@@ -1,4 +1,4 @@
-# Brightside <img width="330px" src="images/brightside.svg"/>
+# Brightside Node <img width="330px" src="images/brightside.svg"/>
 <sup>[💬 Join the conversation at decstack](http://tinyurl.com/decstack-projects-invite) channel: brightside-f2f</sup>
 
 Brightside is a decentralized service that allows applications to verify that their users are unique.
@@ -23,13 +23,19 @@ Brightside nodes store interactions, forming a social graph. By analyzing this g
 ## Read More
 * [Running a Node](node.md)
 * [Security](security.md)
-* Consensus is mediated by [SCP (Stellar Consensus Protocol)](https://www.stellar.org/blog/stellar-consensus-protocol-proof-code/)
 
 ---
 ## Contribute
 
-Check out our [open projects](https://github.com/adamstallard/brightside/projects).  Or [start a new Issue](https://github.com/adamstallard/brightside/issues) and we'll add you to the conversation.
+Check out our [open projects](https://github.com/Brightside-Social/brightside/projects).  Or [start a new Issue](https://github.com/Brightside-Social/brightside/issues) and we'll add you to the conversation.
+
+This repo is for [Brightside Node](https://github.com/Brightside-Social/brightside-node).
+
+Other repos
+* [Brightside](https://github.com/Brightside-Social/brightside): Mobile app for connecting to other Brightside users
+* [Brightside Unique](https://github.com/Brightside-Social/brightside-unique): Decentralized unique user verification using a social graph
+* [Github Pages repo for our site](https://github.com/Brightside-Social/Brightside-Social.github.io)
 
 ## Discuss
 
-Discuss on [Decstack](http://decstack.com/)--Join the conversation at http://tinyurl.com/decstack-projects-invite, channel: https://hub.decstack.com/projects/channels/brightside-f2f.
+We have an active community on [Decstack](http://decstack.com/)--Join the conversation at http://tinyurl.com/decstack-projects-invite, channel: https://hub.decstack.com/projects/channels/brightside.
