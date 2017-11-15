@@ -3,7 +3,7 @@
 
 Brightside nodes store the social graph used by Brightside.
 
-Mobile devices send interactions to Brightside nodes, which keep the social graph up-to-date.
+Mobile devices send interactions to Brightside nodes, whose job it is to keep the social graph up-to-date.
 
 By analyzing this graph, a Brightside node is able to determine whether or not a person can be verified as unique. When another application--such as a Basic Income application--wants to know whether a user is a unique individual in their system, they make a request to a Brightside node. Brightside nodes protect systems against fake or duplicate accounts, known as sybils. Node operators may earn money for their services.
 
