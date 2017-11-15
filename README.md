@@ -9,9 +9,7 @@ By analyzing this graph, Brightside nodes are able to evaluate a user's likeliho
 
 Node operators may earn money by setting fees for their services.
 
-## Read More
-* [Running a Node](node.md)
-* [Security](security.md)
+[Read more about running a node](node.md)
 
 ---
 ## Contribute
