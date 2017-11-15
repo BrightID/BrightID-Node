@@ -1,11 +1,11 @@
 # Brightside Node <img width="330px" src="images/brightside.svg"/>
 <sup>[💬 Join the conversation at decstack](http://tinyurl.com/decstack-projects-invite) channel: brightside-f2f</sup>
 
-Brightside nodes store the social graph used by Brightside.
+Brightside nodes store the social graph used by the Brightside social platform.
 
-Mobile devices send them updates to the graph.
+Mobile devices send nodes updates to the graph.
 
-By analyzing this graph, a Brightside nodes are able to evaluate a user's likelihood of being unique. Other applications--such as a Basic Income application--make requests to a Brightside node to retrieve this information.
+By analyzing this graph, Brightside nodes are able to evaluate a user's likelihood of being unique. Other applications--such as a Basic Income application--make requests to a Brightside node to retrieve this information.
 
 Node operators may earn money by setting fees for their services.
 
