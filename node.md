@@ -11,6 +11,6 @@ Nodes respond to requests about a user's likelihood of being unique.
 ### Sybil Detection
 Nodes run [SybilInfer](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.149.6318), [SybilDefender](https://pdfs.semanticscholar.org/7606/64eab41125b06692a95832961bc5473d2aae.pdf) and/or other systems designed to detect sybils. The uniqueness likelihood scores served by the uniqueness service are obtained by running these systems. 
 
-Nodes also publish information about possible sybils to _watch lists_ that alert Brightside users. Users can revoke their connections to a sybil account which can in turn affect its uniqueness score.
+Nodes also publish information about possible sybils to _watch lists_ that alert Brightside users. Users can remove their connections to a sybil account which can in turn lower its uniqueness score.
 ## API Reference
 [Brightside Node API Reference](https://github.com/Brightside-Social/brightside/wiki/Brightside-Node-API-Reference)
