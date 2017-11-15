@@ -1,9 +1,7 @@
 # Brightside Node <img width="330px" src="images/brightside.svg"/>
 <sup>[💬 Join the conversation at decstack](http://tinyurl.com/decstack-projects-invite) channel: brightside-f2f</sup>
 
-Brightside nodes store the social graph used by Brightside.
-
-Mobile devices send updates to the graph to Brightside nodes.
+Brightside nodes store the social graph used by Brightside. Mobile devices send them updates to the graph.
 
 By analyzing this graph, a Brightside node is able to determine whether or not a person can be verified as unique. When another application--such as a Basic Income application--wants to know whether a user is a unique individual in their system, they make a request to a Brightside node. Brightside nodes protect systems against fake or duplicate accounts, known as sybils. Node operators may earn money for their services.
 
