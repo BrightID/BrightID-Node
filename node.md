@@ -13,4 +13,4 @@ Nodes run [SybilInfer](http://citeseerx.ist.psu.edu/viewdoc/summary?doi=10.1.1.1
 
 Nodes also publish information about possible sybils to _watch lists_ that alert Brightside users. Users can remove their connections to a sybil account which can in turn lower its uniqueness score.
 ## API Reference
-[Brightside Node API Reference](https://github.com/Brightside-Social/brightside/wiki/Brightside-Node-API-Reference)
+[Brightside Node API Reference](https://github.com/Brightside-Social/brightside-node/wiki/API-Reference)
