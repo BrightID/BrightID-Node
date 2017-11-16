@@ -14,7 +14,7 @@ __[Read more about running a node.](node.md)__
 ---
 ## Contribute
 
-Check out our [open projects](https://github.com/Brightside-Social/brightside/projects).  Or [start a new Issue](https://github.com/Brightside-Social/brightside/issues) and we'll add you to the conversation.
+Check out our [open projects](https://github.com/Brightside-Social/brightside-node/projects).  Or [start a new Issue](https://github.com/Brightside-Social/brightside-node/issues) and we'll add you to the conversation.
 
 This repo is for [Brightside Node](https://github.com/Brightside-Social/brightside-node).
 
