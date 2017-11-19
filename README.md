@@ -1,5 +1,5 @@
 # Brightside Node <img width="330px" src="images/brightside.svg"/>
-<sup>[💬 Join the conversation at decstack](http://tinyurl.com/decstack-projects-invite) channel: brightside-f2f</sup>
+<sup>[💬 Join the conversation at decstack](http://tinyurl.com/decstack-projects-invite) channel: brightside</sup>
 
 Brightside nodes store the social graph used by the Brightside social platform.
 
