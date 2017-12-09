@@ -1,0 +1,9 @@
+{
+  "main": "index.js",
+  "name": "brightside",
+  "description": "Allows brightside clients (typically mobile) to update the social graph.",
+  "version": "1.0.0",
+  "tests": [
+    "tests/*.js"
+  ]
+}
