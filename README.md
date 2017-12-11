@@ -16,9 +16,11 @@ __[Read more about running a node.](node.md)__
 
 Check out our [open projects](https://github.com/Brightside-Social/brightside-node/projects).  Or [start a new Issue](https://github.com/Brightside-Social/brightside-node/issues) and we'll add you to the conversation.
 
-This repo is for [Brightside Node](https://github.com/Brightside-Social/brightside-node).
+### Dev Setup
 
-Other repos
+Use the [development guide](https://github.com/Brightside-Social/brightside-node/wiki/Development-Guide) to setup a development environment and workflow.
+
+## Other repos
 * [Brightside](https://github.com/Brightside-Social/brightside): Mobile app for connecting to other Brightside users
 * [Brightside Unique](https://github.com/Brightside-Social/brightside-unique): Decentralized unique user verification using a social graph
 * [Github Pages repo for our site](https://github.com/Brightside-Social/Brightside-Social.github.io)
