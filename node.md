@@ -1,6 +1,8 @@
 # Running A Node
 ## Overview
 A network of nodes forms the decentralized core of the uniqueness verification service. The nodes reach a consensus about changes to the social graph and store a copy of the complete graph. No identifying information is stored in the graph, only users' public keys. Nodes run software that can detect the presence of sybils based on social graph analysis.
+## Installation
+For now, follow the [development guide](https://github.com/Brightside-Social/brightside-node/wiki/Development-Guide) until our own docker image is ready to use.
 ## Components
 ### Update Service
 Nodes receive client requests to update the graph. Update operations are digitally signed and dated by the users making the request. Nodes forward these requests to other nodes for consensus.
