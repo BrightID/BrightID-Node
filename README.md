@@ -5,7 +5,7 @@ Brightside nodes store the social graph used by the Brightside social platform.
 
 Mobile devices send nodes updates to the graph.
 
-By analyzing this graph, Brightside nodes are able to evaluate a user's likelihood of being unique. Other applications--such as a Basic Income application--make requests to a Brightside node to retrieve this information.
+By analyzing this graph, Brightside nodes are able to evaluate a user's likelihood of being unique. Other applications--such as a Basic Income application--make requests to a Brightside node to retrieve this information.  (See [Brightside Unique](https://github.com/Brightside-Social/brightside-unique).)
 
 Node operators may earn money by setting fees for their services.
 
