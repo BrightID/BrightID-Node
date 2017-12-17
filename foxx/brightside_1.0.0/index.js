@@ -8,9 +8,11 @@ const enc = require('./encoding.js');
 
 module.context.use(router);
 
+const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future to accommodate client/server clock differences
+
 // low-level schemas
 var schemas = {
-  timestamp: Joi.number().integer().max(Date.now()).required()
+  timestamp: Joi.number().integer().required()
 };
 
 // extend low-level schemas with high-level schemas
@@ -42,6 +44,9 @@ const handlers = {
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
     const timestamp =  req.body.timestamp;
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
     const message = enc.strToUint8Array(publicKey1 + publicKey2 + timestamp);
 
     //Verify signatures
@@ -62,6 +67,9 @@ const handlers = {
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
     const timestamp = req.body.timestamp;
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
     const message = enc.strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
 
     //Verify signature
