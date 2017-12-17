@@ -1,5 +1,6 @@
 'use strict';
 const createRouter = require('@arangodb/foxx/router');
+const contacts = require('./contactsGraph.js');
 const router = createRouter();
 const Joi = require('joi');
 const nacl = require('tweetnacl');
@@ -40,7 +41,8 @@ const handlers = {
   connectionsPut: function connectionsPutHandler(req, res){
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
-    const message = enc.strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
+    const timestamp =  req.body.timestamp;
+    const message = enc.strToUint8Array(publicKey1 + publicKey2 + timestamp);
 
     //Verify signatures
     try {
@@ -53,11 +55,13 @@ const handlers = {
     } catch (e) {
       res.throw(403, e);
     }
+    contacts.addAndClean(publicKey1, publicKey2, timestamp);
     res.send('ok');
   },
   connectionsDelete: function connectionsDeleteHandler(req, res){
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
+    const timestamp = req.body.timestamp;
     const message = enc.strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
 
     //Verify signature
@@ -68,6 +72,7 @@ const handlers = {
     } catch (e) {
       res.throw(403, e);
     }
+    contacts.removeAndClean(publicKey1, publicKey2, timestamp);
     res.send('ok');
   }
 };
