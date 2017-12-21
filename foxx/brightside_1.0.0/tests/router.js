@@ -6,11 +6,11 @@
 const router = require('../index.js');
 const assert = require('assert');
 
-describe('handlers', function(){
-    describe('connectionsPut', function(){
-      // TODO: make tests using a sinon stub for res with "send" and "throw" for various good and bad inputs
+describe('handlers', function () {
+  describe('connectionsPut', function () {
+    // TODO: make tests using a sinon stub for res with "send" and "throw" for various good and bad inputs
 
-      // it('should not accept a value in the future', function(){
-      //   const future = 234567890123456;
-    });
+    // it('should not accept a value in the future', function(){
+    //   const future = 234567890123456;
+  });
 });
