@@ -29,13 +29,11 @@ function allEdges(collection, user1, user2) {
 }
 
 function removeByKeys(collection, keys) {
-  if (keys.length > 0) {
-    db._query(aql`
-      for i in ${collection}
-        filter i._key in ${keys}
-        remove i in ${collection}
-    `);
-  }
+  db._query(aql`
+    for i in ${collection}
+      filter i._key in ${keys}
+      remove i in ${collection}
+  `);
 }
 
 function updateAndClean(collection, key1, key2, timestamp) {
