@@ -1,4 +1,4 @@
-# BrightID Node <img width="330px" src="images/brightside.svg"/>
+# BrightID Node <img width="330px" src="images/logo.svg"/>
 <sup>[💬 Join our active community on decstack](https://hub.decstack.com/signup_user_complete/?id=wutow3kb6bda5bhptir6aapyfh) channel: BrightID</sup>
 
 BrightID nodes store the social graph used by the BrightID social platform.
@@ -21,7 +21,7 @@ Check out our [open projects](https://github.com/BrightID/BrightID-Node/projects
 Use the [development guide](https://github.com/BrightID/BrightID-Node/wiki/Development-Guide) to setup a development environment and workflow.
 
 ## Other repos
-* [BrightID](https://github.com/BrightID/BrightID): Mobile app for connecting to other Brightside users
+* [BrightID](https://github.com/BrightID/BrightID): Mobile app for connecting to other BrightID users
 * [BrightID Service](https://github.com/BrightID/BrightID-Service): Decentralized unique user verification using a social graph
 * [Github Pages repo for our site](https://github.com/BrightID/BrightID.github.io)
 
