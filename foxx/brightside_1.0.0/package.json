@@ -1,6 +1,6 @@
 {
-  "name": "brightside-foxx",
-  "description": "foxx service for managing brightside connections",
+  "name": "brightid-foxx",
+  "description": "Foxx service for managing BrightID connections",
   "version": "0.0.1",
   "dependencies": {
     "tweetnacl": "^1.0.0"
