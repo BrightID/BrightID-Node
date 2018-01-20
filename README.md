@@ -1,13 +1,9 @@
 # BrightID Node <img width="330px" src="images/logo.svg"/>
 <sup>[💬 Join our active community on decstack](https://hub.decstack.com/signup_user_complete/?id=wutow3kb6bda5bhptir6aapyfh) channel: BrightID</sup>
 
-BrightID nodes store the social graph used by the BrightID social platform.
+BrightID nodes store the social graph used by [BrightID](https://github.com/BrightID/BrightID).
 
-Mobile devices send nodes updates to the graph.
-
-By analyzing this graph, BrightID nodes are able to evaluate a user's likelihood of being unique. Other applications--such as a Basic Income application--make requests to a BrightID node to retrieve this information.  (See [BrightID Service](https://github.com/BrightID/BrightID-Service).)
-
-Node operators may earn money by setting fees for their services.
+By analyzing this graph, BrightID nodes are able to evaluate a user's likelihood of being unique. Other applications make requests to a BrightID node to retrieve this information.  (See [BrightID Service](https://github.com/BrightID/BrightID-Service).)
 
 __[Read more about running a node.](node.md)__
 
