@@ -1,4 +1,4 @@
-# BrightID Node <img width="330px" src="images/logo.svg"/>
+# BrightID Node
 <sup>[💬 Join our active community on decstack](https://hub.decstack.com/signup_user_complete/?id=wutow3kb6bda5bhptir6aapyfh) channel: BrightID</sup>
 
 BrightID nodes store the social graph used by [BrightID](https://github.com/BrightID/BrightID).
