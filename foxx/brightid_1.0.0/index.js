@@ -52,10 +52,10 @@ const handlers = {
     //Verify signatures
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey + publicKey2 + timestamp signed by publicKey1");
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig2), enc.b64ToUint8Array(publicKey2))){
-        res.throw(403, "sig2 wasn't publicKey + publicKey2 + timestamp signed by publicKey2");
+        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey2");
       }
     } catch (e) {
       res.throw(403, e);
@@ -75,7 +75,7 @@ const handlers = {
     //Verify signature
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey + publicKey2 + timestamp signed by publicKey1");
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
     } catch (e) {
       res.throw(403, e);
