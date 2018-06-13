@@ -23,9 +23,9 @@ schemas = Object.assign({
     publicKey1: Joi.string().required(),
     publicKey2: Joi.string().required(),
     sig1: Joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
+      .description('message (publicKey1 + publicKey2 + timestamp) signed by the private key of the user represented by publicKey1'),
     sig2: Joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey2'),
+      .description('message (publicKey1 + publicKey2 + timestamp) signed by the private key of the user represented by publicKey2'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the connection occurred')
   }),
   connectionsDeleteBody: Joi.object({
@@ -34,7 +34,7 @@ schemas = Object.assign({
     publicKey1: Joi.string().required(),
     publicKey2: Joi.string().required(),
     sig1: Joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
+      .description('message (publicKey1 + publicKey2 + timestamp) signed by the private key of the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   })
 }, schemas);
@@ -52,10 +52,10 @@ const handlers = {
     //Verify signatures
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the private key corresponding to publicKey1");
       }
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig2), enc.b64ToUint8Array(publicKey2))){
-        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey2");
+        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by the private key corresponding to publicKey2");
       }
     } catch (e) {
       res.throw(403, e);
@@ -75,7 +75,7 @@ const handlers = {
     //Verify signature
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the private key corresponding to publicKey1");
       }
     } catch (e) {
       res.throw(403, e);
