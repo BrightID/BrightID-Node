@@ -52,11 +52,5 @@ class SybilRanker():
         # fix distribution
         max_rank = max(ranks, key=lambda item: item[1])[1]
         min_rank = min(ranks, key=lambda item: item[1])[1]
-        ranks = [(node, (rank - min_rank) / (max_rank - min_rank)) for node, rank in ranks]
-
-        # distribute between 0-100
-        max_rank = max(ranks, key=lambda item: item[1])[1]
-        mul_factor = 100.0 / max_rank
-        ranks = [(node, int(int(round(rank * mul_factor)))) for node, rank in ranks]
+        ranks = [(node, int(round((rank - min_rank) * 100 / (max_rank - min_rank)))) for node, rank in ranks]
         return ranks
-

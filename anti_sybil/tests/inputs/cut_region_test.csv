@@ -1,0 +1,9 @@
+num_honest,50
+avg_degree,5
+min_degree,2
+max_degree,7
+num_seed_nodes,20
+num_attacker_to_num_honest,0.1
+num_sybil_to_num_attacker,5
+num_bridge_to_num_non_bridge,0.2
+bridge_to_attackers_con,0.7
