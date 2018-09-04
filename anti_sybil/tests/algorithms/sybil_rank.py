@@ -6,7 +6,7 @@ import networkx as nx
 from arango import ArangoClient
 
 
-class SybilRanker():
+class Detector():
     def __init__(self, graph, trusted_nodes, max_rank=1.0):
         self.graph = graph
         self.max_rank = max_rank
@@ -15,14 +15,12 @@ class SybilRanker():
 
     def detect(self):
         num_iterations = int(math.ceil(math.log10(self.graph.order())))
-        # TODO: Whats the best num_iterations?
-        num_iterations = 10
         nodes_rank = self.initialize_nodes_rank()
         for i in range(num_iterations):
             nodes_rank = self.spread_nodes_rank(nodes_rank)
-        ranked_trust = self.normalize_nodes_rank(nodes_rank)
+        ranked_trust = dict(self.normalize_nodes_rank(nodes_rank))
         self.ranked_trust = ranked_trust
-        return self
+        return ranked_trust
 
     def initialize_nodes_rank(self):
         nodes_rank = dict((node, 0.0) for node in self.graph.nodes())

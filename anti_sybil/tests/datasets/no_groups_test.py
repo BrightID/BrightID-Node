@@ -13,7 +13,7 @@ def init(input_data):
     num_sybil = int(input_data['num_sybil_to_num_honest'] * input_data['num_honest'])
     categories = {
         'Honest': {'nodes': [], 'color': 'green', 'num': input_data['num_honest']},
-        'Sybil': {'nodes': [], 'color': 'red', 'num': num_sybil},
+        'Sybil': {'nodes': [], 'color': 'blue', 'num': num_sybil},
     }
     graph = nx.Graph()
     counter = 0

@@ -1,7 +1,4 @@
-num_honest,50
-avg_degree,5
-min_degree,2
-max_degree,7
-num_seed_nodes,5
-num_sybil_to_num_honest,0.1
-sybil_con_to_honest_con,0.4
+num_honest,avg_degree,min_degree,max_degree,num_seed_nodes,num_sybil_to_num_honest,sybil_con_to_honest_con
+50,5,2,7,5,0.1,0.2
+100,10,4,14,10,0.1,0.2
+200,5,2,7,4,0.1,0.2
