@@ -7,11 +7,11 @@ from arango import ArangoClient
 
 
 class Detector():
-    def __init__(self, graph, trusted_nodes, max_rank=1.0):
+    def __init__(self, graph, trusted_nodes, options=None):
         self.graph = graph
-        self.max_rank = max_rank
         self.honests_predicted = None
         self.verifiers = trusted_nodes
+        self.options = options
 
     def detect(self):
         num_iterations = int(math.ceil(math.log10(self.graph.order())))
@@ -25,7 +25,7 @@ class Detector():
     def initialize_nodes_rank(self):
         nodes_rank = dict((node, 0.0) for node in self.graph.nodes())
         for verifier in self.verifiers:
-            nodes_rank[verifier] = self.max_rank / float(len(self.verifiers))
+            nodes_rank[verifier] = 1.0 / float(len(self.verifiers))
         return nodes_rank
 
     def spread_nodes_rank(self, nodes_rank):

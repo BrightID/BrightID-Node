@@ -1,0 +1,19 @@
+avg_degree,15,30,80
+max_degree,25,50,150
+min_degree,10,10,40
+num_honest,100,500,3000
+num_seed_nodes,10,25,50
+num_sybil_to_num_honest,0.2,0.1,0.1
+sybil_con_to_honest_con,0.2,0.5,0.1
+
+Explosion_Rate_Percent,0,8,0
+Border,81,17,94
+Avg Seed,98,69,100
+Normalized Min Seed,98,49,100
+Min Seed,97,49,100
+Avg Honest,95,47,99
+Normalized Min Honest,83,10,96
+Min Honest,82,10,95
+Max Sybil,2,100,0
+Normalized Max Sybil,2,100,0
+Avg Sybil,1,50,0
