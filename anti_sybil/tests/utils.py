@@ -2,7 +2,7 @@ import networkx as nx
 import matplotlib.pyplot as plt
 
 
-def visualize(graph, categories, labels = None, filename = None, file_format="svg"):
+def visualize(graph, categories, labels = None, output_directory = None, filename = None, file_format="svg"):
     layout = nx.spring_layout(graph)
     # layout = nx.kamada_kawai_layout(graph)
     handles = []
@@ -37,8 +37,8 @@ def visualize(graph, categories, labels = None, filename = None, file_format="sv
 
     if filename:
         plt.savefig(
-            "{0}.{1}".format(filename, file_format),
-            format=file_format
+            "{0}/{1}.{2}".format(output_directory, filename, file_format),
+            format = file_format
         )
         plt.clf()
     else:
