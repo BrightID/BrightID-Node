@@ -13,9 +13,10 @@ class Node():
 def init(input_data):
     num_sybil = int(input_data['num_sybil_to_num_honest']
                     * input_data['num_honest'])
+    num_honest = input_data['num_honest'] - input_data['num_seed_nodes']
     categories = {
         'Seed': {'nodes': [], 'color': 'green', 'num': input_data['num_seed_nodes']},
-        'Honest': {'nodes': [], 'color': 'blue', 'num': input_data['num_honest'] - input_data['num_seed_nodes']},
+        'Honest': {'nodes': [], 'color': 'blue', 'num': num_honest},
         'Sybil': {'nodes': [], 'color': 'red', 'num': num_sybil},
     }
     graph = nx.Graph()
@@ -47,8 +48,9 @@ def init(input_data):
                 j += 1
             else:
                 counter += 1
-                if counter > 10*degree:
-                    raise Exception("Can't find pair. peresent_graph_degree={}".format(peresent_graph_degree))
+                if counter > 10 * degree:
+                    raise Exception("Can't find pair. peresent_graph_degree={}".format(
+                        peresent_graph_degree))
     num_sybil_con = input_data['sybil_con_to_honest_con'] * \
         input_data['avg_degree']
     for i, node in enumerate(categories['Sybil']['nodes']):

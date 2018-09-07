@@ -1,33 +1,37 @@
-import networkx as nx
 import matplotlib.pyplot as plt
+import networkx as nx
+from utils import *
+import collections
 import algorithms
 import datasets
-from utils import *
-import random
 import shutil
+import pickle
 import csv
 import os
-import collections
 
-NORMALIZATION_RATIO = .1
-VISUALIZE = True
 
 def read_input_file(input_file):
     inputs = collections.OrderedDict()
-    with open(input_file) as f:
-        for i, input_dict in enumerate(
-                csv.DictReader(f, skipinitialspace=True)):
-            for key in input_dict:
-                input_dict[key] = eval(input_dict[key])
-            inputs[i + 1] = input_dict
+    with open(input_file, 'rb') as csvfile:
+        rows = [row.strip().split(',')
+                for row in csvfile.read().strip().split('\n')]
+    for row in rows:
+        for col_num, cell in enumerate(row):
+            if col_num == 0:
+                continue
+            if col_num not in inputs:
+                inputs[col_num] = collections.OrderedDict()
+            inputs[col_num][row[0]] = eval(row[col_num])
     return inputs
 
 
 def find_border(result):
     best_border = best_score = 0
     for i in range(100):
-        honest_score = len([node for node in result if node.node_type in ('Honest', 'Seed') and result[node] > i])
-        sybil_score = len([node for node in result if node.node_type in ('Sybil', 'Non_bridge_sybil', 'Bridge_sybil') and result[node] < i])
+        honest_score = len([node for node in result if node.node_type in (
+            'Honest', 'Seed') and result[node] > i])
+        sybil_score = len([node for node in result if node.node_type in (
+            'Sybil', 'Non Bridge Sybil', 'Bridge Sybil') and result[node] < i])
         score = honest_score + sybil_score
         if score >= best_score:
             best_border = i
@@ -37,12 +41,13 @@ def find_border(result):
 
 def write_output_file(output_directory, final_results, input_dic):
     rows = collections.OrderedDict()
+    rows['Inputs'] = ['Inputs', '']
     for test_num in input_dic:
-        for title in sorted(input_dic[test_num]):
+        for title in input_dic[test_num]:
             if test_num == 1:
                 rows[title] = [title]
             rows[title].append(input_dic[test_num][title])
-    rows[''] = []
+    rows['Results'] = ['Results', '']
     for i, result in enumerate(final_results):
         for title in final_results[result]:
             if i == 0:
@@ -54,56 +59,81 @@ def write_output_file(output_directory, final_results, input_dic):
             writer.writerow(rows[row])
 
 
-def calculate_explosion_rate(ranks_dic):
+def calculate_successful_sybils(ranks_dic):
     honests = []
     sybils = []
     for category in ranks_dic:
-        if category in ['Sybil', 'Non_bridge_sybil', 'Bridge_sybil']:
+        if category in ['Sybil', 'Non Bridge Sybil', 'Bridge Sybil']:
             sybils.extend(ranks_dic[category])
         if category in ['Seed', 'Honest']:
             honests.extend(ranks_dic[category])
     high_ranked_sybils = [rank for rank in sybils if rank > min(honests)]
-    explosion_rate = (len(high_ranked_sybils) * 100) / (len(high_ranked_sybils) + len(honests))
-    return explosion_rate
+    successful_sybils = (len(high_ranked_sybils) * 100) / \
+        (len(high_ranked_sybils) + len(honests))
+    return successful_sybils
 
 
-def prepare_result(result, categories):
+def prepare_result(result, categories, normalization_ratio):
     view_order = collections.OrderedDict([
-        ('Seed', ['avg', 'normalized_min', 'min']),
-        ('Honest', ['avg', 'normalized_min', 'min']),
-        ('Attacker', ['max', 'normalized_max', 'avg']),
-        ('Bridge Sybil', ['max', 'normalized_max', 'avg']),
-        ('Non Bridge Sybil', ['max', 'normalized_max', 'avg']),
-        ('Sybil', ['max', 'normalized_max', 'avg'])
+        ('Seed', ['Avg', 'Normalized Min', 'Min']),
+        ('Honest', ['Avg', 'Normalized Min', 'Min']),
+        ('Attacker', ['Max', 'Normalized Max', 'Avg']),
+        ('Bridge Sybil', ['Max', 'Normalized Max', 'Avg']),
+        ('Non Bridge Sybil', ['Max', 'Normalized Max', 'Avg']),
+        ('Sybil', ['Max', 'Normalized Max', 'Avg'])
     ])
 
     final_result = collections.OrderedDict()
-    ranks_dic = {category: [result[node] for node in categories[category]['nodes']] for category in categories}
+    ranks_dic = {category: [
+        result[node] for node in categories[category]['nodes']] for category in categories}
 
-    final_result['Explosion_Rate_Percent'] = calculate_explosion_rate(ranks_dic)
+    final_result['Successful Sybils Percentage'] = calculate_successful_sybils(
+        ranks_dic)
     final_result['Border'] = find_border(result)
 
     for category in view_order:
         if category not in categories:
             continue
-        cut_point = int(len(ranks_dic[category]) * NORMALIZATION_RATIO)
+        cut_point = int(len(ranks_dic[category]) * normalization_ratio)
         if cut_point:
-            cutted_list = ranks_dic[category][cut_point : -cut_point]
+            cutted_list = ranks_dic[category][cut_point: -cut_point]
         else:
             cutted_list = ranks_dic[category]
 
         for parameter in view_order[category]:
-            if parameter == 'min':
-                final_result['Min %s' % category] = min(ranks_dic[category])
-            elif parameter == 'avg':
-                final_result['Avg %s' % category] = sum(ranks_dic[category]) / len(ranks_dic[category])
-            elif parameter == 'max':
-                final_result['Max %s' % category] = max(ranks_dic[category])
-            elif parameter == 'normalized_min':
-                final_result['Normalized Min %s' % category] = min(cutted_list)
-            elif parameter == 'normalized_max':
-                final_result['Normalized Max %s' % category] = max(cutted_list)
+            if len(ranks_dic[category]) == 0:
+                final_result['{0} {1}'.format(parameter, category)] = '__'
+            elif parameter == 'Min':
+                final_result['{0} {1}'.format(parameter, category)] = min(
+                    ranks_dic[category])
+            elif parameter == 'Avg':
+                final_result['{0} {1}'.format(parameter, category)] = sum(
+                    ranks_dic[category]) / len(ranks_dic[category])
+            elif parameter == 'Max':
+                final_result['{0} {1}'.format(parameter, category)] = max(
+                    ranks_dic[category])
+            elif parameter == 'Normalized Min':
+                final_result['{0} {1}'.format(
+                    parameter, category)] = min(cutted_list)
+            elif parameter == 'Normalized Max':
+                final_result['{0} {1}'.format(
+                    parameter, category)] = max(cutted_list)
     return final_result
+
+
+def save_graph(file_name, graph, categories):
+    with open('1_{0}'.format(file_name), 'wb') as f:
+        pickle.dump(graph, f)
+    with open('2_{0}'.format(file_name), 'wb') as f:
+        pickle.dump(categories, f)
+
+
+def load_graph(file_name):
+    with open('1_{0}'.format(file_name), 'rb') as f:
+        graph = pickle.load(f)
+    with open('2_{0}'.format(file_name), 'rb') as f:
+        categories = pickle.load(f)
+    return graph, categories
 
 
 def run(dataset, algorithm, input_file, output_directory):
@@ -117,12 +147,15 @@ def run(dataset, algorithm, input_file, output_directory):
         options = {}
         if algorithm == algorithms.enhanced_sybil_rank:
             options['min_degree'] = input_dic[test_num]['min_degree']
-        detector = algorithm.Detector(graph, categories['Seed']['nodes'], options)
+            options['accumulative'] = input_dic[test_num]['accumulative']
+        detector = algorithm.Detector(
+            graph, categories['Seed']['nodes'], options)
         result = detector.detect()
-        final_results[test_num] = prepare_result(result, categories)
-        if VISUALIZE:
+        final_results[test_num] = prepare_result(
+            result, categories, input_dic[test_num]['normalization_ratio'])
+        if input_dic[test_num]['visualize']:
             visualize(graph, categories, result, output_directory, test_num)
-        print('test %s finished' % test_num)
+        print('test {0} finished'.format(test_num))
     write_output_file(output_directory, final_results, input_dic)
 
 

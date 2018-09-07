@@ -23,6 +23,8 @@ def init(input_data):
         'Bridge Sybil': {'nodes': [], 'color': 'orange', 'num': num_bridge_sybil},
         'Non Bridge Sybil': {'nodes': [], 'color': 'red', 'num': num_non_bridge_sybil}
     }
+    # if categories['Non Bridge Sybil']['num'] == 0:
+    #     del categories['Non Bridge Sybil']
     graph = nx.Graph()
     counter = 0
     for category in categories:
@@ -56,12 +58,12 @@ def init(input_data):
                 if counter > 10*degree:
                     raise Exception("Can't find pair. peresent_graph_degree={}".format(peresent_graph_degree))
 
-
-    for i, node in enumerate(categories['Non Bridge Sybil']['nodes']):
-        node_degree = graph.degree(node)
-        pair_bridge = random.choice(categories['Bridge Sybil']['nodes'])
-        graph.add_edge(node, pair_bridge)
-        # TODO: What about conctions between NonBridgeSybils?
+    if categories['Non Bridge Sybil']['num'] != 0:
+        for i, node in enumerate(categories['Non Bridge Sybil']['nodes']):
+            node_degree = graph.degree(node)
+            pair_bridge = random.choice(categories['Bridge Sybil']['nodes'])
+            graph.add_edge(node, pair_bridge)
+            # TODO: What about conctions between NonBridgeSybils?
 
     for i, node in enumerate(categories['Bridge Sybil']['nodes']):
         num_contection_to_attacker = int(

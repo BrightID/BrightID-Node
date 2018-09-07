@@ -7,6 +7,8 @@ def visualize(graph, categories, labels = None, output_directory = None, filenam
     # layout = nx.kamada_kawai_layout(graph)
     handles = []
     for category in categories:
+        if categories[category]['num'] == 0:
+            continue
         handle = nx.draw_networkx_nodes(
             graph,
             layout,
@@ -21,7 +23,7 @@ def visualize(graph, categories, labels = None, output_directory = None, filenam
     nx.draw_networkx_edges(
         graph,
         layout,
-        edge_color="green",
+        edge_color="brown",
         alpha=0.5
     )
 
@@ -34,7 +36,6 @@ def visualize(graph, categories, labels = None, output_directory = None, filenam
         scatterpoints=1
     )
     plt.axis('off')
-
     if filename:
         plt.savefig(
             "{0}/{1}.{2}".format(output_directory, filename, file_format),
