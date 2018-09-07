@@ -145,9 +145,9 @@ def run(dataset, algorithm, input_file, output_directory):
     for test_num in input_dic:
         graph, categories = dataset.init(input_dic[test_num])
         options = {}
-        if algorithm == algorithms.enhanced_sybil_rank:
-            options['min_degree'] = input_dic[test_num]['min_degree']
-            options['accumulative'] = input_dic[test_num]['accumulative']
+        options['min_degree'] = input_dic[test_num]['min_degree']
+        options['accumulative'] = input_dic[test_num]['accumulative']
+        options['weaken_under_min'] = input_dic[test_num]['weaken_under_min']
         detector = algorithm.Detector(
             graph, categories['Seed']['nodes'], options)
         result = detector.detect()
@@ -161,6 +161,4 @@ def run(dataset, algorithm, input_file, output_directory):
 
 if __name__ == '__main__':
     run(datasets.cut_region_test, algorithms.sybil_rank, './inputs/cut_region_test.csv', './outputs/tests1/')
-    run(datasets.cut_region_test, algorithms.enhanced_sybil_rank, './inputs/cut_region_test.csv', './outputs/tests2/')
-    run(datasets.no_groups_test, algorithms.sybil_rank, './inputs/no_groups_test.csv', './outputs/tests3/')
-    run(datasets.no_groups_test, algorithms.enhanced_sybil_rank,'./inputs/no_groups_test.csv', './outputs/tests4/')
+    run(datasets.no_groups_test, algorithms.sybil_rank, './inputs/no_groups_test.csv', './outputs/tests2/')

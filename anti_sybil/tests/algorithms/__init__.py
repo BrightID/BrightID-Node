@@ -1,2 +1,1 @@
 import sybil_rank
-import enhanced_sybil_rank
