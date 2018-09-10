@@ -39,14 +39,16 @@ def find_border(result):
     return best_border
 
 
-def write_output_file(output_directory, final_results, input_dic):
+def write_output_file(output_directory, final_results, input_dic, algorithms_row):
     rows = collections.OrderedDict()
     rows['Inputs'] = ['Inputs', '']
+    rows['Algorithm'] = algorithms_row
     for test_num in input_dic:
         for title in input_dic[test_num]:
             if test_num == 1:
                 rows[title] = [title]
             rows[title].append(input_dic[test_num][title])
+    rows['  '] = []
     rows['Results'] = ['Results', '']
     for i, result in enumerate(final_results):
         for title in final_results[result]:
@@ -62,35 +64,45 @@ def write_output_file(output_directory, final_results, input_dic):
 def calculate_successful_sybils(ranks_dic):
     honests = []
     sybils = []
+    attackers = []
     for category in ranks_dic:
         if category in ['Sybil', 'Non Bridge Sybil', 'Bridge Sybil']:
             sybils.extend(ranks_dic[category])
-        if category in ['Seed', 'Honest']:
+        elif category in ['Seed', 'Honest']:
             honests.extend(ranks_dic[category])
-    high_ranked_sybils = [rank for rank in sybils if rank > min(honests)]
-    successful_sybils = (len(high_ranked_sybils) * 100) / \
-        (len(high_ranked_sybils) + len(honests))
-    return successful_sybils
+        elif category == 'Attacker':
+            attackers.extend(ranks_dic[category])
+    successful_sybils = [rank for rank in sybils if rank >= min(honests)]
+    successful_sybils_percent = round((len(successful_sybils) * 100.0) / \
+        (len(successful_sybils) + len(honests)), 2)
+    if len(attackers) != 0:
+        successful_sybils_per_attacker = round(float(len(successful_sybils)) / len(attackers), 2)
+    else:
+        successful_sybils_per_attacker = '__'
+    return successful_sybils_percent, successful_sybils_per_attacker
 
 
 def prepare_result(result, categories, normalization_ratio):
     view_order = collections.OrderedDict([
-        ('Seed', ['Avg', 'Normalized Min', 'Min']),
-        ('Honest', ['Avg', 'Normalized Min', 'Min']),
-        ('Attacker', ['Max', 'Normalized Max', 'Avg']),
-        ('Bridge Sybil', ['Max', 'Normalized Max', 'Avg']),
-        ('Non Bridge Sybil', ['Max', 'Normalized Max', 'Avg']),
-        ('Sybil', ['Max', 'Normalized Max', 'Avg'])
+        ('Seed', ['Min', 'Normalized Min', 'Avg', 'Normalized Max', 'Max']),
+        ('Honest', ['Min', 'Normalized Min', 'Avg', 'Normalized Max', 'Max']),
+        ('Attacker', ['Min', 'Normalized Min', 'Avg', 'Normalized Max', 'Max']),
+        ('Bridge Sybil', ['Min', 'Normalized Min', 'Avg', 'Normalized Max', 'Max']),
+        ('Non Bridge Sybil', ['Min', 'Normalized Min', 'Avg', 'Normalized Max', 'Max']),
+        ('Sybil', ['Min', 'Normalized Min', 'Avg', 'Normalized Max', 'Max'])
     ])
 
     final_result = collections.OrderedDict()
     ranks_dic = {category: [
         result[node] for node in categories[category]['nodes']] for category in categories}
 
-    final_result['Successful Sybils Percentage'] = calculate_successful_sybils(
+    successful_sybils_percent, successful_sybils_per_attacker = calculate_successful_sybils(
         ranks_dic)
-    final_result['Border'] = find_border(result)
 
+    final_result['Successful Sybils Percentage'] = successful_sybils_percent
+    final_result['Successful Sybils per Attacker'] = successful_sybils_per_attacker
+    final_result['Border'] = find_border(result)
+    final_result[' '] = ' '
     for category in view_order:
         if category not in categories:
             continue
@@ -136,29 +148,38 @@ def load_graph(file_name):
     return graph, categories
 
 
-def run(dataset, algorithm, input_file, output_directory):
+def run(dataset, algorithms, input_file, output_directory):
     input_dic = read_input_file(input_file)
     if os.path.exists(output_directory):
         shutil.rmtree(output_directory)
     os.makedirs(output_directory)
     final_results = collections.OrderedDict()
-    for test_num in input_dic:
-        graph, categories = dataset.init(input_dic[test_num])
-        options = {}
-        options['min_degree'] = input_dic[test_num]['min_degree']
-        options['accumulative'] = input_dic[test_num]['accumulative']
-        options['weaken_under_min'] = input_dic[test_num]['weaken_under_min']
-        detector = algorithm.Detector(
-            graph, categories['Seed']['nodes'], options)
-        result = detector.detect()
-        final_results[test_num] = prepare_result(
-            result, categories, input_dic[test_num]['normalization_ratio'])
-        if input_dic[test_num]['visualize']:
-            visualize(graph, categories, result, output_directory, test_num)
-        print('test {0} finished'.format(test_num))
-    write_output_file(output_directory, final_results, input_dic)
+    test_num = 0
+    edited_input_dict = {}
+    algorithms_row = ['Algorithm']
+    for data_num in input_dic:
+        graph, categories = dataset.init(input_dic[data_num])
+        for algorithm in algorithms:
+            algorithms_row.append(algorithms.index(algorithm))
+            test_num += 1
+            edited_input_dict[test_num] = input_dic[data_num]
+            options = {}
+            options['min_degree'] = input_dic[data_num].get('min_degree', 1)
+            options['accumulative'] = input_dic[data_num].get('accumulative', False)
+            options['weaken_under_min'] = input_dic[data_num].get('weaken_under_min', False)
+            options['group_edge_weight'] = input_dic[data_num].get('group_edge_weight', 1)
+            detector = algorithm.Detector(
+                graph, categories['Seed']['nodes'], options)
+            result = detector.detect()
+            final_results[test_num] = prepare_result(
+                result, categories, input_dic[data_num]['normalization_ratio'])
+            if input_dic[data_num]['visualize']:
+                visualize(graph, categories, result, output_directory, test_num)
+            print('test {0} finished'.format(test_num))
+    write_output_file(output_directory, final_results, edited_input_dict, algorithms_row)
 
 
 if __name__ == '__main__':
-    run(datasets.cut_region_test, algorithms.sybil_rank, './inputs/cut_region_test.csv', './outputs/tests1/')
-    run(datasets.no_groups_test, algorithms.sybil_rank, './inputs/no_groups_test.csv', './outputs/tests2/')
+    # run(datasets.cut_region_test, [algorithms.sybil_rank], './inputs/cut_region_test.csv', './outputs/tests1/')
+    # run(datasets.no_groups_test,[algorithms.sybil_rank], './inputs/no_groups_test.csv', './outputs/tests2/')
+    run(datasets.groups_test, [algorithms.groups_sybil_rank, algorithms.sybil_rank], './inputs/groups_test.csv', './outputs/tests1/')

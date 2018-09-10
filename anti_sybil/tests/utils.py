@@ -28,6 +28,8 @@ def visualize(graph, categories, labels = None, output_directory = None, filenam
     )
 
     if labels:
+        #TODO: Delete
+        # nx.draw_networkx_labels(graph, layout, {k: '{} {}'.format(k.name, v) for k, v in labels.items()}, font_size=4)
         nx.draw_networkx_labels(graph, layout, labels, font_size=4)
 
     plt.legend(

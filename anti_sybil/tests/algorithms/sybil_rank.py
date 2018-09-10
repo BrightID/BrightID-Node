@@ -13,7 +13,7 @@ class Detector():
         self.options = options
 
     def detect(self):
-        num_iterations = 2 * int(math.ceil(math.log10(self.graph.order())))
+        num_iterations = int(math.ceil(math.log10(self.graph.order())))
         # TODO: Whats the best num_iterations?
         nodes_rank = self.initialize_nodes_rank()
         for i in range(num_iterations):

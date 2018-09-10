@@ -23,8 +23,6 @@ def init(input_data):
         'Bridge Sybil': {'nodes': [], 'color': 'orange', 'num': num_bridge_sybil},
         'Non Bridge Sybil': {'nodes': [], 'color': 'red', 'num': num_non_bridge_sybil}
     }
-    # if categories['Non Bridge Sybil']['num'] == 0:
-    #     del categories['Non Bridge Sybil']
     graph = nx.Graph()
     counter = 0
     for category in categories:
