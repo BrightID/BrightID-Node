@@ -8,7 +8,8 @@ import shutil
 import pickle
 import csv
 import os
-
+import pprint
+import json
 
 def read_input_file(input_file):
     inputs = collections.OrderedDict()
@@ -73,8 +74,7 @@ def calculate_successful_sybils(ranks_dic):
         elif category == 'Attacker':
             attackers.extend(ranks_dic[category])
     successful_sybils = [rank for rank in sybils if rank >= min(honests)]
-    successful_sybils_percent = round((len(successful_sybils) * 100.0) / \
-        (len(successful_sybils) + len(honests)), 2)
+    successful_sybils_percent = round((len(successful_sybils) * 100.0) / len(sybils), 2)
     if len(attackers) != 0:
         successful_sybils_per_attacker = round(float(len(successful_sybils)) / len(attackers), 2)
     else:
@@ -148,6 +148,23 @@ def load_graph(file_name):
     return graph, categories
 
 
+def create_json_object(graph):
+    json_dic = {
+        'graph': [],
+        'links': [],
+        'nodes':[],
+        'directed': False,
+        'multigraph': False,
+    }
+    json_dic['nodes'] = [{"size": 1, "node_type": node.node_type, "id": node.name, "type": "circle", 'groups': list(node.groups), 'rank': node.rank} for node in graph.nodes]
+    positions = {}
+    for i, node in enumerate(json_dic['nodes']):
+        positions[node['id']] = i
+    json_dic['links'] = [{"source": positions[edge[0].name], "target": positions[edge[1].name]} for edge in graph.edges]
+
+    return json.dumps(json_dic)
+
+
 def run(dataset, algorithms, input_file, output_directory):
     input_dic = read_input_file(input_file)
     if os.path.exists(output_directory):
@@ -171,10 +188,18 @@ def run(dataset, algorithms, input_file, output_directory):
             detector = algorithm.Detector(
                 graph, categories['Seed']['nodes'], options)
             result = detector.detect()
+            for node in graph.nodes:
+                node.rank = result[node]
             final_results[test_num] = prepare_result(
                 result, categories, input_dic[data_num]['normalization_ratio'])
             if input_dic[data_num]['visualize']:
-                visualize(graph, categories, result, output_directory, test_num)
+                json_dic = create_json_object(graph)
+                with open('./template.html', 'rb') as temp_file:
+                    temp_string = temp_file.read()
+                edited_string = temp_string.replace('JSON_GRAPH', json_dic)
+                with open(os.path.join(output_directory, '{0}.html'.format(test_num)), 'wb') as output_file:
+                    output_file.write(edited_string)
+                # visualize(graph, categories, result, output_directory, test_num)
             print('test {0} finished'.format(test_num))
     write_output_file(output_directory, final_results, edited_input_dict, algorithms_row)
 
