@@ -30,12 +30,23 @@ output1 = generate_output(graph)
 
 reset_ranks(graph)
 
+algorithms.GroupSybilRank(graph, {
+    'min_degree': 2,
+    'accumulative': False,
+    'weaken_under_min': False,
+    'group_edge_weight': 1,
+}).rank()
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, '2.html'))
+output2 = generate_output(graph)
+
+reset_ranks(graph)
+
 algorithms.SybilRank(graph, {
     'min_degree': 2,
     'accumulative': False,
     'weaken_under_min': False,
 }).rank()
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, '2.html'))
-output2 = generate_output(graph)
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, '3.html'))
+output3 = generate_output(graph)
 
-write_output_file([output1, output2], os.path.join(OUTPUT_FOLDER, 'result.csv'))
+write_output_file([output1, output2, output3], os.path.join(OUTPUT_FOLDER, 'result.csv'))

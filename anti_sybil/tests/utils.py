@@ -1,6 +1,5 @@
 import networkx as nx
 import collections
-import template
 import shutil
 import pickle
 import json

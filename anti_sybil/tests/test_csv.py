@@ -3,7 +3,6 @@ from utils import *
 import collections
 import algorithms
 import graphs
-import template
 import shutil
 import pickle
 import json
