@@ -1,2 +1,2 @@
-import sybil_rank
-import groups_sybil_rank
+from group_sybil_rank import GroupSybilRank
+from sybil_rank import SybilRank

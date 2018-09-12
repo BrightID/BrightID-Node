@@ -8,16 +8,20 @@ class Node():
         self.name = name
         self.node_type = node_type
         self.rank = rank
+        self.groups = set()
+
+    def __repr__(self):
+        return str(self.name)
 
 
-def init(input_data):
+def generate(input_data):
     num_sybil = int(input_data['num_sybil_to_num_honest']
                     * input_data['num_honest'])
     num_honest = input_data['num_honest'] - input_data['num_seed_nodes']
     categories = {
-        'Seed': {'nodes': [], 'color': 'green', 'num': input_data['num_seed_nodes']},
-        'Honest': {'nodes': [], 'color': 'blue', 'num': num_honest},
-        'Sybil': {'nodes': [], 'color': 'red', 'num': num_sybil},
+        'Seed': {'nodes': [], 'num': input_data['num_seed_nodes']},
+        'Honest': {'nodes': [], 'num': num_honest},
+        'Sybil': {'nodes': [], 'num': num_sybil},
     }
     graph = nx.Graph()
     counter = 0
@@ -62,4 +66,4 @@ def init(input_data):
                 graph.add_edge(node, pair)
                 j += 1
         # TODO: What about conctions between NonBridgeSybils?
-    return graph, categories
+    return graph

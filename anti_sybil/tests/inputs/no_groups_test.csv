@@ -1,7 +1,6 @@
 visualize,True,True,True
 accumulative,True,True,True
 weaken_under_min,False,True,False
-normalization_ratio,0.1,0.1,0.1
 num_honest,100,500,3000
 max_degree,25,50,150
 avg_degree,15,30,80

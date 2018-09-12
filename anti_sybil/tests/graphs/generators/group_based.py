@@ -14,7 +14,7 @@ class Node():
         return str(self.name)
 
 
-def init(input_data):
+def generate(input_data):
     graph = nx.Graph()
     groups_size = random.sample(range(
         input_data['min_group_nodes'], input_data['max_group_nodes']+1), input_data['num_groups'])
@@ -22,10 +22,10 @@ def init(input_data):
                        input_data['num_attacker_to_num_honest'])
     num_sybil = int(input_data['num_sybil_to_num_attacker'] * num_attacker)
     categories = {
-        'Seed': {'nodes': [], 'color': 'green', 'num': input_data['num_seed_nodes']},
-        'Honest': {'nodes': [], 'color': 'blue', 'num': sum(groups_size) - input_data['num_seed_nodes'] - num_attacker},
-        'Attacker': {'nodes': [], 'color': 'black', 'num': num_attacker},
-        'Sybil': {'nodes': [], 'color': 'orange', 'num': num_sybil},
+        'Seed': {'nodes': [], 'num': input_data['num_seed_nodes']},
+        'Honest': {'nodes': [], 'num': sum(groups_size) - input_data['num_seed_nodes'] - num_attacker},
+        'Attacker': {'nodes': [], 'num': num_attacker},
+        'Sybil': {'nodes': [], 'num': num_sybil},
     }
     counter = 0
     for category in categories:
@@ -122,5 +122,4 @@ def init(input_data):
                     graph.add_edge(left_node, right_node)
                     print('Add Edge: {0} --> {1}'.format(left_node, right_node))
                     non_sybils = True
-    
-    return graph, categories
+    return graph

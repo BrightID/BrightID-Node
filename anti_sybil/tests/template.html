@@ -99,7 +99,7 @@ var linkedByIndex = {};
     .enter().append("line")
     .attr("class", "link")
     .style("stroke-width",nominal_stroke)
-    .style("stroke", function(d) { 
+    .style("stroke", function(d) {
     if (isNumber(d.score) && d.score>=0) return color(d);
     else return default_link_color; })
 
@@ -140,7 +140,7 @@ var linkedByIndex = {};
         .size(function(d) { return Math.PI*Math.pow(size(d.size)||nominal_base_node_size,2); })
         .type(function(d) { return d.type; }))
 
-    .style(tocolor, function(d) { 
+    .style(tocolor, function(d) {
     return color(d);
     })
     //.attr("r", function(d) { return size(d.size)||nominal_base_node_size; })

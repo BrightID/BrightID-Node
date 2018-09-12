@@ -1,26 +1,23 @@
-import sys
 import math
 import operator
-import networkx as nx
-from arango import ArangoClient
 
 
-class Detector():
-    def __init__(self, graph, trusted_nodes, options=None):
+class SybilRank():
+    def __init__(self, graph, options=None):
         self.graph = graph
-        self.honests_predicted = None
-        self.verifiers = trusted_nodes
+        self.verifiers = [node for node in graph.nodes if node.node_type == 'Seed']
         self.options = options
 
-    def detect(self):
+    def rank(self):
         num_iterations = int(math.ceil(math.log10(self.graph.order())))
         # TODO: Whats the best num_iterations?
         nodes_rank = self.initialize_nodes_rank()
         for i in range(num_iterations):
             nodes_rank = self.spread_nodes_rank(nodes_rank)
-        ranked_trust = dict(self.normalize_nodes_rank(nodes_rank))
-        self.ranked_trust = ranked_trust
-        return ranked_trust
+        self.ranked_trust = dict(self.normalize_nodes_rank(nodes_rank))
+        for node in self.graph.nodes:
+            node.rank = self.ranked_trust[node]
+        return self.graph
 
     def initialize_nodes_rank(self):
         nodes_rank = dict((node, 0.0) for node in self.graph.nodes())

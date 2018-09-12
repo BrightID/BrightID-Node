@@ -3,13 +3,17 @@ import random
 
 
 class Node():
-    def __init__(self, name, node_type, rank=None):
+    def __init__(self, name, node_type, rank = None):
         self.name = name
         self.node_type = node_type
         self.rank = rank
+        self.groups = set()
+
+    def __repr__(self):
+        return str(self.name)
 
 
-def init(input_data):
+def generate(input_data):
     num_attacker = int(
         input_data['num_attacker_to_num_honest'] * input_data['num_honest'])
     num_sybil = int(input_data['num_sybil_to_num_attacker'] * num_attacker)
@@ -17,11 +21,11 @@ def init(input_data):
         input_data['num_bridge_to_num_non_bridge'] * num_sybil)
     num_non_bridge_sybil = num_sybil - num_bridge_sybil
     categories = {
-        'Seed': {'nodes': [], 'color': 'green', 'num': input_data['num_seed_nodes']},
-        'Honest': {'nodes': [], 'color': 'blue', 'num': input_data['num_honest'] - input_data['num_seed_nodes']},
-        'Attacker': {'nodes': [], 'color': 'black', 'num': num_attacker},
-        'Bridge Sybil': {'nodes': [], 'color': 'orange', 'num': num_bridge_sybil},
-        'Non Bridge Sybil': {'nodes': [], 'color': 'red', 'num': num_non_bridge_sybil}
+        'Seed': {'nodes': [], 'num': input_data['num_seed_nodes']},
+        'Honest': {'nodes': [], 'num': input_data['num_honest'] - input_data['num_seed_nodes']},
+        'Attacker': {'nodes': [], 'num': num_attacker},
+        'Bridge Sybil': {'nodes': [], 'num': num_bridge_sybil},
+        'Non Bridge Sybil': {'nodes': [], 'num': num_non_bridge_sybil}
     }
     graph = nx.Graph()
     counter = 0
@@ -75,4 +79,4 @@ def init(input_data):
                 pairs.append(pair)
                 j += 1
 
-    return graph, categories
+    return graph
