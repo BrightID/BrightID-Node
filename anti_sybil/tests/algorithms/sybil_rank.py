@@ -1,7 +1,6 @@
 import math
 import operator
 
-
 class SybilRank():
     def __init__(self, graph, options=None):
         self.graph = graph
@@ -44,7 +43,7 @@ class SybilRank():
         return new_nodes_rank
 
     def nonlinear_distribution(self, ranks, ratio, df, dt):
-        nums = [rank[1] * 10000 for rank in ranks]
+        nums = [rank[1] * 100000000 for rank in ranks]
         counts = {}
         for num in nums:
             counts[int(num)] = counts.get(int(num), 0) + 1

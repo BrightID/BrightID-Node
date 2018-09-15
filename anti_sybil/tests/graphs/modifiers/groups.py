@@ -1,11 +1,24 @@
 import random
 
 
-def add_seed_groups(graph, num_seed_groups):
+def add_seed_groups(graph, num_seed_groups, min_ratio, max_ratio):
     seed_nodes = [node for node in graph.nodes if node.node_type == 'Seed']
     seed_groups = ['seed_group_{0}'.format(i) for i in range(num_seed_groups)]
+    groups_dic = {}
     for node in seed_nodes:
-        node.groups.add(random.choice(seed_groups))
+        seed_group = random.choice(seed_groups)
+        node.groups.add(seed_group)
+        if seed_group not in groups_dic:
+            groups_dic[seed_group] = []
+        groups_dic[seed_group].append(node)
+    for seed_node in seed_nodes:
+        ratio = random.random()*(max_ratio - min_ratio) + min_ratio
+        current_group = [group for group in seed_node.groups if group.startswith('seed_group_')][0]
+        num_con = int(ratio * len(groups_dic[current_group]))
+        pairs = [pair for pair in random.sample(groups_dic[current_group], num_con) if pair!=seed_node]
+        edges = [(seed_node, pair) for pair in pairs]
+        graph.add_edges_from(edges)
+
 
 def increase_joint_nodes(graph, num_joint_node, min_ratio, max_ratio):
     non_sybils = [node for node in graph.nodes if node.node_type in ('Honest', 'Seed')]
