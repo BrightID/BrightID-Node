@@ -1,0 +1,17 @@
+Results
+Successful Sybils Percentage,100.0,100.0
+Successful Sybils per Attacker,5.0,5.0
+Border,16,15
+ , , 
+Max Seed,100,100
+Avg Seed,47,46
+Min Seed,21,22
+Max Honest,100,100
+Avg Honest,31,31
+Min Honest,0,0
+Max Attacker,25,27
+Avg Attacker,18,19
+Min Attacker,6,8
+Max Sybil,9,12
+Avg Sybil,6,8
+Min Sybil,4,6

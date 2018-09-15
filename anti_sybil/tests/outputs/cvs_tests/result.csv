@@ -1,0 +1,36 @@
+Inputs,
+visualize,True,True,True,True,True,True
+accumulative,False,False,False,False,False,False
+weaken_under_min,False,False,False,False,False,True
+group_edge_weight,2,2,2,2,5,5
+num_groups,5,5,5,5,5,5
+min_group_nodes,20,20,20,20,20,20
+max_group_nodes,40,40,40,40,40,40
+max_known_ratio,1,1,1,1,1,1
+avg_known_ratio,0.3,0.3,0.3,0.3,0.3,0.3
+min_known_ratio,0.2,0.2,0.2,0.2,0.2,0.2
+num_seed_nodes,10,10,50,50,10,10
+num_attacker_to_num_honest,0.1,0.1,0.1,0.1,0.1,0.1
+num_sybil_to_num_attacker,2,2,2,2,2,2
+sybil_to_attackers_con,0.2,0.2,0.2,0.2,0.2,0.2
+min_degree,4,4,4,4,4,4
+num_joint_node,15,15,15,15,15,15
+num_inter_group_con,50,100,50,100,50,100
+
+Results,
+Successful Sybils Percentage,42.86,82.14,26.67,10.71,0.0,0.0
+Successful Sybils per Attacker,0.86,1.64,0.53,0.21,0.0,0.0
+Border,32,3,23,32,47,24
+ , , , , , , 
+Max Seed,86,89,98,91,85,95
+Avg Seed,69,58,51,61,63,75
+Min Seed,36,12,25,33,48,27
+Max Honest,100,100,100,100,100,100
+Avg Honest,71,45,46,55,65,66
+Min Honest,32,4,23,35,48,25
+Max Attacker,77,75,85,91,81,82
+Avg Attacker,56,33,46,53,54,49
+Min Attacker,25,4,22,28,45,20
+Max Sybil,55,39,34,47,7,6
+Avg Sybil,28,15,16,19,3,3
+Min Sybil,0,0,0,0,0,0
