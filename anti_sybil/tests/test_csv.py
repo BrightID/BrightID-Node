@@ -59,6 +59,8 @@ def run(dataset, algorithm, input_file, output_directory):
         options['accumulative'] = input_dic[test_num].get('accumulative', False)
         options['weaken_under_min'] = input_dic[test_num].get('weaken_under_min', False)
         options['group_edge_weight'] = input_dic[test_num].get('group_edge_weight', 1)
+        options['nonlinear_distribution'] = input_dic[test_num].get('nonlinear_distribution', 1)
+
         algorithm(graph, options).rank()
         outputs[test_num] = generate_output(graph)
         if input_dic[test_num]['visualize']:
@@ -74,3 +76,5 @@ if __name__ == '__main__':
     with open('template.html') as f:
         TEMPLATE = f.read()
     run(graphs.generators.group_based, algorithms.GroupSybilRank, './inputs/groups_test.csv', './outputs/cvs_tests/')
+    # run(graphs.generators.cut_region, algorithms.SybilRank, './inputs/cut_region_test.csv', './outputs/cvs_tests/')
+    # run(graphs.generators.no_group, algorithms.SybilRank, './inputs/no_groups_test.csv', './outputs/cvs_tests/')

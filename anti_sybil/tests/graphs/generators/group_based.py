@@ -16,8 +16,8 @@ class Node():
 
 def generate(input_data):
     graph = nx.Graph()
-    groups_size = random.sample(range(
-        input_data['min_group_nodes'], input_data['max_group_nodes']+1), input_data['num_groups'])
+    groups_size = [random.choice(range(input_data['min_group_nodes'], input_data['max_group_nodes']+1))
+                   for i in range(input_data['num_groups'])]
     num_attacker = int(sum(groups_size) *
                        input_data['num_attacker_to_num_honest'])
     num_sybil = int(input_data['num_sybil_to_num_attacker'] * num_attacker)
@@ -44,19 +44,22 @@ def generate(input_data):
         groups_nodes = non_sybils[start_point:end_point]
         for node in groups_nodes:
             node.groups.add(group_name)
-    joint_nodes = random.sample(non_sybils, input_data['num_joint_node'])
     groups = set(sum([list(node.groups) for node in non_sybils], []))
-    for joint_node in joint_nodes:
+    i = 0
+    while i < input_data['num_joint_node']:
+        joint_node = random.choice(non_sybils)
         other_groups = groups - joint_node.groups
         if len(other_groups) > 0:
             random_group = random.choice(list(other_groups))
             joint_node.groups.add(random_group)
+            i += 1
     for group in groups:
         nodes = [node for node in non_sybils if group in node.groups]
         nodes_degree = dict((node, 0) for node in nodes)
         min_degree = int(input_data['min_known_ratio'] * len(nodes))
         avg_degree = int(input_data['avg_known_ratio'] * len(nodes))
-        max_degree = min(int(input_data['max_known_ratio'] * len(nodes)), len(nodes) - 1)
+        max_degree = min(
+            int(input_data['max_known_ratio'] * len(nodes)), len(nodes) - 1)
         low_degrees = range(min_degree, avg_degree)
         up_degrees = range(avg_degree, max_degree + 1)
         for i, node in enumerate(nodes):
@@ -91,22 +94,30 @@ def generate(input_data):
                 graph.add_edge(node, pair)
                 pairs.append(pair)
                 j += 1
+
+    if input_data['num_seed_groups'] != 0:
+        seed_groups = ['seed_group_{0}'.format(i) for i in range(input_data['num_seed_groups'])]
+        for node in categories['Seed']['nodes']:
+            node.groups.add(random.choice(seed_groups))
+
     for node in categories['Attacker']['nodes'] + categories['Sybil']['nodes']:
-        node.groups.add('sybil')
+        node.groups.add('attacker')
+
     # Add iner-group connections
-    inter_group_nodes = random.sample(non_sybils, input_data['num_inter_group_con'])
+    inter_group_nodes = random.sample(
+        non_sybils, input_data['num_inter_group_con'])
     inter_group_pairs = []
     for node in inter_group_nodes:
         con = False
         while not con:
             pair = random.choice(non_sybils)
-            if len(node.groups & pair.groups) == 0 and (node, pair) not in inter_group_pairs:                    
+            if len(node.groups & pair.groups) == 0 and (node, pair) not in inter_group_pairs:
                 graph.add_edge(node, pair)
                 inter_group_pairs.append((node, pair))
                 con = True
     # sew graph parts together
     if not nx.is_connected(graph):
-        components = [nx.connected_components(graph)]
+        components = list(nx.connected_components(graph))
         biggest_comp = []
         for i, component in enumerate(components):
             if len(component) > len(biggest_comp):
@@ -120,6 +131,7 @@ def generate(input_data):
                 right_node = random.choice(biggest_comp)
                 if left_node.node_type == 'Honest' and right_node.node_type == 'Honest':
                     graph.add_edge(left_node, right_node)
-                    print('Add Edge: {0} --> {1}'.format(left_node, right_node))
+                    print(
+                        'Add Edge: {0} --> {1}'.format(left_node, right_node))
                     non_sybils = True
     return graph

@@ -1,8 +1,10 @@
 visualize,True,True,True,True,True,True
 accumulative,False,False,False,False,False,False
 weaken_under_min,False,False,False,False,False,True
+nonlinear_distribution,True,True,True,True,True,True
 group_edge_weight,2,2,2,2,5,5
 num_groups,5,5,5,5,5,5
+num_seed_groups,2,1,2,1,2,1
 min_group_nodes,20,20,20,20,20,20
 max_group_nodes,40,40,40,40,40,40
 max_known_ratio,1,1,1,1,1,1
