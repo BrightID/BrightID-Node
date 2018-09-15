@@ -7,6 +7,7 @@ OUTPUT_FOLDER = './outputs/tests1/'
 
 graph = graphs.generators.group_based.generate({
     'num_groups': 5,
+    'num_seed_groups': 2,
     'min_group_nodes': 20,
     'max_group_nodes': 50,
     'max_known_ratio': 1,
@@ -23,6 +24,7 @@ algorithms.GroupSybilRank(graph, {
     'min_degree': 2,
     'accumulative': False,
     'weaken_under_min': False,
+    'nonlinear_distribution': False,
     'group_edge_weight': 2,
 }).rank()
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '1.html'))
@@ -35,6 +37,7 @@ algorithms.GroupSybilRank(graph, {
     'min_degree': 2,
     'accumulative': False,
     'weaken_under_min': False,
+    'nonlinear_distribution': False,
     'group_edge_weight': 2,
 }).rank()
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '2.html'))

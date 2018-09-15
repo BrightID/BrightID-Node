@@ -21,6 +21,7 @@ def write_output_file(outputs, file_name):
         for row in rows:
             writer.writerow(row)
 
+
 def find_border(graph):
     best_border = best_score = 0
     for i in range(100):
@@ -39,6 +40,7 @@ def calculate_successful_sybils(ranks_dic):
     honests = []
     sybils = []
     attackers = []
+    result = {}
     for category in ranks_dic:
         if category in ['Sybil', 'Non Bridge Sybil', 'Bridge Sybil']:
             sybils.extend(ranks_dic[category])
@@ -46,13 +48,15 @@ def calculate_successful_sybils(ranks_dic):
             honests.extend(ranks_dic[category])
         elif category == 'Attacker':
             attackers.extend(ranks_dic[category])
-    successful_sybils = [rank for rank in sybils if rank >= min(honests)]
-    successful_sybils_percent = round((len(successful_sybils) * 100.0) / len(sybils), 2)
+    honests.sort(reverse=True)
+    for limit in [.8, .9, 1]:
+        successful_sybils = [rank for rank in sybils if rank >= min(honests[:int(limit * len(honests))])]
+        result['successful_sybils_percent_{0}'.format(limit)] = round((len(successful_sybils) * 100.0) / len(sybils), 2)
     if len(attackers) != 0:
-        successful_sybils_per_attacker = round(float(len(successful_sybils)) / len(attackers), 2)
+        result['successful_sybils_per_attacker'] = round(float(len(successful_sybils)) / len(attackers), 2)
     else:
-        successful_sybils_per_attacker = '__'
-    return successful_sybils_percent, successful_sybils_per_attacker
+        result['successful_sybils_per_attacker'] = '__'
+    return result
 
 
 def generate_output(graph):
@@ -61,10 +65,11 @@ def generate_output(graph):
     for category in categories:
         ranks_dic[category] = [node.rank for node in graph.nodes if node.node_type == category]
     output = collections.OrderedDict()
-    successful_sybils_percent, successful_sybils_per_attacker = calculate_successful_sybils(
-        ranks_dic)
-    output['Successful Sybils Percentage'] = successful_sybils_percent
-    output['Successful Sybils per Attacker'] = successful_sybils_per_attacker
+    successful_sybils = calculate_successful_sybils(ranks_dic)
+    output['Successful Sybils Percentage'] = successful_sybils['successful_sybils_percent_1']
+    output['Successful Sybils Percentage (-10 percent of honests)'] = successful_sybils['successful_sybils_percent_0.9']
+    output['Successful Sybils Percentage (-20 percent of honests)'] = successful_sybils['successful_sybils_percent_0.8']
+    output['Successful Sybils per Attacker'] = successful_sybils['successful_sybils_per_attacker']
     output['Border'] = find_border(graph)
     output[' '] = ' '
     view_order = ('Seed', 'Honest', 'Attacker', 'Bridge Sybil', 'Non Bridge Sybil', 'Sybil')

@@ -43,17 +43,48 @@ class SybilRank():
                     new_nodes_rank[node] = new_trust / reducer
         return new_nodes_rank
 
+    def nonlinear_distribution(self, ranks, ratio, df, dt):
+        nums = [rank[1] * 10000 for rank in ranks]
+        counts = {}
+        for num in nums:
+            counts[int(num)] = counts.get(int(num), 0) + 1
+        navg = sum(sorted(nums)[len(nums)/10:-1*len(nums)/10]) / (.8*len(nums))
+        navg = int(navg)
+        max_num = max(nums)
+        # find distance from average which include half of numbers
+        distance = 0
+        while True:
+            distance += 1
+            count = sum([counts.get(i, 0) for i in range(navg-distance, navg+distance)])
+            if count > len(nums)*ratio:
+                break
+        f, t = navg-distance, navg+distance
+        ret = []
+        for num in nums:
+            if 0 <= num < f:
+                num = num*df / f
+            elif f <= num < t:
+                num = df + (((num-f) / (t-f)) * (dt-df))
+            else:
+                num = dt + (((num-t) / (max_num-t)) * (100-dt))
+            ret.append(int(num))
+        return [(ranks[i][0], ret[i]) for i, rank in enumerate(ranks)]
+
+    def linear_distribution(self, ranks):
+        max_rank = max(ranks, key=lambda item: item[1])[1]
+        min_rank = min(ranks, key=lambda item: item[1])[1]
+        ranks = [(node, int(round((rank - min_rank) * 100 / (max_rank - min_rank))))
+                 for node, rank in ranks]
+        return ranks
+
     def normalize_nodes_rank(self, nodes_rank):
-        # divide ranks by degree
         for node, rank in nodes_rank.iteritems():
             node_degree = self.graph.degree(node)
             nodes_rank[node] = rank / float(node_degree)
         ranks = sorted(nodes_rank.iteritems(),
                        key=operator.itemgetter(1))
-
-        # fix distribution
-        max_rank = max(ranks, key=lambda item: item[1])[1]
-        min_rank = min(ranks, key=lambda item: item[1])[1]
-        ranks = [(node, int(round((rank - min_rank) * 100 / (max_rank - min_rank))))
-                 for node, rank in ranks]
+        if self.options['nonlinear_distribution']:
+            ranks = self.nonlinear_distribution(ranks, .5, 10, 90)
+        else:
+            ranks = self.linear_distribution(ranks)
         return ranks
