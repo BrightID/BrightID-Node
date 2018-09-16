@@ -66,4 +66,14 @@ def increase_joint_nodes(graph, num_joint_node, min_ratio, max_ratio):
         graph.add_edges_from(edges)
 
 
+def increase_sybil_cons(graph, min_ratio, max_ratio):
+    sybils = [node for node in graph.nodes if node.node_type == 'Sybil']
+    for sybil in sybils:
+        ratio = random.random()*(max_ratio - min_ratio) + min_ratio
+        num_con = int(ratio * len(sybils)) - graph.degree(sybil)
+        if num_con <= 0:
+            continue
+        pairs = [pair for pair in random.sample(sybils, num_con) if pair!=sybil]
+        edges = [(sybil, pair) for pair in pairs]
+        graph.add_edges_from(edges)
 

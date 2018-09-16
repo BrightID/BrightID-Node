@@ -56,14 +56,14 @@ reset_ranks(graph)
 algorithms.SybilRank(graph, {
     'min_degree': 8,
     'accumulative': False,
-    'weaken_under_min': False,
+    'weaken_under_min': True,
     'nonlinear_distribution': True,
 }).rank()
 output4 = generate_output(graph)
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '4.html'))
 
 reset_ranks(graph)
-graphs.modifiers.add_sybil_to_attacker_con(graph, 10)
+graphs.modifiers.add_sybil_to_attacker_con(graph, 5)
 
 algorithms.SybilRank(graph, {
     'min_degree': 8,
@@ -74,17 +74,31 @@ algorithms.SybilRank(graph, {
 output5 = generate_output(graph)
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '5.html'))
 
-reset_ranks(graph)
-graphs.modifiers.add_sybil_to_attacker_con(graph, 10)
+new_graph = graph.copy()
+reset_ranks(new_graph)
+graphs.modifiers.add_sybil_to_attacker_con(new_graph, 10)
 
-algorithms.SybilRank(graph, {
+algorithms.SybilRank(new_graph, {
     'min_degree': 8,
     'accumulative': False,
     'weaken_under_min': False,
     'nonlinear_distribution': True,
 }).rank()
-output6 = generate_output(graph)
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, '6.html'))
+output6 = generate_output(new_graph)
+draw_graph(new_graph, os.path.join(OUTPUT_FOLDER, '6.html'))
+
+new_graph = graph.copy()
+reset_ranks(new_graph)
+graphs.modifiers.increase_sybil_cons(new_graph, .2, .3)
+
+algorithms.SybilRank(new_graph, {
+    'min_degree': 8,
+    'accumulative': False,
+    'weaken_under_min': False,
+    'nonlinear_distribution': True,
+}).rank()
+output7 = generate_output(new_graph)
+draw_graph(new_graph, os.path.join(OUTPUT_FOLDER, '7.html'))
 
 reset_ranks(graph)
 graphs.modifiers.remove_weak_attackers(graph, .7)
@@ -92,12 +106,11 @@ graphs.modifiers.remove_weak_attackers(graph, .7)
 algorithms.SybilRank(graph, {
     'min_degree': 8,
     'accumulative': False,
-    'weaken_under_min': False,
+    'weaken_under_min': True,
     'nonlinear_distribution': True,
 }).rank()
-output7 = generate_output(graph)
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, '7.html'))
-
+output8 = generate_output(graph)
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, '8.html'))
 
 print('Finished')
-write_output_file([output1, output2, output3, output4, output5, output6, output7], os.path.join(OUTPUT_FOLDER, 'result.csv'))
+write_output_file([output1, output2, output3, output4, output5, output6, output7, output8], os.path.join(OUTPUT_FOLDER, 'result.csv'))
