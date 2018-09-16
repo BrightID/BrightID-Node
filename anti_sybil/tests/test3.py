@@ -34,7 +34,7 @@ output1 = generate_output(graph)
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '1.html'))
 
 reset_ranks(graph)
-graphs.modifiers.groups.increase_joint_nodes(graph, 3000, .2, .6)
+graphs.modifiers.increase_joint_nodes(graph, 3000, .2, .6)
 
 algorithms.GroupSybilRank(graph, {
     'min_degree': 5,

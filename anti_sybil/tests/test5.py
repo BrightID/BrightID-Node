@@ -33,7 +33,7 @@ draw_graph(graph, os.path.join(OUTPUT_FOLDER, '1.html'))
 output1 = generate_output(graph)
 
 reset_ranks(graph)
-graphs.modifiers.groups.add_seed_groups(graph, 3, .2, .7)
+graphs.modifiers.add_seed_groups(graph, 3, .2, .7)
 
 algorithms.GroupSybilRank(graph, {
     'min_degree': 2,
@@ -46,7 +46,7 @@ draw_graph(graph, os.path.join(OUTPUT_FOLDER, '2.html'))
 output2 = generate_output(graph)
 
 reset_ranks(graph)
-graphs.modifiers.groups.increase_joint_nodes(graph, 300, .2, .7)
+graphs.modifiers.increase_joint_nodes(graph, 300, .2, .7)
 
 algorithms.GroupSybilRank(graph, {
     'min_degree': 2,

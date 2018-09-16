@@ -15,9 +15,9 @@ graph = graphs.generators.networkrepository.generate({
 
     'file_path': os.path.abspath('./inputs/soc-hamsterster.edges'),
     'num_seed_to_num_honest': .15,
-    'num_attacker_to_num_honest': .01,
+    'num_attacker_to_num_honest': .05,
     'num_sybil_to_num_attacker': 1,
-    'sybil_to_attackers_con': .01
+    'sybil_to_attackers_con': 0
 })
 print('Graph loading completed, Calculating ranks ...')
 algorithms.SybilRank(graph, {
@@ -56,36 +56,48 @@ reset_ranks(graph)
 algorithms.SybilRank(graph, {
     'min_degree': 8,
     'accumulative': False,
-    'weaken_under_min': True,
+    'weaken_under_min': False,
     'nonlinear_distribution': True,
 }).rank()
 output4 = generate_output(graph)
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '4.html'))
 
 reset_ranks(graph)
-graphs.modifiers.nodes.add_sybil_to_attacker_con(graph, 7)
+graphs.modifiers.add_sybil_to_attacker_con(graph, 10)
 
 algorithms.SybilRank(graph, {
     'min_degree': 8,
     'accumulative': False,
-    'weaken_under_min': True,
+    'weaken_under_min': False,
     'nonlinear_distribution': True,
 }).rank()
 output5 = generate_output(graph)
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '5.html'))
 
 reset_ranks(graph)
-graphs.modifiers.nodes.remove_weak_attackers(graph, .7)
+graphs.modifiers.add_sybil_to_attacker_con(graph, 10)
 
 algorithms.SybilRank(graph, {
     'min_degree': 8,
     'accumulative': False,
-    'weaken_under_min': True,
+    'weaken_under_min': False,
     'nonlinear_distribution': True,
 }).rank()
 output6 = generate_output(graph)
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '6.html'))
 
+reset_ranks(graph)
+graphs.modifiers.remove_weak_attackers(graph, .7)
+
+algorithms.SybilRank(graph, {
+    'min_degree': 8,
+    'accumulative': False,
+    'weaken_under_min': False,
+    'nonlinear_distribution': True,
+}).rank()
+output7 = generate_output(graph)
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, '7.html'))
+
 
 print('Finished')
-write_output_file([output1, output2, output3, output4, output5, output6], os.path.join(OUTPUT_FOLDER, 'result.csv'))
+write_output_file([output1, output2, output3, output4, output5, output6, output7], os.path.join(OUTPUT_FOLDER, 'result.csv'))
