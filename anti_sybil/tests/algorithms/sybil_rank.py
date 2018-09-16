@@ -43,7 +43,9 @@ class SybilRank():
         return new_nodes_rank
 
     def nonlinear_distribution(self, ranks, ratio, df, dt):
-        nums = [rank[1] * 100000000 for rank in ranks]
+        avg_floating_points = sum([int(('%E'%rank[1]).split('E')[1]) for rank in ranks])/float(len(ranks))
+        multiplier = 10 ** (-1 * (avg_floating_points - 1))
+        nums = [rank[1] * multiplier for rank in ranks]
         counts = {}
         for num in nums:
             counts[int(num)] = counts.get(int(num), 0) + 1

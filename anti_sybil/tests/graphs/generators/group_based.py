@@ -47,7 +47,8 @@ def generate(input_data):
     if input_data['num_seed_groups'] != 0:
         seed_groups = ['seed_group_{0}'.format(i) for i in range(input_data['num_seed_groups'])]
         for node in categories['Seed']['nodes']:
-            node.groups.add(random.choice(seed_groups))
+            node.groups = set([random.choice(seed_groups)])
+
 
     groups = set(sum([list(node.groups) for node in non_sybils], []))
     i = 0
@@ -105,10 +106,9 @@ def generate(input_data):
         node.groups.add('attacker')
 
     # Add iner-group connections
-    inter_group_nodes = random.sample(
-        non_sybils, input_data['num_inter_group_con'])
     inter_group_pairs = []
-    for node in inter_group_nodes:
+    for i in range(input_data['num_inter_group_con']):
+        node = random.choice(non_sybils)
         con = False
         while not con:
             pair = random.choice(non_sybils)
