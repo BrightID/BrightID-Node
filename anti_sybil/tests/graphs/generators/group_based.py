@@ -47,7 +47,7 @@ def generate(input_data):
     if input_data['num_seed_groups'] != 0:
         seed_groups = ['seed_group_{0}'.format(i) for i in range(input_data['num_seed_groups'])]
         for node in categories['Seed']['nodes']:
-            node.groups = set([random.choice(seed_groups)])
+            node.groups.add(random.choice(seed_groups))
 
 
     groups = set(sum([list(node.groups) for node in non_sybils], []))
