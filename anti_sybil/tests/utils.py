@@ -70,6 +70,7 @@ def generate_output(graph):
     output['Successful Sybils Percentage (-10 percent of honests)'] = successful_sybils['successful_sybils_percent_0.9']
     output['Successful Sybils Percentage (-20 percent of honests)'] = successful_sybils['successful_sybils_percent_0.8']
     output['Successful Sybils per Attacker'] = successful_sybils['successful_sybils_per_attacker']
+    output['Avg Honest - Avg Sybil'] = None
     output['Border'] = find_border(graph)
     output[' '] = ' '
     view_order = ('Seed', 'Honest', 'Attacker', 'Bridge Sybil', 'Non Bridge Sybil', 'Sybil')
@@ -86,6 +87,7 @@ def generate_output(graph):
             elif parameter == 'Max':
                 v = max(ranks_dic[category])
             output['{0} {1}'.format(parameter, category)] = v
+    output['Avg Honest - Avg Sybil'] = output['Avg Honest'] - output.get('Avg Sybil', output.get('Avg Bridge Sybil', 0))
     return output
 
 
