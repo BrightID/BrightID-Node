@@ -33,7 +33,6 @@ def generate(input_data):
                 if node_type == 'Attacker':
                     attackers.append(nodes_dic[node_name])
         edges.append((nodes_dic[edge[0]], nodes_dic[edge[1]]))
-    graph.add_nodes_from(nodes_dic.values())
     graph.add_edges_from(edges)
     # Add sybil nodes to the graph
     num_nodes = nx.number_of_nodes(graph)
@@ -47,6 +46,5 @@ def generate(input_data):
         sybil_nodes.append(node)
         pairs = random.sample(attackers, num_connection_to_attacker)
         sybil_nodes_con.extend([(node, pair) for pair in pairs])
-    graph.add_nodes_from(sybil_nodes)
     graph.add_edges_from(sybil_nodes_con)
     return graph

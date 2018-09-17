@@ -1,7 +1,9 @@
 import math
 import operator
 
+
 class SybilRank():
+
     def __init__(self, graph, options=None):
         self.graph = graph
         self.verifiers = [node for node in graph.nodes if node.node_type == 'Seed']
@@ -32,8 +34,8 @@ class SybilRank():
                 new_trust = rank
             neighbors = self.graph.neighbors(node)
             for neighbor in neighbors:
-                neighbor_degree = self.graph.degree(neighbor)
-                new_trust += nodes_rank[neighbor] / float(neighbor_degree)
+                neighbor_degree = self.graph.degree(neighbor, weight='weight')
+                new_trust += (nodes_rank[neighbor] * self.graph[node][neighbor].get('weight', 1)) / float(neighbor_degree)
             degree = self.graph.degree(node)
             new_nodes_rank[node] = new_trust
             if self.options['weaken_under_min'] and self.options['min_degree']:

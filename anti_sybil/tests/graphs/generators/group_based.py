@@ -44,12 +44,7 @@ def generate(input_data):
         groups_nodes = non_sybils[start_point:end_point]
         for node in groups_nodes:
             node.groups.add(group_name)
-    if input_data['num_seed_groups'] != 0:
-        seed_groups = ['seed_group_{0}'.format(i) for i in range(input_data['num_seed_groups'])]
-        for node in categories['Seed']['nodes']:
-            node.groups.add(random.choice(seed_groups))
-
-
+    
     groups = set(sum([list(node.groups) for node in non_sybils], []))
     i = 0
     while i < input_data['num_joint_node']:
@@ -59,6 +54,12 @@ def generate(input_data):
             random_group = random.choice(list(other_groups))
             joint_node.groups.add(random_group)
             i += 1
+
+    if input_data['num_seed_groups'] != 0:
+        seed_groups = ['seed_group_{0}'.format(i) for i in range(input_data['num_seed_groups'])]
+        for node in categories['Seed']['nodes']:
+            node.groups.add(random.choice(seed_groups))
+
     for group in groups:
         nodes = [node for node in non_sybils if group in node.groups]
         nodes_degree = dict((node, 0) for node in nodes)
@@ -66,7 +67,7 @@ def generate(input_data):
         avg_degree = int(input_data['avg_known_ratio'] * len(nodes))
         max_degree = min(
             int(input_data['max_known_ratio'] * len(nodes)), len(nodes) - 1)
-        low_degrees = range(min_degree, avg_degree)
+        low_degrees = range(min_degree, avg_degree) if min_degree != avg_degree else [min_degree]
         up_degrees = range(avg_degree, max_degree + 1)
         for i, node in enumerate(nodes):
             group_degree = sum(nodes_degree.values()) / (i+1)
@@ -107,15 +108,13 @@ def generate(input_data):
 
     # Add iner-group connections
     inter_group_pairs = []
-    for i in range(input_data['num_inter_group_con']):
+    while i < input_data['num_inter_group_con']:
         node = random.choice(non_sybils)
-        con = False
-        while not con:
-            pair = random.choice(non_sybils)
-            if len(node.groups & pair.groups) == 0 and (node, pair) not in inter_group_pairs:
-                graph.add_edge(node, pair)
-                inter_group_pairs.append((node, pair))
-                con = True
+        pair = random.choice(non_sybils)
+        if len(node.groups & pair.groups) == 0 and (node, pair) not in inter_group_pairs:
+            graph.add_edge(node, pair)
+            inter_group_pairs.append((node, pair))
+            i += 1
     # sew graph parts together
     if not nx.is_connected(graph):
         components = list(nx.connected_components(graph))
@@ -127,7 +126,9 @@ def generate(input_data):
             if component == biggest_comp:
                 continue
             non_sybils = False
+            i = 0
             while not non_sybils:
+                i += 1
                 left_node = random.choice(list(component))
                 right_node = random.choice(biggest_comp)
                 if left_node.node_type == 'Honest' and right_node.node_type == 'Honest':
@@ -135,4 +136,7 @@ def generate(input_data):
                     print(
                         'Add Edge: {0} --> {1}'.format(left_node, right_node))
                     non_sybils = True
+                if i > len(biggest_comp):
+                    print(['%s %s'%(node.name, node.node_type) for node in component])
+                    raise("Can't sew above component to the biggest_comp")
     return graph
