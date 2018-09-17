@@ -25,7 +25,7 @@ algorithm_params = {
 }
 for i in range(2):
     if i == 0:
-        main_graph_params['num_groups'] = 10
+        main_graph_params['num_groups'] = 5
         main_graph_params['min_group_nodes'] = 30
         main_graph_params['max_group_nodes'] = 70
     elif i == 1:
