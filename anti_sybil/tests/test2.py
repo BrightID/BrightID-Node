@@ -8,7 +8,6 @@ from utils import *
 
 OUTPUT_FOLDER = './outputs/tests2/'
 main_graph_params = {
-    'num_groups': 10,
     'num_seed_groups': 0,
     'max_known_ratio': 1,
     'avg_known_ratio': .5,
@@ -16,7 +15,6 @@ main_graph_params = {
     'num_attacker_to_num_honest': .1,
     'num_sybil_to_num_attacker': 2,
     'sybil_to_attackers_con': .2,
-    
 }
 algorithm_params = {
     'min_degree': 5,
@@ -27,9 +25,11 @@ algorithm_params = {
 }
 for i in range(2):
     if i == 0:
-        main_graph_params['min_group_nodes'] = 50
-        main_graph_params['max_group_nodes'] = 100
+        main_graph_params['num_groups'] = 10
+        main_graph_params['min_group_nodes'] = 30
+        main_graph_params['max_group_nodes'] = 70
     elif i == 1:
+        main_graph_params['num_groups'] = 50
         main_graph_params['min_group_nodes'] = 5
         main_graph_params['max_group_nodes'] = 15
     
