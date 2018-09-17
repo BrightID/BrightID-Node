@@ -31,7 +31,7 @@ draw_graph(graph, os.path.join(OUTPUT_FOLDER, '1.html'))
 output1 = generate_output(graph)
 
 reset_ranks(graph)
-graphs.modifiers.nodes.remove_weak_attackers(graph, .7)
+graphs.modifiers.remove_weak_attackers(graph, .7)
 
 algorithms.GroupSybilRank(graph, {
     'min_degree': 2,

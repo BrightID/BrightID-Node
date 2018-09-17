@@ -44,6 +44,12 @@ def generate(input_data):
         groups_nodes = non_sybils[start_point:end_point]
         for node in groups_nodes:
             node.groups.add(group_name)
+    if input_data['num_seed_groups'] != 0:
+        seed_groups = ['seed_group_{0}'.format(i) for i in range(input_data['num_seed_groups'])]
+        for node in categories['Seed']['nodes']:
+            node.groups.add(random.choice(seed_groups))
+
+
     groups = set(sum([list(node.groups) for node in non_sybils], []))
     i = 0
     while i < input_data['num_joint_node']:
@@ -95,19 +101,14 @@ def generate(input_data):
                 pairs.append(pair)
                 j += 1
 
-    if input_data['num_seed_groups'] != 0:
-        seed_groups = ['seed_group_{0}'.format(i) for i in range(input_data['num_seed_groups'])]
-        for node in categories['Seed']['nodes']:
-            node.groups.add(random.choice(seed_groups))
 
     for node in categories['Attacker']['nodes'] + categories['Sybil']['nodes']:
         node.groups.add('attacker')
 
     # Add iner-group connections
-    inter_group_nodes = random.sample(
-        non_sybils, input_data['num_inter_group_con'])
     inter_group_pairs = []
-    for node in inter_group_nodes:
+    for i in range(input_data['num_inter_group_con']):
+        node = random.choice(non_sybils)
         con = False
         while not con:
             pair = random.choice(non_sybils)

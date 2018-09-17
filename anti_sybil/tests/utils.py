@@ -29,7 +29,7 @@ def find_border(graph):
             'Honest', 'Seed') and node.rank > i])
         sybil_score = len([node for node in graph.nodes if node.node_type in (
             'Sybil', 'Non Bridge Sybil', 'Bridge Sybil') and node.rank < i])
-        score = honest_score + sybil_score
+        score = (honest_score * sybil_score)**.5
         if score >= best_score:
             best_border = i
             best_score = score
