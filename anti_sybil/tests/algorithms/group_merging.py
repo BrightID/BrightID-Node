@@ -22,6 +22,8 @@ class Group():
         is_seed = True
         for node in self.get_nodes():
             if node.node_type != "Seed":
+                if "seed" in self.name:
+                    print(node, node.node_type)
                 is_seed = False
         return "seed" if is_seed else "normal"
 
@@ -93,6 +95,9 @@ class GroupMergingRank():
                     group_names.append(group)
 
         self.groups = [Group(g, graph=graph) for g in group_names]
+
+        for g in self.groups:
+            print(g), g.group_type
 
         self.merged_groups = [MergedGroup([g]) for g in self.groups]
 
