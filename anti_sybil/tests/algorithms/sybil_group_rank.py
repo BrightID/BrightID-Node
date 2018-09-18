@@ -1,5 +1,6 @@
 import sybil_rank
 import networkx as nx
+import itertools
 
 
 class Node():
@@ -22,8 +23,8 @@ class SybilGroupRank(sybil_rank.SybilRank):
         for node in self.graph.nodes():
             for group in node.groups:
                 if not group in groups:
-                    groups[group] = []
-                groups[group].append(node)
+                    groups[group] = set()
+                groups[group].add(node)
         self.groups = groups
         self.group_graph = self.gen_group_graph()
 
@@ -37,7 +38,11 @@ class SybilGroupRank(sybil_rank.SybilRank):
                     node_groups_rank[node] = []
                 node_groups_rank[node].append(group_node.rank)
         for node in self.graph:
-            node.rank = max(node_groups_rank[node])
+            if node in node_groups_rank:
+                node.rank = max(node_groups_rank[node])
+            else:
+                node.rank = 0
+                print('{} not in any group!'.format(node))
         return self.group_graph
 
     def get_group_type(self, group_nodes):
@@ -51,24 +56,27 @@ class SybilGroupRank(sybil_rank.SybilRank):
         return group_type
 
     def gen_group_graph(self):
-        dic_nodes = {}
+        weight_dic = {}
         group_graph = nx.Graph()
-        for edge in self.graph.edges():
-            for source_group in edge[0].groups:
-                if source_group not in dic_nodes:
-                    dic_nodes[source_group] = Node(
-                        source_group, self.get_group_type(self.groups[source_group]))
-                for target_group in edge[1].groups:
-                    if target_group not in dic_nodes:
-                        dic_nodes[target_group] = Node(
-                            target_group, self.get_group_type(self.groups[target_group]))
-                    if source_group == target_group:
+        groups_dic = dict([(group, Node(group, self.get_group_type(self.groups[group]))) for group in self.groups])
+        pairs = itertools.combinations(self.groups.keys(), 2)
+        for source_group, target_group in pairs:
+            removed = set()
+            weight = 0
+            for source_node in self.groups[source_group]:
+                if source_node in removed:
+                    continue
+                for target_node in self.groups[target_group]:
+                    if source_node in removed:
+                        break
+                    if target_node in removed:
                         continue
-                    source = dic_nodes[source_group]
-                    target = dic_nodes[target_group]
-                    weight = 1.0 / (len(self.groups[source_group]) + len(self.groups[target_group]))
-                    if group_graph.has_edge(source, target):
-                        group_graph[source][target]['weight'] += weight
-                    else:
-                        group_graph.add_edge(source, target, weight = weight)
+                    if not self.graph.has_edge(source_node, target_node):
+                        continue
+                    removed.add(source_node)
+                    removed.add(target_node)
+                    weight += 1
+            if weight > 0:
+                num = len(self.groups[source_group]) + len(self.groups[target_group])
+                group_graph.add_edge(groups_dic[source_group], groups_dic[target_group], weight=1.0*weight/num)
         return group_graph
