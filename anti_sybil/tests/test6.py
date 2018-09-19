@@ -63,7 +63,7 @@ if __name__ == '__main__':
     outputs.extend(test(graph_params))
 
     graph_params = copy.copy(main_graph_params)
-    graph_params['num_joint_node'] = 3000,
+    graph_params['num_joint_node'] = 3000
     graph_params['num_inter_group_con'] = 3000
     outputs.extend(test(graph_params))
     
