@@ -40,22 +40,24 @@ class GroupSybilRank(sybil_rank.SybilRank):
         return nodes_rank
 
     def spread_nodes_rank(self, nodes_rank):
+        print('spread_nodes_rank called')
         new_nodes_rank = {}
         for node in self.graph.nodes():
             new_nodes_rank[node] = {}
             for group in self.groups:
                 new_nodes_rank[node][group] = 0.0
-        for node, rank in nodes_rank.iteritems():
+        for node in nodes_rank:
             neighbors = self.graph.neighbors(node)
             for neighbor in neighbors:
                 neighbor_degree = self.graph.degree(neighbor)
+                joint_groups = node.groups & neighbor.groups
                 for group in self.groups:
                     if self.options['accumulative']:
                         new_trust = nodes_rank[node][group]
                     else:
                         new_trust = 0.0
                     temp_trust = nodes_rank[neighbor][group] / float(neighbor_degree)
-                    if group in list(set(node.groups) & set(neighbor.groups)):
+                    if group in joint_groups:
                         new_trust += temp_trust * self.options['group_edge_weight']
                     else:
                         new_trust += temp_trust
