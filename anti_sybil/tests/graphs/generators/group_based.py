@@ -106,7 +106,8 @@ def generate(input_data):
     for node in categories['Attacker']['nodes'] + categories['Sybil']['nodes']:
         node.groups.add('attacker')
 
-    # Add inter-group connections
+    # Add iner-group connections
+    i = 0
     inter_group_pairs = []
     while i < input_data['num_inter_group_con']:
         node = random.choice(non_sybils)
