@@ -7,10 +7,10 @@ from utils import *
 OUTPUT_FOLDER = './outputs/tests_group_merging/'
 
 graph = graphs.generators.group_based.generate({
-    'num_groups': 5,
-    'num_seed_groups': 2,
-    'min_group_nodes': 20,
-    'max_group_nodes': 50,
+    'num_groups': 20,
+    'num_seed_groups': 5,
+    'min_group_nodes': 3,
+    'max_group_nodes': 20,
     'max_known_ratio': 1,
     'avg_known_ratio': .5,
     'min_known_ratio': .2,
@@ -19,17 +19,19 @@ graph = graphs.generators.group_based.generate({
     'num_sybil_to_num_attacker': 5,
     'sybil_to_attackers_con': .5,
     'num_joint_node': 0,
-    'num_inter_group_con': 300
+    'num_inter_group_con': 2000
 })
 
 GroupMergingRank(graph, {
-    "thresholds": [0.8, 0.5, 0.3, 0.1, 0.05, 0]
+    "thresholds": [0.5, 0.4, 0.3, 0.2, 0.1, 0.05, 0.01, 0]
 }).rank()
 
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '1.html'))
 
-for node in graph:
-    print node.name, node.rank, node.node_type, [g for g in node.groups]
+#for node in graph:
+#    print node.name, node.rank, node.node_type, [g for g in node.groups]
+
+out1 = generate_output(graph)
 
 reset_ranks(graph)
 
@@ -42,3 +44,6 @@ GroupSybilRank(graph, {
 }).rank()
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, '2.html'))
 
+out2 = generate_output(graph)
+
+write_output_file([out1, out2], os.path.join(OUTPUT_FOLDER, 'result.csv'))

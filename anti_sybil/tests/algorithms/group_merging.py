@@ -61,7 +61,7 @@ class GroupPair():
         self.group2 = group2
         self.graph = graph
 
-    def affinity(self):
+    def affinity_min(self):
         group1_nodes = self.group1.get_nodes(self.graph)
         group2_nodes = self.group2.get_nodes(self.graph)
 
@@ -69,6 +69,32 @@ class GroupPair():
         g2_fraction = float(len([n for n in group2_nodes if n in group1_nodes])) / len(group2_nodes)
 
         return min(g1_fraction, g2_fraction)
+
+    def affinity(self):
+        group1_nodes = self.group1.get_nodes(self.graph)
+        group2_nodes = self.group2.get_nodes(self.graph)
+
+        cons = []
+        pairs = []
+        for g in group1_nodes:
+            found = False
+            for g2 in group2_nodes:
+                if self.graph.has_edge(g, g2) and g2 not in pairs:
+                    found = True
+                    pairs.append(g2)
+                    break
+            if found:
+                cons.append(g)
+
+        return float(len(cons))/(len(group1_nodes)+len(group2_nodes))
+
+    def affinity_intersection(self):
+        group1_nodes = self.group1.get_nodes(self.graph)
+        group2_nodes = self.group2.get_nodes(self.graph)
+
+        both = [g for g in group1_nodes if g in group2_nodes]
+
+        return float(len(cons))/(len(group1_nodes)+len(group2_nodes))
 
     def is_seed(self):
         return self.group1.group_type == "seed" or self.group2.group_type == "seed"
@@ -96,8 +122,8 @@ class GroupMergingRank():
 
         self.groups = [Group(g, graph=graph) for g in group_names]
 
-        for g in self.groups:
-            print(g), g.group_type
+        #for g in self.groups:
+        #    print(g), g.group_type
 
         self.merged_groups = [MergedGroup([g]) for g in self.groups]
 
@@ -108,7 +134,7 @@ class GroupMergingRank():
     def rank(self):
         self.update_ranks(100)
         for th in self.thresholds:
-            self.run_threashold(th)
+            self.run_threshold(th)
 
     def update_group_pairs(self):
         self.group_pairs = []
@@ -138,7 +164,7 @@ class GroupMergingRank():
                 if g in [i.name for i in ending_seed_groups]:
                     node.rank = score
 
-    def run_threashold(self, threshold):
+    def run_threshold(self, threshold):
         self.update_group_pairs()
         self.group_pairs = sorted(self.group_pairs, key=lambda x: x.affinity(), reverse=True)
         for pair in self.group_pairs:
@@ -147,7 +173,7 @@ class GroupMergingRank():
             self.merge_pair(pair)
 
             self.update_ranks(threshold * 100)
-            return self.run_threashold(threshold)
+            return self.run_threshold(threshold)
 
     def merge_pair(self, pair):
         new_groups = [p for p in self.merged_groups if p not in [pair.group1, pair.group2]]
