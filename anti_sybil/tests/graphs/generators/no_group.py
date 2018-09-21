@@ -1,18 +1,7 @@
 import networkx as nx
 import collections
 import random
-
-
-class Node():
-    def __init__(self, name, node_type, rank=None):
-        self.name = name
-        self.node_type = node_type
-        self.rank = rank
-        self.groups = set()
-
-    def __repr__(self):
-        return str(self.name)
-
+from ..node import Node
 
 def generate(input_data):
     num_sybil = int(input_data['num_sybil_to_num_honest']

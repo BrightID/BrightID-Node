@@ -1,18 +1,7 @@
 import sybil_rank
 import networkx as nx
 import itertools
-
-
-class Node():
-
-    def __init__(self, name, node_type, rank=None):
-        self.name = name
-        self.node_type = node_type
-        self.rank = rank
-        self.groups = set()
-
-    def __repr__(self):
-        return str(self.name)
+from graphs.node import Node
 
 
 class SybilGroupRank(sybil_rank.SybilRank):
@@ -76,6 +65,7 @@ class SybilGroupRank(sybil_rank.SybilRank):
                     removed.add(source_node)
                     removed.add(target_node)
                     weight += 1
+
             if weight > 0:
                 num = len(self.groups[source_group]) + len(self.groups[target_group])
                 group_graph.add_edge(groups_dic[source_group], groups_dic[target_group], weight=1.0*weight/num)
