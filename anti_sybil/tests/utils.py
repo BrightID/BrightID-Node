@@ -1,11 +1,10 @@
 import networkx as nx
 import collections
 import shutil
-import pickle
 import json
 import csv
 import os
-
+import graphs
 
 def write_output_file(outputs, file_name):
     if len(outputs) == 0:
@@ -51,7 +50,7 @@ def calculate_successful_sybils(ranks_dic):
     honests.sort(reverse=True)
     for limit in [.8, .9, 1]:
         successful_sybils = [rank for rank in sybils if rank >= min(honests[:int(limit * len(honests))])]
-        result['successful_sybils_percent_{0}'.format(limit)] = round((len(successful_sybils) * 100.0) / len(sybils), 2)
+        result['successful_sybils_percent_{0}'.format(limit)] = round((len(successful_sybils) * 100.0) / max(1, len(sybils)), 2)
     if len(attackers) != 0:
         result['successful_sybils_per_attacker'] = round(float(len(successful_sybils)) / len(attackers), 2)
     else:
@@ -108,15 +107,26 @@ def create_json_object(graph):
 
 
 def save_graph(file_name, graph):
-    with open(file_name, 'wb') as f:
-        f.write(json.dumps(graph))
-    return True
+    data = {'nodes': [], 'edges': []}
+    for node in graph.nodes():
+        data['nodes'].append({'name': node.name, 'node_type': node.node_type, 'groups': list(node.groups)})
+    for edge in graph.edges():
+        data['edges'].append((edge[0].name, edge[1].name))
+    with open(file_name, 'w') as f:
+        f.write(json.dumps(data))
 
 
 def load_graph(file_name):
     with open(file_name, 'rb') as f:
-        graph = json.loads(f)
+        data = json.loads(f.read())
+    nodes = {}
+    for node in data['nodes']:
+        groups = set(node['groups']) if node['groups'] else None
+        nodes[node['name']] = graphs.node.Node(node['name'], node['node_type'], groups)
+    graph = nx.Graph()
+    graph.add_edges_from([(nodes[edge[0]], nodes[edge[1]]) for edge in data['edges']])
     return graph
+
 
 TEMPLATE = None
 def draw_graph(graph, file_name):
