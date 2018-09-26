@@ -5,6 +5,7 @@ from utils import *
 
 OUTPUT_FOLDER = './outputs/manual_attack/'
 
+
 def add_sybils(graph, sybils_file_name):
     nodes_dic = {node.name: node for node in graph.nodes()}
     input_file = open(sybils_file_name, 'rb')
@@ -21,7 +22,7 @@ def add_sybils(graph, sybils_file_name):
     for sybil in sybils:
         for neighbour in graph.neighbors(sybil):
             if neighbour.node_type != 'Sybil':
-                neighbour.node_type = 'Attacker'
+                # neighbour.node_type = 'Attacker'
                 neighbour.groups.add('sybils')
 
 
