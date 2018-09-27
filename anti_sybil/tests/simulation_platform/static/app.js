@@ -14,13 +14,15 @@ function save_graph(json_graph){
 
 
 function add_sybils(json_graph, sybils){
+    var box = Ext.MessageBox.wait('Please wait ...');
     Ext.Ajax.request({
         url:'/add_sybils',
         method: 'POST',
         params: {'json_graph':JSON.stringify(json_graph), 'sybils':sybils},
         success: function(data, action) {
-            var graph= JSON.parse(data.responseText)['graph'];
-            load_graph(graph);
+            var res = JSON.parse(data.responseText);
+            load_graph(res['graph'], res['graph_info']);
+            box.hide();
         },
         failure: function(form, action) {
             Ext.Msg.alert('Failed', 'Failed');

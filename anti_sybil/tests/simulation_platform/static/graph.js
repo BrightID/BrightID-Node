@@ -25,7 +25,7 @@ function load_graph(json_graph, graph_info) {
             'Sybil': 'yellow',
             'Bridge Sybil': 'orange',
             'Non Bridge Sybil': 'yellow',
-            'Attacker': 'gray'
+            'Attacker': 'orange'
         };
         return colors_map[d['node_type']];
     } ;
