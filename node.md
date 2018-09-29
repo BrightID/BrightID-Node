@@ -8,7 +8,7 @@ For now, follow the [development guide](https://github.com/BrightID/BrightID-Nod
 Nodes receive client requests from the [BrightID mobile application](https://github.com/BrightID/BrightID) to update the graph. Update operations are digitally signed and dated by the users making the request. Nodes forward these requests to other nodes for consensus.
 ### Consensus
 Nodes reach a consensus about signed update operations. Once it's clear that all nodes will accept an update, it's applied to the graph.
-### [BrightID Service](https://github.com/BrightID/BrightID-Service)
-Nodes run [systems designed to detect sybils](https://github.com/BrightID/BrightID-Node/wiki/Anti-Sybil-Systems). They use these to compute the _trust scores_ they send to third-party applications.  These are also obtained with consensus from the other nodes.
+### [BrightID API](https://github.com/BrightID/BrightID-API)
+Nodes run [systems designed to detect sybils](https://github.com/BrightID/BrightID-Node/wiki/Anti-Sybil-Systems). They use these to compute users' _brightID scores_ which they send to third-party applications.
 ## API Reference
 [BrightID Node API Reference](https://github.com/BrightID/BrightID-Node/wiki/API-Reference)
