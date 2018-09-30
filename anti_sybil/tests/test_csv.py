@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 import networkx as nx
 from utils import *
 import collections
@@ -64,7 +67,7 @@ def run(dataset, algorithm, input_file, output_directory):
         algorithm(graph, options).rank()
         outputs[test_num] = generate_output(graph)
         if input_dic[test_num]['visualize']:
-            json_dic = create_json_object(graph)
+            json_dic = to_json(graph)
             edited_string = TEMPLATE.replace('JSON_GRAPH', json_dic)
             with open(os.path.join(output_directory, '{0}.html'.format(test_num)), 'wb') as output_file:
                 output_file.write(edited_string)
@@ -75,6 +78,6 @@ def run(dataset, algorithm, input_file, output_directory):
 if __name__ == '__main__':
     with open('template.html') as f:
         TEMPLATE = f.read()
-    run(graphs.generators.group_based, algorithms.GroupSybilRank, './inputs/groups_test.csv', './outputs/cvs_tests/')
-    # run(graphs.generators.cut_region, algorithms.SybilRank, './inputs/cut_region_test.csv', './outputs/cvs_tests/')
+    # run(graphs.generators.group_based, algorithms.GroupSybilRank, './inputs/groups_test.csv', './outputs/cvs_tests/')
+    run(graphs.generators.cut_region, algorithms.SybilRank, './inputs/cut_region_test.csv', './outputs/cvs_tests/')
     # run(graphs.generators.no_group, algorithms.SybilRank, './inputs/no_groups_test.csv', './outputs/cvs_tests/')

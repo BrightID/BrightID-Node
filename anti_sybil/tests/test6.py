@@ -1,5 +1,8 @@
 # test effect of running sybil rank on graph of groups instead of graph of individuals
 
+import sys
+sys.path.append('../')
+
 import algorithms
 import graphs
 import os

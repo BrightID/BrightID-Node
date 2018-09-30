@@ -80,7 +80,7 @@ def generate_output(graph):
     ranks_dic = {}
     for category in categories:
         ranks_dic[category] = [
-            node.rank for node in graph.nodes if node.node_type == category]
+            node.rank if node.rank else 0 for node in graph.nodes if node.node_type == category]
     output = collections.OrderedDict()
     successful_sybils = calculate_successful_sybils(ranks_dic)
     successful_honests = calculate_successful_honest(ranks_dic)
@@ -113,24 +113,6 @@ def generate_output(graph):
     return output
 
 
-def create_json_object(graph):
-    json_dic = {
-        'graph': [],
-        'links': [],
-        'nodes': [],
-        'directed': False,
-        'multigraph': False,
-    }
-    json_dic['nodes'] = [{"size": 1, "node_type": node.node_type, "id": node.name,
-                          "type": "circle", 'groups': list(node.groups), 'rank': node.rank} for node in graph.nodes]
-    positions = {}
-    for i, node in enumerate(json_dic['nodes']):
-        positions[node['id']] = i
-    json_dic['links'] = [{"source": positions[edge[0].name],
-                          "target": positions[edge[1].name]} for edge in graph.edges]
-    return json.dumps(json_dic)
-
-
 def save_graph(file_name, graph):
     with open(file_name, 'w') as f:
         f.write(to_json(graph))
@@ -158,7 +140,7 @@ def from_json(data):
     for node in data['nodes']:
         groups = set(node['groups']) if node['groups'] else None
         nodes[node['name']] = graphs.node.Node(
-            node['name'], node['node_type'], groups)
+            node['name'], node['node_type'], groups, node['rank'])
     graph = nx.Graph()
     graph.add_edges_from([(nodes[edge[0]], nodes[edge[1]])
                           for edge in data['edges']])
@@ -171,11 +153,14 @@ TEMPLATE = None
 def draw_graph(graph, file_name):
     global TEMPLATE
     if not TEMPLATE:
-        with open('template.html') as f:
+        abspath = os.path.abspath(__file__)
+        dname = os.path.dirname(abspath)
+        with open(os.path.join(dname, 'template.html')) as f:
             TEMPLATE = f.read()
-    if not os.path.exists(os.path.dirname(file_name)):
-        os.makedirs(os.path.dirname(file_name))
-    json_dic = create_json_object(graph)
+    dname = os.path.dirname(file_name)
+    if dname and not os.path.exists(dname):
+        os.makedirs(dname)
+    json_dic = to_json(graph)
     edited_string = TEMPLATE.replace('JSON_GRAPH', json_dic)
     with open(file_name, 'wb') as output_file:
         output_file.write(edited_string)

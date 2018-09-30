@@ -1,6 +1,9 @@
 # In a real social networ, everyone is member of multiple groups.
 # This test tries to simulate this condition by increasing num_joint_node
 
+import sys
+sys.path.append('../')
+
 import algorithms
 import graphs
 import os
