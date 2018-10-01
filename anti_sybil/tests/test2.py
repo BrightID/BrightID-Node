@@ -1,5 +1,8 @@
 # Test if GroupSybilRank works better than SybilRank
 
+import sys
+sys.path.append('../')
+
 import os
 import copy
 import algorithms

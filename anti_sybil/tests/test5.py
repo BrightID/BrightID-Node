@@ -1,5 +1,8 @@
 # test effect of grouping seeds
 
+import sys
+sys.path.append('../')
+
 import algorithms
 import graphs
 import os

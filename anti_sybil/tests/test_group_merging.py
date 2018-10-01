@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 from algorithms.group_merging import GroupMergingRank
 from algorithms.group_sybil_rank import GroupSybilRank
 import graphs
