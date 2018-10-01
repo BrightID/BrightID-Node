@@ -13,8 +13,11 @@ def save(graph):
         db['users'].insert({'_key': str(node.name), 'rank': node.rank})
         for group in node.groups:
             if not db['groups'].get({'_key': group}):
-                 db['groups'].insert({'_key': group, 'seed': True if group.find('seed_group_') != -1 else False})
-            db['usersInGroups'].insert({'user': str(node.name), 'group': group})
+                if group.find('seed_group_') != -1:
+                     db['groups'].insert({'_key': group, 'seed': True})
+                else:
+                    db['groups'].insert({'_key': group})
+            db['usersInGroups'].insert({'_from': 'users/{0}'.format(node.name), '_to': 'groups/{0}'.format(group)})
     for edge in graph.edges():
         db['connections'].insert({'_from': 'users/{0}'.format(edge[0].name), '_to': 'users/{0}'.format(edge[1].name)})
 
@@ -37,11 +40,11 @@ def load():
     connections = db.collection('connections')
     usersInGroups = db.collection('usersInGroups')
     user_groups = {}
-    seed_groups = set([group['_key'] for group in groups if group['seed']])
+    seed_groups = set([group['_key'] for group in groups if group.get('seed', None)])
     for user_group in usersInGroups:
-        if not user_group['user'] in user_groups:
-            user_groups[user_group['user']] = set()
-        user_groups[user_group['user']].add(user_group['group'])
+        if not user_group['_from'].replace('users/', '') in user_groups:
+            user_groups[user_group['_from'].replace('users/', '')] = set()
+        user_groups[user_group['_from'].replace('users/', '')].add(user_group['_to'].replace('groups/', ''))
     users_dic = {}
     for user in users:
         user_type = 'Seed' if user_groups[user['_key']] & seed_groups else 'Honest'
