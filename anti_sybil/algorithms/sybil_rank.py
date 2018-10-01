@@ -21,7 +21,7 @@ class SybilRank():
         return self.graph
 
     def initialize_nodes_rank(self):
-        nodes_rank = dict((node, 0.0) for node in self.graph.nodes())
+        nodes_rank = dict((node, 0.0) for node in self.graph.nodes)
         for verifier in self.verifiers:
             nodes_rank[verifier] = 1.0 / float(len(self.verifiers))
         return nodes_rank

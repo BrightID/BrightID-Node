@@ -2,6 +2,9 @@
 # ./inputs/socfb-Auburn71.mtx has 18K nodes and 974K edges
 # ./inputs/soc-hamsterster.edges has 2K nodes and 17K edges
 
+import sys
+sys.path.append('../')
+
 import algorithms
 import graphs
 import os

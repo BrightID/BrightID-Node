@@ -1,3 +1,6 @@
+import sys
+sys.path.append('../')
+
 import networkx as nx
 import algorithms
 from graphs.node import Node

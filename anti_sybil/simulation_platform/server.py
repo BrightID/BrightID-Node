@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-import os
+
 import sys
 sys.path.append('../')
+
+import os
 import time
 import json
 import algorithms
@@ -62,7 +64,7 @@ def add_sybils_to_graph(graph, sybils_defenition):
 
 @app.route('/load_default', methods=['GET', 'POST'])
 def load_default():
-    graph = load_graph('../inputs/graph.json')
+    graph = load_graph('graph.json')
     ranker = algorithms.SybilGroupRank(graph, algorithm_options)
     ranker.rank()
     graph_info = edit_output(graph)

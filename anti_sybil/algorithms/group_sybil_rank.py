@@ -40,7 +40,6 @@ class GroupSybilRank(sybil_rank.SybilRank):
         return nodes_rank
 
     def spread_nodes_rank(self, nodes_rank):
-        print('spread_nodes_rank called')
         new_nodes_rank = {}
         for node in self.graph.nodes():
             new_nodes_rank[node] = {}
