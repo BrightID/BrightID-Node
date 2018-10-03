@@ -31,12 +31,10 @@ def update(nodes_graph, groups_graph):
         db['users'].update({'_key': node.name, 'rank': node.rank})
     for group in groups_graph.nodes:
         db['groups'].update({'_key': group.name, 'rank': group.rank})
+    for affinity in db['affinity']:
+        db['affinity'].delete(affinity)
     for edge in groups_graph.edges.data():
-        try:
-            db['affinity'].update(
-                {'_key': '{0}-{1}'.format(edge[0], edge[1]), 'weight': edge[2]['weight']})
-        except:
-            db['affinity'].insert({'_key': '{0}-{1}'.format(edge[0], edge[1]), '_from': 'groups/{0}'.format(
+        db['affinity'].insert({'_key': '{0}-{1}'.format(edge[0], edge[1]), '_from': 'groups/{0}'.format(
                 edge[0]), '_to': 'groups/{0}'.format(edge[1]), 'weight': edge[2]['weight']})
 
 
@@ -78,7 +76,7 @@ def load_group_graph():
     group_dic = {}
     for group in groups:
         group_dic[group['_key']] = graphs.node.Node(
-            group['_key'], 'Seed' if group['seed'] else 'Honest', [], group['rank'])
+            group['_key'], 'Seed' if 'seed' in group and group['seed'] else 'Honest', [], group['rank'])
     for connection in group_connections:
         edges.append((
             group_dic[connection['_from'].replace('groups/', '')],
