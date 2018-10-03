@@ -24,19 +24,6 @@ def save(graph):
             {'_from': 'users/{0}'.format(edge[0].name), '_to': 'users/{0}'.format(edge[1].name)})
 
 
-def label_seed_groups(input_file, overwrite=True):
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    groups = db.collection('groups')
-    with open(input_file, 'rb') as f:
-        seeds = f.read().strip().split('\n')
-    for group in groups:
-        if group['_key'] in seeds:
-            db['groups'].update({'_key': group['_key'], 'seed': True})
-        elif overwrite:
-            db['groups'].update({'_key': group['_key'], 'seed': False})
-
-
 def update(nodes_graph, groups_graph):
     client = ArangoClient()
     db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
@@ -112,10 +99,9 @@ def clear():
 
 
 if __name__ == '__main__':
-    clear()
-    graph = load_graph('simulation_platform/graph.json')
-    save(graph)
-    label_seed_groups('./seed_groups.txt')
+    # clear()
+    # graph = load_graph('simulation_platform/graph.json')
+    # save(graph)
     graph = load()
     reset_ranks(graph)
     ranker = algorithms.SybilGroupRank(graph, {
