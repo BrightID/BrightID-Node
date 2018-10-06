@@ -30,6 +30,7 @@ function add_sybils(json_graph, sybils){
     });
 }
 
+
 function load_default_graph() {
     var box = Ext.MessageBox.wait('Please wait ...');
     Ext.Ajax.request({

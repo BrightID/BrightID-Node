@@ -15,6 +15,9 @@ class SybilRank():
         nodes_rank = self.initialize_nodes_rank()
         for i in range(num_iterations):
             nodes_rank = self.spread_nodes_rank(nodes_rank)
+        for node in self.graph.nodes:
+            node.raw_rank = nodes_rank[node]
+            node.degree = self.graph.degree(node, weight='weight')
         self.ranked_trust = dict(self.normalize_nodes_rank(nodes_rank))
         for node in self.graph.nodes:
             node.rank = self.ranked_trust[node]

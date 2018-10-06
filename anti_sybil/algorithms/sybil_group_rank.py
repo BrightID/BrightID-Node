@@ -45,7 +45,6 @@ class SybilGroupRank(sybil_rank.SybilRank):
         return group_type
 
     def gen_group_graph(self):
-        weight_dic = {}
         group_graph = nx.Graph()
         groups_dic = dict([(group, Node(group, self.get_group_type(self.groups[group]))) for group in self.groups])
         pairs = itertools.combinations(self.groups.keys(), 2)

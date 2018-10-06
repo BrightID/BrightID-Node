@@ -152,7 +152,7 @@ text {
             titles = ["name", "rank", "node_type", "groups"]
             for (var k in titles) {
                 s = s + titles[k] + ': ' + d[titles[k]] + '<br/>';        }
-            document.getElementById('node_info').innerHTML = s;
+            document.getElementById('info').innerHTML = s;
         })
         node.on("mouseover", function(d) {
         set_highlight(d);

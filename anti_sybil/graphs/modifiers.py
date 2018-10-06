@@ -1,5 +1,6 @@
 import random
 
+
 def remove_weak_attackers(graph, cut_point):
     attackers = [node for node in graph.nodes if node.node_type == 'Attacker']
     attackers.sort(key=lambda node: node.rank, reverse=True)
@@ -76,4 +77,3 @@ def increase_sybil_cons(graph, min_ratio, max_ratio):
         pairs = [pair for pair in random.sample(sybils, num_con) if pair!=sybil]
         edges = [(sybil, pair) for pair in pairs]
         graph.add_edges_from(edges)
-
