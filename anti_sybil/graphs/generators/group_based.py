@@ -3,6 +3,7 @@ import collections
 import random
 from ..node import Node
 
+
 def generate(input_data):
     graph = nx.Graph()
     groups_size = [random.choice(range(input_data['min_group_nodes'], input_data['max_group_nodes']+1))
@@ -16,7 +17,8 @@ def generate(input_data):
         'Attacker': {'nodes': [], 'num': num_attacker},
         'Sybil': {'nodes': [], 'num': num_sybil},
     }
-    counter = 0
+    start_node = input_data.get('start_node') or 0
+    counter = start_node
     for category in categories:
         for i in range(categories[category]['num']):
             node = Node(counter, category)
@@ -64,7 +66,7 @@ def generate(input_data):
                 degree = random.choice(up_degrees)
             else:
                 degree = random.choice(low_degrees)
-            j = counter = 0
+            j = counter = start_node
             pairs = []
             while j < degree:
                 pair = random.choice(nodes)
@@ -79,23 +81,22 @@ def generate(input_data):
                         # j += 1
                         raise Exception(
                             "Can't find pair. group_degree={}".format(group_degree))
-    num_contection_to_attacker = max(
+    num_connection_to_attacker = max(
         int(input_data['sybil_to_attackers_con'] * categories['Attacker']['num']), 1)
     for i, node in enumerate(categories['Sybil']['nodes']):
         pairs = []
-        j = 0
-        while j < num_contection_to_attacker:
+        j = start_node
+        while j < num_connection_to_attacker:
             pair = random.choice(categories['Attacker']['nodes'])
             if pair not in pairs:
                 graph.add_edge(node, pair)
                 pairs.append(pair)
                 j += 1
 
-
     for node in categories['Attacker']['nodes'] + categories['Sybil']['nodes']:
         node.groups.add('attacker')
 
-    # Add iner-group connections
+    # Add inter-group connections
     i = 0
     inter_group_pairs = []
     while i < input_data['num_inter_group_con']:
@@ -121,7 +122,7 @@ def generate(input_data):
                 i += 1
                 left_node = random.choice(list(component))
                 right_node = random.choice(biggest_comp)
-                if left_node.node_type == 'Honest' and right_node.node_type == 'Honest':
+                if left_node.node_type != 'Sybil' and right_node.node_type != 'Sybil':
                     graph.add_edge(left_node, right_node)
                     print(
                         'Add Edge: {0} --> {1}'.format(left_node, right_node))
