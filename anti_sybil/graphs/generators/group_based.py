@@ -66,7 +66,7 @@ def generate(input_data):
                 degree = random.choice(up_degrees)
             else:
                 degree = random.choice(low_degrees)
-            j = counter = start_node
+            j = counter = 0
             pairs = []
             while j < degree:
                 pair = random.choice(nodes)
@@ -85,7 +85,7 @@ def generate(input_data):
         int(input_data['sybil_to_attackers_con'] * categories['Attacker']['num']), 1)
     for i, node in enumerate(categories['Sybil']['nodes']):
         pairs = []
-        j = start_node
+        j = 0
         while j < num_connection_to_attacker:
             pair = random.choice(categories['Attacker']['nodes'])
             if pair not in pairs:
