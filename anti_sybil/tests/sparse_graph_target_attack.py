@@ -5,7 +5,7 @@ import algorithms
 from graphs.node import Node
 from utils import *
 
-OUTPUT_FOLDER = './outputs/manual_attack2/'
+OUTPUT_FOLDER = './outputs/sparse_graph_target_attack/'
 
 graph_params = {
     'num_seed_nodes': 140,
@@ -37,7 +37,7 @@ algorithm_options = {
     'min_degree': 5,
     'nonlinear_distribution': True,
     'group_edge_weight': 20,
-    'thresholds': [.08, .06, .04, .02, .01, .005, 0]
+    'thresholds': [.36, .24, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .001, 0]
 }
 
 sybil_edges1 = [
