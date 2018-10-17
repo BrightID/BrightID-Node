@@ -5,11 +5,11 @@ import algorithms
 from graphs.node import Node
 from utils import *
 
-OUTPUT_FOLDER = './outputs/sparse_graph_few_seeds/'
+OUTPUT_FOLDER = './outputs/sparse_graph_collusion/'
 
 graph_params = {
     'num_seed_nodes': 14,
-    'num_attacker_to_num_honest': 0,
+    'num_attacker_to_num_honest': 0.05,
     'num_sybil_to_num_attacker': 2,
     'num_groups': 19,
     'min_group_nodes': 3,
@@ -19,17 +19,18 @@ graph_params = {
     'min_known_ratio': .125,
     'avg_known_ratio': .5,
     'max_known_ratio': 1,
-    'sybil_to_attackers_con': 1.5,
+    'sybil_to_attackers_con': .5,
     'num_inter_group_con': 210
 }
 
 algorithm_options = {
     'accumulative': False,
     'weaken_under_min': False,
-    'min_degree': 5,
+    'min_degree': 8,
+    'weaken_seed': 0,
     'nonlinear_distribution': True,
     'group_edge_weight': 20,
-    'thresholds': [.36, .24, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .0015, .001, .0005, 0]
+    'thresholds': [.36, .24, .22, .21, .20, .19, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .0015, .001, .0005, 0]
 }
 
 sybil_edges1 = [
@@ -57,6 +58,54 @@ sybil_edges1 = [
     # [8, 's6'],
     # [8, 's7'],
     # [8, 's8'],
+    # [9, 's1'],
+    # [9, 's2'],
+    # [9, 's3'],
+    # [9, 's4'],
+    # [9, 's5'],
+    # [9, 's6'],
+    # [9, 's7'],
+    # [9, 's8'],
+    # [1, 's1'],
+    # [1, 's2'],
+    # [1, 's3'],
+    # [1, 's4'],
+    # [1, 's5'],
+    # [1, 's6'],
+    # [1, 's7'],
+    # [1, 's8'],
+    # [2, 's1'],
+    # [2, 's2'],
+    # [2, 's3'],
+    # [2, 's4'],
+    # [2, 's5'],
+    # [2, 's6'],
+    # [2, 's7'],
+    # [2, 's8'],
+    # [3, 's1'],
+    # [3, 's2'],
+    # [3, 's3'],
+    # [3, 's4'],
+    # [3, 's5'],
+    # [3, 's6'],
+    # [3, 's7'],
+    # [3, 's8'],
+    # [4, 's1'],
+    # [4, 's2'],
+    # [4, 's3'],
+    # [4, 's4'],
+    # [4, 's5'],
+    # [4, 's6'],
+    # [4, 's7'],
+    # [4, 's8'],
+    # [5, 's1'],
+    # [5, 's2'],
+    # [5, 's3'],
+    # [5, 's4'],
+    # [5, 's5'],
+    # [5, 's6'],
+    # [5, 's7'],
+    # [5, 's8'],
     ['s1', 's2'],
     ['s3', 's4'],
     ['s5', 's6'],
@@ -231,43 +280,67 @@ def add_sybils(graph, sybil_edges, group):
 
 
 graph = graphs.generators.group_based.generate(graph_params)
-add_sybils(graph, sybil_edges1, 'sybil1');
-add_sybils(graph, sybil_edges2, 'sybil2');
-add_sybils(graph, sybil_edges3, 'sybil3');
-add_sybils(graph, sybil_edges4, 'sybil4');
-add_sybils(graph, sybil_edges5, 'sybil5');
-add_sybils(graph, sybil_edges6, 'sybil6');
-add_sybils(graph, sybil_edges7, 'sybil7');
-add_sybils(graph, sybil_edges8, 'sybil8');
-add_sybils(graph, sybil_edges9, 'sybil9');
-add_sybils(graph, sybil_edges10, 'sybil10');
+# add_sybils(graph, sybil_edges1, 'sybil1')
+# add_sybils(graph, sybil_edges2, 'sybil2')
+# add_sybils(graph, sybil_edges3, 'sybil3')
+# add_sybils(graph, sybil_edges4, 'sybil4')
+# add_sybils(graph, sybil_edges5, 'sybil5')
+# add_sybils(graph, sybil_edges6, 'sybil6')
+# add_sybils(graph, sybil_edges7, 'sybil7')
+# add_sybils(graph, sybil_edges8, 'sybil8')
+# add_sybils(graph, sybil_edges9, 'sybil9')
+# add_sybils(graph, sybil_edges10, 'sybil10')
 
 outputs = []
 
+ranker = algorithms.SybilRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'SybilRank'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
+
+reset_ranks(graph)
+
 ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
-outputs.append(generate_output(graph))
+outputs.append(generate_output(graph, 'SybilGroupRank'))
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank.html'))
 
-# reset_ranks(graph)
-#
-# ranker = algorithms.SybilRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
-#
-# reset_ranks(graph)
-#
+reset_ranks(graph)
+
+ranker = algorithms.GroupSybilRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'IntraGroupWeight'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
+
+reset_ranks(graph)
+algorithm_options['weaken_under_min'] = True
+
+ranker = algorithms.SybilRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'SR_weaken'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
+
+reset_ranks(graph)
+
+ranker = algorithms.SybilGroupRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'SGR_weaken'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
+
+reset_ranks(graph)
+
 # ranker = algorithms.GroupSybilRank(graph, algorithm_options)
 # ranker.rank()
-# outputs.append(generate_output(graph))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupSybilRank.html'))
+# outputs.append(generate_output(graph, 'IGW_weaken'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IGW_weaken.html'))
 #
 # reset_ranks(graph)
 #
 # ranker = algorithms.GroupMergingRank(graph, algorithm_options)
 # ranker.rank()
-# outputs.append(generate_output(graph))
+# outputs.append(generate_output(graph, 'GroupMerge'))
 # draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
+#
+# reset_ranks(graph)
 
 write_output_file(outputs, os.path.join(OUTPUT_FOLDER, 'result.csv'))
