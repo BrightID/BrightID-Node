@@ -5,7 +5,7 @@ import algorithms
 from graphs.node import Node
 from utils import *
 
-OUTPUT_FOLDER = './outputs/sparse_graph_target_attack/'
+OUTPUT_FOLDER = './outputs/collusion_separate_sybil/'
 
 graph_params = {
     'num_seed_nodes': 14,
@@ -466,7 +466,7 @@ def add_sybils(graph, sybil_edges, group):
 
 graph = graphs.generators.group_based.generate(graph_params)
 # add_sybils(graph, sybil_to_seed, 'sybil_to_seed')
-# add_sybils(graph, sybil_to_non_seed, 'sybil_to_non_seed')
+add_sybils(graph, sybil_to_non_seed, 'sybil_to_non_seed')
 # add_sybils(graph, sybil_edges2, 'sybil2')
 # add_sybils(graph, sybil_edges3, 'sybil3')
 # add_sybils(graph, sybil_edges4, 'sybil4')
@@ -479,12 +479,12 @@ graph = graphs.generators.group_based.generate(graph_params)
 
 outputs = []
 
-ranker = algorithms.SybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'SybilRank'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
-
-reset_ranks(graph)
+# ranker = algorithms.SybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SybilRank'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
+#
+# reset_ranks(graph)
 
 ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
@@ -497,24 +497,36 @@ reset_ranks(graph)
 # ranker.rank()
 # outputs.append(generate_output(graph, 'IntraGroupWeight'))
 # draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
+#
+# reset_ranks(graph)
 
-reset_ranks(graph)
-# algorithm_options['min_neighborhood_factor'] = 5
 algorithm_options['weaken_seed'] = 5000
 
 ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
-outputs.append(generate_output(graph, 'SGR_weaken'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
+outputs.append(generate_output(graph, 'SGR_weaken_seed'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken_seed.html'))
 
 reset_ranks(graph)
-# algorithm_options['weaken_under_min'] = True
 
-ranker = algorithms.SybilRank(graph, algorithm_options)
+algorithm_options['weaken_seed'] = 0
+algorithm_options['min_neighborhood_factor'] = 5
+
+ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
-outputs.append(generate_output(graph, 'SR_weaken'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
+outputs.append(generate_output(graph, 'SGR_neighbor_factor'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_neighbor_factor.html'))
 
+reset_ranks(graph)
+
+# reset_ranks(graph)
+# algorithm_options['weaken_under_min'] = True
+#
+# ranker = algorithms.SybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SR_weaken'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
+#
 # reset_ranks(graph)
 #
 # ranker = algorithms.GroupSybilRank(graph, algorithm_options)
@@ -528,7 +540,7 @@ draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
 # ranker.rank()
 # outputs.append(generate_output(graph, 'GroupMerge'))
 # draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
-
-reset_ranks(graph)
+#
+# reset_ranks(graph)
 
 write_output_file(outputs, os.path.join(OUTPUT_FOLDER, 'result.csv'))

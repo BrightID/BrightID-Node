@@ -7,7 +7,7 @@ from graphs.node import Node
 from utils import *
 from collections import OrderedDict
 
-OUTPUT_FOLDER = './outputs/sparse_graph_target_attack/'
+OUTPUT_FOLDER = './outputs/heavy_target_attack/'
 
 graph_params = {
     'num_seed_nodes': 30,
