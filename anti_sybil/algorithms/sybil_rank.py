@@ -37,13 +37,15 @@ class SybilRank():
             neighbors = self.graph.neighbors(node)
             for neighbor in neighbors:
                 neighbor_degree = self.graph.degree(neighbor, weight='weight')
-                new_trust += (nodes_rank[neighbor] * self.graph[node][neighbor].get('weight', 1)) / float(neighbor_degree)
+                if neighbor_degree > 0:
+                    new_trust += (nodes_rank[neighbor] * self.graph[node][neighbor].get('weight', 1)) / float(neighbor_degree)
             degree = self.graph.degree(node)
-            new_nodes_rank[node] = new_trust
-            if self.options['weaken_under_min'] and self.options['min_degree']:
-                if degree < self.options['min_degree']:
-                    reducer = (self.options['min_degree'] - degree) ** .5
-                    new_nodes_rank[node] = new_trust / reducer
+            if self.options['weaken_under_min'] and self.options['min_degree'] and degree < self.options['min_degree']:
+                reducer = (self.options['min_degree'] - degree) ** .5
+                new_nodes_rank[node] = new_trust / reducer
+            else:
+                new_nodes_rank[node] = new_trust
+
         return new_nodes_rank
 
     def nonlinear_distribution(self, ranks, ratio, df, dt):
