@@ -7,6 +7,8 @@ from graphs.node import Node
 class SybilGroupRank(sybil_rank.SybilRank):
 
     def __init__(self, graph, options=None):
+        self.weaken_seed = options.get('weaken_seed') or 0
+
         sybil_rank.SybilRank.__init__(self, graph, options)
         groups = {}
         for node in self.graph.nodes:
@@ -39,7 +41,7 @@ class SybilGroupRank(sybil_rank.SybilRank):
             for group in self.group_graph:
                 if group.neighborhood_factor < border:
                     group.raw_rank = group.raw_rank * (group.neighborhood_factor / border)
-        if 'min_neighborhood_factor' in self.options or if 'weaken_inconsistency_ratio' in self.options:
+        if 'min_neighborhood_factor' in self.options or 'weaken_inconsistency_ratio' in self.options:
             ranks = dict((group, group.raw_rank) for group in self.group_graph.nodes)
             ranked_trust = dict(ranker.normalize_nodes_rank(ranks))
             for group in self.group_graph.nodes:
@@ -86,6 +88,8 @@ class SybilGroupRank(sybil_rank.SybilRank):
                     weight += 1
             if weight > 0:
                 num = len(self.groups[source_group]) + len(self.groups[target_group])
+                if self.get_group_type(self.groups[source_group]) == 'Seed' or self.get_group_type(self.groups[target_group]) == 'Seed':
+                    num = max(num, (self.weaken_seed - weight) * self.weaken_seed)
                 group_graph.add_edge(groups_dic[source_group], groups_dic[target_group], weight=1.0*weight/num)
         return group_graph
 
