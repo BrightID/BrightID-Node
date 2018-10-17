@@ -16,7 +16,6 @@ class SybilRank():
         for i in range(num_iterations):
             nodes_rank = self.spread_nodes_rank(nodes_rank)
         for node in self.graph.nodes:
-            node.raw_rank = nodes_rank[node]
             node.degree = self.graph.degree(node, weight='weight')
         self.ranked_trust = dict(self.normalize_nodes_rank(nodes_rank))
         for node in self.graph.nodes:
@@ -87,6 +86,7 @@ class SybilRank():
         for node, rank in nodes_rank.iteritems():
             node_degree = self.graph.degree(node)
             nodes_rank[node] = rank / float(node_degree)
+            node.raw_rank = nodes_rank[node]
         ranks = sorted(nodes_rank.iteritems(),
                        key=operator.itemgetter(1))
         if self.options['nonlinear_distribution']:

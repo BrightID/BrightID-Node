@@ -31,6 +31,9 @@ algorithm_options = {
     'nonlinear_distribution': True,
     'group_edge_weight': 20,
     'thresholds': [.36, .24, .22, .21, .20, .19, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .0015, .001, .0005, 0]
+    'weaken_inconsistency_ratio': .1,
+    'min_neighborhood_factor': 5,
+    'min_reliable_rank': 20,
 }
 
 sybil_edges1 = [
