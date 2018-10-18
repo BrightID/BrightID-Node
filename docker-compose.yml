@@ -1,0 +1,22 @@
+version: '3'
+services:
+  ws:
+    build: web_services
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    network_mode: host
+
+  anti_sybil:
+    build: anti_sybil
+    depends_on:
+      - ws
+      - db
+    network_mode: host
+
+  db:
+    build: db_dumps
+    ports:
+      - "8529:8529"
+    network_mode: host
