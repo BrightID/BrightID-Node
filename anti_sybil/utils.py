@@ -5,6 +5,7 @@ import json
 import csv
 import os
 import graphs
+from bisect import bisect
 
 
 def write_output_file(outputs, file_name):
@@ -12,9 +13,10 @@ def write_output_file(outputs, file_name):
         return
     if not os.path.exists(os.path.dirname(file_name)):
         os.makedirs(os.path.dirname(file_name))
-    rows = [['Results']]
+    rows = [['Results'] + [output['name'] for output in outputs]]
     for title in outputs[0]:
-        rows.append([title] + [output[title] for output in outputs])
+        if title != 'name':
+            rows.append([title] + [output[title] for output in outputs])
 
     with open(file_name, 'wb') as f:
         writer = csv.writer(f)
@@ -48,17 +50,18 @@ def calculate_successful_sybils(ranks_dic):
             honests.extend(ranks_dic[category])
         elif category == 'Attacker':
             attackers.extend(ranks_dic[category])
-    honests.sort(reverse=True)
-    for limit in [.8, .9, 1]:
-        successful_sybils = [rank for rank in sybils if rank >= min(
-            honests[:int(limit * len(honests))])]
-        result['successful_sybils_percent_{0}'.format(limit)] = round(
-            (len(successful_sybils) * 100.0) / max(1, len(sybils)), 2)
-    if len(attackers) != 0:
-        result['successful_sybils_per_attacker'] = round(
-            float(len(successful_sybils)) / len(attackers), 2)
-    else:
-        result['successful_sybils_per_attacker'] = '__'
+    honests.sort()
+    # for limit in [.8, .9, 1]:
+    #     successful_sybils = [rank for rank in sybils if rank >= min(
+    #         honests[:int(limit * len(honests))])]
+    #     result['successful_sybils_percent_{0}'.format(limit)] = round(
+    #         (len(successful_sybils) * 100.0) / max(1, len(sybils)), 2)
+    # if len(attackers) != 0:
+    #     result['successful_sybils_per_attacker'] = round(
+    #         float(len(successful_sybils)) / len(attackers), 2)
+    # else:
+    #     result['successful_sybils_per_attacker'] = '__'
+    result['better_than_pct'] = float(bisect(honests, max(sybils))) / len(honests)
     return result
 
 
@@ -75,24 +78,25 @@ def calculate_successful_honest(ranks_dic):
     return result
 
 
-def generate_output(graph):
+def generate_output(graph, name=''):
     categories = set([node.node_type for node in graph.nodes])
     ranks_dic = {}
     for category in categories:
         ranks_dic[category] = [
             node.rank if node.rank else 0 for node in graph.nodes if node.node_type == category]
     output = collections.OrderedDict()
+    output['name'] = name
     successful_sybils = calculate_successful_sybils(ranks_dic)
-    successful_honests = calculate_successful_honest(ranks_dic)
-    output['Successful Sybils Percentage'] = successful_sybils['successful_sybils_percent_1']
-    output['Successful Sybils Percentage (-10 percent of honests)'] = successful_sybils['successful_sybils_percent_0.9']
-    output['Successful Sybils Percentage (-20 percent of honests)'] = successful_sybils['successful_sybils_percent_0.8']
-    output['Successful Sybils per Attacker'] = successful_sybils['successful_sybils_per_attacker']
-    output['Min 90 Percent'] = successful_honests['min_0.1']
-    output['Min 80 Percent'] = successful_honests['min_0.2']
+    # successful_honests = calculate_successful_honest(ranks_dic)
+    # output['Successful Sybils Percentage'] = successful_sybils['successful_sybils_percent_1']
+    # output['Successful Sybils Percentage (-10 percent of honests)'] = successful_sybils['successful_sybils_percent_0.9']
+    # output['Successful Sybils Percentage (-20 percent of honests)'] = successful_sybils['successful_sybils_percent_0.8']
+    # output['Successful Sybils per Attacker'] = successful_sybils['successful_sybils_per_attacker']
+    # output['Min 90 Percent'] = successful_honests['min_0.1']
+    # output['Min 80 Percent'] = successful_honests['min_0.2']
+
+    output['Sybils scored >= %'] = successful_sybils['better_than_pct'];
     output['Avg Honest - Avg Sybil'] = None
-    output['Border'] = find_border(graph)
-    output[' '] = ' '
     view_order = ('Seed', 'Honest', 'Attacker',
                   'Bridge Sybil', 'Non Bridge Sybil', 'Sybil')
     for category in view_order:
@@ -110,6 +114,7 @@ def generate_output(graph):
             output['{0} {1}'.format(parameter, category)] = v
     output['Avg Honest - Avg Sybil'] = output['Avg Honest'] - \
         output.get('Avg Sybil', output.get('Avg Bridge Sybil', 0))
+    output['Border'] = find_border(graph)
     return output
 
 

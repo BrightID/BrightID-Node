@@ -16,7 +16,6 @@ class SybilRank():
         for i in range(num_iterations):
             nodes_rank = self.spread_nodes_rank(nodes_rank)
         for node in self.graph.nodes:
-            node.raw_rank = nodes_rank[node]
             node.degree = self.graph.degree(node, weight='weight')
         self.ranked_trust = dict(self.normalize_nodes_rank(nodes_rank))
         for node in self.graph.nodes:
@@ -38,13 +37,15 @@ class SybilRank():
             neighbors = self.graph.neighbors(node)
             for neighbor in neighbors:
                 neighbor_degree = self.graph.degree(neighbor, weight='weight')
-                new_trust += (nodes_rank[neighbor] * self.graph[node][neighbor].get('weight', 1)) / float(neighbor_degree)
+                if neighbor_degree > 0:
+                    new_trust += (nodes_rank[neighbor] * self.graph[node][neighbor].get('weight', 1)) / float(neighbor_degree)
             degree = self.graph.degree(node)
-            new_nodes_rank[node] = new_trust
-            if self.options['weaken_under_min'] and self.options['min_degree']:
-                if degree < self.options['min_degree']:
-                    reducer = (self.options['min_degree'] - degree) ** .5
-                    new_nodes_rank[node] = new_trust / reducer
+            if self.options['weaken_under_min'] and self.options['min_degree'] and degree < self.options['min_degree']:
+                reducer = (self.options['min_degree'] - degree) ** .5
+                new_nodes_rank[node] = new_trust / reducer
+            else:
+                new_nodes_rank[node] = new_trust
+
         return new_nodes_rank
 
     def nonlinear_distribution(self, ranks, ratio, df, dt):
@@ -87,6 +88,7 @@ class SybilRank():
         for node, rank in nodes_rank.iteritems():
             node_degree = self.graph.degree(node)
             nodes_rank[node] = rank / float(node_degree)
+            node.raw_rank = nodes_rank[node]
         ranks = sorted(nodes_rank.iteritems(),
                        key=operator.itemgetter(1))
         if self.options['nonlinear_distribution']:

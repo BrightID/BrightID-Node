@@ -22,8 +22,8 @@ class Group():
         is_seed = True
         for node in self.get_nodes():
             if node.node_type != "Seed":
-                if "seed" in self.name:
-                    print(node, node.node_type)
+                # if "seed" in self.name:
+                #     print(node, node.node_type)
                 is_seed = False
         return "seed" if is_seed else "normal"
 

@@ -5,28 +5,28 @@ import algorithms
 from graphs.node import Node
 from utils import *
 
-OUTPUT_FOLDER = './outputs/dense_graph_target_attack/'
+OUTPUT_FOLDER = './outputs/sparse_graph_collusion/'
 
 graph_params = {
     'num_seed_nodes': 14,
-    'num_attacker_to_num_honest': 0.0,
+    'num_attacker_to_num_honest': 0.05,
     'num_sybil_to_num_attacker': 2,
     'num_groups': 19,
     'min_group_nodes': 3,
     'max_group_nodes': 25,
-    'num_joint_node': 200,
+    'num_joint_node': 20,
     'num_seed_groups': 1,
     'min_known_ratio': .125,
     'avg_known_ratio': .5,
     'max_known_ratio': 1,
-    'sybil_to_attackers_con': .2,
+    'sybil_to_attackers_con': .5,
     'num_inter_group_con': 210
 }
 
 algorithm_options = {
     'accumulative': False,
     'weaken_under_min': False,
-    'min_degree': 14,
+    'min_degree': 8,
     'weaken_seed': 0,
     'nonlinear_distribution': True,
     'group_edge_weight': 20,
@@ -280,11 +280,11 @@ def add_sybils(graph, sybil_edges, group):
 
 
 graph = graphs.generators.group_based.generate(graph_params)
-add_sybils(graph, sybil_edges1, 'sybil1')
-add_sybils(graph, sybil_edges2, 'sybil2')
-add_sybils(graph, sybil_edges3, 'sybil3')
-add_sybils(graph, sybil_edges4, 'sybil4')
-add_sybils(graph, sybil_edges5, 'sybil5')
+# add_sybils(graph, sybil_edges1, 'sybil1')
+# add_sybils(graph, sybil_edges2, 'sybil2')
+# add_sybils(graph, sybil_edges3, 'sybil3')
+# add_sybils(graph, sybil_edges4, 'sybil4')
+# add_sybils(graph, sybil_edges5, 'sybil5')
 # add_sybils(graph, sybil_edges6, 'sybil6')
 # add_sybils(graph, sybil_edges7, 'sybil7')
 # add_sybils(graph, sybil_edges8, 'sybil8')
@@ -329,18 +329,18 @@ draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
 
 reset_ranks(graph)
 
-ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'IGW_weaken'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IGW_weaken.html'))
-
-reset_ranks(graph)
-
-ranker = algorithms.GroupMergingRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'GroupMerge'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
-
-reset_ranks(graph)
+# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'IGW_weaken'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IGW_weaken.html'))
+#
+# reset_ranks(graph)
+#
+# ranker = algorithms.GroupMergingRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'GroupMerge'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
+#
+# reset_ranks(graph)
 
 write_output_file(outputs, os.path.join(OUTPUT_FOLDER, 'result.csv'))
