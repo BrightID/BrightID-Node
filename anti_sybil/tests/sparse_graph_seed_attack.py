@@ -1124,13 +1124,12 @@ draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank_group
 
 reset_ranks(graph)
 
-# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'IntraGroupWeight'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
-#
-# reset_ranks(graph)
+ranker = algorithms.GroupSybilRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'IntraGroupWeight'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
 
+reset_ranks(graph)
 
 algorithm_options['min_group_req'] = 2
 
@@ -1141,20 +1140,6 @@ draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2.html'))
 draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2_groups.html'))
 
 reset_ranks(graph)
-
-# ranker = algorithms.SybilRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'SR_weaken'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
-#
-# reset_ranks(graph)
-#
-# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'IGW_weaken'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IGW_weaken.html'))
-#
-# reset_ranks(graph)
 
 # ranker = algorithms.GroupMergingRank(graph, algorithm_options)
 # ranker.rank()

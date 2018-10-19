@@ -2,6 +2,7 @@ import math
 import operator
 import sybil_rank
 
+
 class GroupSybilRank(sybil_rank.SybilRank):
     def __init__(self, graph, options=None):
         groups = {}
@@ -61,13 +62,7 @@ class GroupSybilRank(sybil_rank.SybilRank):
                     else:
                         new_trust += temp_trust
                     new_nodes_rank[node][group] += new_trust
-                    if self.options['weaken_under_min'] and self.options['min_degree']:
-                        degree = self.graph.degree(node)
-                        if degree < self.options['min_degree']:
-                            reducer = (self.options['min_degree'] - degree) ** .5
-                            new_nodes_rank[node][group] = new_trust / reducer
         return new_nodes_rank
-
 
     def linear_distribution(self, ranks):
         max_rank = max(ranks, key=lambda item: item[1])[1]
@@ -75,7 +70,6 @@ class GroupSybilRank(sybil_rank.SybilRank):
         ranks = [(node, int(round((rank - min_rank) * 100 / (max_rank - min_rank))))
                  for node, rank in ranks]
         return ranks
-
 
     def normalize_nodes_rank(self, nodes_rank):
         final_nodes_rank = {}
