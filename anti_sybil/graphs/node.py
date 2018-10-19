@@ -1,4 +1,4 @@
-class Node():
+class Node:
     def __init__(self, name, node_type, groups=None, rank=None, raw_rank=None, degree=None):
         self.name = name
         self.node_type = node_type
@@ -9,7 +9,3 @@ class Node():
 
     def __repr__(self):
         return str(self.name)
-
-    @property
-    def num_groups(self):
-        return len(self.groups)

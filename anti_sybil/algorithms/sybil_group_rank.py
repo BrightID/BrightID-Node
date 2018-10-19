@@ -52,8 +52,8 @@ class SybilGroupRank(sybil_rank.SybilRank):
             source_nodes = self.groups[source_group]
             target_nodes = self.groups[target_group]
             if 'min_group_req' in self.options:
-                source_nodes = filter(lambda n: n.num_groups >= self.options['min_group_req'], source_nodes)
-                target_nodes = filter(lambda n: n.num_groups >= self.options['min_group_req'], target_nodes)
+                source_nodes = filter(lambda n: len(n.groups) >= self.options['min_group_req'], source_nodes)
+                target_nodes = filter(lambda n: len(n.groups) >= self.options['min_group_req'], target_nodes)
             for source_node in source_nodes:
                 if source_node in removed:
                     continue
