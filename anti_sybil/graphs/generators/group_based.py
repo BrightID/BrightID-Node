@@ -17,7 +17,7 @@ def generate(input_data):
         'Attacker': {'nodes': [], 'num': num_attacker},
         'Sybil': {'nodes': [], 'num': num_sybil},
     }
-    start_node = input_data.get('start_node') or 0
+    start_node = input_data.get('start_node', 0)
     counter = start_node
     for category in categories:
         for i in range(categories[category]['num']):

@@ -25,60 +25,48 @@ graph_params = {
 
 algorithm_options = {
     'accumulative': False,
-    'weaken_under_min': False,
-    'min_degree': 8,
-    'weaken_seed': 0,
     'nonlinear_distribution': True,
-    'group_edge_weight': 20,
     'thresholds': [.36, .24, .22, .21, .20, .19, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .0015, .001, .0005, 0],
-    # 'weaken_inconsistency_ratio': .1,
-    'min_reliable_rank': 0,
 }
 
 sybil_to_non_seed = [
     [26, 's1'],
     [26, 's2'],
     [26, 's3'],
-    [27, 's1'],
-    [27, 's2'],
-    [27, 's3'],
-    [28, 's1'],
-    [28, 's2'],
-    [28, 's3'],
-    # [26, 's4'],
-    # [26, 's5'],
+    [26, 's4'],
+    [26, 's5'],
     # [26, 's6'],
     # [26, 's7'],
     # [26, 's8'],
-    # [27, 's1'],
-    # [27, 's2'],
-    # [27, 's3'],
-    # [27, 's4'],
-    # [27, 's5'],
+    [27, 's1'],
+    [27, 's2'],
+    [27, 's3'],
+    [27, 's4'],
+    [27, 's5'],
     # [27, 's6'],
     # [27, 's7'],
     # [27, 's8'],
-    # [28, 's1'],
-    # [28, 's2'],
-    # [28, 's3'],
-    # [28, 's4'],
-    # [28, 's5'],
+    [28, 's1'],
+    [28, 's2'],
+    [28, 's3'],
+    [28, 's4'],
+    [28, 's5'],
     # [28, 's6'],
     # [28, 's7'],
     # [28, 's8'],
-    # [29, 's1'],
-    # [29, 's2'],
-    # [29, 's3'],
-    # [29, 's4'],
-    # [29, 's5'],
+    [29, 's1'],
+    [29, 's2'],
+    [29, 's3'],
+    [29, 's4'],
+    [29, 's5'],
     # [29, 's6'],
     # [29, 's7'],
     # [29, 's8'],
-    # [21, 's1'],
-    # [21, 's2'],
-    # [21, 's3'],
-    # [21, 's4'],
-    # [21, 's5'],
+    [21, 's1'],
+    [21, 's2'],
+    [21, 's3'],
+    [21, 's4'],
+    [21, 's5'],
     # [21, 's6'],
     # [21, 's7'],
     # [21, 's8'],
@@ -404,16 +392,13 @@ reset_ranks(graph)
 #
 # reset_ranks(graph)
 
-# algorithm_options['min_neighborhood_factor'] = 3
-algorithm_options['weaken_seed'] = 100
-
-ranker = algorithms.SybilGroupRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'SGR_weaken'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
-draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken_Groups.html'))
-
-reset_ranks(graph)
+# ranker = algorithms.SybilGroupRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SGR_weaken'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
+# draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken_Groups.html'))
+#
+# reset_ranks(graph)
 
 # ranker = algorithms.SybilRank(graph, algorithm_options)
 # ranker.rank()

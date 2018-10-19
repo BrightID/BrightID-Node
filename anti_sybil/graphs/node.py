@@ -10,3 +10,6 @@ class Node():
     def __repr__(self):
         return str(self.name)
 
+    @property
+    def num_groups(self):
+        return len(self.groups)

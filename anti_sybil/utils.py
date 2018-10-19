@@ -95,7 +95,7 @@ def generate_output(graph, name=''):
     # output['Min 90 Percent'] = successful_honests['min_0.1']
     # output['Min 80 Percent'] = successful_honests['min_0.2']
 
-    output['Sybils scored >= %'] = successful_sybils['better_than_pct'];
+    output['Sybils scored >= %'] = successful_sybils['better_than_pct']
     output['Avg Honest - Avg Sybil'] = None
     view_order = ('Seed', 'Honest', 'Attacker',
                   'Bridge Sybil', 'Non Bridge Sybil', 'Sybil')
