@@ -7,17 +7,16 @@ from graphs.node import Node
 class SybilGroupRank(sybil_rank.SybilRank):
 
     def __init__(self, graph, options=None):
-
         sybil_rank.SybilRank.__init__(self, graph, options)
+        self.min_group_req = self.options.get('min_group_req', 1)
         groups = {}
         for node in self.graph.nodes:
             for group in node.groups:
-                if not group in groups:
+                if group not in groups:
                     groups[group] = set()
                 groups[group].add(node)
         self.groups = groups
         self.group_graph = self.gen_group_graph()
-        self.min_group_req = self.options.get('min_group_req', 1)
 
     def rank(self):
         ranker = sybil_rank.SybilRank(self.group_graph, self.options)
@@ -72,6 +71,5 @@ class SybilGroupRank(sybil_rank.SybilRank):
                     weight += 1
             if weight > 0:
                 num = len(source_nodes) + len(target_nodes)
-                group_graph.add_edge(groups_dic[source_group], groups_dic[target_group], weight=1.0*weight/num)
+                group_graph.add_edge(groups_dic[source_group], groups_dic[target_group], weight=1.0 * weight / num)
         return group_graph
-

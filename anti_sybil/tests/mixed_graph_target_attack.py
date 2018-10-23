@@ -8,125 +8,199 @@ from utils import *
 OUTPUT_FOLDER = './outputs/mixed_graph_target_attack/'
 
 graph_params_1 = {
-    'num_seed_nodes': 14,
-    'num_attacker_to_num_honest': 0.05,
+    'num_seed_nodes': 18,
+    'num_attacker_to_num_honest': 0.0,
     'num_sybil_to_num_attacker': 2,
     'num_groups': 19,
     'min_group_nodes': 3,
-    'max_group_nodes': 25,
-    'num_joint_node': 20,
+    'max_group_nodes': 33,
+    'num_joint_node': 36,
     'num_seed_groups': 1,
     'min_known_ratio': .125,
     'avg_known_ratio': .5,
     'max_known_ratio': 1,
     'sybil_to_attackers_con': 1,
-    'num_inter_group_con': 210
+    'num_inter_group_con': 360
 }
 
 graph_params_2 = {
     'start_node': 1000,
-    'num_seed_nodes': 14,
-    'num_attacker_to_num_honest': 0.05,
+    'num_seed_nodes': 18,
+    'num_attacker_to_num_honest': 0.0,
     'num_sybil_to_num_attacker': 2,
     'num_groups': 19,
     'min_group_nodes': 3,
-    'max_group_nodes': 25,
-    'num_joint_node': 200,
+    'max_group_nodes': 33,
+    'num_joint_node': 360,
+    'num_seed_groups': 1,
+    'min_known_ratio': .125,
+    'avg_known_ratio': .5,
+    'max_known_ratio': 1,
+    'sybil_to_attackers_con': .5,
+    'num_inter_group_con': 360
+}
+
+graph_params_3 = {
+    'start_node': 2000,
+    'num_seed_nodes': 18,
+    'num_attacker_to_num_honest': 0.15,
+    'num_sybil_to_num_attacker': 2,
+    'num_groups': 19,
+    'min_group_nodes': 3,
+    'max_group_nodes': 33,
+    'num_joint_node': 36,
     'num_seed_groups': 1,
     'min_known_ratio': .125,
     'avg_known_ratio': .5,
     'max_known_ratio': 1,
     'sybil_to_attackers_con': 1,
-    'num_inter_group_con': 210
+    'num_inter_group_con': 360
 }
 
 algorithm_options = {
     'accumulative': False,
-    'weaken_under_min': True,
-    'min_degree': 14,
-    'weaken_seed': 0,
     'nonlinear_distribution': True,
     'group_edge_weight': 20,
-    'thresholds': [.36, .24, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .0015, .001, .0005, 0]
+    'thresholds': [.36, .24, .22, .21, .20, .19, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .0015, .001, .0005, 0],
 }
 
 sybil_edges1 = [
-    [16, 's1'],
-    [16, 's2'],
-    [16, 's3'],
-    [16, 's4'],
-    [16, 's5'],
-    [16, 's6'],
-    [16, 's7'],
-    [16, 's8'],
-    [17, 's1'],
-    [17, 's2'],
-    [17, 's3'],
-    [17, 's4'],
-    [17, 's5'],
-    [17, 's6'],
-    [17, 's7'],
-    [17, 's8'],
-    [18, 's1'],
-    [18, 's2'],
-    [18, 's3'],
-    [18, 's4'],
-    [18, 's5'],
-    [18, 's6'],
-    [18, 's7'],
-    [18, 's8'],
-    [19, 's1'],
-    [19, 's2'],
-    [19, 's3'],
-    [19, 's4'],
-    [19, 's5'],
-    [19, 's6'],
-    [19, 's7'],
-    [19, 's8'],
-    [21, 's1'],
-    [21, 's2'],
-    [21, 's3'],
-    [21, 's4'],
-    [21, 's5'],
-    [21, 's6'],
-    [21, 's7'],
-    [21, 's8'],
-    [22, 's1'],
-    [22, 's2'],
-    [22, 's3'],
-    [22, 's4'],
-    [22, 's5'],
-    [22, 's6'],
-    [22, 's7'],
-    [22, 's8'],
-    # [3, 's1'],
-    # [3, 's2'],
-    # [3, 's3'],
-    # [3, 's4'],
-    # [3, 's5'],
-    # [3, 's6'],
-    # [3, 's7'],
-    # [3, 's8'],
-    # [4, 's1'],
-    # [4, 's2'],
-    # [4, 's3'],
-    # [4, 's4'],
-    # [4, 's5'],
-    # [4, 's6'],
-    # [4, 's7'],
-    # [4, 's8'],
-    # [5, 's1'],
-    # [5, 's2'],
-    # [5, 's3'],
-    # [5, 's4'],
-    # [5, 's5'],
-    # [5, 's6'],
-    # [5, 's7'],
-    # [5, 's8'],
+    [26, 's1'],
+    [26, 's2'],
+    [26, 's3'],
+    # [26, 's4'],
+    # [26, 's5'],
+    # [26, 's6'],
+    # [26, 's7'],
+    # [26, 's8'],
+    [27, 's1'],
+    [27, 's2'],
+    [27, 's3'],
+    # [27, 's4'],
+    # [27, 's5'],
+    # [27, 's6'],
+    # [27, 's7'],
+    # [27, 's8'],
+    [28, 's1'],
+    [28, 's2'],
+    [28, 's3'],
+    # [28, 's4'],
+    # [28, 's5'],
+    # [28, 's6'],
+    # [28, 's7'],
+    # [28, 's8'],
+    # [29, 's1'],
+    # [29, 's2'],
+    # [29, 's3'],
+    # [29, 's4'],
+    # [29, 's5'],
+    # [29, 's6'],
+    # [29, 's7'],
+    # [29, 's8'],
+    # [21, 's1'],
+    # [21, 's2'],
+    # [21, 's3'],
+    # [21, 's4'],
+    # [21, 's5'],
+    # [21, 's6'],
+    # [21, 's7'],
+    # [21, 's8'],
+    # [22, 's1'],
+    # [22, 's2'],
+    # [22, 's3'],
+    # [22, 's4'],
+    # [22, 's5'],
+    # [22, 's6'],
+    # [22, 's7'],
+    # [22, 's8'],
+    # [23, 's1'],
+    # [23, 's2'],
+    # [23, 's3'],
+    # [23, 's4'],
+    # [23, 's5'],
+    # [23, 's6'],
+    # [23, 's7'],
+    # [23, 's8'],
+    # [24, 's1'],
+    # [24, 's2'],
+    # [24, 's3'],
+    # [24, 's4'],
+    # [24, 's5'],
+    # [24, 's6'],
+    # [24, 's7'],
+    # [24, 's8'],
+    # [25, 's1'],
+    # [25, 's2'],
+    # [25, 's3'],
+    # [25, 's4'],
+    # [25, 's5'],
+    # [25, 's6'],
+    # [25, 's7'],
+    # [25, 's8'],
+    # [20, 's1'],
+    # [20, 's2'],
+    # [20, 's3'],
+    # [20, 's4'],
+    # [20, 's5'],
+    # [20, 's6'],
+    # [20, 's7'],
+    # [20, 's8'],
+    # [26, 's1001'],
+    # [26, 's1002'],
+    # [26, 's1003'],
+    # [26, 's1004'],
+    # [26, 's1005'],
+    # [26, 's1006'],
+    # [26, 's1007'],
+    # [26, 's1008'],
+    # [27, 's1001'],
+    # [27, 's1002'],
+    # [27, 's1003'],
+    # [27, 's1004'],
+    # [27, 's1005'],
+    # [27, 's1006'],
+    # [27, 's1007'],
+    # [27, 's1008'],
+    # [28, 's1001'],
+    # [28, 's1002'],
+    # [28, 's1003'],
+    # [28, 's1004'],
+    # [28, 's1005'],
+    # [28, 's1006'],
+    # [28, 's1007'],
+    # [28, 's1008'],
+    # [29, 's1001'],
+    # [29, 's1002'],
+    # [29, 's1003'],
+    # [29, 's1004'],
+    # [29, 's1005'],
+    # [29, 's1006'],
+    # [29, 's1007'],
+    # [29, 's1008'],
+    # [21, 's1001'],
+    # [21, 's1002'],
+    # [21, 's1003'],
+    # [21, 's1004'],
+    # [21, 's1005'],
+    # [21, 's1006'],
+    # [21, 's1007'],
+    # [21, 's1008'],
+    # ['s1001', 's1002'],
+    # ['s1003', 's1004'],
+    # ['s1005', 's1006'],
+    # ['s1007', 's1008'],
+    # ['s1001', 's2'],
+    # ['s1003', 's4'],
+    # ['s1005', 's6'],
+    # ['s1007', 's8'],
+    # ['s1', 's1002'],
+    # ['s3', 's1004'],
+    # ['s5', 's1006'],
+    # ['s7', 's1008'],
     ['s1', 's2'],
-    ['s3', 's4'],
-    ['s5', 's6'],
-    ['s7', 's8']
+    ['s1', 's3'],
+    ['s3', 's2'],
+    # [6, 26]
 ]
 
 sybil_edges1b = [
@@ -210,18 +284,18 @@ sybil_edges1b = [
 
 
 sybil_edges2 = [
-    [16, 's11'],
-    [16, 's12'],
-    [16, 's13'],
-    [16, 's14'],
-    [16, 's15'],
-    [16, 's16'],
-    [16, 's17'],
-    [16, 's18'],
-    ['s11', 's12'],
-    ['s13', 's14'],
-    ['s15', 's16'],
-    ['s17', 's18']
+    [0, 's21'],
+    [0, 's22'],
+    [0, 's23'],
+    [1, 's21'],
+    [1, 's22'],
+    [1, 's23'],
+    [2, 's21'],
+    [2, 's22'],
+    [2, 's23'],
+    ['s21', 's22'],
+    ['s21', 's23'],
+    ['s22', 's23'],
 ]
 
 sybil_edges3 = [
@@ -365,31 +439,98 @@ sybil_edges10 = [
 ]
 
 connectors = [
-    [201, 1201],
     [101, 1101],
-    [202, 1202],
-    [102, 1102],
-    [203, 1203],
-    [103, 1103],
-    [204, 1201],
-    [104, 1101],
-    [205, 1202],
-    [105, 1102],
-    [206, 1203],
-    [106, 1103],
-    [201, 1204],
+    [101, 1103],
     [101, 1104],
-    [202, 1205],
+    [101, 1105],
+    [101, 1105],
+    [101, 1106],
+    [101, 1107],
+    [101, 1108],
+    [102, 1101],
+    [102, 1102],
+    [102, 1103],
+    [102, 1104],
     [102, 1105],
-    [203, 1206],
+    [102, 1106],
+    [102, 1107],
+    [102, 1108],
+    [103, 1101],
+    [103, 1102],
+    [103, 1103],
+    [103, 1104],
+    [103, 1105],
     [103, 1106],
-    [204, 1204],
+    [103, 1107],
+    [103, 1108],
+    [104, 1101],
+    [104, 1102],
+    [104, 1103],
     [104, 1104],
-    [205, 1205],
+    [104, 1105],
+    [104, 1106],
+    [104, 1107],
+    [104, 1108],
+    [105, 1101],
+    [105, 1102],
+    [105, 1103],
+    [105, 1104],
     [105, 1105],
-    [206, 1206],
+    [105, 1106],
+    [105, 1107],
+    [105, 1108],
+    [106, 1101],
+    [106, 1102],
+    [106, 1103],
+    [106, 1104],
+    [106, 1105],
     [106, 1106],
+    [106, 1107],
+    [106, 1108],
+    [107, 1101],
+    [107, 1102],
+    [107, 1103],
+    [107, 1104],
+    [107, 1105],
+    [107, 1106],
+    [107, 1107],
+    [107, 1108],
+    [108, 1101],
+    [108, 1102],
+    [108, 1103],
+    [108, 1104],
+    [108, 1105],
+    [108, 1106],
+    [108, 1107],
+    [108, 1108],
+    [101, 102],
+    [101, 103],
+    [101, 104],
+    [101, 105],
+    [102, 103],
+    [102, 104],
+    [102, 105],
+    [103, 104],
+    [103, 105],
+    [104, 105],
+    [106, 107],
+    [107, 108],
+    [1107, 108],
+    [1101, 102],
+    [1101, 103],
+    [1101, 104],
+    [1101, 105],
+    [1102, 103],
+    [1102, 104],
+    [1102, 105],
+    [1103, 104],
+    [1103, 105],
+    [1104, 105],
+    [1106, 107],
+    [1106, 108],
+    [1107, 108],
 ]
+
 
 def add_sybils(graph, sybil_edges, group):
     nodes_dic = {node.name: node for node in graph.nodes()}
@@ -397,18 +538,22 @@ def add_sybils(graph, sybil_edges, group):
     for edge in sybil_edges:
         for node_name in edge:
             if node_name not in nodes_dic:
-                nodes_dic[node_name] = Node(node_name, 'Sybil', groups=set([group]))
+                nodes_dic[node_name] = Node(node_name, 'Sybil', groups=set([group, group + 'b']))
         edges.append((nodes_dic[edge[0]], nodes_dic[edge[1]]))
     graph.add_edges_from(edges)
 
+
 graph_1 = graphs.generators.group_based.generate(graph_params_1)
 graph_2 = graphs.generators.group_based.generate(graph_params_2)
+graph_3 = graphs.generators.group_based.generate(graph_params_3)
 
 graph = nx.compose(graph_1, graph_2)
-add_sybils(graph, connectors, 'joined')
+graph = nx.compose(graph, graph_3)
+
+# add_sybils(graph, connectors, 'connectors')
 add_sybils(graph, sybil_edges1, 'sybil1')
 add_sybils(graph, sybil_edges1b, 'sybil1b')
-# add_sybils(graph, sybil_edges2, 'sybil2')
+add_sybils(graph, sybil_edges2, 'sybil2')
 # add_sybils(graph, sybil_edges3, 'sybil3')
 # add_sybils(graph, sybil_edges4, 'sybil4')
 # add_sybils(graph, sybil_edges5, 'sybil5')
@@ -417,35 +562,46 @@ add_sybils(graph, sybil_edges1b, 'sybil1b')
 # add_sybils(graph, sybil_edges8, 'sybil8')
 # add_sybils(graph, sybil_edges9, 'sybil9')
 # add_sybils(graph, sybil_edges10, 'sybil10')
+
 outputs = []
 
-# ranker = algorithms.SybilGroupRank(graph, algorithm_options)
+# ranker = algorithms.SybilRank(graph, algorithm_options)
 # ranker.rank()
-# outputs.append(generate_output(graph))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank.html'))
+# outputs.append(generate_output(graph, 'SybilRank'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
+#
 # reset_ranks(graph)
 
-ranker = algorithms.GroupSybilRank(graph, algorithm_options)
+ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
-outputs.append(generate_output(graph))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupSybilRank_merged.html'))
+outputs.append(generate_output(graph, 'SybilGroupRank'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank.html'))
+draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank_groups.html'))
+
 reset_ranks(graph)
-
-ranker = algorithms.GroupSybilRank(graph_2, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph))
-draw_graph(graph_2, os.path.join(OUTPUT_FOLDER, 'GroupSybilRank_unmerged.html'))
-reset_ranks(graph_2)
-
+#
 # ranker = algorithms.GroupSybilRank(graph, algorithm_options)
 # ranker.rank()
-# outputs.append(generate_output(graph))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupSybilRank.html'))
-# reset_ranks(graph)
+# outputs.append(generate_output(graph, 'IntraGroupWeight'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
 #
+# reset_ranks(graph)
+
+algorithm_options['min_group_req'] = 2
+
+ranker = algorithms.SybilGroupRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'SGR_min2'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2.html'))
+draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2_groups.html'))
+
+reset_ranks(graph)
+
 # ranker = algorithms.GroupMergingRank(graph, algorithm_options)
 # ranker.rank()
-# outputs.append(generate_output(graph))
+# outputs.append(generate_output(graph, 'GroupMerge'))
 # draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
 #
-# write_output_file(outputs, os.path.join(OUTPUT_FOLDER, 'result.csv'))
+# reset_ranks(graph)
+
+write_output_file(outputs, os.path.join(OUTPUT_FOLDER, 'result.csv'))
