@@ -8,65 +8,66 @@ from utils import *
 OUTPUT_FOLDER = './outputs/sparse_graph_nonseed_attack/'
 
 graph_params = {
-    'num_seed_nodes': 14,
+    'num_seed_nodes': 18,
     'num_attacker_to_num_honest': 0.0,
     'num_sybil_to_num_attacker': 2,
     'num_groups': 19,
     'min_group_nodes': 3,
-    'max_group_nodes': 25,
-    'num_joint_node': 20,
+    'max_group_nodes': 33,
+    'num_joint_node': 36,
     'num_seed_groups': 1,
     'min_known_ratio': .125,
     'avg_known_ratio': .5,
     'max_known_ratio': 1,
     'sybil_to_attackers_con': 1,
-    'num_inter_group_con': 210
+    'num_inter_group_con': 360
 }
 
 algorithm_options = {
     'accumulative': False,
     'nonlinear_distribution': True,
+    'group_edge_weight': 20,
     'thresholds': [.36, .24, .22, .21, .20, .19, .18, .12, .06, .04, .02, .01, .005, .004, .003, .002, .0015, .001, .0005, 0],
 }
 
-sybil_to_non_seed = [
+sybil_edges1 = [
     [26, 's1'],
     [26, 's2'],
     [26, 's3'],
-    [26, 's4'],
-    [26, 's5'],
+    # [26, 's4'],
+    # [26, 's5'],
     # [26, 's6'],
     # [26, 's7'],
     # [26, 's8'],
     [27, 's1'],
     [27, 's2'],
     [27, 's3'],
-    [27, 's4'],
-    [27, 's5'],
+    # [27, 's4'],
+    # [27, 's5'],
     # [27, 's6'],
     # [27, 's7'],
     # [27, 's8'],
     [28, 's1'],
     [28, 's2'],
     [28, 's3'],
-    [28, 's4'],
-    [28, 's5'],
+    # [28, 's4'],
+    # [28, 's5'],
     # [28, 's6'],
     # [28, 's7'],
     # [28, 's8'],
-    [29, 's1'],
-    [29, 's2'],
-    [29, 's3'],
-    [29, 's4'],
-    [29, 's5'],
+    # [29, 's1'],
+    # [29, 's2'],
+    # [29, 's3'],
+    # [29, 's4'],
+    # [29, 's5'],
     # [29, 's6'],
     # [29, 's7'],
     # [29, 's8'],
-    [21, 's1'],
-    [21, 's2'],
-    [21, 's3'],
-    [21, 's4'],
-    [21, 's5'],
+    # [21, 's1'],
+    # [21, 's2'],
+    # [21, 's3'],
+    # [21, 's4'],
+    # [21, 's5'],
     # [21, 's6'],
     # [21, 's7'],
     # [21, 's8'],
@@ -102,6 +103,14 @@ sybil_to_non_seed = [
     # [25, 's6'],
     # [25, 's7'],
     # [25, 's8'],
+    # [20, 's1'],
+    # [20, 's2'],
+    # [20, 's3'],
+    # [20, 's4'],
+    # [20, 's5'],
+    # [20, 's6'],
+    # [20, 's7'],
+    # [20, 's8'],
     # [26, 's1001'],
     # [26, 's1002'],
     # [26, 's1003'],
@@ -155,31 +164,9 @@ sybil_to_non_seed = [
     # ['s5', 's1006'],
     # ['s7', 's1008'],
     ['s1', 's2'],
-    # ['s3', 's4'],
-    # ['s5', 's6'],
-    # ['s7', 's8'],
-    [6, 26]
-]
-
-sybil_to_seed = [
-    [6, 's1'],
-    [6, 's2'],
-    [6, 's3'],
-    # [6, 's4'],
-    # [6, 's5'],
-    # [6, 's6'],
-    # [6, 's7'],
-    # [6, 's8'],
-    # [6, 's9'],
-    ['s1', 's2'],
     ['s1', 's3'],
-    # ['s5', 's6'],
-    # ['s7', 's8'],
-    # ['s1', 's9'],
-    # ['s2', 's3'],
-    # ['s4', 's5'],
-    # ['s6', 's7'],
-    # ['s8', 's9']
+    ['s3', 's2'],
+    # [6, 26]
 ]
 
 sybil_edges2 = [
@@ -350,14 +337,16 @@ def add_sybils(graph, sybil_edges, group):
     for edge in sybil_edges:
         for node_name in edge:
             if node_name not in nodes_dic:
-                nodes_dic[node_name] = Node(node_name, 'Sybil', groups=set([group]))
+                nodes_dic[node_name] = Node(node_name, 'Sybil', groups=set([group, group + 'b']))
+            elif nodes_dic[node_name].node_type != 'Sybil':
+                nodes_dic[node_name].groups.add('Attackers')
+                nodes_dic[node_name].node_type = 'Attacker'
         edges.append((nodes_dic[edge[0]], nodes_dic[edge[1]]))
     graph.add_edges_from(edges)
 
 
 graph = graphs.generators.group_based.generate(graph_params)
-# add_sybils(graph, sybil_to_seed, 'sybil')
-add_sybils(graph, sybil_to_non_seed, 'sybil_to_non_seed')
+add_sybils(graph, sybil_edges1, 'sybil1')
 # add_sybils(graph, sybil_edges2, 'sybil2')
 # add_sybils(graph, sybil_edges3, 'sybil3')
 # add_sybils(graph, sybil_edges4, 'sybil4')
@@ -381,43 +370,31 @@ ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
 outputs.append(generate_output(graph, 'SybilGroupRank'))
 draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank.html'))
-draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank_Groups.html'))
+draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank_groups.html'))
 
 reset_ranks(graph)
 
-# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'IntraGroupWeight'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
-#
-# reset_ranks(graph)
+ranker = algorithms.GroupSybilRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'IntraGroupWeight'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
 
-# ranker = algorithms.SybilGroupRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'SGR_weaken'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
-# draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken_Groups.html'))
-#
-# reset_ranks(graph)
+reset_ranks(graph)
 
-# ranker = algorithms.SybilRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'SR_weaken'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
-#
-# reset_ranks(graph)
-#
-# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'IGW_weaken'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IGW_weaken.html'))
-#
-# reset_ranks(graph)
+algorithm_options['min_group_req'] = 2
 
-# ranker = algorithms.GroupMergingRank(graph, algorithm_options)
-# ranker.rank()
-# outputs.append(generate_output(graph, 'GroupMerge'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
+ranker = algorithms.SybilGroupRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'SGR_min2'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2.html'))
+draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2_groups.html'))
+
+reset_ranks(graph)
+
+ranker = algorithms.GroupMergingRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'GroupMerge'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
 
 reset_ranks(graph)
 
