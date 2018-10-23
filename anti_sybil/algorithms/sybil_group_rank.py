@@ -17,13 +17,15 @@ class SybilGroupRank(sybil_rank.SybilRank):
                 groups[group].add(node)
         self.groups = groups
         self.group_graph = self.gen_group_graph()
+        self.min_group_req = self.options.get('min_group_req', 1)
 
     def rank(self):
         ranker = sybil_rank.SybilRank(self.group_graph, self.options)
         ranker.rank()
         groups_ranks = {g.name: (g.raw_rank, g.rank) for g in self.group_graph.nodes}
+
         for node in self.graph.nodes:
-            if 'min_group_req' in self.options and len(node.groups) < self.options['min_group_req']:
+            if len(node.groups) < self.min_group_req:
                 node.raw_rank = node.rank = 0
                 node.node_type = 'New'
             else:
@@ -31,7 +33,8 @@ class SybilGroupRank(sybil_rank.SybilRank):
                 node.raw_rank, node.rank = groups_ranks.get(max_group, [0, 0])
         return self.group_graph
 
-    def get_group_type(self, group_nodes):
+    @staticmethod
+    def get_group_type(group_nodes):
         flag = set([node.node_type for node in group_nodes])
         if flag == set(['Seed']):
             group_type = 'Seed'
@@ -51,9 +54,9 @@ class SybilGroupRank(sybil_rank.SybilRank):
             weight = 0
             source_nodes = self.groups[source_group]
             target_nodes = self.groups[target_group]
-            if 'min_group_req' in self.options:
-                source_nodes = filter(lambda n: len(n.groups) >= self.options['min_group_req'], source_nodes)
-                target_nodes = filter(lambda n: len(n.groups) >= self.options['min_group_req'], target_nodes)
+            if self.min_group_req > 1:
+                source_nodes = filter(lambda n: len(n.groups) >= self.min_group_req, source_nodes)
+                target_nodes = filter(lambda n: len(n.groups) >= self.min_group_req, target_nodes)
             for source_node in source_nodes:
                 if source_node in removed:
                     continue
