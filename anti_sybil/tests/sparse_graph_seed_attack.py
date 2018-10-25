@@ -1155,12 +1155,12 @@ add_sybils(graph, sybil_edges10, 'sybil10')
 
 outputs = []
 
-ranker = algorithms.SybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'SybilRank'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
-
-reset_ranks(graph)
+# ranker = algorithms.SybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SybilRank'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
+#
+# reset_ranks(graph)
 
 ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
@@ -1170,28 +1170,26 @@ draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank_group
 
 reset_ranks(graph)
 
-ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'IntraGroupWeight'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
-
-reset_ranks(graph)
-
-algorithm_options['min_group_req'] = 2
-
-ranker = algorithms.SybilGroupRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'SGR_min2'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2.html'))
-draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2_groups.html'))
-
-reset_ranks(graph)
-
-# ranker = algorithms.GroupMergingRank(graph, algorithm_options)
+# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
 # ranker.rank()
-# outputs.append(generate_output(graph, 'GroupMerge'))
-# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
+# outputs.append(generate_output(graph, 'IntraGroupWeight'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
+#
+# reset_ranks(graph)
+#
+# algorithm_options['min_group_req'] = 2
+#
+# ranker = algorithms.SybilGroupRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SGR_min2'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2.html'))
+# draw_graph(ranker.group_graph, os.path.join(OUTPUT_FOLDER, 'SGR_min2_groups.html'))
+#
+# reset_ranks(graph)
 
-reset_ranks(graph)
+ranker = algorithms.GroupMergingRank(graph, algorithm_options)
+ranker.rank()
+outputs.append(generate_output(graph, 'GroupMerge'))
+draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'GroupMerge.html'))
 
 write_output_file(outputs, os.path.join(OUTPUT_FOLDER, 'result.csv'))

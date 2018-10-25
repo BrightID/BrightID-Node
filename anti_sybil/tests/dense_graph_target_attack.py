@@ -272,6 +272,8 @@ def add_sybils(graph, sybil_edges, group):
     nodes_dic = {node.name: node for node in graph.nodes()}
     edges = []
     for edge in sybil_edges:
+        # if edge[0] == 6:
+        #     edge[0] = 26
         for node_name in edge:
             if node_name not in nodes_dic:
                 nodes_dic[node_name] = Node(node_name, 'Sybil', groups=set([group]))
@@ -293,12 +295,12 @@ add_sybils(graph, sybil_edges5, 'sybil5')
 
 outputs = []
 
-ranker = algorithms.SybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'SybilRank'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
-
-reset_ranks(graph)
+# ranker = algorithms.SybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SybilRank'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilRank.html'))
+#
+# reset_ranks(graph)
 
 ranker = algorithms.SybilGroupRank(graph, algorithm_options)
 ranker.rank()
@@ -307,32 +309,32 @@ draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SybilGroupRank.html'))
 
 reset_ranks(graph)
 
-ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'IntraGroupWeight'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
-
-reset_ranks(graph)
-algorithm_options['weaken_under_min'] = True
-
-ranker = algorithms.SybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'SR_weaken'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
-
-reset_ranks(graph)
-
-ranker = algorithms.SybilGroupRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'SGR_weaken'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
-
-reset_ranks(graph)
-
-ranker = algorithms.GroupSybilRank(graph, algorithm_options)
-ranker.rank()
-outputs.append(generate_output(graph, 'IGW_weaken'))
-draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IGW_weaken.html'))
+# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'IntraGroupWeight'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IntraGroupWeight.html'))
+#
+# reset_ranks(graph)
+# algorithm_options['weaken_under_min'] = True
+#
+# ranker = algorithms.SybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SR_weaken'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SR_weaken.html'))
+#
+# reset_ranks(graph)
+#
+# ranker = algorithms.SybilGroupRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'SGR_weaken'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'SGR_weaken.html'))
+#
+# reset_ranks(graph)
+#
+# ranker = algorithms.GroupSybilRank(graph, algorithm_options)
+# ranker.rank()
+# outputs.append(generate_output(graph, 'IGW_weaken'))
+# draw_graph(graph, os.path.join(OUTPUT_FOLDER, 'IGW_weaken.html'))
 
 reset_ranks(graph)
 
