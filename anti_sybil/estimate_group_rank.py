@@ -1,143 +1,106 @@
 from arango import ArangoClient
-from utils import *
-from db_config import *
+from db_config import DB_NAME, DB_USER, DB_PASS
+from algorithms.sybil_rank import SybilRank
 
 
-def groups_of_user(node):
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    cursor = db.aql.execute(
+def groups(user):
+    db = ArangoClient().db(DB_NAME, username=DB_USER, password=DB_PASS)
+    res = db.aql.execute(
         'FOR doc IN usersInGroups FILTER doc._from == @value RETURN doc._to',
-        bind_vars={'value': 'users/{0}'.format(node)}
-    )
-    groups = [group.replace('groups/', '') for group in cursor]
+        bind_vars={'value': 'users/{0}'.format(user)})
+    groups = [group.replace('groups/', '') for group in res]
     return groups
 
 
-def nodes_of_group(group):
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    cursor = db.aql.execute(
+def users(group):
+    db = ArangoClient().db(DB_NAME, username=DB_USER, password=DB_PASS)
+    res = db.aql.execute(
         'FOR doc IN usersInGroups FILTER doc._to == @value RETURN doc._from',
-        bind_vars={'value': 'groups/{0}'.format(group)}
-    )
-    nodes = [node.replace('users/', '') for node in cursor]
-    return nodes
+        bind_vars={'value': 'groups/{0}'.format(group)})
+    users = [user.replace('users/', '') for user in res]
+    return users
 
 
-def get_node_neighbors(node):
-    neighbors = []
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    cursor = db.aql.execute(
-        'FOR doc IN connections FILTER doc._from == @value RETURN doc._to',
-        bind_vars={'value': 'users/{0}'.format(node)}
-    )
-    neighbors.extend([group.replace('users/', '') for group in cursor])
-    cursor = db.aql.execute(
-        'FOR doc IN connections FILTER doc._to == @value RETURN doc._from',
-        bind_vars={'value': 'users/{0}'.format(node)}
-    )
-    neighbors.extend([group.replace('users/', '') for group in cursor])
-    return set(neighbors)
+def user_neighbors(user):
+    neighbors = set()
+    db = ArangoClient().db(DB_NAME, username=DB_USER, password=DB_PASS)
+    res = db.aql.execute(
+        'FOR doc IN connections FILTER doc._from == @value or doc._to == @value RETURN doc',
+        bind_vars={'value': 'users/{0}'.format(user)})
+    for edge in res:
+        neighbors.add(edge['_from'].replace('users/', ''))
+        neighbors.add(edge['_to'].replace('users/', ''))
+    neighbors.remove(user)
+    return neighbors
 
 
-def get_group_neighbors(group):
-    group_neighbors = set()
-    nodes = nodes_of_group(group)
-    for node in nodes:
-        for neighbor in get_node_neighbors(node):
-            for neighbor_group in groups_of_user(neighbor):
-                group_neighbors.add(neighbor_group)
-    group_neighbors.remove(group)
-    return group_neighbors
+def group_neighbors(group):
+    neighbors = set()
+    for user in users(group):
+        for neighbor in user_neighbors(user):
+            for neighbor_group in groups(neighbor):
+                neighbors.add(neighbor_group)
+    neighbors.remove(group)
+    return neighbors
 
 
-def count_new_affinity(source, target):
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    connections = db.collection('connections')
+def affinity(group1, group2):
+    db = ArangoClient().db(DB_NAME, username=DB_USER, password=DB_PASS)
     removed = set()
     weight = 0
-    source_nodes = sorted(nodes_of_group(source))
-    for source_node in source_nodes:
-        if source_node in removed:
+    group1_users = sorted(users(group1))
+    for user1 in group1_users:
+        if user1 in removed:
             continue
-        target_nodes = sorted(nodes_of_group(target))
-        for target_node in target_nodes:
-            if source_node in removed:
+        group2_users = sorted(users(group2))
+        for user2 in group2_users:
+            if user1 in removed:
                 break
-            if target_node in removed:
+            if user2 in removed:
                 continue
-            cursor = db.aql.execute(
+            res = db.aql.execute(
                 'FOR doc IN connections FILTER (doc._from == @source and doc._to == @target) or (doc._from == @target and doc._to == @source) RETURN doc',
-                bind_vars={'source': 'users/{0}'.format(source_node), 'target': 'users/{0}'.format(target_node)}
-            )
-            if cursor.empty():
+                bind_vars={
+                    'source': 'users/{0}'.format(user1),
+                    'target': 'users/{0}'.format(user2)
+                })
+            if res.empty():
                 continue
-            removed.add(source_node)
-            removed.add(target_node)
+            removed.add(user1)
+            removed.add(user2)
             weight += 1
     if weight > 0:
-        weight = 1.0 * weight / (len(source_nodes) + len(target_nodes))
+        weight = 1.0 * weight / (len(group1_users) + len(group2_users))
     return weight
 
 
-def nonlinear_distribution(ranks, ratio, df, dt):
-    avg_floating_points = sum([int(('%E'%rank[1]).split('E')[1]) for rank in ranks])/float(len(ranks))
-    multiplier = 10 ** (-1 * (avg_floating_points - 1))
-    nums = [rank[1] * multiplier for rank in ranks]
-    counts = {}
-    for num in nums:
-        counts[int(num)] = counts.get(int(num), 0) + 1
-    navg = sum(sorted(nums)[len(nums)/10:-1*len(nums)/10]) / (.8*len(nums))
-    navg = int(navg)
-    max_num = max(nums)
-    # find distance from average which include half of numbers
-    distance = 0
-    while True:
-        distance += 1
-        count = sum([counts.get(i, 0) for i in range(navg-distance, navg+distance)])
-        if count > len(nums)*ratio:
-            break
-    f, t = navg-distance, navg+distance
-    ret = []
-    for num in nums:
-        if 0 <= num < f:
-            num = num*df / f
-        elif f <= num < t:
-            num = df + (((num-f) / (t-f)) * (dt-df))
-        else:
-            num = dt + (((num-t) / (max_num-t)) * (100-dt))
-        ret.append(int(num))
-    return dict([(ranks[i][0], ret[i]) for i, rank in enumerate(ranks)])
-
-
-def estimate_score(source):
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
+def estimate_score(group):
+    db = ArangoClient().db(DB_NAME, username=DB_USER, password=DB_PASS)
     groups = db.collection('groups')
-    group_connections = db.collection('affinity')
-    neighbors = get_group_neighbors(source)
+    neighbors = group_neighbors(group)
     new_raw_rank = 0
     for neighbor in neighbors:
-        new_affinity = count_new_affinity(source, neighbor)
-        cursor = db.aql.execute(
+        new_affinity = affinity(group, neighbor)
+        res = db.aql.execute(
             'FOR doc IN affinity FILTER (doc._from == @source and doc._to == @target) or (doc._from == @target and doc._to == @source) RETURN doc.weight',
-            bind_vars={'source': 'groups/{0}'.format(source), 'target': 'groups/{0}'.format(neighbor)}
-        )
-        old_affinity = [w for w in cursor][0]
-        new_raw_rank += (groups[source]['raw_rank'] * new_affinity) / float(groups[neighbor]['degree'])
-        print('Source: {0}, Target: {1}, Old Affinity: {2}\nNew Affinity: {3}'.format(
-        source, neighbor, old_affinity, new_affinity))
-    print('Old Raw Rank: {0}\nNew Raw Rank: {1}'.format(groups[source]['raw_rank'], new_raw_rank))
-    cursor = db.aql.execute('FOR doc IN groups RETURN doc')
-    ranks = [(doc['_key'], doc['raw_rank']) for doc in cursor if doc['_key']!=source]
-    ranks.append((source, new_raw_rank))
-    new_rank = nonlinear_distribution(ranks, .5, 10, 90)[source]
-    print('Old Rank: {0}\nNew Rank: {1}'.format(groups[source]['rank'], new_rank))
+            bind_vars={
+                'source': 'groups/{0}'.format(group),
+                'target': 'groups/{0}'.format(neighbor)
+            })
+        old_affinity = res.next()
+        new_raw_rank += (groups[group]['raw_rank'] * new_affinity) / float(
+            groups[neighbor]['degree'])
+        print('Source: {0}, Target: {1}, Old Affinity: {2}\nNew Affinity: {3}'.
+              format(group, neighbor, old_affinity, new_affinity))
+    print('Old Raw Rank: {0}\nNew Raw Rank: {1}'.format(
+        groups[group]['raw_rank'], new_raw_rank))
+    ranks = [(g['_key'], g['raw_rank']) for g in groups if g['_key'] != group]
+    ranks.append((group, new_raw_rank))
+    new_rank = dict(SybilRank.nonlinear_distribution(ranks, .5, 10, 90))[group]
+    print('Old Rank: {0}\nNew Rank: {1}'.format(groups[group]['rank'],
+                                                new_rank))
     return new_rank
 
 
 if __name__ == '__main__':
-    estimate_score('group_15')
+    estimate_score('group_1')
