@@ -16,7 +16,7 @@ def write_output_file(outputs, file_name):
     rows = [['Results'] + [output['name'] for output in outputs]]
     for title in outputs[0]:
         if title != 'name':
-            rows.append([title] + [output[title] for output in outputs])
+            rows.append([title] + [output.get(title, '') for output in outputs])
 
     with open(file_name, 'wb') as f:
         writer = csv.writer(f)

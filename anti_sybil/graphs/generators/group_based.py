@@ -1,6 +1,7 @@
-import networkx as nx
-import collections
 import random
+
+import networkx as nx
+
 from ..node import Node
 
 
