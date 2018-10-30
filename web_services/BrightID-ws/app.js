@@ -12,15 +12,16 @@ const dataCache = new NodeCache(config.node_cache);
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 
-app.use(express.static(__dirname + '/node_modules'));
+if(config.is_dev){
+    app.use(express.static(__dirname + '/node_modules'));
+    app.get('/test', function(req, res,next){
+        res.sendFile(__dirname + '/index.html');
+    });
+}
 
 app.get('/', function(req, res,next){
     console.log("test");
     res.send("BrightID socket server");
-});
-
-app.get('/test', function(req, res,next){
-	res.sendFile(__dirname + '/index.html');
 });
 
 app.post('/upload', function(req, res, next){

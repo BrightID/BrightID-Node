@@ -15,9 +15,12 @@ var production = {
 };
 
 var env = "dev"; // default value
+var is_dev = false;
+
 switch (process.env.NODE_ENV || env) {
   case 'dev':
     env = development;
+    is_dev = true;
     break;
   case 'prod':
     env = production;
@@ -29,3 +32,5 @@ if(env){
     exports[key] = env[key];
   }
 }
+
+exports.is_dev = is_dev;
