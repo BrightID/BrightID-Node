@@ -10,7 +10,7 @@ const dataCache = new NodeCache(config.node_cache);
 
 // BodyParser Middleware
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({limit:"6mb", extended: false }));
 
 if(config.is_dev){
     app.use(express.static(__dirname + '/node_modules'));
