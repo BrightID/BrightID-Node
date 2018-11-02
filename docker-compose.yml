@@ -2,10 +2,11 @@ version: '3'
 services:
   ws:
     build: web_services
-    ports:
-      - "3000:3000"
     depends_on:
       - db
+    ports:
+      - "3000:3000"
+      - "80:80"
     network_mode: host
 
   anti_sybil:
@@ -17,6 +18,6 @@ services:
 
   db:
     build: db_dumps
+    network_mode: host
     ports:
       - "8529:8529"
-    network_mode: host

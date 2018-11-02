@@ -7,14 +7,14 @@ var development = {
 };
 
 var production = {
-  port: 3001,
+  port: 3000,
   node_cache: {
     stdTTL: 300,
     checkperiod: 120
   }
 };
 
-var env = "dev"; // default value
+var env = "prod"; // default value
 var is_dev = false;
 
 switch (process.env.NODE_ENV || env) {

@@ -59,4 +59,4 @@ io.on('connection', function(client){
 
 var port = config.port || 3000;
 console.log("Listening on port: ", port);
-server.listen(port, "0.0.0.0");
+server.listen(port, "localhost");
