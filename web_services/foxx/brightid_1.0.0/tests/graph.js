@@ -1,6 +1,6 @@
 "use strict";
 
-const contacts = require('../contactsGraph.js');
+const contacts = require('../db.js');
 
 describe('contacts graph', function () {
   it('should be able to create a connection', function () {

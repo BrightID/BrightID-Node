@@ -1,6 +1,6 @@
 'use strict';
 const createRouter = require('@arangodb/foxx/router');
-const contacts = require('./contactsGraph.js');
+const db = require('./db.js');
 const router = createRouter();
 const Joi = require('joi');
 const nacl = require('tweetnacl');
@@ -8,7 +8,7 @@ const enc = require('./encoding.js');
 
 module.context.use(router);
 
-const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future to accommodate client/server clock differences
+const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
 // low-level schemas
 var schemas = {
@@ -19,23 +19,41 @@ var schemas = {
 schemas = Object.assign({
   connectionsPutBody: Joi.object({
     // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required();
+    // publicKey1: Joi.string().base64().required(),
+    // publicKey2: Joi.string().base64().required(),
     publicKey1: Joi.string().required(),
     publicKey2: Joi.string().required(),
     sig1: Joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the private key of the user represented by publicKey1'),
+      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
     sig2: Joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the private key of the user represented by publicKey2'),
+      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey2'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the connection occurred')
   }),
   connectionsDeleteBody: Joi.object({
     // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required();
+    // publicKey1: Joi.string().base64().required(),
+    // publicKey2: Joi.string().base64().required(),
     publicKey1: Joi.string().required(),
     publicKey2: Joi.string().required(),
     sig1: Joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the private key of the user represented by publicKey1'),
+      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
+  }),
+  membershipPutBody: Joi.object({
+    // Consider using this if they ever update Joi
+    // publicKey1: Joi.string().base64().required(),
+    publicKey: Joi.string().required(),
+    group: Joi.string().required(),
+    sig: Joi.string().required()
+      .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
+  }),
+  membershipDeleteBody: Joi.object({
+    // Consider using this if they ever update Joi
+    // publicKey1: Joi.string().base64().required(),
+    publicKey: Joi.string().required(),
+    group: Joi.string().required(),
+    sig: Joi.string().required()
+      .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
   })
 }, schemas);
 
@@ -52,15 +70,15 @@ const handlers = {
     //Verify signatures
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the private key corresponding to publicKey1");
+        res.throw(403, "sig1 wasn't publicKey + publicKey2 + timestamp signed by publicKey1");
       }
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig2), enc.b64ToUint8Array(publicKey2))){
-        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by the private key corresponding to publicKey2");
+        res.throw(403, "sig2 wasn't publicKey + publicKey2 + timestamp signed by publicKey2");
       }
     } catch (e) {
       res.throw(403, e);
     }
-    contacts.addAndClean(publicKey1, publicKey2, timestamp);
+    db.addAndClean(publicKey1, publicKey2, timestamp);
     res.send('ok');
   },
   connectionsDelete: function connectionsDeleteHandler(req, res){
@@ -75,14 +93,16 @@ const handlers = {
     //Verify signature
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the private key corresponding to publicKey1");
+        res.throw(403, "sig1 wasn't publicKey + publicKey2 + timestamp signed by publicKey1");
       }
     } catch (e) {
       res.throw(403, e);
     }
-    contacts.removeAndClean(publicKey1, publicKey2, timestamp);
+    db.removeAndClean(publicKey1, publicKey2, timestamp);
     res.send('ok');
-  }
+  },
+  membershipPut: function membershipPutHandler(req, res){},
+  membershipDelete: function membershipDeleteHandler(req, res){}
 };
 
 router.put('/connections/', handlers.connectionsPut)
@@ -94,6 +114,16 @@ router.delete('/connections/', handlers.connectionsDelete)
   .body(schemas.connectionsDeleteBody.required())
   .summary('Remove a connection')
   .description('Removes a connection.');
+
+router.put('/membership/', handlers.connectionsPut)
+  .body(schemas.membershipPutBody.required())
+  .summary('Join a group')
+  .description('Joins a user to a group. A user must have a connection to more than 50% of members and must not have been previously flagged twice for removal.');
+
+router.delete('/membership/', handlers.connectionsDelete)
+  .body(schemas.membershipDeleteBody.required())
+  .summary('Leave a group')
+  .description('Allows a user to leave a group.');
 
 module.exports = {
   schemas: schemas,
