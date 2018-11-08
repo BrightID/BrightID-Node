@@ -46,6 +46,7 @@ schemas = Object.assign({
     group: Joi.string().required(),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the join was requested')
   }),
   membershipDeleteBody: Joi.object({
     // Consider using this if they ever update Joi
@@ -54,6 +55,7 @@ schemas = Object.assign({
     group: Joi.string().required(),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   })
 }, schemas);
 
