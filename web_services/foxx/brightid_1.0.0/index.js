@@ -12,7 +12,12 @@ const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (m
 
 // low-level schemas
 var schemas = {
-  timestamp: Joi.number().integer().required()
+  timestamp: Joi.number().integer().required(),
+  group: Joi.object({
+    id: Joi.string().required().description('unique identifier (base64) of the group'),
+    score: Joi.number().min(0).max(100).required(),
+    isNew: Joi.boolean()
+  })
 };
 
 // extend low-level schemas with high-level schemas
@@ -21,8 +26,8 @@ schemas = Object.assign({
     // Consider using this if they ever update Joi
     // publicKey1: Joi.string().base64().required(),
     // publicKey2: Joi.string().base64().required(),
-    publicKey1: Joi.string().required(),
-    publicKey2: Joi.string().required(),
+    publicKey1: Joi.string().required().description('public key of the first user (base64)'),
+    publicKey2: Joi.string().required().description('public key of the second user (base64)'),
     sig1: Joi.string().required()
       .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
     sig2: Joi.string().required()
@@ -33,8 +38,8 @@ schemas = Object.assign({
     // Consider using this if they ever update Joi
     // publicKey1: Joi.string().base64().required(),
     // publicKey2: Joi.string().base64().required(),
-    publicKey1: Joi.string().required(),
-    publicKey2: Joi.string().required(),
+    publicKey1: Joi.string().required().description('public key of the user removing the connection (base64)'),
+    publicKey2: Joi.string().required().description('public key of the second user (base64)'),
     sig1: Joi.string().required()
       .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
@@ -42,7 +47,7 @@ schemas = Object.assign({
   membershipPutBody: Joi.object({
     // Consider using this if they ever update Joi
     // publicKey1: Joi.string().base64().required(),
-    publicKey: Joi.string().required(),
+    publicKey: Joi.string().required().description('public key of the user (base64)'),
     group: Joi.string().required(),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
@@ -51,11 +56,18 @@ schemas = Object.assign({
   membershipDeleteBody: Joi.object({
     // Consider using this if they ever update Joi
     // publicKey1: Joi.string().base64().required(),
-    publicKey: Joi.string().required(),
+    publicKey: Joi.string().required().description('public key of the user (base64)'),
     group: Joi.string().required(),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
+  }),
+  userInfoResponse: Joi.object({
+    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
+    data: Joi.object({
+      currentGroups: Joi.array().items(schemas.group),
+      eligibleGroups: Joi.array().items(schemas.group)
+    })
   })
 }, schemas);
 
@@ -72,16 +84,15 @@ const handlers = {
     //Verify signatures
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey + publicKey2 + timestamp signed by publicKey1");
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig2), enc.b64ToUint8Array(publicKey2))){
-        res.throw(403, "sig2 wasn't publicKey + publicKey2 + timestamp signed by publicKey2");
+        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey2");
       }
     } catch (e) {
       res.throw(403, e);
     }
     db.addConnection(publicKey1, publicKey2, timestamp);
-    res.send('ok');
   },
   connectionsDelete: function connectionsDeleteHandler(req, res){
     const publicKey1 = req.body.publicKey1;
@@ -95,37 +106,49 @@ const handlers = {
     //Verify signature
     try {
       if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey + publicKey2 + timestamp signed by publicKey1");
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
     } catch (e) {
       res.throw(403, e);
     }
     db.removeConnection(publicKey1, publicKey2, timestamp);
-    res.send('ok');
   },
   membershipPut: function membershipPutHandler(req, res){},
-  membershipDelete: function membershipDeleteHandler(req, res){}
+  membershipDelete: function membershipDeleteHandler(req, res){},
+  userInfo: function userInfoHandler(req, res){}
 };
 
 router.put('/connections/', handlers.connectionsPut)
   .body(schemas.connectionsPutBody.required())
   .summary('Add a connection')
-  .description('Adds a connection.');
+  .description('Adds a connection.')
+  .response(null);
 
 router.delete('/connections/', handlers.connectionsDelete)
   .body(schemas.connectionsDeleteBody.required())
   .summary('Remove a connection')
-  .description('Removes a connection.');
+  .description('Removes a connection.')
+  .response(null);
 
-router.put('/membership/', handlers.connectionsPut)
+router.put('/membership/', handlers.membershipPut)
   .body(schemas.membershipPutBody.required())
   .summary('Join a group')
-  .description('Joins a user to a group. A user must have a connection to more than 50% of members and must not have been previously flagged twice for removal.');
+  .description('Joins a user to a group. A user must have a connection to more than 50% of members and must not have been previously flagged twice for removal.')
+  .response(null);
 
-router.delete('/membership/', handlers.connectionsDelete)
+router.delete('/membership/', handlers.membershipDelete)
   .body(schemas.membershipDeleteBody.required())
   .summary('Leave a group')
-  .description('Allows a user to leave a group.');
+  .description('Allows a user to leave a group.')
+  .response(null);
+
+router.get('/user-info/:publicKey', handlers.userInfo)
+// Consider using this if they ever update Joi
+// .pathParam('publicKey', Joi.string().base64().required,"...")
+  .pathParam('publicKey', Joi.string().required, "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
+  .summary('Get information about a user')
+  .description('Gets lists of current groups, eligible groups, and current connections for the given user.')
+  .response(schemas.userInfoResponse);
 
 module.exports = {
   schemas: schemas,
