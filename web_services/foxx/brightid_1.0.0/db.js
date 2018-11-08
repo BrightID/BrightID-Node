@@ -36,7 +36,7 @@ function removeByKeys(collection, keys) {
   `);
 }
 
-function updateAndClean(collection, key1, key2, timestamp) {
+function updateAndCleanConnections(collection, key1, key2, timestamp) {
   // all keys in the DB are in the url/directory/db safe b64 format
   const user1 = 'users/' + b64ToSafeB64(key1);
   const user2 = 'users/' + b64ToSafeB64(key2);
@@ -65,11 +65,11 @@ function updateAndClean(collection, key1, key2, timestamp) {
 }
 
 const operations = {
-  addAndClean: function addAndClean(key1, key2, timestamp) {
-    updateAndClean(connectionsColl, key1, key2, timestamp);
+  addConnection: function addAndClean(key1, key2, timestamp) {
+    updateAndCleanConnections(connectionsColl, key1, key2, timestamp);
   },
-  removeAndClean: function removeAndClean(key1, key2, timestamp) {
-    updateAndClean(removedColl, key1, key2, timestamp);
+  removeConnection: function removeAndClean(key1, key2, timestamp) {
+    updateAndCleanConnections(removedColl, key1, key2, timestamp);
   }
 };
 

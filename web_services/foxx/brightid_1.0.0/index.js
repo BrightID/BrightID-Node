@@ -78,7 +78,7 @@ const handlers = {
     } catch (e) {
       res.throw(403, e);
     }
-    db.addAndClean(publicKey1, publicKey2, timestamp);
+    db.addConnection(publicKey1, publicKey2, timestamp);
     res.send('ok');
   },
   connectionsDelete: function connectionsDeleteHandler(req, res){
@@ -98,7 +98,7 @@ const handlers = {
     } catch (e) {
       res.throw(403, e);
     }
-    db.removeAndClean(publicKey1, publicKey2, timestamp);
+    db.removeConnection(publicKey1, publicKey2, timestamp);
     res.send('ok');
   },
   membershipPut: function membershipPutHandler(req, res){},
