@@ -65,6 +65,8 @@ schemas = Object.assign({
   groupsPostBody: Joi.object({
     // Consider using this if they ever update Joi
     // publicKey1: Joi.string().base64().required(),
+    // publicKey2: Joi.string().base64().required(),
+    // publicKey3: Joi.string().base64().required(),
     publicKey1: Joi.string().required().description('public key of the first founder (base64)'),
     publicKey2: Joi.string().required().description('public key of the second founder (base64)'),
     publicKey3: Joi.string().required().description('public key of the third founder (base64)'),
@@ -72,9 +74,13 @@ schemas = Object.assign({
       .description('message (publicKey1 + publicKey2 + publicKey3 + timestamp) signed by the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the group creation was requested')
   }),
+  groupsPostResponse: Joi.object({
+    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
+    data: schemas.group
+  }),
   groupsDeleteBody: Joi.object({
     // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required(),
+    // publicKey: Joi.string().base64().required(),
     publicKey: Joi.string().required().description('public key of the user deleting the group (base64)'),
     group: Joi.string().required().description('group id'),
     sig: Joi.string().required()
@@ -172,7 +178,7 @@ router.post('/groups/', handlers.groupsPost)
   .body(schemas.groupsPostBody.required())
   .summary('Create a group')
   .description('Creates a group.')
-  .response(schemas.group);
+  .response(schemas.groupsPostResponse);
 
 router.delete('/groups/', handlers.groupsDelete)
   .body(schemas.groupsDeleteBody.required())
@@ -182,7 +188,7 @@ router.delete('/groups/', handlers.groupsDelete)
 
 router.get('/user-info/:publicKey', handlers.userInfo)
 // Consider using this if they ever update Joi
-// .pathParam('publicKey', Joi.string().base64().required,"...")
+// .pathParam('publicKey', Joi.string().base64().required)
   .pathParam('publicKey', Joi.string().required, "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
   .summary('Get information about a user')
   .description('Gets lists of current groups, eligible groups, and current connections for the given user.')
