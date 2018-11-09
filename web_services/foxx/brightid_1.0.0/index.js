@@ -142,7 +142,11 @@ const handlers = {
   membershipDelete: function membershipDeleteHandler(req, res){},
   groupsPost: function groupsPostHandler(req, res){
     const newGroup = {
-      id: "foo"
+      data : {
+        id: "foo",
+        score: 0,
+        isNew: true
+      }
     };
     res.send(newGroup);
   },
