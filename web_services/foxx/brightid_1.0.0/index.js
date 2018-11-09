@@ -87,11 +87,12 @@ schemas = Object.assign({
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
-  userInfoResponse: Joi.object({
+  usersResponse: Joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
     data: Joi.object({
       currentGroups: Joi.array().items(schemas.group),
       eligibleGroups: Joi.array().items(schemas.group)
+      // TODO: POST-BETA: return list of this user's connections (publicKeys)
     })
   })
 }, schemas);
@@ -151,7 +152,7 @@ const handlers = {
     res.send(newGroup);
   },
   groupsDelete: function groupsDeleteHandler(req, res){},
-  userInfo: function userInfoHandler(req, res){}
+  users: function usersHandler(req, res){}
 };
 
 router.put('/connections/', handlers.connectionsPut)
@@ -190,13 +191,13 @@ router.delete('/groups/', handlers.groupsDelete)
   .description('Removes a group with three or fewer members (founders). Any of the founders can remove the group.')
   .response(null);
 
-router.get('/user-info/:publicKey', handlers.userInfo)
+router.get('/users/:publicKey', handlers.users)
 // Consider using this if they ever update Joi
 // .pathParam('publicKey', Joi.string().base64().required)
   .pathParam('publicKey', Joi.string().required, "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
   .summary('Get information about a user')
   .description('Gets lists of current groups, eligible groups, and current connections for the given user.')
-  .response(schemas.userInfoResponse);
+  .response(schemas.usersResponse);
 
 module.exports = {
   schemas: schemas,
