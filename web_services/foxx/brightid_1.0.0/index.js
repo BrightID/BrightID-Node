@@ -15,8 +15,8 @@ var schemas = {
   timestamp: Joi.number().integer().required(),
   group: Joi.object({
     id: Joi.string().required().description('unique identifier (base64) of the group'),
-    score: Joi.number().min(0).max(100).required(),
-    isNew: Joi.boolean()
+    score: Joi.number().min(0).max(100).default(0),
+    isNew: Joi.boolean().default(true)
   })
 };
 
@@ -47,8 +47,8 @@ schemas = Object.assign({
   membershipPutBody: Joi.object({
     // Consider using this if they ever update Joi
     // publicKey1: Joi.string().base64().required(),
-    publicKey: Joi.string().required().description('public key of the user (base64)'),
-    group: Joi.string().required(),
+    publicKey: Joi.string().required().description('public key of the user joining the group (base64)'),
+    group: Joi.string().required().description('group id'),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the join was requested')
@@ -56,8 +56,27 @@ schemas = Object.assign({
   membershipDeleteBody: Joi.object({
     // Consider using this if they ever update Joi
     // publicKey1: Joi.string().base64().required(),
-    publicKey: Joi.string().required().description('public key of the user (base64)'),
-    group: Joi.string().required(),
+    publicKey: Joi.string().required().description('public key of the user leaving the group (base64)'),
+    group: Joi.string().required().description('group id'),
+    sig: Joi.string().required()
+      .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
+  }),
+  groupsPostBody: Joi.object({
+    // Consider using this if they ever update Joi
+    // publicKey1: Joi.string().base64().required(),
+    publicKey1: Joi.string().required().description('public key of the first founder (base64)'),
+    publicKey2: Joi.string().required().description('public key of the second founder (base64)'),
+    publicKey3: Joi.string().required().description('public key of the third founder (base64)'),
+    sig1: Joi.string().required()
+      .description('message (publicKey1 + publicKey2 + publicKey3 + timestamp) signed by the user represented by publicKey1'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the group creation was requested')
+  }),
+  groupsDeleteBody: Joi.object({
+    // Consider using this if they ever update Joi
+    // publicKey1: Joi.string().base64().required(),
+    publicKey: Joi.string().required().description('public key of the user deleting the group (base64)'),
+    group: Joi.string().required().description('group id'),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
@@ -115,6 +134,13 @@ const handlers = {
   },
   membershipPut: function membershipPutHandler(req, res){},
   membershipDelete: function membershipDeleteHandler(req, res){},
+  groupsPost: function groupsPostHandler(req, res){
+    const newGroup = {
+      id: "foo"
+    };
+    res.send(newGroup);
+  },
+  groupsDelete: function groupsDeleteHandler(req, res){},
   userInfo: function userInfoHandler(req, res){}
 };
 
@@ -140,6 +166,18 @@ router.delete('/membership/', handlers.membershipDelete)
   .body(schemas.membershipDeleteBody.required())
   .summary('Leave a group')
   .description('Allows a user to leave a group.')
+  .response(null);
+
+router.post('/groups/', handlers.groupsPost)
+  .body(schemas.groupsPostBody.required())
+  .summary('Create a group')
+  .description('Creates a group.')
+  .response(schemas.group);
+
+router.delete('/groups/', handlers.groupsDelete)
+  .body(schemas.groupsDeleteBody.required())
+  .summary('Remove a group.')
+  .description('Removes a group with three or fewer members (founders). Any of the founders can remove the group.')
   .response(null);
 
 router.get('/user-info/:publicKey', handlers.userInfo)
