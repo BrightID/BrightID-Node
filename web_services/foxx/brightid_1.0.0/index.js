@@ -119,6 +119,7 @@ const handlers = {
     } catch (e) {
       res.throw(403, e);
     }
+
     db.addConnection(publicKey1, publicKey2, timestamp);
   },
   connectionsDelete: function connectionsDeleteHandler(req, res){
@@ -140,19 +141,126 @@ const handlers = {
     }
     db.removeConnection(publicKey1, publicKey2, timestamp);
   },
-  membershipPut: function membershipPutHandler(req, res){},
-  membershipDelete: function membershipDeleteHandler(req, res){},
-  groupsPost: function groupsPostHandler(req, res){
-    const newGroup = {
-      data : {
-        id: "foo",
-        score: 0,
-        isNew: true
+
+  membershipPut: function membershipPutHandler(req, res){
+    const publicKey = req.body.publicKey;
+    const group = req.body.group;
+    const timestamp = req.body.timestamp;
+
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
+    const message = enc.strToUint8Array(publicKey + group + timestamp);
+
+    //Verify signature
+    try {
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKeyss");
       }
-    };
-    res.send(newGroup);
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    try{
+      db.addMembership(group, publicKey, timestamp);
+      res.send({});
+    }catch(e){
+      res.throw(403, e);
+    }
   },
-  groupsDelete: function groupsDeleteHandler(req, res){},
+
+  membershipDelete: function membershipDeleteHandler(req, res){
+    const publicKey = req.body.publicKey;
+    const group = req.body.group;
+    const timestamp = req.body.timestamp;
+
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
+    const message = enc.strToUint8Array(publicKey + group + timestamp);
+
+    //Verify signature
+    try {
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKeyss");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    try{
+      db.deleteMembership(group, publicKey, timestamp);
+      res.send({});
+    }catch(e){
+      res.throw(403, e);
+    }
+  },
+  
+  groupsPost: function groupsPostHandler(req, res){
+    const publicKey1 = req.body.publicKey1;
+    const publicKey2 = req.body.publicKey2;
+    const publicKey3 = req.body.publicKey3;
+    const timestamp = req.body.timestamp;
+
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
+    const message = enc.strToUint8Array(publicKey1 + publicKey2 + publicKey3 + 
+        req.body.timestamp);
+
+    //Verify signature
+    try {
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + publicKey3 + timestamp signed by publicKey1");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    try{
+      const group = db.createGroup(publicKey1, publicKey2, publicKey3, timestamp);
+
+      const newGroup = {
+        data : {
+          id: group._key,
+          score: 0,
+          isNew: true
+        }
+      };
+      res.send(newGroup);
+    }catch(e){
+      res.throw(403, e);
+    }
+  },
+
+  groupsDelete: function groupsDeleteHandler(req, res){
+    const publicKey = req.body.publicKey;
+    const group = req.body.group;
+    const timestamp = req.body.timestamp;
+
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
+    const message = enc.strToUint8Array(publicKey + group +
+        req.body.timestamp);
+
+    //Verify signature
+    try {
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    try{
+      db.deleteGroup(group, publicKey, timestamp);
+      res.send({});
+    }catch(e){
+      res.throw(403, e);
+    }
+  },
+  
   users: function usersHandler(req, res){}
 };
 
