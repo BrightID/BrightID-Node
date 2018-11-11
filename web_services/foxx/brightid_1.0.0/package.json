@@ -3,6 +3,7 @@
   "description": "Foxx service for managing BrightID connections",
   "version": "0.0.1",
   "dependencies": {
+    "lodash": "^4.17.11",
     "tweetnacl": "^1.0.0"
   }
 }

@@ -4,6 +4,8 @@ const aql = require('@arangodb').aql;
 const db = require('@arangodb').db;
 const errors = require('@arangodb').errors;
 
+const _ = require('lodash');
+
 const connectionsColl = db._collection('connections');
 const removedColl = db._collection('removed');
 const groupsColl = db._collection('groups');
@@ -39,6 +41,23 @@ function removeByKeys(collection, keys) {
       filter i._key in ${keys}
       remove i in ${collection}
   `);
+}
+
+function userConnections(user){
+  return db._query(aql`
+    for i in ${connectionsColl}
+      filter i._from == ${user}
+    sort i.timestamp desc
+    return i
+  `).toArray(); 
+}
+
+function groupMembers(group){
+  return db._query(aql`
+    for i in ${usersInGroupsColl}
+      filter i._to == ${group}
+    return i
+  `).toArray();
 }
 
 function updateAndCleanConnections(collection, key1, key2, timestamp) {
@@ -195,7 +214,15 @@ function addMembership(groupId, key, timestamp){
     }
   }else{
     //TODO: Ivan: is eligible?
-    addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");
+    const userCons = userConnections("users/"+b64ToSafeB64(key)).map(x => x._to);
+    const groupMems = groupMembers("groups/"+groupId).map(x => x._from);
+    const count = _.intersection(userCons, groupMems).length;
+    
+    if(count*2 > groupMems){ // > 50%
+      addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");  
+    }else{
+      throw 'Not eligible to join this group';
+    }
   }
 }
 
