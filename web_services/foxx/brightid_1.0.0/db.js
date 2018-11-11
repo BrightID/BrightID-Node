@@ -60,6 +60,17 @@ function groupMembers(group){
   `).toArray();
 }
 
+function isEligible(groupId, userId){
+  const userCons = userConnections("users/"+b64ToSafeB64(userId)).map(x => x._to);
+  const groupMems = groupMembers("groups/"+groupId).map(x => x._from);
+  const count = _.intersection(userCons, groupMems).length;
+    
+  if(count*2 > groupMems){
+    return true;
+  }
+  return false;
+}
+
 function updateAndCleanConnections(collection, key1, key2, timestamp) {
   // all keys in the DB are in the url/directory/db safe b64 format
   const user1 = 'users/' + b64ToSafeB64(key1);
@@ -213,12 +224,7 @@ function addMembership(groupId, key, timestamp){
       db._query(aql`remove ${group._key} in ${newGroupsColl}`);
     }
   }else{
-    //TODO: Ivan: is eligible?
-    const userCons = userConnections("users/"+b64ToSafeB64(key)).map(x => x._to);
-    const groupMems = groupMembers("groups/"+groupId).map(x => x._from);
-    const count = _.intersection(userCons, groupMems).length;
-    
-    if(count*2 > groupMems){ // > 50%
+    if(isEligible(groupId, key)){
       addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");  
     }else{
       throw 'Not eligible to join this group';
