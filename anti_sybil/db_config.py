@@ -1,3 +1,3 @@
 DB_NAME = '_system'
 DB_USER = 'root'
-DB_PASS = 'a'
+DB_PASS = 'sadegh'

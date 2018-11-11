@@ -165,10 +165,37 @@ function addMembership(groupId, key, timestamp){
 
   if(isNew){
     addUserToGroup(usersInNewGroupsColl, groupId, key, timestamp, "newGroups");
-    //TODO: Ivan: move to groups if all founders joined
+    //move to groups if all founders joined
+    const groupMembers = db._query(aql`
+      for i in ${usersInNewGroupsColl}
+        return i
+    `).toArray()
+
+    if(groupMembers.length == group.founders.length){
+      groupsColl.save({
+        score: 0,
+        isNew: false,
+        timestamp: group.timestamp,
+        founders: group.founders,
+        _key: group._key
+      });
+
+      for(var i=0; i < groupMembers.length; i++){
+        var doc = groupMembers[i];
+        usersInGroupsColl.save({
+          _key: doc._key,
+          _from: doc._from,
+          _to: doc._to.replace('newGroups', 'groups'),
+          timestamp: doc.timestamp
+        });
+        db._query(aql`remove ${doc._key} in ${usersInNewGroupsColl}`);
+      }
+
+      db._query(aql`remove ${group._key} in ${newGroupsColl}`);
+    }
   }else{
     //TODO: Ivan: is eligible?
-    addUserToGroup(usersInGroups, groupId, key, timestamp, "groups");
+    addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");
   }
 }
 
@@ -200,7 +227,7 @@ const operations = {
     return addMembership(group, key, timestamp);
   },
   deleteMembership: function(group, key, timestamp){
-    return deleteMembership(usersInGroups, group, key, timestamp);
+    return deleteMembership(usersInGroupsColl, group, key, timestamp);
   },
 };
 
