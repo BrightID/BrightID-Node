@@ -262,7 +262,14 @@ const handlers = {
     }
   },
   
-  users: function usersHandler(req, res){}
+  users: function usersHandler(req, res){
+    const key = req.param("publicKey");
+    const eligibleIds = db.userEligibleGroups(key);
+    res.send({
+      eligibleGroups: db.loadGroups(eligibleIds),
+      currentGroups: db.userCurrentGroups(key)
+    });
+  }
 };
 
 router.put('/connections/', handlers.connectionsPut)

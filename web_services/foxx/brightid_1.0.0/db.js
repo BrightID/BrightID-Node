@@ -71,6 +71,76 @@ function isEligible(groupId, userId){
   return false;
 }
 
+function userEligibleGroups(userId){
+  const user = "users/" + b64ToSafeB64(userId);
+  const candidates = db._query(aql`
+      LET userConnections = (
+        FOR c in connections
+          FILTER c._from == ${user}
+          RETURN c._to
+      )
+      FOR edge in usersInGroups
+          FILTER edge._from in userConnections
+          COLLECT group=edge._to  WITH COUNT INTO count
+          FILTER count >= 2
+          SORT count DESC
+          RETURN {
+              group,
+              count
+          }
+  `).toArray();
+
+  var groupIds = candidates.map(x => x.group);
+  const groupCounts = db._query(aql`
+    FOR ug in usersInGroups
+      FILTER ug._to in ${groupIds}
+      COLLECT id=ug._to WITH COUNT INTO count
+      return {
+        id,
+        count
+      }
+  `).toArray();
+
+  var groupCountsDic = {};
+  groupCounts.map(function(row){
+    groupCountsDic[row.id] = row.count;
+  });
+
+  var eligibles = candidates.filter(function(g){
+    if(g.count*2 > groupCountsDic[g.id]){
+      return true;
+    }
+    return false;
+  });
+  eligibles = eligibles.map(x => x.id);
+  return eligibles;
+}
+
+function userCurrentGroups(userId){
+  const user = "users/"+b64ToSafeB64(userId);
+  const groupIds = db._query(aql`
+    FOR ug in usersInGroups
+      FILTER ug._from == ${user}
+      return ug._to
+  `).toArray();
+  return loadGroups(groupIds);
+}
+
+function loadGroups(ids){
+  return db._query(aql`
+    FOR g in groups
+      FILTER g._id in ${ids}
+      return g
+  `).toArray().map(function(g){
+      return {
+        isNew: g.isNew,
+        score: g.score,
+        id: g._key,
+        knownMembers: [] //TODO: Ivan: load known members
+      }
+  });
+}
+
 function updateAndCleanConnections(collection, key1, key2, timestamp) {
   // all keys in the DB are in the url/directory/db safe b64 format
   const user1 = 'users/' + b64ToSafeB64(key1);
@@ -262,6 +332,9 @@ const operations = {
   deleteMembership: function(group, key, timestamp){
     return deleteMembership(usersInGroupsColl, group, key, timestamp);
   },
+  userEligibleGroups: userEligibleGroups,
+  loadGroups: loadGroups,
+  userCurrentGroups: userCurrentGroups
 };
 
 module.exports = operations;
