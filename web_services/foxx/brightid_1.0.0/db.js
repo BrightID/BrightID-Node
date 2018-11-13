@@ -141,6 +141,17 @@ function loadGroups(ids){
   });
 }
 
+function loadUser(id){
+  var user = "users/"+b64ToSafeB64(id);
+  return db._query(aql`RETURN DOCUMENT(${user})`).toArray()[0];
+}
+
+function updateEligibleTimestamp(key, timestamp){
+  return db._query(aql`
+    UPDATE ${key} WITH {eligible_timestamp: ${timestamp}} in users
+  `); 
+}
+
 function updateAndCleanConnections(collection, key1, key2, timestamp) {
   // all keys in the DB are in the url/directory/db safe b64 format
   const user1 = 'users/' + b64ToSafeB64(key1);
@@ -334,7 +345,9 @@ const operations = {
   },
   userEligibleGroups: userEligibleGroups,
   loadGroups: loadGroups,
-  userCurrentGroups: userCurrentGroups
+  userCurrentGroups: userCurrentGroups,
+  loadUser: loadUser,
+  updateEligibleTimestamp: updateEligibleTimestamp
 };
 
 module.exports = operations;

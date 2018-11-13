@@ -9,6 +9,7 @@ const enc = require('./encoding.js');
 module.context.use(router);
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
+const ELIGIBLE_TIME_INTERVAL = 60 * 60 * 1000;
 const DEBUG = true;
 
 // low-level schemas
@@ -89,8 +90,12 @@ schemas = Object.assign({
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
+
   usersResponse: Joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
+    rateLimitRemaining: Joi.number().integer().required().description(
+      'milliseconds that need to wait before sending next request for reloading eligible groups'
+    ),
     data: Joi.object({
       currentGroups: Joi.array().items(schemas.group),
       eligibleGroups: Joi.array().items(schemas.group)
@@ -264,12 +269,54 @@ const handlers = {
   
   users: function usersHandler(req, res){
     const key = req.param("publicKey");
-    const eligibleIds = db.userEligibleGroups(key);
+    const timestamp = req.param("timestamp");
+    const sig = req.param("sig");
+
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
+    const message = enc.strToUint8Array(key + timestamp);
+
+    //Verify signature
+    try {
+      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(sig), enc.b64ToUint8Array(key))){
+        res.throw(403, "sig wasn't publicKey + timestamp signed by publicKey");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    const user = db.loadUser(key);
+    if(!user){
+      res.throw(404, "User not found");
+    }
+
+    var eligibleGroups = null;
+    const last_timestamp = user.eligible_timestamp || 0;
+    var rateLimitRemaining = 0;
+
+    if(last_timestamp == 0 || Date.now() > last_timestamp + ELIGIBLE_TIME_INTERVAL){
+      eligibleGroups = db.loadGroups(db.userEligibleGroups(key));
+      db.updateEligibleTimestamp(key, Date.now());
+      rateLimitRemaining = ELIGIBLE_TIME_INTERVAL;
+    }else{
+      rateLimitRemaining = (last_timestamp + ELIGIBLE_TIME_INTERVAL) - Date.now();
+    }
+
     res.send({
-      eligibleGroups: db.loadGroups(eligibleIds),
-      currentGroups: db.userCurrentGroups(key)
+      rateLimitRemaining: rateLimitRemaining,
+      data:{
+        eligibleGroups: eligibleGroups,
+        currentGroups: db.userCurrentGroups(key)
+      }
     });
+  },
+
+  usersPost: function usersPostHandler(req, res){
+    const key = req.body.publicKey;
+    // TODO: Ivan: implement
   }
+
 };
 
 router.put('/connections/', handlers.connectionsPut)
@@ -309,9 +356,9 @@ router.delete('/groups/', handlers.groupsDelete)
   .response(null);
 
 router.get('/users/:publicKey', handlers.users)
-// Consider using this if they ever update Joi
-// .pathParam('publicKey', Joi.string().base64().required)
   .pathParam('publicKey', Joi.string().required, "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
+  .queryParam('sig', Joi.string().required(), 'message (publicKey + timestamp) signed by the user represented by publicKey')
+  .queryParam('timestamp', schemas.timestamp)
   .summary('Get information about a user')
   .description('Gets lists of current groups, eligible groups, and current connections for the given user.')
   .response(schemas.usersResponse);
