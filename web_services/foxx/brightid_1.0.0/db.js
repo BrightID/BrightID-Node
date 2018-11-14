@@ -237,7 +237,15 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   const user = 'users/' + b64ToSafeB64(key);
   const group = groupCollName + '/' + groupId;
 
-  //TODO: Ivan: check duplicate
+  const ret = db._query(aql`
+    FOR i in ${collection}
+      FILTER i._from == ${user} && i._to == ${group}
+      RETURN i
+  `).toArray();
+  
+  if(ret && ret.length){
+    return ret[0];
+  }
 
   return collection.save({
     timestamp: timestamp,
