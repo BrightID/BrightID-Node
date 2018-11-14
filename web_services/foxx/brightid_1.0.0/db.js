@@ -237,12 +237,14 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   const user = 'users/' + b64ToSafeB64(key);
   const group = groupCollName + '/' + groupId;
 
+  // Ivan: Is this a safe method for avoiding duplicate edges
+  // or parallel requests can push more than one edge to db?
   const ret = db._query(aql`
     FOR i in ${collection}
       FILTER i._from == ${user} && i._to == ${group}
       RETURN i
   `).toArray();
-  
+
   if(ret && ret.length){
     return ret[0];
   }
