@@ -20,6 +20,10 @@ var schemas = {
     score: Joi.number().min(0).max(100).default(0),
     isNew: Joi.boolean().default(true),
     knownMembers: Joi.array().items(Joi.string()).description('public keys of two or three founders or other members connected to the reference user')
+  }),
+  user: Joi.object({
+    key: Joi.string().required().description('unique identifier (base64) of the user'),
+    score: Joi.number().min(0).max(100).default(0)
   })
 };
 
@@ -77,6 +81,7 @@ schemas = Object.assign({
       .description('message (publicKey1 + publicKey2 + publicKey3 + timestamp) signed by the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the group creation was requested')
   }),
+
   groupsPostResponse: Joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
     data: schemas.group
@@ -101,7 +106,17 @@ schemas = Object.assign({
       eligibleGroups: Joi.array().items(schemas.group)
       // TODO: POST-BETA: return list of this user's connections (publicKeys)
     })
+  }),
+
+  usersPostBody: Joi.object({
+    publicKey: Joi.string().required().description('public key of the first founder (base64)')
+  }),
+
+  usersPostResponse: Joi.object({
+    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
+    data: schemas.user
   })
+
 }, schemas);
 
 const handlers = {
@@ -316,7 +331,8 @@ const handlers = {
 
   usersPost: function usersPostHandler(req, res){
     const key = req.body.publicKey;
-    // TODO: Ivan: implement
+    const ret = db.createUser(key);
+    res.send({data: ret});
   }
 
 };
@@ -364,6 +380,12 @@ router.get('/users/:publicKey', handlers.users)
   .summary('Get information about a user')
   .description('Gets lists of current groups, eligible groups, and current connections for the given user.')
   .response(schemas.usersResponse);
+
+router.post('/user/', handlers.usersPost)
+  .body(schemas.usersPostBody.required())
+  .summary("Create a user")
+  .description("Create a group")
+  .response(schemas.usersPostResponse);
 
 module.exports = {
   schemas: schemas,

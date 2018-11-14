@@ -14,6 +14,8 @@ const newGroupsColl = db._collection('newGroups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
 
+const usersColl = db._collection('users');
+
 function b64ToSafeB64(s) {
   const alts = {
     '/': '_',
@@ -192,6 +194,17 @@ function updateAndCleanConnections(collection, key1, key2, timestamp) {
   }
 }
 
+function createUser(key){
+  const ret = usersColl.save({
+    score: 0,
+    _key: b64ToSafeB64(key)
+  });
+  return {
+    key: ret._key,
+    score: 0
+  };
+}
+
 function createGroup(collection, key1, key2, key3, timestamp){
   const user1 = 'users/' + b64ToSafeB64(key1);
   const user2 = 'users/' + b64ToSafeB64(key2);
@@ -360,7 +373,8 @@ const operations = {
   userCurrentGroups: userCurrentGroups,
   loadUser: loadUser,
   updateEligibleTimestamp: updateEligibleTimestamp,
-  userNewGroups: userNewGroups
+  userNewGroups: userNewGroups,
+  createUser: createUser
 };
 
 module.exports = operations;
