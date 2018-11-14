@@ -116,6 +116,16 @@ function userEligibleGroups(userId){
   return eligibles;
 }
 
+function userNewGroups(userId){
+  const user = "users/" + b64ToSafeB64(userId);
+  const groups = db._query(aql`
+      FOR g in newGroups
+        FILTER ${user} in g.founders
+      return g
+  `).toArray().map(g => groupToDic(g));
+  return groups;
+}
+
 function userCurrentGroups(userId){
   const user = "users/"+b64ToSafeB64(userId);
   const groupIds = db._query(aql`
@@ -126,19 +136,21 @@ function userCurrentGroups(userId){
   return loadGroups(groupIds);
 }
 
+function groupToDic(g){
+  return {
+      isNew: g.isNew,
+      score: g.score,
+      id: g._key,
+      knownMembers: [] //TODO: Ivan: load known members
+    };
+}
+
 function loadGroups(ids){
   return db._query(aql`
     FOR g in groups
       FILTER g._id in ${ids}
       return g
-  `).toArray().map(function(g){
-      return {
-        isNew: g.isNew,
-        score: g.score,
-        id: g._key,
-        knownMembers: [] //TODO: Ivan: load known members
-      }
-  });
+  `).toArray().map(g => groupToDic(g));
 }
 
 function loadUser(id){
@@ -347,7 +359,8 @@ const operations = {
   loadGroups: loadGroups,
   userCurrentGroups: userCurrentGroups,
   loadUser: loadUser,
-  updateEligibleTimestamp: updateEligibleTimestamp
+  updateEligibleTimestamp: updateEligibleTimestamp,
+  userNewGroups: userNewGroups
 };
 
 module.exports = operations;

@@ -291,12 +291,14 @@ const handlers = {
       res.throw(404, "User not found");
     }
 
-    var eligibleGroups = null;
+    var eligibleGroups = db.userNewGroups(key);
     const last_timestamp = user.eligible_timestamp || 0;
     var rateLimitRemaining = 0;
 
     if(last_timestamp == 0 || Date.now() > last_timestamp + ELIGIBLE_TIME_INTERVAL){
-      eligibleGroups = db.loadGroups(db.userEligibleGroups(key));
+      eligibleGroups = eligibleGroups.concat(
+        db.loadGroups(db.userEligibleGroups(key))
+      );
       db.updateEligibleTimestamp(key, Date.now());
       rateLimitRemaining = ELIGIBLE_TIME_INTERVAL;
     }else{
