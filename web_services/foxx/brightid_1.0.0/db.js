@@ -124,7 +124,7 @@ function userNewGroups(userId){
       FOR g in newGroups
         FILTER ${user} in g.founders
       return g
-  `).toArray().map(g => groupToDic(g));
+  `).toArray().map(g => groupToDic(g, userId));
   return groups;
 }
 
@@ -135,24 +135,48 @@ function userCurrentGroups(userId){
       FILTER ug._from == ${user}
       return ug._to
   `).toArray();
-  return loadGroups(groupIds);
+  return loadGroups(groupIds, userId);
 }
 
-function groupToDic(g){
+function groupKnownMembers(group, refUserId){
+  const user = "users/"+b64ToSafeB64(refUserId);
+  var collection = usersInGroupsColl;
+  
+  if(group.isNew){
+    collection = usersInNewGroupsColl;
+  }
+  
+  const users = db._query(aql`
+    LET userConnections = (
+      FOR c in connections
+        FILTER c._from == ${user}
+        RETURN c._to
+    )
+    FOR ug in ${collection}
+      FILTER ug._to == ${group._id} && ug._from in userConnections
+      LIMIT 3
+      RETURN ug._from
+  `).toArray();
+
+  return users;
+}
+
+function groupToDic(g, refUserId){
   return {
       isNew: g.isNew,
       score: g.score,
       id: g._key,
-      knownMembers: [] //TODO: Ivan: load known members
+      knownMembers: groupKnownMembers(g, refUserId)
+       //TODO: Ivan: load known members
     };
 }
 
-function loadGroups(ids){
+function loadGroups(ids, refUserId){
   return db._query(aql`
     FOR g in groups
       FILTER g._id in ${ids}
       return g
-  `).toArray().map(g => groupToDic(g));
+  `).toArray().map(g => groupToDic(g, refUserId));
 }
 
 function loadUser(id){
@@ -239,6 +263,7 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
 
   // Ivan: Is this a safe method for avoiding duplicate edges
   // or parallel requests can push more than one edge to db?
+  // Maybe we need to create uniqe indexes to avoid duplicates.
   const ret = db._query(aql`
     FOR i in ${collection}
       FILTER i._from == ${user} && i._to == ${group}

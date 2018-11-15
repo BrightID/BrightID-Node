@@ -312,7 +312,7 @@ const handlers = {
 
     if(last_timestamp == 0 || Date.now() > last_timestamp + ELIGIBLE_TIME_INTERVAL){
       eligibleGroups = eligibleGroups.concat(
-        db.loadGroups(db.userEligibleGroups(key))
+        db.loadGroups(db.userEligibleGroups(key), key)
       );
       db.updateEligibleTimestamp(key, Date.now());
       rateLimitRemaining = ELIGIBLE_TIME_INTERVAL;
