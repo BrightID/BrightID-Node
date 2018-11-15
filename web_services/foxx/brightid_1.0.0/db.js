@@ -167,7 +167,6 @@ function groupToDic(g, refUserId){
       score: g.score,
       id: g._key,
       knownMembers: groupKnownMembers(g, refUserId)
-       //TODO: Ivan: load known members
     };
 }
 
