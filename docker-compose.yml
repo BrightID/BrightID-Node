@@ -7,6 +7,7 @@ services:
     ports:
       - "3000:3000"
     network_mode: host
+    image: ivanhelmot/brightid-node-web
 
   anti_sybil:
     build: anti_sybil
@@ -14,12 +15,14 @@ services:
       - ws
       - db
     network_mode: host
+    image: ivanhelmot/brightid-node-algorithms
 
   db:
     build: db_dumps
     network_mode: host
     ports:
       - "8529:8529"
+    image: ivanhelmot/brightid-node-db
 
   web:
     image: nginx
