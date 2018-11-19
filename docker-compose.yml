@@ -1,7 +1,6 @@
 version: '3'
 services:
   ws:
-    build: web_services
     depends_on:
       - db
     ports:
@@ -10,7 +9,6 @@ services:
     image: brightid/brightid-node-web
 
   anti_sybil:
-    build: anti_sybil
     depends_on:
       - ws
       - db
@@ -18,7 +16,6 @@ services:
     image: brightid/brightid-node-algorithms
 
   db:
-    build: db_dumps
     network_mode: host
     ports:
       - "8529:8529"
