@@ -368,7 +368,7 @@ router.delete('/groups/', handlers.groupsDelete)
   .response(null);
 
 router.get('/users/:publicKey', handlers.users)
-  .pathParam('publicKey', Joi.string().required, "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
+  .pathParam('publicKey', Joi.string().required(), "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
   .queryParam('sig', Joi.string().required(), "Message (publicKey + timestamp) signed by the user represented by publicKey. Should be in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
   .queryParam('timestamp', schemas.timestamp)
   .summary('Get information about a user')
