@@ -97,11 +97,8 @@ schemas = Object.assign({
   }),
 
   usersResponse: Joi.object({
-    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
-    rateLimitRemaining: Joi.number().integer().required().description(
-      'milliseconds that need to wait before sending next request for reloading eligible groups'
-    ),
     data: Joi.object({
+      score: Joi.number().min(0).max(100).default(0),
       currentGroups: Joi.array().items(schemas.group),
       eligibleGroups: Joi.array().items(schemas.group)
       // TODO: POST-BETA: return list of this user's connections (publicKeys)
@@ -307,22 +304,19 @@ const handlers = {
     }
 
     var eligibleGroups = db.userNewGroups(key);
-    const last_timestamp = user.eligible_timestamp || 0;
-    var rateLimitRemaining = 0;
 
-    if(last_timestamp == 0 || Date.now() > last_timestamp + ELIGIBLE_TIME_INTERVAL){
+    // TODO: after P2P is done, replace eligible_timestamp with the end of the operation set "time period" and return that time as part of this API call
+
+    if(!user.eligible_timestamp || Date.now() > last_timestamp + ELIGIBLE_TIME_INTERVAL){
       eligibleGroups = eligibleGroups.concat(
         db.loadGroups(db.userEligibleGroups(key), key)
       );
       db.updateEligibleTimestamp(key, Date.now());
-      rateLimitRemaining = ELIGIBLE_TIME_INTERVAL;
-    }else{
-      rateLimitRemaining = (last_timestamp + ELIGIBLE_TIME_INTERVAL) - Date.now();
     }
 
     res.send({
-      rateLimitRemaining: rateLimitRemaining,
       data:{
+        score: user.score,
         eligibleGroups: eligibleGroups,
         currentGroups: db.userCurrentGroups(key)
       }
@@ -375,16 +369,16 @@ router.delete('/groups/', handlers.groupsDelete)
 
 router.get('/users/:publicKey', handlers.users)
   .pathParam('publicKey', Joi.string().required, "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
-  .queryParam('sig', Joi.string().required(), 'message (publicKey + timestamp) signed by the user represented by publicKey')
+  .queryParam('sig', Joi.string().required(), "Message (publicKey + timestamp) signed by the user represented by publicKey. Should be in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
   .queryParam('timestamp', schemas.timestamp)
   .summary('Get information about a user')
-  .description('Gets lists of current groups, eligible groups, and current connections for the given user.')
+  .description("Gets a user's score, lists of current groups, eligible groups, and current connections for the given user.")
   .response(schemas.usersResponse);
 
-router.post('/user/', handlers.usersPost)
+router.post('/users/', handlers.usersPost)
   .body(schemas.usersPostBody.required())
   .summary("Create a user")
-  .description("Create a group")
+  .description("Create a user")
   .response(schemas.usersPostResponse);
 
 module.exports = {

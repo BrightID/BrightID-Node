@@ -167,6 +167,7 @@ function groupToDic(g, refUserId){
       score: g.score,
       id: g._key,
       knownMembers: groupKnownMembers(g, refUserId)
+       //TODO: Ivan: load known members
     };
 }
 
@@ -259,19 +260,6 @@ function createGroup(collection, key1, key2, key3, timestamp){
 function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   const user = 'users/' + b64ToSafeB64(key);
   const group = groupCollName + '/' + groupId;
-
-  // Ivan: Is this a safe method for avoiding duplicate edges
-  // or parallel requests can push more than one edge to db?
-  // Maybe we need to create uniqe indexes to avoid duplicates.
-  const ret = db._query(aql`
-    FOR i in ${collection}
-      FILTER i._from == ${user} && i._to == ${group}
-      RETURN i
-  `).toArray();
-
-  if(ret && ret.length){
-    return ret[0];
-  }
 
   return collection.save({
     timestamp: timestamp,
