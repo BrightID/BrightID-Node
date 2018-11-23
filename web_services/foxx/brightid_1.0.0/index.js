@@ -99,6 +99,7 @@ schemas = Object.assign({
   usersResponse: Joi.object({
     data: Joi.object({
       score: Joi.number().min(0).max(100).default(0),
+      eligibleGroupsUpdated: Joi.boolean().description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, `eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
       currentGroups: Joi.array().items(schemas.group),
       eligibleGroups: Joi.array().items(schemas.group)
       // TODO: POST-BETA: return list of this user's connections (publicKeys)
@@ -173,7 +174,7 @@ const handlers = {
     //Verify signature
     try {
       if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKeyss");
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
@@ -303,20 +304,21 @@ const handlers = {
       res.throw(404, "User not found");
     }
 
-    var eligibleGroups = db.userNewGroups(key);
-
-    // TODO: after P2P is done, replace eligible_timestamp with the end of the operation set "time period" and return that time as part of this API call
+    let eligibleGroups = db.userNewGroups(key);
+    let eligibleGroupsUpdated = false;
 
     if(!user.eligible_timestamp || Date.now() > last_timestamp + ELIGIBLE_TIME_INTERVAL){
       eligibleGroups = eligibleGroups.concat(
         db.loadGroups(db.userEligibleGroups(key), key)
       );
       db.updateEligibleTimestamp(key, Date.now());
+      eligibleGroupsUpdated = true;
     }
 
     res.send({
       data:{
         score: user.score,
+        eligibleGroupsUpdated: eligibleGroupsUpdated,
         eligibleGroups: eligibleGroups,
         currentGroups: db.userCurrentGroups(key)
       }

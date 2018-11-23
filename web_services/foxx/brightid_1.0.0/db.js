@@ -67,10 +67,7 @@ function isEligible(groupId, userId){
   const groupMems = groupMembers("groups/"+groupId).map(x => x._from);
   const count = _.intersection(userCons, groupMems).length;
     
-  if(count*2 > groupMems){
-    return true;
-  }
-  return false;
+  return count * 2 > groupMems.length;
 }
 
 function userEligibleGroups(userId){
