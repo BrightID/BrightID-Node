@@ -307,7 +307,9 @@ const handlers = {
     let eligibleGroups = db.userNewGroups(key);
     let eligibleGroupsUpdated = false;
 
-    if(!user.eligible_timestamp || Date.now() > last_timestamp + ELIGIBLE_TIME_INTERVAL){
+    if(!user.eligible_timestamp || 
+      Date.now() > user.eligible_timestamp + ELIGIBLE_TIME_INTERVAL){
+      
       eligibleGroups = eligibleGroups.concat(
         db.loadGroups(db.userEligibleGroups(key), key)
       );
