@@ -113,6 +113,13 @@ schemas = Object.assign({
   usersPostResponse: Joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
     data: schemas.user
+  }),
+
+  fetchUserInfoPostBody: Joi.object({
+    publicKey: Joi.string().required().description('public key of the user deleting the group (base64)'),
+    sig: Joi.string().required()
+      .description('message (publicKey + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   })
 
 }, schemas);
@@ -280,10 +287,10 @@ const handlers = {
     }
   },
   
-  users: function usersHandler(req, res){
-    const key = req.param("publicKey");
-    const timestamp = req.param("timestamp");
-    const sig = req.param("sig");
+  fetchUserInfo: function usersHandler(req, res){
+    const key = req.body.publicKey;
+    const timestamp = req.body.timestamp;
+    const sig = req.body.sig;
 
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
@@ -371,10 +378,8 @@ router.delete('/groups/', handlers.groupsDelete)
   .description('Removes a group with three or fewer members (founders). Any of the founders can remove the group.')
   .response(null);
 
-router.get('/users/:publicKey', handlers.users)
-  .pathParam('publicKey', Joi.string().required(), "User's public key in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
-  .queryParam('sig', Joi.string().required(), "Message (publicKey + timestamp) signed by the user represented by publicKey. Should be in URL-safe Base64 ('_' instead of '/' ,  '-' instead of '+', omit '=').")
-  .queryParam('timestamp', schemas.timestamp)
+router.post('/fetchUserInfo/', handlers.fetchUserInfo)
+  .body(schemas.fetchUserInfoPostBody)
   .summary('Get information about a user')
   .description("Gets a user's score, lists of current groups, eligible groups, and current connections for the given user.")
   .response(schemas.usersResponse);
