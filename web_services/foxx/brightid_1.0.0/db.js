@@ -50,7 +50,7 @@ function userConnections(user){
     for i in ${connectionsColl}
       filter i._from == ${user}
     sort i.timestamp desc
-    return i
+    return DISTINCT i._to
   `).toArray(); 
 }
 
@@ -58,13 +58,13 @@ function groupMembers(group){
   return db._query(aql`
     for i in ${usersInGroupsColl}
       filter i._to == ${group}
-    return i
+    return DISTINCT i._from
   `).toArray();
 }
 
 function isEligible(groupId, userId){
-  const userCons = userConnections("users/"+b64ToSafeB64(userId)).map(x => x._to);
-  const groupMems = groupMembers("groups/"+groupId).map(x => x._from);
+  const userCons = userConnections("users/"+b64ToSafeB64(userId));
+  const groupMems = groupMembers("groups/"+groupId);
   const count = _.intersection(userCons, groupMems).length;
     
   return count * 2 > groupMems.length;
@@ -80,7 +80,8 @@ function userEligibleGroups(userId){
       )
       FOR edge in usersInGroups
           FILTER edge._from in userConnections
-          COLLECT group=edge._to  WITH COUNT INTO count
+          COLLECT group_tmp=edge._to, from_tmp=edge._from WITH COUNT INTO count_tmp
+          COLLECT group=group_tmp WITH COUNT INTO count
           FILTER count >= 2
           SORT count DESC
           RETURN {
@@ -93,7 +94,8 @@ function userEligibleGroups(userId){
   const groupCounts = db._query(aql`
     FOR ug in usersInGroups
       FILTER ug._to in ${groupIds}
-      COLLECT id=ug._to WITH COUNT INTO count
+      COLLECT to_tmp=ug._to WITH COUNT INTO count_tmp
+      COLLECT id=to_tmp WITH COUNT INTO count
       return {
         id,
         count
@@ -130,7 +132,7 @@ function userCurrentGroups(userId){
   const groupIds = db._query(aql`
     FOR ug in usersInGroups
       FILTER ug._from == ${user}
-      return ug._to
+      return DISTINCT ug._to
   `).toArray();
   return loadGroups(groupIds, userId);
 }
@@ -147,7 +149,7 @@ function groupKnownMembers(group, refUserId){
     LET userConnections = (
       FOR c in connections
         FILTER c._from == ${user}
-        RETURN c._to
+        RETURN DISTINCT c._to
     )
     FOR ug in ${collection}
       FILTER ug._to == ${group._id} && ug._from in userConnections
@@ -164,7 +166,6 @@ function groupToDic(g, refUserId){
       score: g.score,
       id: g._key,
       knownMembers: groupKnownMembers(g, refUserId)
-       //TODO: Ivan: load known members
     };
 }
 
