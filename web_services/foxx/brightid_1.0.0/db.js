@@ -344,9 +344,11 @@ function addMembership(groupId, key, timestamp){
   if(isNew){
     addUserToGroup(usersInNewGroupsColl, groupId, key, timestamp, "newGroups");
     //move to groups if all founders joined
+    const grp = "newGroups/"+groupId;
     const groupMembers = db._query(aql`
       for i in ${usersInNewGroupsColl}
-        return i
+        filter i._to == ${grp}
+        return DISTINCT i._from
     `).toArray()
 
     if(groupMembers.length == group.founders.length){
