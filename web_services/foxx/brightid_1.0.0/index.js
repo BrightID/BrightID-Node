@@ -9,7 +9,8 @@ const enc = require('./encoding.js');
 module.context.use(router);
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
-const ELIGIBLE_TIME_INTERVAL = 60 * 60 * 1000;
+//TODO: Ivan: update interval for prod
+const ELIGIBLE_TIME_INTERVAL = 0;// 60 * 60 * 1000;
 const DEBUG = true;
 
 // low-level schemas

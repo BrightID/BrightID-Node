@@ -152,7 +152,7 @@ function groupKnownMembers(group, refUserId){
         RETURN DISTINCT c._to
     )
     FOR ug in ${collection}
-      FILTER ug._to == ${group._id} && ug._from in userConnections
+      FILTER ug._to == ${group._id} && (ug._from in userConnections || ug._from == ${user})
       LIMIT 3
       RETURN ug._from
   `).toArray();
@@ -217,10 +217,22 @@ function updateAndCleanConnections(collection, key1, key2, timestamp) {
 }
 
 function createUser(key){
+  // already exists?
+  const user = "users/" + b64ToSafeB64(key);
+  const currents = db._query(aql`RETURN DOCUMENT(${user})`).toArray();
+  
+  if(currents && currents.length){
+    return {
+      key: currents[0]._key,
+      score: currents[0].score || 0
+    };  
+  }
+  
   const ret = usersColl.save({
     score: 0,
     _key: b64ToSafeB64(key)
   });
+
   return {
     key: ret._key,
     score: 0
@@ -243,6 +255,16 @@ function createGroup(collection, key1, key2, key3, timestamp){
 
   if(groups.length){
     throw 'Duplicate group';
+  }
+
+  const conns = db._query(aql`
+    for i in ${connectionsColl}
+      filter (i._from == ${user2} || i._from == ${user3}) && i._to == ${user1}
+    return DISTINCT i._from
+  `).toArray();
+
+  if(conns.indexOf(user2) < 0 || conns.indexOf(user3) < 0){
+    throw 'Co-founders not connected';
   }
 
   const ret = collection.save({
