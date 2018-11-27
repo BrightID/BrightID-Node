@@ -221,7 +221,7 @@ function createUser(key){
   const user = "users/" + b64ToSafeB64(key);
   const currents = db._query(aql`RETURN DOCUMENT(${user})`).toArray();
   
-  if(currents && currents.length){
+  if(currents && currents.length && currents[0]){
     return {
       key: currents[0]._key,
       score: currents[0].score || 0
