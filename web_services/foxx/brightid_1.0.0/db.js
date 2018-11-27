@@ -155,7 +155,7 @@ function groupKnownMembers(group, refUserId){
       FILTER ug._to == ${group._id} && (ug._from in userConnections || ug._from == ${user})
       LIMIT 3
       RETURN ug._from
-  `).toArray();
+  `).toArray().map(x => x.replace("users/", ""));
 
   return users;
 }

@@ -1,4 +1,4 @@
-'use strict';
+f='use strict';
 const createRouter = require('@arangodb/foxx/router');
 const db = require('./db.js');
 const router = createRouter();
@@ -190,7 +190,7 @@ const handlers = {
 
     try{
       db.addMembership(group, publicKey, timestamp);
-      res.send({});
+      //res.send({});
     }catch(e){
       res.throw(403, e);
     }
@@ -217,7 +217,7 @@ const handlers = {
 
     try{
       db.deleteMembership(group, publicKey, timestamp);
-      res.send({});
+      //res.send({});
     }catch(e){
       res.throw(403, e);
     }
@@ -282,7 +282,7 @@ const handlers = {
 
     try{
       db.deleteGroup(group, publicKey, timestamp);
-      res.send({});
+      //res.send({});
     }catch(e){
       res.throw(403, e);
     }
