@@ -348,10 +348,12 @@ function addMembership(groupId, key, timestamp){
     const groupMembers = db._query(aql`
       for i in ${usersInNewGroupsColl}
         filter i._to == ${grp}
-        return DISTINCT i._from
+        return i
     `).toArray()
 
-    if(groupMembers.length == group.founders.length){
+    const memberIds = [...new Set(groupMembers.map(x => x._from))];
+
+    if(memberIds.length == group.founders.length){
       groupsColl.save({
         score: 0,
         isNew: false,
