@@ -46,12 +46,18 @@ function removeByKeys(collection, keys) {
 }
 
 function userConnections(user){
-  return db._query(aql`
+  const cons = db._query(aql`
     for i in ${connectionsColl}
-      filter i._from == ${user}
+      filter (i._from == ${user} || i._to == ${user})
     sort i.timestamp desc
-    return DISTINCT i._to
-  `).toArray(); 
+    return DISTINCT i
+  `).toArray().map(function(u){
+    if(u._from == user){
+      return u._to;
+    }
+    return u._from;
+  });
+  return [...Set(cons)];
 }
 
 function groupMembers(group){
@@ -78,8 +84,13 @@ function userEligibleGroups(userId){
           FILTER c._from == ${user}
           RETURN c._to
       )
+      LET userConnections2 = (
+        FOR c in connections
+          FILTER c._to == ${user}
+          RETURN c._from
+      )
       FOR edge in usersInGroups
-          FILTER edge._from in userConnections
+          FILTER edge._from in UNION_DISTINCT(userConnections, userConnections2)
           COLLECT group_tmp=edge._to, from_tmp=edge._from WITH COUNT INTO count_tmp
           COLLECT group=group_tmp WITH COUNT INTO count
           FILTER count >= 2
@@ -151,8 +162,13 @@ function groupKnownMembers(group, refUserId){
         FILTER c._from == ${user}
         RETURN DISTINCT c._to
     )
+    LET userConnections2 = (
+      FOR c in connections
+        FILTER c._to == ${user}
+        RETURN DISTINCT c._from
+    )
     FOR ug in ${collection}
-      FILTER ug._to == ${group._id} && (ug._from in userConnections || ug._from == ${user})
+      FILTER ug._to == ${group._id} && (ug._from in UNION_DISTINCT(userConnections, userConnections2) || ug._from == ${user})
       LIMIT 3
       RETURN ug._from
   `).toArray().map(x => x.replace("users/", ""));
@@ -257,11 +273,7 @@ function createGroup(collection, key1, key2, key3, timestamp){
     throw 'Duplicate group';
   }
 
-  const conns = db._query(aql`
-    for i in ${connectionsColl}
-      filter (i._from == ${user2} || i._from == ${user3}) && i._to == ${user1}
-    return DISTINCT i._from
-  `).toArray();
+  const conns = userConnections(user1);
 
   if(conns.indexOf(user2) < 0 || conns.indexOf(user3) < 0){
     throw 'Co-founders not connected';
