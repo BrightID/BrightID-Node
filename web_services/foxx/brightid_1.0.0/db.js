@@ -57,7 +57,7 @@ function userConnections(user){
     }
     return u._from;
   });
-  return [...Set(cons)];
+  return [...new Set(cons)];
 }
 
 function groupMembers(group){
