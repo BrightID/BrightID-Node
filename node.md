@@ -2,7 +2,7 @@
 ## Overview
 A network of nodes forms the decentralized core of the uniqueness verification service. The nodes reach a consensus about changes to the social graph and store a copy of the complete graph. No identifying information is stored in the graph, only users' public keys. Nodes run software that can detect the presence of sybils based on social graph analysis.
 ## Installation
-For now, follow the [development guide](https://github.com/BrightID/BrightID-Node/wiki/Development-Guide) until our own docker image is ready to use.
+https://github.com/BrightID/BrightID-Node/wiki/Installation-Guide
 ## Components
 ### Update Service
 Nodes receive client requests from the [BrightID mobile application](https://github.com/BrightID/BrightID) to update the graph. Update operations are digitally signed and dated by the users making the request. Nodes forward these requests to other nodes for consensus.
