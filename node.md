@@ -1,7 +1,7 @@
 # Running A Node
 ## Overview
 A network of nodes forms the decentralized core of the uniqueness verification service. The nodes reach a consensus about changes to the social graph and store a copy of the complete graph. No identifying information is stored in the graph, only users' public keys. Nodes run software that can detect the presence of sybils based on social graph analysis.
-## Installation
+## [Installation](https://github.com/BrightID/BrightID-Node/wiki/Installation-Guide)
 https://github.com/BrightID/BrightID-Node/wiki/Installation-Guide
 ## Components
 ### Update Service
