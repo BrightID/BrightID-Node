@@ -103,9 +103,9 @@ def clear():
 
 
 if __name__ == '__main__':
-    clear()
-    graph = load_graph('simulation_platform/graph.json')
-    save(graph)
+#    clear()
+#    graph = load_graph('simulation_platform/graph.json')
+#    save(graph)
     graph = load()
     reset_ranks(graph)
     ranker = algorithms.SybilGroupRank(graph, {
