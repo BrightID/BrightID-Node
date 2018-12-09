@@ -143,11 +143,11 @@ text {
         .attr("dy", ".35em")
         .style("font-size", nominal_text_size + "px")
         if (text_center)
-         text.text(function(d) { return d.rank; })
+         text.text(function(d) { return parseInt(d.rank); })
         .style("text-anchor", "middle");
         else
         text.attr("dx", function(d) {return (size(d.size)||nominal_base_node_size);})
-        .text(function(d) { return '\u2002'+d.rank; });
+        .text(function(d) { return '\u2002'+parseInt(d.rank); });
         node.on("click", function(d) {
             var s = '';
             titles = ["name", "rank", "node_type", "groups"]

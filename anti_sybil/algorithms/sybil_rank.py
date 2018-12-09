@@ -7,7 +7,7 @@ class SybilRank():
     def __init__(self, graph, options=None):
         self.graph = graph
         self.verifiers = [node for node in graph.nodes if node.node_type == 'Seed']
-        self.options = options
+        self.options = options if options else {}
 
     def rank(self):
         num_iterations = max(3, int(math.ceil(math.log10(self.graph.order()))))
@@ -71,26 +71,40 @@ class SybilRank():
                 num = df + (((num-f) / (t-f)) * (dt-df))
             else:
                 num = dt + (((num-t) / (max_num-t)) * (100-dt))
-            ret.append(int(num))
+            ret.append(round(num, 2))
         return [(ranks[i][0], ret[i]) for i, rank in enumerate(ranks)]
 
     @staticmethod
     def linear_distribution(ranks):
         max_rank = max(ranks, key=lambda item: item[1])[1]
         min_rank = min(ranks, key=lambda item: item[1])[1]
-        ranks = [(node, int(round((rank - min_rank) * 100 / (max_rank - min_rank))))
+        ranks = [(node, round((rank - min_rank) * 100 / (max_rank - min_rank), 2))
                  for node, rank in ranks]
         return ranks
+
+    @staticmethod
+    def border_based_distribution(ranks, border):
+        max_rank = max(ranks, key=lambda item: item[1])[1]
+        res = []
+        for node, rank in ranks:
+            if rank < border:
+                new_rank = 10*rank / border
+            else:
+                new_rank = 90 + 10*(rank - border)/(max_rank - border)
+            res.append((node, round(new_rank, 2)))
+        return res
 
     def normalize_nodes_rank(self, nodes_rank):
         for node, rank in nodes_rank.iteritems():
             node_degree = self.graph.degree(node)
             nodes_rank[node] = rank / float(node_degree)
             node.raw_rank = nodes_rank[node]
-        ranks = sorted(nodes_rank.iteritems(),
-                       key=operator.itemgetter(1))
+        ranks = nodes_rank.items()
         if self.options.get('nonlinear_distribution', False):
             ranks = self.nonlinear_distribution(ranks, .5, 10, 90)
+        elif self.options.get('stupid_sybil_border', False):
+            border = self.options['stupid_sybil_border']
+            ranks = self.border_based_distribution(ranks, border)
         else:
             ranks = self.linear_distribution(ranks)
         return ranks

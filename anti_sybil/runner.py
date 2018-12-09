@@ -1,3 +1,4 @@
+import random
 import networkx as nx
 from arango import ArangoClient
 import graphs
@@ -102,17 +103,40 @@ def clear():
             db[collection].delete(data)
 
 
+def stupid_sybil_border(graph):
+    reset_ranks(graph)
+    ranker = algorithms.SybilGroupRank(graph)
+    ranker.rank()
+    attacker = max(graph.nodes, key=lambda node: node.rank)
+    attacker.groups.add('stupid_sybil')
+    sybil1 = graphs.node.Node('stupid_sybil_1', 'Sybil', set(['stupid_sybil']))
+    sybil2 = graphs.node.Node('stupid_sybil_2', 'Sybil', set(['stupid_sybil']))
+    graph.add_edge(attacker, sybil1)
+    graph.add_edge(attacker, sybil2)
+    reset_ranks(graph)
+    ranker = algorithms.SybilGroupRank(graph)
+    ranker.rank()
+    border = max(sybil1.raw_rank, sybil2.raw_rank)
+    graph.remove_nodes_from([sybil1, sybil2])
+    attacker.groups.remove('stupid_sybil')
+    reset_ranks(graph)
+    return border
+
+
 if __name__ == '__main__':
-#    clear()
-#    graph = load_graph('simulation_platform/graph.json')
-#    save(graph)
+    # clear()
+    # graph = load_graph('simulation_platform/graph.json')
+    # save(graph)
     graph = load()
+    border = stupid_sybil_border(graph)
+    raw_ranks = [node.raw_rank for node in graph.nodes]
+    print('''stupid border: {}
+max: {}
+min: {}
+avg: {}'''.format(border, max(raw_ranks), min(raw_ranks), sum(raw_ranks)/len(raw_ranks)))
     reset_ranks(graph)
     ranker = algorithms.SybilGroupRank(graph, {
-        'min_degree': 5,
-        'accumulative': False,
-        'weaken_under_min': False,
-        'nonlinear_distribution': True,
+        'stupid_sybil_border': border
     })
     ranker.rank()
     draw_graph(ranker.graph, 'nodes.html')
