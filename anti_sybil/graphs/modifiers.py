@@ -1,13 +1,12 @@
 import random
 
-
 def remove_weak_attackers(graph, cut_point):
     attackers = [node for node in graph.nodes if node.node_type == 'Attacker']
     attackers.sort(key=lambda node: node.rank, reverse=True)
     cut_index = int((1-cut_point) * len(attackers))
     nodes_to_remove = attackers[cut_index:]
     graph.remove_nodes_from(nodes_to_remove)
-    for node in graph.nodes():
+    for node in graph.nodes:
         if graph.degree(node) != 0:
             continue
         pair = random.choice(attackers[:cut_index])

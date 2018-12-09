@@ -89,7 +89,7 @@ class SybilRank():
             node.raw_rank = nodes_rank[node]
         ranks = sorted(nodes_rank.iteritems(),
                        key=operator.itemgetter(1))
-        if self.options['nonlinear_distribution']:
+        if self.options.get('nonlinear_distribution', False):
             ranks = self.nonlinear_distribution(ranks, .5, 10, 90)
         else:
             ranks = self.linear_distribution(ranks)
