@@ -5,5 +5,11 @@
   "version": "1.0.0",
   "tests": [
     "tests/*.js"
-  ]
+  ],
+  "configuration": {
+    "ip": {
+      "description": "IPv4 address of the server hosting this service",
+      "type": "string"
+    }
+  }
 }

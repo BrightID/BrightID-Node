@@ -339,6 +339,19 @@ const handlers = {
     const key = req.body.publicKey;
     const ret = db.createUser(key);
     res.send({data: ret});
+  },
+
+  ip: function ip(req, res){
+    let ip = module.context && module.context.configuration && module.context.configuration.ip;
+    if (ip){
+      res.send({
+        data: {
+          ip: ip
+        }
+      });
+    } else {
+      res.throw(500, "Ip address unknown");
+    }
   }
 
 };
@@ -390,6 +403,10 @@ router.post('/users/', handlers.usersPost)
   .summary("Create a user")
   .description("Create a user")
   .response(schemas.usersPostResponse);
+
+router.get('/ip/', handlers.ip)
+  .summary("Get this server's IPv4 address")
+  .response(Joi.string().description("IPv4 address in dot-decimal notation."));
 
 module.exports = {
   schemas: schemas,
