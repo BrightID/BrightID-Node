@@ -15,8 +15,13 @@ RUN apt-get update && \
     && \
     rm -rf /var/lib/apt/lists/*
 
-RUN gpg --keyserver hkps://hkps.pool.sks-keyservers.net --recv-keys CD8CB0F1E0AD5B52E93F41E7EA93F5E56E751E9B
+# RUN gpg --keyserver hkps://hkps.pool.sks-keyservers.net --recv-keys CD8CB0F1E0AD5B52E93F41E7EA93F5E56E751E9B
 
+RUN GPG_KEYS=CD8CB0F1E0AD5B52E93F41E7EA93F5E56E751E9B && \
+   ( gpg --keyserver ha.pool.sks-keyservers.net --recv-keys "$GPG_KEYS" \
+  || gpg --keyserver pgp.mit.edu --recv-keys "$GPG_KEYS" \
+  || gpg --keyserver keyserver.pgp.com --recv-keys "$GPG_KEYS" )
+  
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libjemalloc1 \
