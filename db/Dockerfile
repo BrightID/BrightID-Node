@@ -55,7 +55,7 @@ COPY docker-entrypoint.sh /entrypoint.sh
 
 ADD . /code
 WORKDIR /code/
-RUN mkdir -p /docker-entrypoint-initdb.d/dumps/_system/ && cp db/* /docker-entrypoint-initdb.d/dumps/_system/
+RUN mkdir -p /docker-entrypoint-initdb.d/dumps/_system/ && cp dumps/* /docker-entrypoint-initdb.d/dumps/_system/
 
 ENTRYPOINT ["/entrypoint.sh"]
 
