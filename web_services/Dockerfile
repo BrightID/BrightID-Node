@@ -3,7 +3,6 @@ ADD . /code
 WORKDIR /code/BrightID-ws/
 RUN npm install
 RUN npm install foxx-cli -g
-RUN bash -c "echo a > /code/pass"
 
 RUN apt-get update && apt-get install -y netcat
 
