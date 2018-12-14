@@ -7,7 +7,7 @@ services:
     ports:
       - "3000:3000"
     network_mode: host
-    image: brightid/brightid-node-web
+    image: brightid/web_services
 
   anti_sybil:
     build: anti_sybil
@@ -15,14 +15,14 @@ services:
       - ws
       - db
     network_mode: host
-    image: brightid/brightid-node-algorithms
+    image: brightid/anti_sybil
 
   db:
-    build: db_dumps
+    build: db
     network_mode: host
     ports:
       - "8529:8529"
-    image: brightid/brightid-node-db
+    image: brightid/db
 
   web:
     image: nginx
