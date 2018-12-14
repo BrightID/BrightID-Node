@@ -9,7 +9,7 @@ const NodeCache = require( "node-cache" );
 const dataCache = new NodeCache(config.node_cache);
 
 // BodyParser Middleware
-app.use(bodyParser.json({limit: "6mb"}));
+app.use(bodyParser.json({limit: "100kb"}));
 app.use(bodyParser.urlencoded({extended: false}));
 
 if(config.is_dev){
