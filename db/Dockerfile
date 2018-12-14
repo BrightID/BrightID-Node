@@ -53,9 +53,9 @@ VOLUME ["/var/lib/arangodb3", "/var/lib/arangodb3-apps"]
 
 COPY docker-entrypoint.sh /entrypoint.sh
 
-ADD . /code
-WORKDIR /code/
-RUN mkdir -p /docker-entrypoint-initdb.d/dumps/_system/ && cp dumps/* /docker-entrypoint-initdb.d/dumps/_system/
+#ADD . /code
+#WORKDIR /code/
+#RUN mkdir -p /docker-entrypoint-initdb.d/dumps/_system/ && cp dumps/* /docker-entrypoint-initdb.d/dumps/_system/
 
 ENTRYPOINT ["/entrypoint.sh"]
 
