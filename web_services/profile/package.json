@@ -1,7 +1,7 @@
 {
-  "name": "brightid-ws",
+  "name": "brightid-profile",
   "version": "1.0.0",
-  "description": "BrightID socket server",
+  "description": "BrightID profile service for exchanging profiles or other secure messages.",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
