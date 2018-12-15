@@ -1,6 +1,6 @@
 FROM node:8
 ADD . /code
-WORKDIR /code/BrightID-ws/
+WORKDIR /code/profile/
 RUN npm install
 RUN npm install foxx-cli -g
 
