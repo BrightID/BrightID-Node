@@ -57,8 +57,6 @@ ADD . /code
 WORKDIR /code/
 RUN mkdir -p /docker-entrypoint-initdb.d/dumps/_system/ && cp dumps/* /docker-entrypoint-initdb.d/dumps/_system/
 
-RUN sysctl -w vm.max_map_count=262144
-
 ENTRYPOINT ["/entrypoint.sh"]
 
 # standard port
