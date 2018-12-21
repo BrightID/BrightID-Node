@@ -1,4 +1,4 @@
-f='use strict';
+'use strict';
 const createRouter = require('@arangodb/foxx/router');
 const db = require('./db.js');
 const router = createRouter();
@@ -9,9 +9,6 @@ const enc = require('./encoding.js');
 module.context.use(router);
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
-//TODO: Ivan: update interval for prod
-const ELIGIBLE_TIME_INTERVAL = 0;// 60 * 60 * 1000;
-const DEBUG = true;
 
 // low-level schemas
 var schemas = {
@@ -137,10 +134,10 @@ const handlers = {
 
     //Verify signatures
     try {
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
         res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig2), enc.b64ToUint8Array(publicKey2))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig2), enc.b64ToUint8Array(publicKey2))){
         res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey2");
       }
     } catch (e) {
@@ -160,7 +157,7 @@ const handlers = {
 
     //Verify signature
     try {
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
         res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
     } catch (e) {
@@ -181,7 +178,7 @@ const handlers = {
 
     //Verify signature
     try {
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
         res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
       }
     } catch (e) {
@@ -208,7 +205,7 @@ const handlers = {
 
     //Verify signature
     try {
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
         res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKeyss");
       }
     } catch (e) {
@@ -237,7 +234,7 @@ const handlers = {
 
     //Verify signature
     try {
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
         res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + publicKey3 + timestamp signed by publicKey1");
       }
     } catch (e) {
@@ -273,7 +270,7 @@ const handlers = {
 
     //Verify signature
     try {
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
         res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
       }
     } catch (e) {
@@ -300,7 +297,7 @@ const handlers = {
 
     //Verify signature
     try {
-      if (!DEBUG && ! nacl.sign.detached.verify(message, enc.b64ToUint8Array(sig), enc.b64ToUint8Array(key))){
+      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(sig), enc.b64ToUint8Array(key))){
         res.throw(403, "sig wasn't publicKey + timestamp signed by publicKey");
       }
     } catch (e) {
@@ -314,9 +311,11 @@ const handlers = {
 
     let eligibleGroups = db.userNewGroups(key);
     let eligibleGroupsUpdated = false;
+    const groupCheckInterval =
+      ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
 
     if(!user.eligible_timestamp || 
-      Date.now() > user.eligible_timestamp + ELIGIBLE_TIME_INTERVAL){
+      Date.now() > user.eligible_timestamp + groupCheckInterval){
       
       eligibleGroups = eligibleGroups.concat(
         db.loadGroups(db.userEligibleGroups(key), key)

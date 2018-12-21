@@ -10,6 +10,11 @@
     "ip": {
       "description": "IPv4 address of the server hosting this service",
       "type": "string"
+    },
+    "groupCheckInterval": {
+      "description": "How often (in milliseconds) a user is allowed to check for eligible groups",
+      "type": "integer",
+      "default": 0
     }
   }
 }
