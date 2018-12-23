@@ -64,7 +64,7 @@ function isEligible(groupId, userId) {
 }
 
 function userEligibleGroups(userId) {
-  const user = "users/" + userid;
+  const user = "users/" + userId;
   const candidates = db._query(aql`
       LET userConnections = (
         FOR c in connections
@@ -116,7 +116,7 @@ function userEligibleGroups(userId) {
 }
 
 function userNewGroups(userId) {
-  const user = "users/" + userid;
+  const user = "users/" + userId;
   const groups = db._query(aql`
       FOR g in newGroups
         FILTER ${user} in g.founders
@@ -126,7 +126,7 @@ function userNewGroups(userId) {
 }
 
 function userCurrentGroups(userId) {
-  const user = "users/" + userid;
+  const user = "users/" + userId;
   const groupIds = db._query(aql`
     FOR ug in usersInGroups
       FILTER ug._from == ${user}
@@ -181,7 +181,7 @@ function loadGroups(ids, refUserId) {
 }
 
 function loadUser(id) {
-  var user = "users/" + id;
+  const user = "users/" + id;
   return db._query(aql`RETURN DOCUMENT(${user})`).toArray()[0];
 }
 
