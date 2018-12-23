@@ -285,7 +285,7 @@ const handlers = {
   },
   
   fetchUserInfo: function usersHandler(req, res){
-    key = req.body.publicKey;
+    const key = req.body.publicKey;
     const timestamp = req.body.timestamp;
     const sig = req.body.sig;
 
