@@ -61,4 +61,4 @@ ENTRYPOINT ["/entrypoint.sh"]
 
 # standard port
 EXPOSE 8529
-CMD ["arangod", "--server.maximal-threads 16", "--supervisor", "--pid-file /var/run/arangodb.pid"]
+CMD ["arangod", "--server.maximal-threads=16", "--supervisor", "--pid-file=/var/run/arangodb.pid"]
