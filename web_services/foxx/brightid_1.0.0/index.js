@@ -1,11 +1,18 @@
 'use strict';
 const createRouter = require('@arangodb/foxx/router');
-const db = require('./db.js');
-const router = createRouter();
 const Joi = require('joi');
 const nacl = require('tweetnacl');
-const enc = require('./encoding.js');
 
+const db = require('./db');
+const enc = require('./encoding');
+
+const strToUint8Array = enc.strToUint8Array;
+const b64ToUint8Array = enc.b64ToUint8Array;
+
+// all keys in the DB are in the url/directory/db safe b64 format
+const safe = enc.b64ToUrlSafeB64;
+
+const router = createRouter();
 module.context.use(router);
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
@@ -25,12 +32,13 @@ var schemas = {
   })
 };
 
+// Consider using this in the schemas below if they ever update Joi
+// publicKey1: Joi.string().base64().required(),
+
 // extend low-level schemas with high-level schemas
 schemas = Object.assign({
+
   connectionsPutBody: Joi.object({
-    // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required(),
-    // publicKey2: Joi.string().base64().required(),
     publicKey1: Joi.string().required().description('public key of the first user (base64)'),
     publicKey2: Joi.string().required().description('public key of the second user (base64)'),
     sig1: Joi.string().required()
@@ -39,39 +47,32 @@ schemas = Object.assign({
       .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey2'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the connection occurred')
   }),
+
   connectionsDeleteBody: Joi.object({
-    // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required(),
-    // publicKey2: Joi.string().base64().required(),
     publicKey1: Joi.string().required().description('public key of the user removing the connection (base64)'),
     publicKey2: Joi.string().required().description('public key of the second user (base64)'),
     sig1: Joi.string().required()
       .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
+
   membershipPutBody: Joi.object({
-    // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required(),
     publicKey: Joi.string().required().description('public key of the user joining the group (base64)'),
     group: Joi.string().required().description('group id'),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the join was requested')
   }),
+
   membershipDeleteBody: Joi.object({
-    // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required(),
     publicKey: Joi.string().required().description('public key of the user leaving the group (base64)'),
     group: Joi.string().required().description('group id'),
     sig: Joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
+
   groupsPostBody: Joi.object({
-    // Consider using this if they ever update Joi
-    // publicKey1: Joi.string().base64().required(),
-    // publicKey2: Joi.string().base64().required(),
-    // publicKey3: Joi.string().base64().required(),
     publicKey1: Joi.string().required().description('public key of the first founder (base64)'),
     publicKey2: Joi.string().required().description('public key of the second founder (base64)'),
     publicKey3: Joi.string().required().description('public key of the third founder (base64)'),
@@ -84,9 +85,8 @@ schemas = Object.assign({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
     data: schemas.group
   }),
+
   groupsDeleteBody: Joi.object({
-    // Consider using this if they ever update Joi
-    // publicKey: Joi.string().base64().required(),
     publicKey: Joi.string().required().description('public key of the user deleting the group (base64)'),
     group: Joi.string().required().description('group id'),
     sig: Joi.string().required()
@@ -123,6 +123,7 @@ schemas = Object.assign({
 }, schemas);
 
 const handlers = {
+
   connectionsPut: function connectionsPutHandler(req, res){
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
@@ -130,22 +131,23 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = enc.strToUint8Array(publicKey1 + publicKey2 + timestamp);
+    const message = strToUint8Array(publicKey1 + publicKey2 + timestamp);
 
     //Verify signatures
     try {
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))){
         res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig2), enc.b64ToUint8Array(publicKey2))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig2), b64ToUint8Array(publicKey2))){
         res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey2");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    db.addConnection(publicKey1, publicKey2, timestamp);
+    db.addConnection(safe(publicKey1), safe(publicKey2), timestamp);
   },
+
   connectionsDelete: function connectionsDeleteHandler(req, res){
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
@@ -153,17 +155,17 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = enc.strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
+    const message = strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))){
         res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
       }
     } catch (e) {
       res.throw(403, e);
     }
-    db.removeConnection(publicKey1, publicKey2, timestamp);
+    db.removeConnection(safe(publicKey1), safe(publicKey2), timestamp);
   },
 
   membershipPut: function membershipPutHandler(req, res){
@@ -174,11 +176,11 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = enc.strToUint8Array(publicKey + group + timestamp);
+    const message = strToUint8Array(publicKey + group + timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))){
         res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
       }
     } catch (e) {
@@ -186,8 +188,7 @@ const handlers = {
     }
 
     try{
-      db.addMembership(group, publicKey, timestamp);
-      //res.send({});
+      db.addMembership(group, safe(publicKey), timestamp);
     }catch(e){
       res.throw(403, e);
     }
@@ -201,11 +202,11 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = enc.strToUint8Array(publicKey + group + timestamp);
+    const message = strToUint8Array(publicKey + group + timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))){
         res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKeyss");
       }
     } catch (e) {
@@ -213,8 +214,7 @@ const handlers = {
     }
 
     try{
-      db.deleteMembership(group, publicKey, timestamp);
-      //res.send({});
+      db.deleteMembership(group, safe(publicKey), timestamp);
     }catch(e){
       res.throw(403, e);
     }
@@ -229,12 +229,12 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = enc.strToUint8Array(publicKey1 + publicKey2 + publicKey3 + 
+    const message = strToUint8Array(publicKey1 + publicKey2 + publicKey3 + 
         req.body.timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig1), enc.b64ToUint8Array(publicKey1))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))){
         res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + publicKey3 + timestamp signed by publicKey1");
       }
     } catch (e) {
@@ -242,7 +242,7 @@ const handlers = {
     }
 
     try{
-      const group = db.createGroup(publicKey1, publicKey2, publicKey3, timestamp);
+      const group = db.createGroup(safe(publicKey1), safe(publicKey2), safe(publicKey3), timestamp);
 
       const newGroup = {
         data : {
@@ -265,12 +265,12 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = enc.strToUint8Array(publicKey + group +
+    const message = strToUint8Array(publicKey + group +
         req.body.timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(req.body.sig), enc.b64ToUint8Array(publicKey))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))){
         res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
       }
     } catch (e) {
@@ -278,38 +278,39 @@ const handlers = {
     }
 
     try{
-      db.deleteGroup(group, publicKey, timestamp);
-      //res.send({});
+      db.deleteGroup(group, safe(publicKey), timestamp);
     }catch(e){
       res.throw(403, e);
     }
   },
   
   fetchUserInfo: function usersHandler(req, res){
-    const key = req.body.publicKey;
+    key = req.body.publicKey;
     const timestamp = req.body.timestamp;
     const sig = req.body.sig;
 
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = enc.strToUint8Array(key + timestamp);
+    const message = strToUint8Array(key + timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, enc.b64ToUint8Array(sig), enc.b64ToUint8Array(key))){
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))){
         res.throw(403, "sig wasn't publicKey + timestamp signed by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    const user = db.loadUser(key);
+    const safeKey = safe(key);
+
+    const user = db.loadUser(safeKey);
     if(!user){
       res.throw(404, "User not found");
     }
 
-    let eligibleGroups = db.userNewGroups(key);
+    let eligibleGroups = db.userNewGroups(safeKey);
     let eligibleGroupsUpdated = false;
     const groupCheckInterval =
       ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
@@ -318,9 +319,9 @@ const handlers = {
       Date.now() > user.eligible_timestamp + groupCheckInterval){
       
       eligibleGroups = eligibleGroups.concat(
-        db.loadGroups(db.userEligibleGroups(key), key)
+        db.loadGroups(db.userEligibleGroups(safeKey), safeKey)
       );
-      db.updateEligibleTimestamp(key, Date.now());
+      db.updateEligibleTimestamp(safeKey, Date.now());
       eligibleGroupsUpdated = true;
     }
 
@@ -329,14 +330,14 @@ const handlers = {
         score: user.score,
         eligibleGroupsUpdated: eligibleGroupsUpdated,
         eligibleGroups: eligibleGroups,
-        currentGroups: db.userCurrentGroups(key)
+        currentGroups: db.userCurrentGroups(safeKey)
       }
     });
   },
 
   usersPost: function usersPostHandler(req, res){
     const key = req.body.publicKey;
-    const ret = db.createUser(key);
+    const ret = db.createUser(safe(key));
     res.send({data: ret});
   },
 

@@ -10,22 +10,9 @@ const connectionsColl = db._collection('connections');
 const removedColl = db._collection('removed');
 const groupsColl = db._collection('groups');
 const newGroupsColl = db._collection('newGroups');
-
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
-
 const usersColl = db._collection('users');
-
-function b64ToSafeB64(s) {
-  const alts = {
-    '/': '_',
-    '+': '-',
-    '=': ''
-  };
-  return s.replace(/[/+=]/g, function (c) {
-    return alts[c];
-  });
-}
 
 function allEdges(collection, user1, user2) {
   return db._query(aql`
@@ -45,14 +32,14 @@ function removeByKeys(collection, keys) {
   `);
 }
 
-function userConnections(user){
+function userConnections(user) {
   const cons = db._query(aql`
     for i in ${connectionsColl}
       filter (i._from == ${user} || i._to == ${user})
     sort i.timestamp desc
     return DISTINCT i
-  `).toArray().map(function(u){
-    if(u._from == user){
+  `).toArray().map(function (u) {
+    if (u._from == user) {
       return u._to;
     }
     return u._from;
@@ -60,7 +47,7 @@ function userConnections(user){
   return [...new Set(cons)];
 }
 
-function groupMembers(group){
+function groupMembers(group) {
   return db._query(aql`
     for i in ${usersInGroupsColl}
       filter i._to == ${group}
@@ -68,16 +55,16 @@ function groupMembers(group){
   `).toArray();
 }
 
-function isEligible(groupId, userId){
-  const userCons = userConnections("users/"+b64ToSafeB64(userId));
-  const groupMems = groupMembers("groups/"+groupId);
+function isEligible(groupId, userId) {
+  const userCons = userConnections("users/" + userid);
+  const groupMems = groupMembers("groups/" + groupId);
   const count = _.intersection(userCons, groupMems).length;
-    
+
   return count * 2 > groupMems.length;
 }
 
-function userEligibleGroups(userId){
-  const user = "users/" + b64ToSafeB64(userId);
+function userEligibleGroups(userId) {
+  const user = "users/" + userid;
   const candidates = db._query(aql`
       LET userConnections = (
         FOR c in connections
@@ -114,12 +101,12 @@ function userEligibleGroups(userId){
   `).toArray();
 
   var groupCountsDic = {};
-  groupCounts.map(function(row){
+  groupCounts.map(function (row) {
     groupCountsDic[row.id] = row.count;
   });
 
-  var eligibles = candidates.filter(function(g){
-    if(g.count*2 > groupCountsDic[g.id]){
+  var eligibles = candidates.filter(function (g) {
+    if (g.count * 2 > groupCountsDic[g.id]) {
       return true;
     }
     return false;
@@ -128,8 +115,8 @@ function userEligibleGroups(userId){
   return eligibles;
 }
 
-function userNewGroups(userId){
-  const user = "users/" + b64ToSafeB64(userId);
+function userNewGroups(userId) {
+  const user = "users/" + userid;
   const groups = db._query(aql`
       FOR g in newGroups
         FILTER ${user} in g.founders
@@ -138,8 +125,8 @@ function userNewGroups(userId){
   return groups;
 }
 
-function userCurrentGroups(userId){
-  const user = "users/"+b64ToSafeB64(userId);
+function userCurrentGroups(userId) {
+  const user = "users/" + userid;
   const groupIds = db._query(aql`
     FOR ug in usersInGroups
       FILTER ug._from == ${user}
@@ -148,14 +135,14 @@ function userCurrentGroups(userId){
   return loadGroups(groupIds, userId);
 }
 
-function groupKnownMembers(group, refUserId){
-  const user = "users/"+b64ToSafeB64(refUserId);
+function groupKnownMembers(group, refUserId) {
+  const user = "users/" + refUserId;
   var collection = usersInGroupsColl;
-  
-  if(group.isNew){
+
+  if (group.isNew) {
     collection = usersInNewGroupsColl;
   }
-  
+
   const users = db._query(aql`
     LET userConnections = (
       FOR c in connections
@@ -176,16 +163,16 @@ function groupKnownMembers(group, refUserId){
   return users;
 }
 
-function groupToDic(g, refUserId){
+function groupToDic(g, refUserId) {
   return {
-      isNew: g.isNew,
-      score: g.score,
-      id: g._key,
-      knownMembers: groupKnownMembers(g, refUserId)
-    };
+    isNew: g.isNew,
+    score: g.score,
+    id: g._key,
+    knownMembers: groupKnownMembers(g, refUserId)
+  };
 }
 
-function loadGroups(ids, refUserId){
+function loadGroups(ids, refUserId) {
   return db._query(aql`
     FOR g in groups
       FILTER g._id in ${ids}
@@ -193,21 +180,20 @@ function loadGroups(ids, refUserId){
   `).toArray().map(g => groupToDic(g, refUserId));
 }
 
-function loadUser(id){
-  var user = "users/"+b64ToSafeB64(id);
+function loadUser(id) {
+  var user = "users/" + id;
   return db._query(aql`RETURN DOCUMENT(${user})`).toArray()[0];
 }
 
-function updateEligibleTimestamp(key, timestamp){
+function updateEligibleTimestamp(key, timestamp) {
   return db._query(aql`
     UPDATE ${key} WITH {eligible_timestamp: ${timestamp}} in users
-  `); 
+  `);
 }
 
 function updateAndCleanConnections(collection, key1, key2, timestamp) {
-  // all keys in the DB are in the url/directory/db safe b64 format
-  const user1 = 'users/' + b64ToSafeB64(key1);
-  const user2 = 'users/' + b64ToSafeB64(key2);
+  const user1 = 'users/' + key1;
+  const user2 = 'users/' + key2;
 
   const added = allEdges(connectionsColl, user1, user2)._documents;
   const removed = allEdges(removedColl, user1, user2)._documents;
@@ -232,21 +218,21 @@ function updateAndCleanConnections(collection, key1, key2, timestamp) {
   }
 }
 
-function createUser(key){
+function createUser(key) {
   // already exists?
-  const user = "users/" + b64ToSafeB64(key);
+  const user = "users/" + key;
   const currents = db._query(aql`RETURN DOCUMENT(${user})`).toArray();
-  
-  if(currents && currents.length && currents[0]){
+
+  if (currents && currents.length && currents[0]) {
     return {
       key: currents[0]._key,
       score: currents[0].score || 0
-    };  
+    };
   }
-  
+
   const ret = usersColl.save({
     score: 0,
-    _key: b64ToSafeB64(key)
+    _key: key
   });
 
   return {
@@ -255,42 +241,47 @@ function createUser(key){
   };
 }
 
-function createGroup(collection, key1, key2, key3, timestamp){
-  const user1 = 'users/' + b64ToSafeB64(key1);
-  const user2 = 'users/' + b64ToSafeB64(key2);
-  const user3 = 'users/' + b64ToSafeB64(key3);
+function createGroup(key1, key2, key3, timestamp) {
+  const user1 = 'users/' + key1;
+  const user2 = 'users/' + key2;
+  const user3 = 'users/' + key3;
 
   const founders = [user1, user2, user3].sort();
 
-  // check duplicates
-  const groups = db._query(aql`
-    for i in ${collection}
-      filter (${user1} in i.founders && ${user2} in i.founders && ${user3} in i.founders )
-    return i
-  `)._documents;
+  function isDuplicate(collection) {
+    return db._query(aql`
+      for i in ${collection}
+        filter (${user1} in i.founders && ${user2} in i.founders && ${user3} in i.founders )
+        LIMIT 1
+      return i
+    `)._documents.length > 0;
+  }
 
-  if(groups.length){
+  if (isDuplicate(newGroupsColl) || isDuplicate(groupsColl)) {
     throw 'Duplicate group';
   }
 
   const conns = userConnections(user1);
 
-  if(conns.indexOf(user2) < 0 || conns.indexOf(user3) < 0){
-    throw 'Co-founders not connected';
+  if (conns.indexOf(user2) < 0 || conns.indexOf(user3) < 0) {
+    throw "Creator isn't connected to one or both of the co-founders";
   }
 
-  const ret = collection.save({
-        score: 0,
-        isNew: true,
-        timestamp: timestamp,
-        founders: founders
+  const ret = newGroupsColl.save({
+    score: 0,
+    isNew: true,
+    timestamp: timestamp,
+    founders: founders
   });
+
+  // Add the creator to the group now. The other two "co-founders" have to join using /membership
   addUserToGroup(usersInNewGroupsColl, ret._key, key1, timestamp, "newGroups");
+
   return ret;
 }
 
-function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
-  const user = 'users/' + b64ToSafeB64(key);
+function addUserToGroup(collection, groupId, key, timestamp, groupCollName) {
+  const user = 'users/' + key;
   const group = groupCollName + '/' + groupId;
 
   return collection.save({
@@ -300,24 +291,25 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   });
 }
 
-function deleteGroup(collection, groupId, key, timestamp){
+function deleteGroup(groupId, key, timestamp) {
+
   const groups = db._query(aql`
-    for i in ${collection}
+    for i in ${newGroupsColl}
       filter i._key == ${groupId}
     return i
   `).toArray();
 
-  if(!groups || !groups.length){
+  if (!groups || !groups.length) {
     throw 'Group not found';
   }
   const group = groups[0];
 
-  if(group.founders.indexOf('users/' + b64ToSafeB64(key)) < 0){
+  if (group.founders.indexOf('users/' + key) < 0) {
     throw 'Access Denied';
   }
   // Remove members
 
-  const newGroup = "newGroups/"+groupId;
+  const newGroup = "newGroups/" + groupId;
   db._query(aql`
     for i in ${usersInNewGroupsColl}
       filter i._to == ${newGroup}
@@ -328,15 +320,15 @@ function deleteGroup(collection, groupId, key, timestamp){
   db._query(aql`remove ${group._key} in ${collection}`);
 }
 
-function addMembership(groupId, key, timestamp){
-  var groups =  db._query(aql`
+function addMembership(groupId, key, timestamp) {
+  var groups = db._query(aql`
     for i in ${groupsColl}
       filter i._key == ${groupId}
     return i
   `).toArray();
-  const user = "users/" + b64ToSafeB64(key);
+  const user = "users/" + key;
   var isNew = false;
-  if(!groups.length){
+  if (!groups.length) {
     // load from newGroups
     isNew = true;
     groups = db._query(aql`
@@ -345,18 +337,18 @@ function addMembership(groupId, key, timestamp){
       return i
     `).toArray();
   }
-  if(!groups.length){
+  if (!groups.length) {
     throw 'Group not found';
   }
   const group = groups[0];
-  if(isNew && group.founders.indexOf(user) < 0){
+  if (isNew && group.founders.indexOf(user) < 0) {
     throw 'Access denied';
   }
 
-  if(isNew){
+  if (isNew) {
     addUserToGroup(usersInNewGroupsColl, groupId, key, timestamp, "newGroups");
     //move to groups if all founders joined
-    const grp = "newGroups/"+groupId;
+    const grp = "newGroups/" + groupId;
     const groupMembers = db._query(aql`
       for i in ${usersInNewGroupsColl}
         filter i._to == ${grp}
@@ -365,7 +357,7 @@ function addMembership(groupId, key, timestamp){
 
     const memberIds = [...new Set(groupMembers.map(x => x._from))];
 
-    if(memberIds.length == group.founders.length){
+    if (memberIds.length == group.founders.length) {
       groupsColl.save({
         score: 0,
         isNew: false,
@@ -374,7 +366,7 @@ function addMembership(groupId, key, timestamp){
         _key: group._key
       });
 
-      for(var i=0; i < groupMembers.length; i++){
+      for (var i = 0; i < groupMembers.length; i++) {
         var doc = groupMembers[i];
         usersInGroupsColl.save({
           _key: doc._key,
@@ -387,21 +379,21 @@ function addMembership(groupId, key, timestamp){
 
       db._query(aql`remove ${group._key} in ${newGroupsColl}`);
     }
-  }else{
-    if(isEligible(groupId, key)){
-      addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");  
-    }else{
+  } else {
+    if (isEligible(groupId, key)) {
+      addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");
+    } else {
       throw 'Not eligible to join this group';
     }
   }
 }
 
-function deleteMembership(collection, groupId, key, timestamp){
-  const user = "users/" + b64ToSafeB64(key);
-  const group = "groups/"+groupId;
+function deleteMembership(collection, groupId, key, timestamp) {
+  const user = "users/" + key;
+  const group = "groups/" + groupId;
 
   db._query(aql`
-    for i in ${collection}
+    for i in ${usersInGroupsColl}
       filter i._to == ${group} && i._from == ${user}
       remove i in ${collection}
   `);
@@ -414,25 +406,17 @@ const operations = {
   removeConnection: function removeAndClean(key1, key2, timestamp) {
     updateAndCleanConnections(removedColl, key1, key2, timestamp);
   },
-  createGroup: function(key1, key2, key3, timestamp){
-    return createGroup(newGroupsColl, key1, key2, key3, timestamp);
-  },
-  deleteGroup: function(group, key, timestamp){
-    return deleteGroup(newGroupsColl, group, key, timestamp);
-  },
-  addMembership: function(group, key, timestamp){
-    return addMembership(group, key, timestamp);
-  },
-  deleteMembership: function(group, key, timestamp){
-    return deleteMembership(usersInGroupsColl, group, key, timestamp);
-  },
-  userEligibleGroups: userEligibleGroups,
-  loadGroups: loadGroups,
-  userCurrentGroups: userCurrentGroups,
-  loadUser: loadUser,
-  updateEligibleTimestamp: updateEligibleTimestamp,
-  userNewGroups: userNewGroups,
-  createUser: createUser
+  createGroup,
+  deleteGroup,
+  addMembership,
+  deleteMembership,
+  userEligibleGroups,
+  loadGroups,
+  userCurrentGroups,
+  loadUser,
+  updateEligibleTimestamp,
+  userNewGroups,
+  createUser
 };
 
 module.exports = operations;

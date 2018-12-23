@@ -10,7 +10,17 @@ function strToUint8Array(str){
   return new Uint8Array(b.slice());
 }
 
+function b64ToUrlSafeB64(s) {
+  const alts = {
+    '/': '_',
+    '+': '-',
+    '=': ''
+  };
+  return s.replace(/[/+=]/g, (c) => alts[c]);
+}
+
 module.exports = {
-  b64ToUint8Array: b64ToUint8Array,
-  strToUint8Array: strToUint8Array
-};
+  b64ToUint8Array,
+  strToUint8Array,
+  b64ToUrlSafeB64,
+}
