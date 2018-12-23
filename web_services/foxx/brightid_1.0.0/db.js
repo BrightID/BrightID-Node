@@ -147,17 +147,19 @@ function groupKnownMembers(group, refUserId) {
     LET userConnections = (
       FOR c in connections
         FILTER c._from == ${user}
+        LIMIT 3
         RETURN DISTINCT c._to
     )
     LET userConnections2 = (
       FOR c in connections
         FILTER c._to == ${user}
+        LIMIT 3
         RETURN DISTINCT c._from
     )
     FOR ug in ${collection}
       FILTER ug._to == ${group._id} && (ug._from in UNION_DISTINCT(userConnections, userConnections2) || ug._from == ${user})
       LIMIT 3
-      RETURN ug._from
+      RETURN DISTINCT ug._from
   `).toArray().map(x => x.replace("users/", ""));
 
   return users;
@@ -168,7 +170,8 @@ function groupToDic(g, refUserId) {
     isNew: g.isNew,
     score: g.score,
     id: g._key,
-    knownMembers: groupKnownMembers(g, refUserId)
+    knownMembers: groupKnownMembers(g, refUserId),
+    founders: g.founders.map(u => u.replace("users/", ""))
   };
 }
 

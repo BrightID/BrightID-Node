@@ -24,7 +24,8 @@ var schemas = {
     id: Joi.string().required().description('unique identifier (base64) of the group'),
     score: Joi.number().min(0).max(100).default(0),
     isNew: Joi.boolean().default(true),
-    knownMembers: Joi.array().items(Joi.string()).description('public keys of two or three founders or other members connected to the reference user')
+    knownMembers: Joi.array().items(Joi.string()).description('public keys of two or three current members connected to the reference user'),
+    founders: Joi.array().items(Joi.string()).description('public keys of the three founders of the group')
   }),
   user: Joi.object({
     key: Joi.string().required().description('unique identifier (base64) of the user'),
