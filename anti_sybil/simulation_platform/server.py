@@ -1,17 +1,16 @@
-#!/usr/bin/env python
-# -*- coding: utf-8 -*-
-
 import sys
 sys.path.append('../')
 
 import os
 import time
 import json
-import algorithms
-from utils import *
 import networkx as nx
-from graphs.node import Node
 from flask import Flask, session, redirect, url_for, escape, request, make_response
+
+from anti_sybil import algorithms
+from anti_sybil.graphs.node import Node
+from anti_sybil.utils import *
+
 
 abspath = os.path.abspath(__file__)
 dname = os.path.dirname(abspath)
@@ -135,6 +134,8 @@ def new_graph():
     json_graph = to_json(graph)
     return json.dumps({'success': True, 'graph': json_graph, 'graph_info': graph_info})
 
+def main():
+    app.run(debug=True, host='127.0.0.1', port=8082, threaded=True)
 
 if __name__=='__main__':
-    app.run(debug=True, host='0.0.0.0', port=80, threaded=True)
+    main()

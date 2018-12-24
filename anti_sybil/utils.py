@@ -61,7 +61,7 @@ def calculate_successful_sybils(ranks_dic):
     #         float(len(successful_sybils)) / len(attackers), 2)
     # else:
     #     result['successful_sybils_per_attacker'] = '__'
-    result['better_than_pct'] = float(bisect(honests, max(sybils))) / len(honests)
+    result['better_than_pct'] = float(bisect(honests, max(sybils) if sybils else 0)) / len(honests)
     return result
 
 
