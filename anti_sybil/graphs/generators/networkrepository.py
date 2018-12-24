@@ -1,6 +1,5 @@
 import networkx as nx
 import random
-import numpy
 from ..node import Node
 
 def generate(input_data):
@@ -18,7 +17,7 @@ def generate(input_data):
         edge = row.strip().split()
         for node_name in edge:
             if node_name not in nodes_dic:
-                node_type = numpy.random.choice(['Honest', 'Seed', 'Attacker'], p=[p_honest, p_seed, p_attacker])
+                node_type = random.choice(['Honest', 'Seed', 'Attacker'], p=[p_honest, p_seed, p_attacker])
                 nodes_dic[node_name] = Node(node_name, node_type)
                 if node_type == 'Attacker':
                     attackers.append(nodes_dic[node_name])
