@@ -1,6 +1,6 @@
 # BrightID Node
 
-BrightID nodes store the social graph used by [brightID](https://github.com/BrightID/BrightID).
+BrightID nodes store the social graph used by [BrightID](https://github.com/BrightID/BrightID).
 
 By analyzing this graph, BrightID nodes are able to evaluate a user's likelihood of being unique. Other applications make requests to a BrightID node to retrieve this information.  (See [BrightID API](https://github.com/BrightID/BrightID-API).)
 
