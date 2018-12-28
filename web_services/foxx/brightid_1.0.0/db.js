@@ -170,8 +170,8 @@ function groupKnownMembers(group, refUserId) {
         LIMIT 1
         RETURN m._from
     )
-    RETURN APPEND(members, me)[0]
-  `).toArray().map(m => m.replace("users/", ""));
+    RETURN APPEND(members, me)
+  `).toArray()[0].map(m => m.replace("users/", ""));
 
   return users;
 }
