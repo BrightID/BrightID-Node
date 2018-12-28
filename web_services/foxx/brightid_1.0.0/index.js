@@ -1,6 +1,6 @@
 'use strict';
 const createRouter = require('@arangodb/foxx/router');
-const Joi = require('joi');
+const joi = require('joi');
 const nacl = require('tweetnacl');
 
 const db = require('./db');
@@ -19,104 +19,108 @@ const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (m
 
 // low-level schemas
 var schemas = {
-  timestamp: Joi.number().integer().required(),
-  group: Joi.object({
-    id: Joi.string().required().description('unique identifier (base64) of the group'),
-    score: Joi.number().min(0).max(100).default(0),
-    isNew: Joi.boolean().default(true),
-    knownMembers: Joi.array().items(Joi.string()).description('public keys of two or three current members connected to the reference user'),
-    founders: Joi.array().items(Joi.string()).description('public keys of the three founders of the group')
+  timestamp: joi.number().integer().required(),
+  group: joi.object({
+    id: joi.string().required().description('unique identifier of the group'),
+    score: joi.number().min(0).max(100).default(0),
+    isNew: joi.boolean().default(true),
+    knownMembers: joi.array().items(joi.string()).description('url-safe public keys of two or three current members connected to the reference user'),
+    founders: joi.array().items(joi.string()).description('url-safe public keys of the three founders of the group')
   }),
-  user: Joi.object({
-    key: Joi.string().required().description('unique identifier (base64) of the user'),
-    score: Joi.number().min(0).max(100).default(0)
+  user: joi.object({
+    key: joi.string().required().description('url-safe public key of the user'),
+    score: joi.number().min(0).max(100).default(0)
   })
 };
 
-// Consider using this in the schemas below if they ever update Joi
-// publicKey1: Joi.string().base64().required(),
+// Consider using this in the schemas below if they ever update joi
+// publicKey1: joi.string().base64().required(),
 
 // extend low-level schemas with high-level schemas
 schemas = Object.assign({
 
-  connectionsPutBody: Joi.object({
-    publicKey1: Joi.string().required().description('public key of the first user (base64)'),
-    publicKey2: Joi.string().required().description('public key of the second user (base64)'),
-    sig1: Joi.string().required()
+  connectionsPutBody: joi.object({
+    publicKey1: joi.string().required().description('public key of the first user (base64)'),
+    publicKey2: joi.string().required().description('public key of the second user (base64)'),
+    sig1: joi.string().required()
       .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
-    sig2: Joi.string().required()
+    sig2: joi.string().required()
       .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey2'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the connection occurred')
   }),
 
-  connectionsDeleteBody: Joi.object({
-    publicKey1: Joi.string().required().description('public key of the user removing the connection (base64)'),
-    publicKey2: Joi.string().required().description('public key of the second user (base64)'),
-    sig1: Joi.string().required()
+  connectionsDeleteBody: joi.object({
+    publicKey1: joi.string().required().description('public key of the user removing the connection (base64)'),
+    publicKey2: joi.string().required().description('public key of the second user (base64)'),
+    sig1: joi.string().required()
       .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
-  membershipPutBody: Joi.object({
-    publicKey: Joi.string().required().description('public key of the user joining the group (base64)'),
-    group: Joi.string().required().description('group id'),
-    sig: Joi.string().required()
+  membershipGetResponse: joi.object({
+    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
+    data: joi.array().items(joi.string()).description('url-safe public keys of all members of the group')
+  }),
+
+  membershipPutBody: joi.object({
+    publicKey: joi.string().required().description('public key of the user joining the group (base64)'),
+    group: joi.string().required().description('group id'),
+    sig: joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the join was requested')
   }),
 
-  membershipDeleteBody: Joi.object({
-    publicKey: Joi.string().required().description('public key of the user leaving the group (base64)'),
-    group: Joi.string().required().description('group id'),
-    sig: Joi.string().required()
+  membershipDeleteBody: joi.object({
+    publicKey: joi.string().required().description('public key of the user leaving the group (base64)'),
+    group: joi.string().required().description('group id'),
+    sig: joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
-  groupsPostBody: Joi.object({
-    publicKey1: Joi.string().required().description('public key of the first founder (base64)'),
-    publicKey2: Joi.string().required().description('public key of the second founder (base64)'),
-    publicKey3: Joi.string().required().description('public key of the third founder (base64)'),
-    sig1: Joi.string().required()
+  groupsPostBody: joi.object({
+    publicKey1: joi.string().required().description('public key of the first founder (base64)'),
+    publicKey2: joi.string().required().description('public key of the second founder (base64)'),
+    publicKey3: joi.string().required().description('public key of the third founder (base64)'),
+    sig1: joi.string().required()
       .description('message (publicKey1 + publicKey2 + publicKey3 + timestamp) signed by the user represented by publicKey1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the group creation was requested')
   }),
 
-  groupsPostResponse: Joi.object({
+  groupsPostResponse: joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
     data: schemas.group
   }),
 
-  groupsDeleteBody: Joi.object({
-    publicKey: Joi.string().required().description('public key of the user deleting the group (base64)'),
-    group: Joi.string().required().description('group id'),
-    sig: Joi.string().required()
+  groupsDeleteBody: joi.object({
+    publicKey: joi.string().required().description('public key of the user deleting the group (base64)'),
+    group: joi.string().required().description('group id'),
+    sig: joi.string().required()
       .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
-  usersResponse: Joi.object({
-    data: Joi.object({
-      score: Joi.number().min(0).max(100).default(0),
-      eligibleGroupsUpdated: Joi.boolean().description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, `eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
-      currentGroups: Joi.array().items(schemas.group),
-      eligibleGroups: Joi.array().items(schemas.group)
-      // TODO: POST-BETA: return list of this user's connections (publicKeys)
+  usersResponse: joi.object({
+    data: joi.object({
+      score: joi.number().min(0).max(100).default(0),
+      eligibleGroupsUpdated: joi.boolean().description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, `eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
+      currentGroups: joi.array().items(schemas.group),
+      eligibleGroups: joi.array().items(schemas.group)
     })
   }),
 
-  usersPostBody: Joi.object({
-    publicKey: Joi.string().required().description('public key of the first founder (base64)')
+  usersPostBody: joi.object({
+    publicKey: joi.string().required().description('public key of the first founder (base64)')
   }),
 
-  usersPostResponse: Joi.object({
+  usersPostResponse: joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
     data: schemas.user
   }),
 
-  fetchUserInfoPostBody: Joi.object({
-    publicKey: Joi.string().required().description('public key of the user deleting the group (base64)'),
-    sig: Joi.string().required()
+  fetchUserInfoPostBody: joi.object({
+    publicKey: joi.string().required().description('public key of the user deleting the group (base64)'),
+    sig: joi.string().required()
       .description('message (publicKey + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   })
@@ -167,6 +171,16 @@ const handlers = {
       res.throw(403, e);
     }
     db.removeConnection(safe(publicKey1), safe(publicKey2), timestamp);
+  },
+
+  membershipGet: function membershipGetHandler(req, res){
+    const members = db.groupMembers(req.param('groupId'));
+    if(!(members && members.length)){
+      res.throw(404, "Group not found");
+    }
+    res.send({
+      "data": members
+    });
   },
 
   membershipPut: function membershipPutHandler(req, res){
@@ -369,6 +383,12 @@ router.delete('/connections/', handlers.connectionsDelete)
   .description('Removes a connection.')
   .response(null);
 
+router.get('/membership/:groupId', handlers.membershipGet)
+  .pathParam('groupId', joi.string().required())
+  .summary('Get group members')
+  .description('Gets all members of a group.')
+  .response(schemas.membershipGetResponse);
+
 router.put('/membership/', handlers.membershipPut)
   .body(schemas.membershipPutBody.required())
   .summary('Join a group')
@@ -407,7 +427,7 @@ router.post('/users/', handlers.usersPost)
 
 router.get('/ip/', handlers.ip)
   .summary("Get this server's IPv4 address")
-  .response(Joi.string().description("IPv4 address in dot-decimal notation."));
+  .response(joi.string().description("IPv4 address in dot-decimal notation."));
 
 module.exports = {
   schemas: schemas,

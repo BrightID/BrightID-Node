@@ -33,6 +33,7 @@ function removeByKeys(collection, keys) {
 }
 
 function userConnections(user) {
+  user = "users/" + user;
   const cons = db._query(aql`
     for i in ${connectionsColl}
       filter (i._from == ${user} || i._to == ${user})
@@ -40,24 +41,25 @@ function userConnections(user) {
     return DISTINCT i
   `).toArray().map(function (u) {
     if (u._from == user) {
-      return u._to;
+      return u._to.replace("users/", "");
     }
-    return u._from;
+    return u._from.replace("users/", "");
   });
   return [...new Set(cons)];
 }
 
 function groupMembers(group) {
+  group = "groups/" + group;
   return db._query(aql`
     for i in ${usersInGroupsColl}
       filter i._to == ${group}
     return DISTINCT i._from
-  `).toArray();
+  `).toArray().map(m => m.replace("users/", ""));
 }
 
 function isEligible(groupId, userId) {
-  const userCons = userConnections("users/" + userid);
-  const groupMems = groupMembers("groups/" + groupId);
+  const userCons = userConnections(userId);
+  const groupMems = groupMembers(groupId);
   const count = _.intersection(userCons, groupMems).length;
 
   return count * 2 > groupMems.length;
@@ -156,11 +158,20 @@ function groupKnownMembers(group, refUserId) {
         LIMIT 3
         RETURN DISTINCT c._from
     )
-    FOR ug in ${collection}
-      FILTER ug._to == ${group._id} && (ug._from in UNION_DISTINCT(userConnections, userConnections2) || ug._from == ${user})
-      LIMIT 3
-      RETURN DISTINCT ug._from
-  `).toArray().map(x => x.replace("users/", ""));
+    LET members = (
+      FOR m in ${collection}
+        FILTER m._to == ${group._id} && (m._from in UNION_DISTINCT(userConnections, userConnections2))
+        LIMIT 3
+        RETURN DISTINCT m._from
+    )
+    LET me = (
+      FOR m in ${collection}
+        FILTER m._to == ${group._id} && m._from == ${user}
+        LIMIT 1
+        RETURN m._from
+    )
+    RETURN APPEND(members, me)[0]
+  `).toArray().map(m => m.replace("users/", ""));
 
   return users;
 }
@@ -419,7 +430,8 @@ const operations = {
   loadUser,
   updateEligibleTimestamp,
   userNewGroups,
-  createUser
+  createUser,
+  groupMembers
 };
 
 module.exports = operations;
