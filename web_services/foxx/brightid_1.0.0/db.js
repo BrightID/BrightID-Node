@@ -1,5 +1,7 @@
 'use strict';
 
+const { randomBytes } = require('crypto');
+
 const aql = require('@arangodb').aql;
 const db = require('@arangodb').db;
 const errors = require('@arangodb').errors;
@@ -13,6 +15,8 @@ const newGroupsColl = db._collection('newGroups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
+
+const safe = require('./encoding').b64ToUrlSafeB64;
 
 function allEdges(collection, user1, user2) {
   return db._query(aql`
@@ -279,7 +283,10 @@ function createGroup(key1, key2, key3, timestamp) {
     throw "Creator isn't connected to one or both of the co-founders";
   }
 
+  const groupId = safe(randomBytes(9).toString('base64'));
+
   const ret = newGroupsColl.save({
+    _key: groupId,
     score: 0,
     isNew: true,
     timestamp: timestamp,
@@ -381,7 +388,6 @@ function addMembership(groupId, key, timestamp) {
       for (var i = 0; i < groupMembers.length; i++) {
         var doc = groupMembers[i];
         usersInGroupsColl.save({
-          _key: doc._key,
           _from: doc._from,
           _to: doc._to.replace('newGroups', 'groups'),
           timestamp: doc.timestamp
