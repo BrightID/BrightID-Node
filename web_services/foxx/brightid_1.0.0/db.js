@@ -1,6 +1,6 @@
 'use strict';
 
-const { randomBytes } = require('crypto');
+const randomBytes = require('@arangodb/crypto').genRandomBytes;
 
 const aql = require('@arangodb').aql;
 const db = require('@arangodb').db;
