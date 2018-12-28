@@ -149,13 +149,11 @@ function groupKnownMembers(group, refUserId) {
     LET userConnections = (
       FOR c in connections
         FILTER c._from == ${user}
-        LIMIT 3
         RETURN DISTINCT c._to
     )
     LET userConnections2 = (
       FOR c in connections
         FILTER c._to == ${user}
-        LIMIT 3
         RETURN DISTINCT c._from
     )
     LET members = (
