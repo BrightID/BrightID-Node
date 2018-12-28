@@ -277,7 +277,7 @@ function createGroup(key1, key2, key3, timestamp) {
 
   const conns = userConnections(user1);
 
-  if (conns.indexOf(user2) < 0 || conns.indexOf(user3) < 0) {
+  if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
     throw "Creator isn't connected to one or both of the co-founders";
   }
 
