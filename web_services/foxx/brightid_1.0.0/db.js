@@ -52,11 +52,18 @@ function userConnections(user) {
   return [...new Set(cons)];
 }
 
-function groupMembers(group) {
-  group = "groups/" + group;
+function groupMembers(groupId, isNew = false) {
+  let key, collection;
+  if (isNew) {
+    key = "newGroups/" + groupId;
+    collection = usersInNewGroupsColl;
+  } else {
+    key = "groups/" + groupId;
+    collection = usersInGroupsColl;
+  }
   return db._query(aql`
-    for i in ${usersInGroupsColl}
-      filter i._to == ${group}
+    for i in ${collection}
+      filter i._to == ${key}
     return DISTINCT i._from
   `).toArray().map(m => m.replace("users/", ""));
 }
@@ -143,7 +150,8 @@ function userCurrentGroups(userId) {
 function groupKnownMembers(group, refUserId) {
   // knownMembers for a new group is just the founders that have already joined
   if (group.isNew) {
-    return groupMembers(group._key);
+    return groupMembers(group._key, group.isNew);
+  }
 
   const user = "users/" + refUserId;
   const collection = usersInGroupsColl;
@@ -173,7 +181,6 @@ function groupKnownMembers(group, refUserId) {
     )
     RETURN APPEND(members, me)
   `).toArray()[0].map(m => m.replace("users/", ""));
-  }
 }
 
 function groupToDic(g, refUserId) {
