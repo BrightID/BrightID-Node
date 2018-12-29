@@ -123,12 +123,11 @@ function userEligibleGroups(userId) {
 
 function userNewGroups(userId) {
   const user = "users/" + userId;
-  const groups = db._query(aql`
+  return db._query(aql`
       FOR g in newGroups
         FILTER ${user} in g.founders
       return g
   `).toArray().map(g => groupToDic(g, userId));
-  return groups;
 }
 
 function userCurrentGroups(userId) {
@@ -142,14 +141,14 @@ function userCurrentGroups(userId) {
 }
 
 function groupKnownMembers(group, refUserId) {
-  const user = "users/" + refUserId;
-  var collection = usersInGroupsColl;
-
+  // knownMembers for a new group is just the founders that have already joined
   if (group.isNew) {
-    collection = usersInNewGroupsColl;
-  }
+    return groupMembers(group);
 
-  const users = db._query(aql`
+  const user = "users/" + refUserId;
+  const collection = usersInGroupsColl;
+
+  return db._query(aql`
     LET userConnections = (
       FOR c in connections
         FILTER c._from == ${user}
@@ -174,8 +173,7 @@ function groupKnownMembers(group, refUserId) {
     )
     RETURN APPEND(members, me)
   `).toArray()[0].map(m => m.replace("users/", ""));
-
-  return users;
+  }
 }
 
 function groupToDic(g, refUserId) {
@@ -336,7 +334,7 @@ function deleteGroup(groupId, key, timestamp) {
   `);
 
   // Remove group
-  db._query(aql`remove ${group._key} in ${collection}`);
+  db._query(aql`remove ${group._key} in ${newGroupsColl}`);
 }
 
 function addMembership(groupId, key, timestamp) {
