@@ -143,7 +143,7 @@ function userCurrentGroups(userId) {
 function groupKnownMembers(group, refUserId) {
   // knownMembers for a new group is just the founders that have already joined
   if (group.isNew) {
-    return groupMembers(group);
+    return groupMembers(group._key);
 
   const user = "users/" + refUserId;
   const collection = usersInGroupsColl;
