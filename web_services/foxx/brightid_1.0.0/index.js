@@ -223,7 +223,7 @@ const handlers = {
     //Verify signature
     try {
       if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))){
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKeyss");
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
       }
     } catch (e) {
       res.throw(403, e);

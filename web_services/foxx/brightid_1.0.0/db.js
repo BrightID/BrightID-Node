@@ -411,14 +411,14 @@ function addMembership(groupId, key, timestamp) {
   }
 }
 
-function deleteMembership(collection, groupId, key, timestamp) {
+function deleteMembership(groupId, key, timestamp) {
   const user = "users/" + key;
   const group = "groups/" + groupId;
 
   db._query(aql`
     for i in ${usersInGroupsColl}
       filter i._to == ${group} && i._from == ${user}
-      remove i in ${collection}
+      remove i in ${groupsColl}
   `);
 }
 
