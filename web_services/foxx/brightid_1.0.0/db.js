@@ -418,7 +418,7 @@ function deleteMembership(groupId, key, timestamp) {
   db._query(aql`
     for i in ${usersInGroupsColl}
       filter i._to == ${group} && i._from == ${user}
-      remove i in ${groupsColl}
+      remove i in ${usersInGroupsColl}
   `);
 }
 
