@@ -1,13 +1,13 @@
 "use strict";
+const B64 = require('base64-js');
 
 function b64ToUint8Array (str){
-  var b = new Buffer(str, 'base64');
-  return new Uint8Array(b.slice());
+  return B64.toByteArray(str);
 }
 
 function strToUint8Array(str){
-  var b = new Buffer(str);
-  return new Uint8Array(b.slice());
+  const b = Buffer.from(str);
+  return b.slice(b.byteOffset, b.byteOffset + b.byteLength);
 }
 
 function b64ToUrlSafeB64(s) {

@@ -1,7 +1,7 @@
 var development = {
   port: 3000,
   node_cache: {
-    stdTTL: 60,
+    stdTTL: 120,
     checkperiod: 120
   }
 };
@@ -9,7 +9,7 @@ var development = {
 var production = {
   port: 3000,
   node_cache: {
-    stdTTL: 60,
+    stdTTL: 120,
     checkperiod: 120
   }
 };
