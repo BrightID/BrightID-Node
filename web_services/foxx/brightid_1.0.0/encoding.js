@@ -6,8 +6,7 @@ function b64ToUint8Array(str) {
 }
 
 function strToUint8Array(str) {
-  const b = Buffer.from(str);
-  return new Uint8Array(b.slice(b.byteOffset, b.byteOffset + b.byteLength));
+  return new Uint8Array(Buffer.from(str, 'ascii'));
 }
 
 function b64ToUrlSafeB64(s) {
