@@ -124,9 +124,9 @@ def stupid_sybil_border(graph):
 
 
 if __name__ == '__main__':
-    clear()
-    graph = load_graph('graph.json')
-    save(graph)
+    # clear()
+    # graph = load_graph('graph.json')
+    # save(graph)
     graph = load()
     border = stupid_sybil_border(graph)
     raw_ranks = [node.raw_rank for node in graph.nodes]
