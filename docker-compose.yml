@@ -7,13 +7,13 @@ services:
     network_mode: host
     image: brightid/web_services
 
-  anti_sybil:
-    build: anti_sybil
+  ranker:
+    build: ranker
     depends_on:
       - ws
       - db
     network_mode: host
-    image: brightid/anti_sybil
+    image: brightid/ranker
 
   db:
     build: db
