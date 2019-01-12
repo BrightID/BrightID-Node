@@ -335,7 +335,7 @@ const handlers = {
       Date.now() > user.eligible_timestamp + groupCheckInterval){
       
       eligibleGroups = eligibleGroups.concat(
-        db.loadGroups(db.userEligibleGroups(safeKey), safeKey)
+        db.userEligibleGroups(safeKey)
       );
       db.updateEligibleTimestamp(safeKey, Date.now());
       eligibleGroupsUpdated = true;

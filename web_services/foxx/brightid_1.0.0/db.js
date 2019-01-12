@@ -79,7 +79,7 @@ function isEligible(groupId, userId) {
 function userEligibleGroups(userId) {
   const user = "users/" + userId;
   const candidates = db._query(aql`
-      LET userConnections = (
+      LET userConnections1 = (
         FOR c in connections
           FILTER c._from == ${user}
           RETURN c._to
@@ -89,10 +89,10 @@ function userEligibleGroups(userId) {
           FILTER c._to == ${user}
           RETURN c._from
       )
+      LET userConnections = UNION_DISTINCT(userConnections1, userConnections2)
       FOR edge in usersInGroups
-          FILTER edge._from in UNION_DISTINCT(userConnections, userConnections2)
-          COLLECT group_tmp=edge._to, from_tmp=edge._from WITH COUNT INTO count_tmp
-          COLLECT group=group_tmp WITH COUNT INTO count
+          FILTER edge._from in userConnections
+          COLLECT group=edge._to WITH COUNT INTO count
           FILTER count >= 2
           SORT count DESC
           RETURN {
@@ -101,31 +101,28 @@ function userEligibleGroups(userId) {
           }
   `).toArray();
 
-  var groupIds = candidates.map(x => x.group);
+  const groupIds = candidates.map(x => x.group);
   const groupCounts = db._query(aql`
     FOR ug in usersInGroups
       FILTER ug._to in ${groupIds}
-      COLLECT to_tmp=ug._to WITH COUNT INTO count_tmp
-      COLLECT id=to_tmp WITH COUNT INTO count
+      COLLECT id=ug._to WITH COUNT INTO count
       return {
         id,
         count
       }
   `).toArray();
 
-  var groupCountsDic = {};
+  const groupCountsDic = {};
+
   groupCounts.map(function (row) {
     groupCountsDic[row.id] = row.count;
   });
 
-  var eligibles = candidates.filter(function (g) {
-    if (g.count * 2 > groupCountsDic[g.id]) {
-      return true;
-    }
-    return false;
-  });
-  eligibles = eligibles.map(x => x.id);
-  return eligibles;
+  const eligibles = candidates
+    .filter(g =>  g.count * 2 > groupCountsDic[g.group])
+    .map(g => g.group);
+
+  return loadGroups(eligibles, userId);
 }
 
 function userNewGroups(userId) {
@@ -434,7 +431,6 @@ const operations = {
   addMembership,
   deleteMembership,
   userEligibleGroups,
-  loadGroups,
   userCurrentGroups,
   loadUser,
   updateEligibleTimestamp,
