@@ -326,6 +326,8 @@ const handlers = {
       res.throw(404, "User not found");
     }
 
+    const currentGroups = db.userCurrentGroups(safeKey);
+
     let eligibleGroups = db.userNewGroups(safeKey);
     let eligibleGroupsUpdated = false;
     const groupCheckInterval =
@@ -335,7 +337,7 @@ const handlers = {
       Date.now() > user.eligible_timestamp + groupCheckInterval){
       
       eligibleGroups = eligibleGroups.concat(
-        db.userEligibleGroups(safeKey)
+        db.userEligibleGroups(safeKey, currentGroups)
       );
       db.updateEligibleTimestamp(safeKey, Date.now());
       eligibleGroupsUpdated = true;
@@ -346,7 +348,7 @@ const handlers = {
         score: user.score,
         eligibleGroupsUpdated: eligibleGroupsUpdated,
         eligibleGroups: eligibleGroups,
-        currentGroups: db.userCurrentGroups(safeKey)
+        currentGroups: db.loadGroups(currentGroups, safeKey)
       }
     });
   },

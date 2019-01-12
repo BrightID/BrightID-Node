@@ -76,7 +76,7 @@ function isEligible(groupId, userId) {
   return count * 2 > groupMems.length;
 }
 
-function userEligibleGroups(userId) {
+function userEligibleGroups(userId, currentGroups=[]) {
   const user = "users/" + userId;
   const candidates = db._query(aql`
       LET userConnections1 = (
@@ -92,6 +92,7 @@ function userEligibleGroups(userId) {
       LET userConnections = UNION_DISTINCT(userConnections1, userConnections2)
       FOR edge in usersInGroups
           FILTER edge._from in userConnections
+          FILTER edge._to NOT IN ${currentGroups}
           COLLECT group=edge._to WITH COUNT INTO count
           FILTER count >= 2
           SORT count DESC
@@ -136,12 +137,11 @@ function userNewGroups(userId) {
 
 function userCurrentGroups(userId) {
   const user = "users/" + userId;
-  const groupIds = db._query(aql`
+  return db._query(aql`
     FOR ug in usersInGroups
       FILTER ug._from == ${user}
       return DISTINCT ug._to
   `).toArray();
-  return loadGroups(groupIds, userId);
 }
 
 function groupKnownMembers(group, refUserId) {
@@ -433,6 +433,7 @@ const operations = {
   userEligibleGroups,
   userCurrentGroups,
   loadUser,
+  loadGroups,
   updateEligibleTimestamp,
   userNewGroups,
   createUser,
