@@ -1,2 +1,0 @@
-python-arango==4.2.1
-anti_sybil
