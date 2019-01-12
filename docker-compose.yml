@@ -7,13 +7,13 @@ services:
     network_mode: host
     image: brightid/web_services
 
-  ranker:
-    build: ranker
+  scorer:
+    build: scorer
     depends_on:
       - ws
       - db
     network_mode: host
-    image: brightid/ranker
+    image: brightid/scorer
 
   db:
     build: db
