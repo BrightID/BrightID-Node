@@ -8,5 +8,4 @@ RUN pip install -r requirements.txt
 ADD runner-cron /etc/cron.d/runner-cron
 RUN chmod 0644 /etc/cron.d/runner-cron
 
-RUN touch /var/log/cron.log
-CMD service cron start & tail -f /var/log/cron.log
+CMD touch /var/log/cron.log && service cron start && tail -f /var/log/cron.log
