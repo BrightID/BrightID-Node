@@ -11,7 +11,7 @@ def save(graph):
     client = ArangoClient()
     db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
     for node in graph.nodes:
-        db['users'].insert({'_key': str(node.name), 'rank': node.rank})
+        db['users'].insert({'_key': str(node.name), 'score': node.rank})
         for group in node.groups:
             if not db['groups'].get({'_key': group}):
                 if group.find('seed_group_') != -1:
@@ -30,9 +30,9 @@ def update(nodes_graph, groups_graph):
     client = ArangoClient()
     db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
     for node in nodes_graph.nodes:
-        db['users'].update({'_key': node.name, 'rank': node.rank})
+        db['users'].update({'_key': node.name, 'score': node.rank})
     for group in groups_graph.nodes:
-        db['groups'].update({'_key': group.name, 'rank': group.rank,
+        db['groups'].update({'_key': group.name, 'score': group.rank,
                              'raw_rank': group.raw_rank, 'degree': group.degree})
     for affinity in db['affinity']:
         db['affinity'].delete(affinity)
@@ -61,7 +61,7 @@ def load():
         cur_user_groups = user_groups.get(user['_key'])
         user_type = 'Seed' if cur_user_groups and (cur_user_groups & seed_groups) else 'Honest'
         users_dic[user['_key']] = graphs.node.Node(
-            user['_key'], user_type, user_groups[user['_key']], user['rank'])
+            user['_key'], user_type, cur_user_groups, user['score'])
     edges = [(users_dic[connection['_from'].replace('users/', '')], users_dic[connection['_to'].replace('users/', '')])
              for connection in connections]
     graph = nx.Graph()
@@ -79,9 +79,10 @@ def load_group_graph():
     group_dic = {}
     for group in groups:
         group_dic[group['_key']] = graphs.node.Node(
-            group['_key'], 'Seed' if 'seed' in group and group['seed'] else 'Honest',
+            group['_key'],
+            'Seed' if 'seed' in group and group['seed'] else 'Honest',
             [],
-            group['rank'],
+            group['score'],
             group['raw_rank'],
             group['degree']
         )
