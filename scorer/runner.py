@@ -22,7 +22,8 @@ def save(graph):
                 {'_from': 'users/{0}'.format(node.name), '_to': 'groups/{0}'.format(group)})
     for edge in graph.edges():
         db['connections'].insert(
-            {'_key': '{0}-{1}'.format(edge[0].name, edge[1].name), '_from': 'users/{0}'.format(edge[0].name), '_to': 'users/{0}'.format(edge[1].name)})
+            {'_key': '{0}-{1}'.format(edge[0].name, edge[1].name), '_from': 'users/{0}'.format(edge[0].name),
+             '_to': 'users/{0}'.format(edge[1].name)})
 
 
 def update(nodes_graph, groups_graph):
@@ -32,7 +33,7 @@ def update(nodes_graph, groups_graph):
         db['users'].update({'_key': node.name, 'rank': node.rank})
     for group in groups_graph.nodes:
         db['groups'].update({'_key': group.name, 'rank': group.rank,
-            'raw_rank': group.raw_rank, 'degree': group.degree})
+                             'raw_rank': group.raw_rank, 'degree': group.degree})
     for affinity in db['affinity']:
         db['affinity'].delete(affinity)
     for edge in groups_graph.edges.data():
@@ -57,8 +58,8 @@ def load():
             'users/', '')].add(user_group['_to'].replace('groups/', ''))
     users_dic = {}
     for user in users:
-        user_type = 'Seed' if user_groups[user['_key']
-                                          ] & seed_groups else 'Honest'
+        cur_user_groups = user_groups.get(user['_key'])
+        user_type = 'Seed' if cur_user_groups and (cur_user_groups & seed_groups) else 'Honest'
         users_dic[user['_key']] = graphs.node.Node(
             user['_key'], user_type, user_groups[user['_key']], user['rank'])
     edges = [(users_dic[connection['_from'].replace('users/', '')], users_dic[connection['_to'].replace('users/', '')])
@@ -133,7 +134,7 @@ if __name__ == '__main__':
     print('''stupid border: {}
 max: {}
 min: {}
-avg: {}'''.format(border, max(raw_ranks), min(raw_ranks), sum(raw_ranks)/len(raw_ranks)))
+avg: {}'''.format(border, max(raw_ranks), min(raw_ranks), sum(raw_ranks) / len(raw_ranks)))
     reset_ranks(graph)
     ranker = algorithms.SybilGroupRank(graph, {
         'stupid_sybil_border': border
