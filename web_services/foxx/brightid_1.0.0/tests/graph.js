@@ -10,14 +10,24 @@ const usersInGroupsColl = arango._collection('usersInGroups');
 const usersInNewGroupsColl = arango._collection('usersInNewGroups');
 const usersColl = arango._collection('users');
 
+const chai = require('chai');
+const should = chai.should();
+
 describe('db graph', function () {
   before(function(){
     connectionsColl.truncate();
     removedColl.truncate();
+    usersColl.truncate();
+    db.createUser('a');
+    db.createUser('b');
   });
   after(function(){
     connectionsColl.truncate();
     removedColl.truncate();
+    usersColl.truncate();
+  });
+  it('should be able to retrieve a score for a user', function() {
+    db.userScore('a').should.equal(0);
   });
   it('should be able to create a connection', function () {
     db.addConnection('a', 'b', Date.now());

@@ -17,27 +17,32 @@ module.context.use(router);
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
-// low-level schemas
+// Consider using this in the schemas below if they ever update joi
+// publicKey1: joi.string().base64().required(),
+
+// lowest-level schemas
 var schemas = {
-  timestamp: joi.number().integer().required(),
+  score: joi.number().min(0).max(100).default(0),
+  timestamp: joi.number().integer().required()
+};
+
+// extend lower-level schemas with higher-level schemas
+schemas = Object.assign({
+  user: joi.object({
+    key: joi.string().required().description('url-safe public key of the user'),
+    score: schemas.score
+  }),
   group: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
-    score: joi.number().min(0).max(100).default(0),
+    score: schemas.score,
     isNew: joi.boolean().default(true),
     knownMembers: joi.array().items(joi.string()).description('url-safe public keys of two or three current' +
       ' members connected to the reference user, or if the group is being founded, the co-founders that have joined'),
     founders: joi.array().items(joi.string()).description('url-safe public keys of the three founders of the group')
-  }),
-  user: joi.object({
-    key: joi.string().required().description('url-safe public key of the user'),
-    score: joi.number().min(0).max(100).default(0)
   })
-};
+}, schemas);
 
-// Consider using this in the schemas below if they ever update joi
-// publicKey1: joi.string().base64().required(),
-
-// extend low-level schemas with high-level schemas
+// extend lower-level schemas with higher-level schemas
 schemas = Object.assign({
 
   connectionsPutBody: joi.object({
@@ -103,7 +108,7 @@ schemas = Object.assign({
 
   usersResponse: joi.object({
     data: joi.object({
-      score: joi.number().min(0).max(100).default(0),
+      score: schemas.score,
       eligibleGroupsUpdated: joi.boolean().description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, `eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
       currentGroups: joi.array().items(schemas.group),
       eligibleGroups: joi.array().items(schemas.group)
@@ -124,6 +129,12 @@ schemas = Object.assign({
     sig: joi.string().required()
       .description('message (publicKey + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
+  }),
+
+  userScore: joi.object({
+    data: joi.object({
+      score: schemas.score
+    })
   })
 
 }, schemas);
@@ -370,7 +381,20 @@ const handlers = {
     } else {
       res.throw(500, "Ip address unknown");
     }
-  }
+  },
+
+  userScore: function userScore(req, res){
+    const score = db.userScore(req.param('user'));
+    if(score == null){
+      res.throw(404, "User not found");
+    } else {
+      res.send({
+        "data": {
+          "score": score
+        }
+      });
+    }
+  },
 
 };
 
@@ -431,6 +455,11 @@ router.post('/users/', handlers.usersPost)
 router.get('/ip/', handlers.ip)
   .summary("Get this server's IPv4 address")
   .response(joi.string().description("IPv4 address in dot-decimal notation."));
+
+router.get('/userScore/:user', handlers.userScore)
+  .pathParam('user', joi.string().required().description("Public key of user"))
+  .summary("Get a user's score")
+  .response(schemas.userScore);
 
 module.exports = {
   schemas: schemas,

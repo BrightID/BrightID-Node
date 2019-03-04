@@ -203,6 +203,15 @@ function loadUser(id) {
   return db._query(aql`RETURN DOCUMENT(${user})`).toArray()[0];
 }
 
+function userScore(id) {
+  const user = "users/" + id;
+  return db._query(aql`
+    FOR u in users
+      FILTER u._id  == ${user}
+      RETURN u.score
+  `).toArray()[0];
+}
+
 function updateEligibleTimestamp(key, timestamp) {
   return db._query(aql`
     UPDATE ${key} WITH {eligible_timestamp: ${timestamp}} in users
@@ -437,7 +446,8 @@ const operations = {
   updateEligibleTimestamp,
   userNewGroups,
   createUser,
-  groupMembers
+  groupMembers,
+  userScore: userScore,
 };
 
 module.exports = operations;
