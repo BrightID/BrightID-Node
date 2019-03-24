@@ -447,6 +447,7 @@ const operations = {
   userNewGroups,
   createUser,
   groupMembers,
+  userConnections,
   userScore: userScore,
 };
 

@@ -135,7 +135,14 @@ schemas = Object.assign({
     data: joi.object({
       score: schemas.score
     })
+  }),
+
+  userConnections: joi.object({
+    data: joi.object({
+      users: joi.array().items(joi.string())
+    })
   })
+
 
 }, schemas);
 
@@ -396,6 +403,19 @@ const handlers = {
     }
   },
 
+  userConnections: function userConnections(req, res){
+    const users = db.userConnections(req.param('user'));
+    if(users == null){
+      res.throw(404, "User not found");
+    } else {
+      res.send({
+        "data": {
+          "users": users
+        }
+      });
+    }
+  },
+
 };
 
 router.put('/connections/', handlers.connectionsPut)
@@ -460,6 +480,11 @@ router.get('/userScore/:user', handlers.userScore)
   .pathParam('user', joi.string().required().description("Public key of user"))
   .summary("Get a user's score")
   .response(schemas.userScore);
+
+router.get('/userConnections/:user', handlers.userConnections)
+  .pathParam('user', joi.string().required().description("Public key of user"))
+  .summary("Get a user's connectionss")
+  .response(schemas.userConnections);
 
 module.exports = {
   schemas: schemas,
