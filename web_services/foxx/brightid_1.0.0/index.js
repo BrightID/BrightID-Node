@@ -106,17 +106,18 @@ schemas = Object.assign({
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
-  usersResponse: joi.object({
+  fetchUserInfoPostResponse: joi.object({
     data: joi.object({
       score: schemas.score,
       eligibleGroupsUpdated: joi.boolean().description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, `eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
       currentGroups: joi.array().items(schemas.group),
-      eligibleGroups: joi.array().items(schemas.group)
+      eligibleGroups: joi.array().items(schemas.group),
+      connections: joi.array().items(schemas.user)
     })
   }),
 
   usersPostBody: joi.object({
-    publicKey: joi.string().required().description('public key of the first founder (base64)')
+    publicKey: joi.string().required().description("user's public key")
   }),
 
   usersPostResponse: joi.object({
@@ -125,7 +126,7 @@ schemas = Object.assign({
   }),
 
   fetchUserInfoPostBody: joi.object({
-    publicKey: joi.string().required().description('public key of the user deleting the group (base64)'),
+    publicKey: joi.string().required().description('public key of the user (base64)'),
     sig: joi.string().required()
       .description('message (publicKey + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
@@ -142,7 +143,6 @@ schemas = Object.assign({
       users: joi.array().items(joi.string())
     })
   })
-
 
 }, schemas);
 
@@ -338,6 +338,7 @@ const handlers = {
     }
 
     const safeKey = safe(key);
+    const connections = db.userConnectionsRaw(safeKey);
 
     const user = db.loadUser(safeKey);
     if(!user){
@@ -346,7 +347,7 @@ const handlers = {
 
     const currentGroups = db.userCurrentGroups(safeKey);
 
-    let eligibleGroups = db.userNewGroups(safeKey);
+    let eligibleGroups = db.userNewGroups(safeKey, connections);
     let eligibleGroupsUpdated = false;
     const groupCheckInterval =
       ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
@@ -355,7 +356,7 @@ const handlers = {
       Date.now() > user.eligible_timestamp + groupCheckInterval){
       
       eligibleGroups = eligibleGroups.concat(
-        db.userEligibleGroups(safeKey, currentGroups)
+        db.userEligibleGroups(safeKey, connections, currentGroups)
       );
       db.updateEligibleTimestamp(safeKey, Date.now());
       eligibleGroupsUpdated = true;
@@ -366,7 +367,8 @@ const handlers = {
         score: user.score,
         eligibleGroupsUpdated: eligibleGroupsUpdated,
         eligibleGroups: eligibleGroups,
-        currentGroups: db.loadGroups(currentGroups, safeKey)
+        currentGroups: db.loadGroups(currentGroups, connections, safeKey),
+        connections: db.loadUsers(connections)
       }
     });
   },
@@ -464,7 +466,7 @@ router.post('/fetchUserInfo/', handlers.fetchUserInfo)
   .body(schemas.fetchUserInfoPostBody)
   .summary('Get information about a user')
   .description("Gets a user's score, lists of current groups, eligible groups, and current connections for the given user.")
-  .response(schemas.usersResponse);
+  .response(schemas.fetchUserInfoPostResponse);
 
 router.post('/users/', handlers.usersPost)
   .body(schemas.usersPostBody.required())
@@ -483,7 +485,7 @@ router.get('/userScore/:user', handlers.userScore)
 
 router.get('/userConnections/:user', handlers.userConnections)
   .pathParam('user', joi.string().required().description("Public key of user"))
-  .summary("Get a user's connectionss")
+  .summary("Get a user's connections")
   .response(schemas.userConnections);
 
 module.exports = {

@@ -36,20 +36,52 @@ function removeByKeys(collection, keys) {
   `);
 }
 
-function userConnections(user) {
+// function userConnections(user) {
+//   user = "users/" + user;
+//   const cons = db._query(aql`
+//     for i in ${connectionsColl}
+//       filter (i._from == ${user} || i._to == ${user})
+//     sort i.timestamp desc
+//     return DISTINCT i
+//   `).toArray().map(function (u) {
+//     if (u._from == user) {
+//       return u._to.replace("users/", "");
+//     }
+//     return u._from.replace("users/", "");
+//   });
+//   return [...new Set(cons)];
+// }
+
+function userConnectionsRaw(user){
   user = "users/" + user;
-  const cons = db._query(aql`
-    for i in ${connectionsColl}
-      filter (i._from == ${user} || i._to == ${user})
-    sort i.timestamp desc
-    return DISTINCT i
-  `).toArray().map(function (u) {
-    if (u._from == user) {
-      return u._to.replace("users/", "");
-    }
-    return u._from.replace("users/", "");
-  });
-  return [...new Set(cons)];
+  return db._query(aql`
+      LET userConnections1 = (
+        FOR c in ${connectionsColl}
+          FILTER c._from == ${user}
+          RETURN c._to
+      )
+      LET userConnections2 = (
+        FOR c in ${connectionsColl}
+          FILTER c._to == ${user}
+          RETURN c._from
+      )
+      RETURN UNION_DISTINCT(userConnections1, userConnections2)
+  `).toArray()[0]
+}
+
+function userConnections(user){
+  return userConnectionsRaw(user).map(u => u.replace("users/", ""))
+}
+
+function loadUsers(users){
+  return db._query(aql`
+      FOR u in ${usersColl}
+        FILTER u._id in ${users}
+          RETURN {
+              key: u._id,
+              score: u.score
+          }
+  `).toArray();
 }
 
 function groupMembers(groupId, isNew = false) {
@@ -76,22 +108,11 @@ function isEligible(groupId, userId) {
   return count * 2 > groupMems.length;
 }
 
-function userEligibleGroups(userId, currentGroups=[]) {
+function userEligibleGroups(userId, connections, currentGroups=[]) {
   const user = "users/" + userId;
   const candidates = db._query(aql`
-      LET userConnections1 = (
-        FOR c in connections
-          FILTER c._from == ${user}
-          RETURN c._to
-      )
-      LET userConnections2 = (
-        FOR c in connections
-          FILTER c._to == ${user}
-          RETURN c._from
-      )
-      LET userConnections = UNION_DISTINCT(userConnections1, userConnections2)
-      FOR edge in usersInGroups
-          FILTER edge._from in userConnections
+      FOR edge in ${usersInGroupsColl}
+          FILTER edge._from in ${connections}
           FILTER edge._to NOT IN ${currentGroups}
           COLLECT group=edge._to WITH COUNT INTO count
           FILTER count >= 2
@@ -104,7 +125,7 @@ function userEligibleGroups(userId, currentGroups=[]) {
 
   const groupIds = candidates.map(x => x.group);
   const groupCounts = db._query(aql`
-    FOR ug in usersInGroups
+    FOR ug in ${usersInGroupsColl}
       FILTER ug._to in ${groupIds}
       COLLECT id=ug._to WITH COUNT INTO count
       return {
@@ -123,28 +144,28 @@ function userEligibleGroups(userId, currentGroups=[]) {
     .filter(g =>  g.count * 2 > groupCountsDic[g.group])
     .map(g => g.group);
 
-  return loadGroups(eligibles, userId);
+  return loadGroups(eligibles, connections, userId);
 }
 
-function userNewGroups(userId) {
+function userNewGroups(userId, connections) {
   const user = "users/" + userId;
   return db._query(aql`
-      FOR g in newGroups
+      FOR g in ${newGroupsColl}
         FILTER ${user} in g.founders
       return g
-  `).toArray().map(g => groupToDic(g, userId));
+  `).toArray().map(g => groupToDic(g, connections, userId));
 }
 
 function userCurrentGroups(userId) {
   const user = "users/" + userId;
   return db._query(aql`
-    FOR ug in usersInGroups
+    FOR ug in ${usersInGroupsColl}
       FILTER ug._from == ${user}
       return DISTINCT ug._to
   `).toArray();
 }
 
-function groupKnownMembers(group, refUserId) {
+function groupKnownMembers(group, connections, refUserId) {
   // knownMembers for a new group is just the founders that have already joined
   if (group.isNew) {
     return groupMembers(group._key, group.isNew);
@@ -154,19 +175,9 @@ function groupKnownMembers(group, refUserId) {
   const collection = usersInGroupsColl;
 
   return db._query(aql`
-    LET userConnections = (
-      FOR c in connections
-        FILTER c._from == ${user}
-        RETURN DISTINCT c._to
-    )
-    LET userConnections2 = (
-      FOR c in connections
-        FILTER c._to == ${user}
-        RETURN DISTINCT c._from
-    )
     LET members = (
       FOR m in ${collection}
-        FILTER m._to == ${group._id} && (m._from in UNION_DISTINCT(userConnections, userConnections2))
+        FILTER m._to == ${group._id} && m._from in ${connections}
         LIMIT 3
         RETURN DISTINCT m._from
     )
@@ -180,22 +191,22 @@ function groupKnownMembers(group, refUserId) {
   `).toArray()[0].map(m => m.replace("users/", ""));
 }
 
-function groupToDic(g, refUserId) {
+function groupToDic(g, connections, refUserId) {
   return {
     isNew: g.isNew,
     score: g.score,
     id: g._key,
-    knownMembers: groupKnownMembers(g, refUserId),
+    knownMembers: groupKnownMembers(g, connections, refUserId),
     founders: g.founders.map(u => u.replace("users/", ""))
   };
 }
 
-function loadGroups(ids, refUserId) {
+function loadGroups(ids, connections, refUserId) {
   return db._query(aql`
-    FOR g in groups
+    FOR g in ${groupsColl}
       FILTER g._id in ${ids}
       return g
-  `).toArray().map(g => groupToDic(g, refUserId));
+  `).toArray().map(g => groupToDic(g, connections, refUserId));
 }
 
 function loadUser(id) {
@@ -206,7 +217,7 @@ function loadUser(id) {
 function userScore(id) {
   const user = "users/" + id;
   return db._query(aql`
-    FOR u in users
+    FOR u in ${usersColl}
       FILTER u._id  == ${user}
       RETURN u.score
   `).toArray()[0];
@@ -448,7 +459,9 @@ const operations = {
   createUser,
   groupMembers,
   userConnections,
-  userScore: userScore,
+  userConnectionsRaw,
+  userScore,
+  loadUsers,
 };
 
 module.exports = operations;

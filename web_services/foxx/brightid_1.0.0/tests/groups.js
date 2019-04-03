@@ -65,8 +65,12 @@ describe('groups', function () {
       db.addConnection('a', 'c', 0);
       db.addConnection('a', 'd', 0);
     });
+
+    it('should have three connections', function(){
+      db.userConnections('a').length.should.equal(3);
+    });
     it('should be eligible to join the group', function (){
-      const eligibleGroups = db.userEligibleGroups('a');
+      const eligibleGroups = db.userEligibleGroups('a', db.userConnectionsRaw('a'));
       eligibleGroups.should.not.be.empty;
       eligibleGroups[0].id.should.equal(groupId);
     });
