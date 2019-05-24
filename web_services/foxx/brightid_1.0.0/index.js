@@ -30,11 +30,13 @@ var schemas = {
 schemas = Object.assign({
   user: joi.object({
     key: joi.string().required().description('url-safe public key of the user'),
-    score: schemas.score
+    score: schemas.score,
+    verifications: joi.array().items(joi.string())
   }),
   group: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
     score: schemas.score,
+    verifications: joi.array().items(joi.string()),
     isNew: joi.boolean().default(true),
     knownMembers: joi.array().items(joi.string()).description('url-safe public keys of two or three current' +
       ' members connected to the reference user, or if the group is being founded, the co-founders that have joined'),
@@ -106,13 +108,23 @@ schemas = Object.assign({
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
+  fetchUserInfoPostBody: joi.object({
+    publicKey: joi.string().required().description('public key of the user (base64)'),
+    sig: joi.string().required()
+      .description('message (publicKey + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
+  }),
+
   fetchUserInfoPostResponse: joi.object({
     data: joi.object({
       score: schemas.score,
-      eligibleGroupsUpdated: joi.boolean().description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, `eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
+      eligibleGroupsUpdated: joi.boolean()
+        .description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, ' +
+          '`eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
       currentGroups: joi.array().items(schemas.group),
       eligibleGroups: joi.array().items(schemas.group),
-      connections: joi.array().items(schemas.user)
+      connections: joi.array().items(schemas.user),
+      verifications: joi.array().items(joi.string())
     })
   }),
 
@@ -125,11 +137,22 @@ schemas = Object.assign({
     data: schemas.user
   }),
 
-  fetchUserInfoPostBody: joi.object({
+  fetchVerificationPostBody: joi.object({
     publicKey: joi.string().required().description('public key of the user (base64)'),
+    context: joi.string().required().description('the context of the id (typically an application)'),
+    id: joi.string().required().description('an id used by the app consuming the verification'),
     sig: joi.string().required()
-      .description('message (publicKey + timestamp) signed by the user represented by publicKey'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
+      .description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
+  }),
+
+  fetchVerificationPostResponse: joi.object({
+    data: joi.object({
+      publicKey: joi.string().description("the node's public key."),
+      oldId: joi.string().description("the user's old id in the context (if a pre-existing id is being replaced.)"),
+      sig: joi.string().description('verification message ( context + "," + id +  "," + timestamp [ + "," + oldId] ) signed by the node'),
+      timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed')
+    })
   }),
 
   userScore: joi.object({
@@ -253,7 +276,7 @@ const handlers = {
       res.throw(403, e);
     }
   },
-  
+
   groupsPost: function groupsPostHandler(req, res){
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
@@ -263,8 +286,8 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE){
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey1 + publicKey2 + publicKey3 + 
-        req.body.timestamp);
+    const message = strToUint8Array(publicKey1 + publicKey2 + publicKey3 +
+      req.body.timestamp);
 
     //Verify signature
     try {
@@ -300,7 +323,7 @@ const handlers = {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(publicKey + group +
-        req.body.timestamp);
+      req.body.timestamp);
 
     //Verify signature
     try {
@@ -317,7 +340,7 @@ const handlers = {
       res.throw(403, e);
     }
   },
-  
+
   fetchUserInfo: function usersHandler(req, res){
     const key = req.body.publicKey;
     const timestamp = req.body.timestamp;
@@ -352,9 +375,9 @@ const handlers = {
     const groupCheckInterval =
       ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
 
-    if(!user.eligible_timestamp || 
+    if(!user.eligible_timestamp ||
       Date.now() > user.eligible_timestamp + groupCheckInterval){
-      
+
       eligibleGroups = eligibleGroups.concat(
         db.userEligibleGroups(safeKey, connections, currentGroups)
       );
@@ -368,9 +391,47 @@ const handlers = {
         eligibleGroupsUpdated: eligibleGroupsUpdated,
         eligibleGroups: eligibleGroups,
         currentGroups: db.loadGroups(currentGroups, connections, safeKey),
-        connections: db.loadUsers(connections)
+        connections: db.loadUsers(connections),
+        verifications: user.verifications,
       }
     });
+  },
+
+  fetchVerification: function fetchVerification(req, res){
+    const {publicKey: key, context, sig, id, timestamp} = req.body;
+
+    if (timestamp > Date.now() + TIME_FUDGE){
+      res.throw(400, "timestamp can't be in the future");
+    }
+
+    const message = strToUint8Array(context + ',' + id + ',' + timestamp );
+
+    try {
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))){
+        res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by publicKey");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    // if the user already has an id mapped under this context, get its value and timestamp
+
+    // if the timestamp of the existing id is newer, give error message
+
+    // find the verification for the context
+
+    // check that the user has this verification
+
+    // create a new timestamp on the server
+
+    // if the user has already mapped the same id, return a verification for it and update the timestamp if it's newer
+
+    // if no other user has mapped the same old id, mark it for removal
+
+    // update the old id and timestamp in the db
+
+    // sign and return the verification
+
   },
 
   usersPost: function usersPostHandler(req, res){
@@ -458,14 +519,14 @@ router.post('/groups/', handlers.groupsPost)
 
 router.delete('/groups/', handlers.groupsDelete)
   .body(schemas.groupsDeleteBody.required())
-  .summary('Remove a group.')
+  .summary('Remove a group')
   .description('Removes a group with three or fewer members (founders). Any of the founders can remove the group.')
   .response(null);
 
 router.post('/fetchUserInfo/', handlers.fetchUserInfo)
-  .body(schemas.fetchUserInfoPostBody)
+  .body(schemas.fetchUserInfoPostBody.required())
   .summary('Get information about a user')
-  .description("Gets a user's score, lists of current groups, eligible groups, and current connections for the given user.")
+  .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")
   .response(schemas.fetchUserInfoPostResponse);
 
 router.post('/users/', handlers.usersPost)
@@ -473,6 +534,12 @@ router.post('/users/', handlers.usersPost)
   .summary("Create a user")
   .description("Create a user")
   .response(schemas.usersPostResponse);
+
+router.post('/fetchVerification', handlers.fetchVerification)
+  .body(schemas.fetchVerificationPostBody.required())
+  .summary("Get a signed verification from a server node")
+  .description("Gets a signed verification for a user under a given id and context.")
+  .response(schemas.fetchVerificationPostResponse);
 
 router.get('/ip/', handlers.ip)
   .summary("Get this server's IPv4 address")
