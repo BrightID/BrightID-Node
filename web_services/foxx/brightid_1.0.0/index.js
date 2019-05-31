@@ -141,16 +141,18 @@ schemas = Object.assign({
     publicKey: joi.string().required().description('public key of the user (base64)'),
     context: joi.string().required().description('the context of the id (typically an application)'),
     id: joi.string().required().description('an id used by the app consuming the verification'),
-    sig: joi.string().required()
+    sigUser: joi.string().required()
       .description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
+    sigContext: joi.string().required()
+      .description('message (id + "," + timestamp) signed by context manager'),
     timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
   }),
 
   fetchVerificationPostResponse: joi.object({
     data: joi.object({
       publicKey: joi.string().description("the node's public key."),
-      oldId: joi.string().description("the user's old id in the context (if a pre-existing id is being replaced.)"),
-      sig: joi.string().description('verification message ( context + "," + id +  "," + timestamp [ + "," + oldId] ) signed by the node'),
+      revocableIds: joi.array().items(joi.string()).description("ids formerly used by this user that can be safely revoked"),
+      sig: joi.string().description('verification message ( context + "," + id +  "," + timestamp [ + "," + revocableId ... ] ) signed by the node'),
       timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed')
     })
   }),
@@ -174,19 +176,19 @@ const handlers = {
   connectionsPut: function connectionsPutHandler(req, res){
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
-    const timestamp =  req.body.timestamp;
-    if (timestamp > Date.now() + TIME_FUDGE){
+    const timestamp = req.body.timestamp;
+    if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(publicKey1 + publicKey2 + timestamp);
 
     //Verify signatures
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))) {
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the user represented by publicKey1");
       }
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig2), b64ToUint8Array(publicKey2))){
-        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey2");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig2), b64ToUint8Array(publicKey2))) {
+        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by the user represented by publicKey2");
       }
     } catch (e) {
       res.throw(403, e);
@@ -199,15 +201,15 @@ const handlers = {
     const publicKey1 = req.body.publicKey1;
     const publicKey2 = req.body.publicKey2;
     const timestamp = req.body.timestamp;
-    if (timestamp > Date.now() + TIME_FUDGE){
+    if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by publicKey1");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))) {
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the user represented by publicKey1");
       }
     } catch (e) {
       res.throw(403, e);
@@ -217,7 +219,7 @@ const handlers = {
 
   membershipGet: function membershipGetHandler(req, res){
     const members = db.groupMembers(req.param('groupId'));
-    if(!(members && members.length)){
+    if (! (members && members.length)) {
       res.throw(404, "Group not found");
     }
     res.send({
@@ -230,23 +232,23 @@ const handlers = {
     const group = req.body.group;
     const timestamp = req.body.timestamp;
 
-    if (timestamp > Date.now() + TIME_FUDGE){
+    if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(publicKey + group + timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))){
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by the user represented by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    try{
+    try {
       db.addMembership(group, safe(publicKey), timestamp);
-    }catch(e){
+    } catch (e) {
       res.throw(403, e);
     }
   },
@@ -256,23 +258,23 @@ const handlers = {
     const group = req.body.group;
     const timestamp = req.body.timestamp;
 
-    if (timestamp > Date.now() + TIME_FUDGE){
+    if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(publicKey + group + timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))){
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by the user represented by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    try{
+    try {
       db.deleteMembership(group, safe(publicKey), timestamp);
-    }catch(e){
+    } catch (e) {
       res.throw(403, e);
     }
   },
@@ -283,7 +285,7 @@ const handlers = {
     const publicKey3 = req.body.publicKey3;
     const timestamp = req.body.timestamp;
 
-    if (timestamp > Date.now() + TIME_FUDGE){
+    if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(publicKey1 + publicKey2 + publicKey3 +
@@ -291,25 +293,25 @@ const handlers = {
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))){
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + publicKey3 + timestamp signed by publicKey1");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))) {
+        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + publicKey3 + timestamp signed by the user represented by publicKey1");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    try{
+    try {
       const group = db.createGroup(safe(publicKey1), safe(publicKey2), safe(publicKey3), timestamp);
 
       const newGroup = {
-        data : {
+        data: {
           id: group._key,
           score: 0,
           isNew: true
         }
       };
       res.send(newGroup);
-    }catch(e){
+    } catch (e) {
       res.throw(403, e);
     }
   },
@@ -319,7 +321,7 @@ const handlers = {
     const group = req.body.group;
     const timestamp = req.body.timestamp;
 
-    if (timestamp > Date.now() + TIME_FUDGE){
+    if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(publicKey + group +
@@ -327,16 +329,16 @@ const handlers = {
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))){
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by publicKey");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
+        res.throw(403, "sig wasn't publicKey + group + timestamp signed by the user represented by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    try{
+    try {
       db.deleteGroup(group, safe(publicKey), timestamp);
-    }catch(e){
+    } catch (e) {
       res.throw(403, e);
     }
   },
@@ -346,15 +348,15 @@ const handlers = {
     const timestamp = req.body.timestamp;
     const sig = req.body.sig;
 
-    if (timestamp > Date.now() + TIME_FUDGE){
+    if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
     const message = strToUint8Array(key + timestamp);
 
     //Verify signature
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))){
-        res.throw(403, "sig wasn't publicKey + timestamp signed by publicKey");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))) {
+        res.throw(403, "sig wasn't publicKey + timestamp signed by the user represented by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
@@ -364,7 +366,7 @@ const handlers = {
     const connections = db.userConnectionsRaw(safeKey);
 
     const user = db.loadUser(safeKey);
-    if(!user){
+    if (! user) {
       res.throw(404, "User not found");
     }
 
@@ -375,8 +377,8 @@ const handlers = {
     const groupCheckInterval =
       ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
 
-    if(!user.eligible_timestamp ||
-      Date.now() > user.eligible_timestamp + groupCheckInterval){
+    if (! user.eligible_timestamp ||
+      Date.now() > user.eligible_timestamp + groupCheckInterval) {
 
       eligibleGroups = eligibleGroups.concat(
         db.userEligibleGroups(safeKey, connections, currentGroups)
@@ -386,7 +388,7 @@ const handlers = {
     }
 
     res.send({
-      data:{
+      data: {
         score: user.score,
         eligibleGroupsUpdated: eligibleGroupsUpdated,
         eligibleGroups: eligibleGroups,
@@ -398,51 +400,90 @@ const handlers = {
   },
 
   fetchVerification: function fetchVerification(req, res){
-    const {publicKey: key, context, sig, id, timestamp} = req.body;
+    const { publicKey: key, context, sigUser, sigContext, id, timestamp: userTimestamp } = req.body;
 
-    if (timestamp > Date.now() + TIME_FUDGE){
+    const serverTimestamp = Date.now();
+
+    if (userTimestamp > serverTimestamp + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
 
-    const message = strToUint8Array(context + ',' + id + ',' + timestamp );
+    let nodePublicKey, nodePrivateKey;
+
+    if (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey) {
+      nodePublicKey = module.context.configuration.publicKey;
+      nodePrivateKey = module.context.configuration.privateKey;
+    } else {
+      res.throw(500, 'Server node key pair not configured')
+    }
+
+    const message1 = strToUint8Array(context + ',' + id + ',' + userTimestamp);
+    const message2 = strToUint8Array(id + ',' + userTimestamp);
 
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))){
-        res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by publicKey");
+      if (! nacl.sign.detached.verify(message1, b64ToUint8Array(sigUser), b64ToUint8Array(key))) {
+        res.throw(403, "sigUser wasn't context + \",\" + id + \",\" + timestamp signed by the user represented by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    // if the user already has an id mapped under this context, get its value and timestamp
+    const contextKey = db.contextPublicKey(context);
 
-    // if the timestamp of the existing id is newer, give error message
+    try {
+      if (! nacl.sign.detached.verify(message2, b64ToUint8Array(sigContext), b64ToUint8Array(contextKey))) {
+        res.throw(403, "sigContext wasn't id + \",\" + timestamp signed by the context manager");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
 
-    // find the verification for the context
+    if (db.latestTimestampForContext(context, key) > userTimestamp) {
+      res.throw(400, "there was an existing verification with a more recent timestamp");
+    }
+
+    const verification = db.verificationForContext(context);
 
     // check that the user has this verification
 
-    // create a new timestamp on the server
+    if (! db.userHasVerification(verification, key)) {
+      res.throw(400, "user doesn't have the verification for the context")
+    }
 
-    // if the user has already mapped the same id, return a verification for it and update the timestamp if it's newer
+    // update the id and timestamp and mark it as current in the db
 
-    // if no other user has mapped the same old id, mark it for removal
+    db.addId(context, id, key, serverTimestamp);
 
-    // update the old id and timestamp in the db
+    // find old ids for this public key that aren't still currently being used by someone else
+
+    const revocableIds = db.revocableIds(context, key);
 
     // sign and return the verification
+
+    const message = context + ',' + id + ',' + serverTimestamp + revocableIds.length ? ',' : '' + revocableIds.join(',');
+
+    const sig = nacl.sign.detached(message, nodePrivateKey);
+
+    res.send({
+      data: {
+        revocableIds,
+        sig,
+        timestamp: serverTimestamp,
+        publicKey: nodePublicKey
+      }
+    })
 
   },
 
   usersPost: function usersPostHandler(req, res){
     const key = req.body.publicKey;
     const ret = db.createUser(safe(key));
-    res.send({data: ret});
+    res.send({ data: ret });
   },
 
   ip: function ip(req, res){
     let ip = module.context && module.context.configuration && module.context.configuration.ip;
-    if (ip){
+    if (ip) {
       res.send({
         data: {
           ip: ip
@@ -455,7 +496,7 @@ const handlers = {
 
   userScore: function userScore(req, res){
     const score = db.userScore(req.param('user'));
-    if(score == null){
+    if (score == null) {
       res.throw(404, "User not found");
     } else {
       res.send({
@@ -468,7 +509,7 @@ const handlers = {
 
   userConnections: function userConnections(req, res){
     const users = db.userConnections(req.param('user'));
-    if(users == null){
+    if (users == null) {
       res.throw(404, "User not found");
     } else {
       res.send({

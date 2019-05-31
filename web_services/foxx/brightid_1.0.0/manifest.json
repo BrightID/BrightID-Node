@@ -15,6 +15,16 @@
       "description": "How often (in milliseconds) a user is allowed to check for eligible groups",
       "type": "integer",
       "default": 0
+    },
+    "publicKey": {
+      "description": "Public key of this server node",
+      "type": "string",
+      "required": false
+    },
+    "privateKey": {
+      "description": "Private key of this server node; used for signing verifications",
+      "type": "string",
+      "required": false
     }
   }
 }
