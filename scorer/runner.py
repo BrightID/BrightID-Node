@@ -6,26 +6,6 @@ from anti_sybil.utils import *
 from arango import ArangoClient
 from db_config import *
 
-
-def save(graph):
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    for node in graph.nodes:
-        db['users'].insert({'_key': str(node.name), 'score': node.rank})
-        for group in node.groups:
-            if not db['groups'].get({'_key': group}):
-                if group.find('seed_group_') != -1:
-                    db['groups'].insert({'_key': group, 'seed': True})
-                else:
-                    db['groups'].insert({'_key': group})
-            db['usersInGroups'].insert(
-                {'_from': 'users/{0}'.format(node.name), '_to': 'groups/{0}'.format(group)})
-    for edge in graph.edges():
-        db['connections'].insert(
-            {'_key': '{0}-{1}'.format(edge[0].name, edge[1].name), '_from': 'users/{0}'.format(edge[0].name),
-             '_to': 'users/{0}'.format(edge[1].name)})
-
-
 def update(nodes_graph, groups_graph):
     client = ArangoClient()
     db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
@@ -34,12 +14,6 @@ def update(nodes_graph, groups_graph):
     for group in groups_graph.nodes:
         db['groups'].update({'_key': group.name, 'score': group.rank,
                              'raw_rank': group.raw_rank, 'degree': group.degree})
-    for affinity in db['affinity']:
-        db['affinity'].delete(affinity)
-    for edge in groups_graph.edges.data():
-        db['affinity'].insert({'_key': '{0}-{1}'.format(edge[0], edge[1]), '_from': 'groups/{0}'.format(
-            edge[0]), '_to': 'groups/{0}'.format(edge[1]), 'weight': edge[2]['weight']})
-
 
 def load():
     client = ArangoClient()
@@ -68,43 +42,6 @@ def load():
     graph.add_edges_from([(edge[0], edge[1]) for edge in edges])
     return graph
 
-
-def load_group_graph():
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    groups = db.collection('groups')
-    group_connections = db.collection('affinity')
-    edges = []
-    i = 0
-    group_dic = {}
-    for group in groups:
-        group_dic[group['_key']] = graphs.node.Node(
-            group['_key'],
-            'Seed' if 'seed' in group and group['seed'] else 'Honest',
-            [],
-            group['score'],
-            group['raw_rank'],
-            group['degree']
-        )
-    for connection in group_connections:
-        edges.append((
-            group_dic[connection['_from'].replace('groups/', '')],
-            group_dic[connection['_to'].replace('groups/', '')],
-            {'weight': connection['weight']}
-        ))
-    graph = nx.Graph()
-    graph.add_edges_from(edges)
-    return graph
-
-
-def clear():
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
-    for collection in ['users', 'groups', 'usersInGroups', 'connections']:
-        for data in db[collection]:
-            db[collection].delete(data)
-
-
 def stupid_sybil_border(graph):
     reset_ranks(graph)
     ranker = algorithms.SybilGroupRank(graph)
@@ -124,11 +61,7 @@ def stupid_sybil_border(graph):
     reset_ranks(graph)
     return border
 
-
 if __name__ == '__main__':
-    # clear()
-    # graph = load_graph('graph.json')
-    # save(graph)
     graph = load()
     border = stupid_sybil_border(graph)
     raw_ranks = [node.raw_rank for node in graph.nodes]
