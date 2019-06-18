@@ -2,9 +2,7 @@
 
 const randomBytes = require('@arangodb/crypto').genRandomBytes;
 
-const aql = require('@arangodb').aql;
-const db = require('@arangodb').db;
-const errors = require('@arangodb').errors;
+const { query, db } = require('@arangodb');
 
 const _ = require('lodash');
 
@@ -15,30 +13,31 @@ const newGroupsColl = db._collection('newGroups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
+const contextsColl = db._collection('contexts');
 
 const safe = require('./encoding').b64ToUrlSafeB64;
 
 function allEdges(collection, user1, user2){
-  return db._query(aql`
+  return query`
     for i in ${collection}
       filter (i._from == ${user1} && i._to == ${user2})
       || (i._from == ${user2} && i._to == ${user1})
     sort i.timestamp desc
     return { "key": i._key, "timestamp": i.timestamp }
-  `);
+  `.toArray();
 }
 
 function removeByKeys(collection, keys){
-  db._query(aql`
+  query`
     for i in ${collection}
       filter i._key in ${keys}
       remove i in ${collection}
-  `);
+  `;
 }
 
 // function userConnections(user) {
 //   user = "users/" + user;
-//   const cons = db._query(aql`
+//   const cons = query`
 //     for i in ${connectionsColl}
 //       filter (i._from == ${user} || i._to == ${user})
 //     sort i.timestamp desc
@@ -54,7 +53,7 @@ function removeByKeys(collection, keys){
 
 function userConnectionsRaw(user){
   user = "users/" + user;
-  return db._query(aql`
+  return query`
       LET userConnections1 = (
         FOR c in ${connectionsColl}
           FILTER c._from == ${user}
@@ -66,7 +65,7 @@ function userConnectionsRaw(user){
           RETURN c._from
       )
       RETURN UNION_DISTINCT(userConnections1, userConnections2)
-  `).toArray()[0]
+  `.toArray()[0]
 }
 
 function userConnections(user){
@@ -74,14 +73,14 @@ function userConnections(user){
 }
 
 function loadUsers(users){
-  return db._query(aql`
+  return query`
       FOR u in ${usersColl}
         FILTER u._id in ${users}
           RETURN {
               key: u._id,
               score: u.score
           }
-  `).toArray();
+  `.toArray();
 }
 
 function groupMembers(groupId, isNew = false){
@@ -93,11 +92,11 @@ function groupMembers(groupId, isNew = false){
     key = "groups/" + groupId;
     collection = usersInGroupsColl;
   }
-  return db._query(aql`
+  return query`
     for i in ${collection}
       filter i._to == ${key}
     return DISTINCT i._from
-  `).toArray().map(m => m.replace("users/", ""));
+  `.toArray().map(m => m.replace("users/", ""));
 }
 
 function isEligible(groupId, userId){
@@ -110,7 +109,7 @@ function isEligible(groupId, userId){
 
 function userEligibleGroups(userId, connections, currentGroups = []){
   const user = "users/" + userId;
-  const candidates = db._query(aql`
+  const candidates = query`
       FOR edge in ${usersInGroupsColl}
           FILTER edge._from in ${connections}
           FILTER edge._to NOT IN ${currentGroups}
@@ -121,10 +120,10 @@ function userEligibleGroups(userId, connections, currentGroups = []){
               group,
               count
           }
-  `).toArray();
+  `.toArray();
 
   const groupIds = candidates.map(x => x.group);
-  const groupCounts = db._query(aql`
+  const groupCounts = query`
     FOR ug in ${usersInGroupsColl}
       FILTER ug._to in ${groupIds}
       COLLECT id=ug._to WITH COUNT INTO count
@@ -132,7 +131,7 @@ function userEligibleGroups(userId, connections, currentGroups = []){
         id,
         count
       }
-  `).toArray();
+  `.toArray();
 
   const groupCountsDic = {};
 
@@ -149,20 +148,20 @@ function userEligibleGroups(userId, connections, currentGroups = []){
 
 function userNewGroups(userId, connections){
   const user = "users/" + userId;
-  return db._query(aql`
+  return query`
       FOR g in ${newGroupsColl}
         FILTER ${user} in g.founders
       return g
-  `).toArray().map(g => groupToDic(g, connections, userId));
+  `.toArray().map(g => groupToDic(g, connections, userId));
 }
 
 function userCurrentGroups(userId){
   const user = "users/" + userId;
-  return db._query(aql`
+  return query`
     FOR ug in ${usersInGroupsColl}
       FILTER ug._from == ${user}
       return DISTINCT ug._to
-  `).toArray();
+  `.toArray();
 }
 
 function groupKnownMembers(group, connections, refUserId){
@@ -172,23 +171,22 @@ function groupKnownMembers(group, connections, refUserId){
   }
 
   const user = "users/" + refUserId;
-  const collection = usersInGroupsColl;
 
-  return db._query(aql`
+  return query`
     LET members = (
-      FOR m in ${collection}
+      FOR m in ${usersInGroupsColl}
         FILTER m._to == ${group._id} && m._from in ${connections}
         LIMIT 3
         RETURN DISTINCT m._from
     )
     LET me = (
-      FOR m in ${collection}
+      FOR m in ${usersInGroupsColl}
         FILTER m._to == ${group._id} && m._from == ${user}
         LIMIT 1
         RETURN m._from
     )
     RETURN APPEND(members, me)
-  `).toArray()[0].map(m => m.replace("users/", ""));
+  `.toArray()[0].map(m => m.replace("users/", ""));
 }
 
 function groupToDic(g, connections, refUserId){
@@ -202,50 +200,49 @@ function groupToDic(g, connections, refUserId){
 }
 
 function loadGroups(ids, connections, refUserId){
-  return db._query(aql`
+  return query`
     FOR g in ${groupsColl}
       FILTER g._id in ${ids}
       return g
-  `).toArray().map(g => groupToDic(g, connections, refUserId));
+  `.toArray().map(g => groupToDic(g, connections, refUserId));
 }
 
 function loadUser(id){
   const user = "users/" + id;
-  return db._query(aql`RETURN DOCUMENT(${user})`).toArray()[0];
+  return query`RETURN DOCUMENT(${user})`.toArray()[0];
 }
 
-function userScore(id){
-  const user = "users/" + id;
-  return db._query(aql`
+function userScore(key){
+  return query`
     FOR u in ${usersColl}
-      FILTER u._id  == ${user}
+      FILTER u._key  == ${key}
       RETURN u.score
-  `).toArray()[0];
+  `.toArray()[0];
 }
 
 function updateEligibleTimestamp(key, timestamp){
-  return db._query(aql`
+  return query`
     UPDATE ${key} WITH {eligible_timestamp: ${timestamp}} in users
-  `);
+  `;
 }
 
 function updateAndCleanConnections(collection, key1, key2, timestamp){
   const user1 = 'users/' + key1;
   const user2 = 'users/' + key2;
 
-  const added = allEdges(connectionsColl, user1, user2)._documents;
-  const removed = allEdges(removedColl, user1, user2)._documents;
+  const added = allEdges(connectionsColl, user1, user2);
+  const removed = allEdges(removedColl, user1, user2);
 
   // if this operation is newer than existing operations of either type
   if ((! added || ! added.length || timestamp > added[0].timestamp)
     && (! removed || ! removed.length || timestamp > removed[0].timestamp)) {
-    db._query(aql`
+    query`
       insert {
         _from: ${user1},
         _to: ${user2},
         timestamp: ${timestamp}
       } in ${collection}
-    `);
+    `;
     // remove any operation of either type older than the new one
     if (added && added.length) {
       removeByKeys(connectionsColl, added.map(entry => entry.key));
@@ -259,7 +256,7 @@ function updateAndCleanConnections(collection, key1, key2, timestamp){
 function createUser(key){
   // already exists?
   const user = "users/" + key;
-  const currents = db._query(aql`RETURN DOCUMENT(${user})`).toArray();
+  const currents = query`RETURN DOCUMENT(${user})`.toArray();
 
   if (currents && currents.length && currents[0]) {
     return {
@@ -287,12 +284,12 @@ function createGroup(key1, key2, key3, timestamp){
   const founders = [user1, user2, user3].sort();
 
   function isDuplicate(collection){
-    return db._query(aql`
+    return query`
       for i in ${collection}
         filter (${user1} in i.founders && ${user2} in i.founders && ${user3} in i.founders )
-        LIMIT 1
-      return i
-    `)._documents.length > 0;
+        limit 1
+      return 1
+    `.count() > 0;
   }
 
   if (isDuplicate(newGroupsColl) || isDuplicate(groupsColl)) {
@@ -334,11 +331,11 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
 
 function deleteGroup(groupId, key, timestamp){
 
-  const groups = db._query(aql`
+  const groups = query`
     for i in ${newGroupsColl}
       filter i._key == ${groupId}
     return i
-  `).toArray();
+  `.toArray();
 
   if (! groups || ! groups.length) {
     throw 'Group not found';
@@ -351,32 +348,32 @@ function deleteGroup(groupId, key, timestamp){
   // Remove members
 
   const newGroup = "newGroups/" + groupId;
-  db._query(aql`
+  query`
     for i in ${usersInNewGroupsColl}
       filter i._to == ${newGroup}
       remove i in ${usersInNewGroupsColl}
-  `);
+  `;
 
   // Remove group
-  db._query(aql`remove ${group._key} in ${newGroupsColl}`);
+  query`remove ${group._key} in ${newGroupsColl}`;
 }
 
 function addMembership(groupId, key, timestamp){
-  var groups = db._query(aql`
+  let groups = query`
     for i in ${groupsColl}
       filter i._key == ${groupId}
     return i
-  `).toArray();
+  `.toArray();
   const user = "users/" + key;
-  var isNew = false;
+  let isNew = false;
   if (! groups.length) {
     // load from newGroups
     isNew = true;
-    groups = db._query(aql`
+    groups = query`
       for i in ${newGroupsColl}
         filter i._key == ${groupId}
       return i
-    `).toArray();
+    `.toArray();
   }
   if (! groups.length) {
     throw 'Group not found';
@@ -390,11 +387,11 @@ function addMembership(groupId, key, timestamp){
     addUserToGroup(usersInNewGroupsColl, groupId, key, timestamp, "newGroups");
     //move to groups if all founders joined
     const grp = "newGroups/" + groupId;
-    const groupMembers = db._query(aql`
+    const groupMembers = query`
       for i in ${usersInNewGroupsColl}
         filter i._to == ${grp}
         return i
-    `).toArray()
+    `.toArray()
 
     const memberIds = [...new Set(groupMembers.map(x => x._from))];
 
@@ -407,17 +404,17 @@ function addMembership(groupId, key, timestamp){
         _key: group._key
       });
 
-      for (var i = 0; i < groupMembers.length; i++) {
-        var doc = groupMembers[i];
+      for (let i = 0; i < groupMembers.length; i++) {
+        let doc = groupMembers[i];
         usersInGroupsColl.save({
           _from: doc._from,
           _to: doc._to.replace('newGroups', 'groups'),
           timestamp: doc.timestamp
         });
-        db._query(aql`remove ${doc._key} in ${usersInNewGroupsColl}`);
+        query`remove ${doc._key} in ${usersInNewGroupsColl}`;
       }
 
-      db._query(aql`remove ${group._key} in ${newGroupsColl}`);
+      query`remove ${group._key} in ${newGroupsColl}`;
     }
   } else {
     if (isEligible(groupId, key)) {
@@ -432,11 +429,11 @@ function deleteMembership(groupId, key, timestamp){
   const user = "users/" + key;
   const group = "groups/" + groupId;
 
-  db._query(aql`
+  query`
     for i in ${usersInGroupsColl}
       filter i._to == ${group} && i._from == ${user}
       remove i in ${usersInGroupsColl}
-  `);
+  `;
 }
 
 function addConnection(key1, key2, timestamp){
@@ -447,28 +444,80 @@ function removeConnection(key1, key2, timestamp){
   updateAndCleanConnections(removedColl, key1, key2, timestamp);
 }
 
-function contextPublicKey(context){
-
+function getContext(context){
+  return query`
+    FOR c in ${contextsColl}
+      FILTER c._key == ${context}
+      RETURN c
+  `.toArray()[0];
 }
 
-function latestTimestampForContext(context, key){
-
-}
-
-function verificationForContext(context){
-
+function latestTimestampForContext(collection, key){
+  return query`
+    FOR u in ${collection}
+      FILTER u.user == ${key}
+      SORT u.timestamp DESC
+      LIMIT 1
+      RETURN u.timestamp
+  `.toArray()[0];
 }
 
 function userHasVerification(verification, key){
-
+  return query`
+    FOR u IN users
+      FILTER u._key == ${key}
+      FILTER ${verification} in u.verifications
+      LIMIT 1
+      RETURN 1
+  `.count() > 0;
 }
 
-function addId(context, id, key, timestamp){
-
+function addId(collection, id, key, timestamp){
+  query`
+    upsert { user: ${key} , account: ${id} }
+    insert { user: ${key} , account: ${id}, timestamp: ${timestamp} }
+    update { timestamp: ${timestamp} } in ${collection}
+  `;
 }
 
-function revocableIds(context, key){
+function revocableIds(collection, id, key){
+  // Any user can link their BrightID key to an account id under a context without proving ownership of that account.
+  // In this way, only a BrightID node (and not an application) has mappings of BrightIDs to application account ids.
+  // Applications can see whether a user with a certain account id is verified.
+  // A user can't block another user from using an id; two or more users can link to the same id.
+  // A user can't revoke another user's id; the id isn't revoked until no users are linking to it.
+  // A user can't link to another id without revoking any previous ids.
+  // A verification always has all past revocations attached to it.
+  // Revocable ids must remain in the DB forever to ensure that the issuing application is aware of all revocations.
+  // The latest id (by timestamp) for each user in a context is the only one that's in use.
+  // Any id not in use by any user is revocable. The actual revocation is done by the issuing application.
 
+  return query`
+    FOR u in ${collection}
+    filter u.account != ${id}
+    filter u.user == ${key}
+      
+    LET inUse = (
+        FOR u2 in ${collection}
+            filter u2.account == u.account
+            filter u2.user != u.user
+            
+            LET latest = (
+                FOR u3 in ${collection}
+                    filter u3.user == u2.user
+                    SORT u3.timestamp DESC
+                    LIMIT 1
+                    RETURN u3._key
+            )
+            
+            filter latest[0] == u2._key
+            LIMIT 1
+            RETURN 1
+    )
+    
+    filter length(inUse) == 0
+    RETURN u.account
+  `.toArray();
 }
 
 module.exports = {
@@ -490,9 +539,8 @@ module.exports = {
   userConnectionsRaw,
   userScore,
   loadUsers,
-  contextPublicKey,
+  getContext,
   latestTimestampForContext,
-  verificationForContext,
   userHasVerification,
   addId,
   revocableIds,

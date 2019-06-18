@@ -141,10 +141,7 @@ schemas = Object.assign({
     publicKey: joi.string().required().description('public key of the user (base64)'),
     context: joi.string().required().description('the context of the id (typically an application)'),
     id: joi.string().required().description('an id used by the app consuming the verification'),
-    sigUser: joi.string().required()
-      .description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
-    sigContext: joi.string().required()
-      .description('message (id + "," + timestamp) signed by context manager'),
+    sig: joi.string().required().description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
   }),
 
@@ -400,7 +397,7 @@ const handlers = {
   },
 
   fetchVerification: function fetchVerification(req, res){
-    const { publicKey: key, context, sigUser, sigContext, id, timestamp: userTimestamp } = req.body;
+    const { publicKey: key, context, sig, id, timestamp: userTimestamp } = req.body;
 
     const serverTimestamp = Date.now();
 
@@ -417,61 +414,54 @@ const handlers = {
       res.throw(500, 'Server node key pair not configured')
     }
 
-    const message1 = strToUint8Array(context + ',' + id + ',' + userTimestamp);
-    const message2 = strToUint8Array(id + ',' + userTimestamp);
+    const message = strToUint8Array(context + ',' + id + ',' + userTimestamp);
 
     try {
-      if (! nacl.sign.detached.verify(message1, b64ToUint8Array(sigUser), b64ToUint8Array(key))) {
-        res.throw(403, "sigUser wasn't context + \",\" + id + \",\" + timestamp signed by the user represented by publicKey");
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))) {
+        res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by the user represented by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
     }
 
-    const contextKey = db.contextPublicKey(context);
+    const { verification, collection } = db.getContext(context);
 
-    try {
-      if (! nacl.sign.detached.verify(message2, b64ToUint8Array(sigContext), b64ToUint8Array(contextKey))) {
-        res.throw(403, "sigContext wasn't id + \",\" + timestamp signed by the context manager");
-      }
-    } catch (e) {
-      res.throw(403, e);
+    const coll = module.context.collection(collection);
+
+    if(db.latestTimestampForContext(coll, key) > userTimestamp){
+      res.throw(400, "there was an existing mapped account with a more recent timestamp");
     }
 
-    if (db.latestTimestampForContext(context, key) > userTimestamp) {
-      res.throw(400, "there was an existing verification with a more recent timestamp");
-    }
-
-    const verification = db.verificationForContext(context);
+    const safeKey = safe(key);
 
     // check that the user has this verification
 
-    if (! db.userHasVerification(verification, key)) {
+    if (! db.userHasVerification(verification, safeKey)) {
       res.throw(400, "user doesn't have the verification for the context")
     }
 
     // update the id and timestamp and mark it as current in the db
 
-    db.addId(context, id, key, serverTimestamp);
+    db.addId(coll, id, safeKey, serverTimestamp);
 
-    // find old ids for this public key that aren't still currently being used by someone else
+    // find old ids for this public key that aren't currently being used by someone else
 
-    const revocableIds = db.revocableIds(context, key);
+    const revocableIds = db.revocableIds(coll, id, safeKey);
 
     // sign and return the verification
 
-    const message = context + ',' + id + ',' + serverTimestamp + revocableIds.length ? ',' : '' + revocableIds.join(',');
+    const verificationMessage = context + ',' + id + ',' + serverTimestamp + revocableIds.length ? ',' : '' + revocableIds.join(',');
 
-    const sig = nacl.sign.detached(message, nodePrivateKey);
+    const verificationSig = nacl.sign.detached(message, nodePrivateKey);
 
     res.send({
       data: {
         revocableIds,
-        sig,
+        sig: verificationSig,
         timestamp: serverTimestamp,
         publicKey: nodePublicKey
       }
-    })
+    });
 
   },
 
@@ -587,12 +577,12 @@ router.get('/ip/', handlers.ip)
   .response(joi.string().description("IPv4 address in dot-decimal notation."));
 
 router.get('/userScore/:user', handlers.userScore)
-  .pathParam('user', joi.string().required().description("Public key of user"))
+  .pathParam('user', joi.string().required().description("Public key of user (url-safe base 64)"))
   .summary("Get a user's score")
   .response(schemas.userScore);
 
 router.get('/userConnections/:user', handlers.userConnections)
-  .pathParam('user', joi.string().required().description("Public key of user"))
+  .pathParam('user', joi.string().required().description("Public key of user (url-safe base 64)"))
   .summary("Get a user's connections")
   .response(schemas.userConnections);
 
