@@ -41,7 +41,14 @@ schemas = Object.assign({
     knownMembers: joi.array().items(joi.string()).description('url-safe public keys of two or three current' +
       ' members connected to the reference user, or if the group is being founded, the co-founders that have joined'),
     founders: joi.array().items(joi.string()).description('url-safe public keys of the three founders of the group')
-  })
+  }),
+  context: joi.object({
+    verification: joi.string().required().description('verification used by the context'),
+    verificationUrl: joi.string().required().description('the url to PUT a verification with /:id'),
+    isApp: joi.boolean().default(false),
+    appLogo: joi.string().description('app logo (base64 encoded image)'),
+    appUrl: joi.string().description('the base url for the web app associated with the context'),
+  }),
 }, schemas);
 
 // extend lower-level schemas with higher-level schemas
@@ -164,7 +171,13 @@ schemas = Object.assign({
     data: joi.object({
       users: joi.array().items(joi.string())
     })
-  })
+  }),
+
+  contextsResponse: joi.object({
+    data: joi.object({
+      context: schemas.context
+    })
+  }),
 
 }, schemas);
 
@@ -387,8 +400,8 @@ const handlers = {
     res.send({
       data: {
         score: user.score,
-        eligibleGroupsUpdated: eligibleGroupsUpdated,
-        eligibleGroups: eligibleGroups,
+        eligibleGroupsUpdated,
+        eligibleGroups,
         currentGroups: db.loadGroups(currentGroups, connections, safeKey),
         connections: db.loadUsers(connections),
         verifications: user.verifications,
@@ -475,8 +488,8 @@ const handlers = {
     let ip = module.context && module.context.configuration && module.context.configuration.ip;
     if (ip) {
       res.send({
-        data: {
-          ip: ip
+        "data": {
+          ip,
         }
       });
     } else {
@@ -491,7 +504,7 @@ const handlers = {
     } else {
       res.send({
         "data": {
-          "score": score
+          score,
         }
       });
     }
@@ -504,7 +517,20 @@ const handlers = {
     } else {
       res.send({
         "data": {
-          "users": users
+          users,
+        }
+      });
+    }
+  },
+
+  contexts: function contexts(req, res){
+    const context = db.getContext(req.param('context'));
+    if (context == null) {
+      res.throw(404, 'Context not found');
+    } else {
+      res.send({
+        "data": {
+          context,
         }
       });
     }
@@ -586,7 +612,12 @@ router.get('/userConnections/:user', handlers.userConnections)
   .summary("Get a user's connections")
   .response(schemas.userConnections);
 
+router.get('/contexts/:context', handlers.contexts)
+  .pathParam('context', joi.string().required().description("Unique name of the context"))
+  .summary("Get information about a context")
+  .response(schemas.contextsResponse);
+
 module.exports = {
-  schemas: schemas,
-  handlers: handlers
+  schemas,
+  handlers
 };

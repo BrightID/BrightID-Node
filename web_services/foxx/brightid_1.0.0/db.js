@@ -208,8 +208,7 @@ function loadGroups(ids, connections, refUserId){
 }
 
 function loadUser(id){
-  const user = "users/" + id;
-  return query`RETURN DOCUMENT(${user})`.toArray()[0];
+  return query`RETURN DOCUMENT(${usersColl}, ${id})`.toArray()[0];
 }
 
 function userScore(key){
@@ -255,10 +254,9 @@ function updateAndCleanConnections(collection, key1, key2, timestamp){
 
 function createUser(key){
   // already exists?
-  const user = "users/" + key;
-  const currents = query`RETURN DOCUMENT(${user})`.toArray();
+  const user = loadUser(key);
 
-  if (currents && currents.length && currents[0]) {
+  if (user) {
     return {
       key: currents[0]._key,
       score: currents[0].score || 0
@@ -391,7 +389,7 @@ function addMembership(groupId, key, timestamp){
       for i in ${usersInNewGroupsColl}
         filter i._to == ${grp}
         return i
-    `.toArray()
+    `.toArray();
 
     const memberIds = [...new Set(groupMembers.map(x => x._from))];
 
@@ -445,11 +443,7 @@ function removeConnection(key1, key2, timestamp){
 }
 
 function getContext(context){
-  return query`
-    FOR c in ${contextsColl}
-      FILTER c._key == ${context}
-      RETURN c
-  `.toArray()[0];
+  return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
 }
 
 function latestTimestampForContext(collection, key){
