@@ -161,6 +161,12 @@ schemas = Object.assign({
     })
   }),
 
+  ipGetResponse: joi.object({
+    data: joi.object({
+      ip: joi.string().description("IPv4 address in dot-decimal notation.")
+    })
+  }),
+
   userScore: joi.object({
     data: joi.object({
       score: schemas.score
@@ -173,10 +179,8 @@ schemas = Object.assign({
     })
   }),
 
-  contextsResponse: joi.object({
-    data: joi.object({
-      context: schemas.context
-    })
+  contextsGetResponse: joi.object({
+    data: schemas.context
   }),
 
 }, schemas);
@@ -441,7 +445,7 @@ const handlers = {
 
     const coll = module.context.collection(collection);
 
-    if(db.latestTimestampForContext(coll, key) > userTimestamp){
+    if (db.latestTimestampForContext(coll, key) > userTimestamp) {
       res.throw(400, "there was an existing mapped account with a more recent timestamp");
     }
 
@@ -529,9 +533,7 @@ const handlers = {
       res.throw(404, 'Context not found');
     } else {
       res.send({
-        "data": {
-          context,
-        }
+        "data": context,
       });
     }
   },
@@ -600,7 +602,7 @@ router.post('/fetchVerification', handlers.fetchVerification)
 
 router.get('/ip/', handlers.ip)
   .summary("Get this server's IPv4 address")
-  .response(joi.string().description("IPv4 address in dot-decimal notation."));
+  .response(schemas.ipGetResponse);
 
 router.get('/userScore/:user', handlers.userScore)
   .pathParam('user', joi.string().required().description("Public key of user (url-safe base 64)"))
@@ -615,7 +617,7 @@ router.get('/userConnections/:user', handlers.userConnections)
 router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
-  .response(schemas.contextsResponse);
+  .response(schemas.contextsGetResponse);
 
 module.exports = {
   schemas,
