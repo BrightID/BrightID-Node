@@ -1,10 +1,8 @@
-import random
-import networkx as nx
-import anti_sybil.graphs as graphs
 import anti_sybil.algorithms as algorithms
 from anti_sybil.utils import *
 from arango import ArangoClient
 from db_config import *
+
 
 def update(nodes_graph, groups_graph):
     client = ArangoClient()
@@ -14,6 +12,36 @@ def update(nodes_graph, groups_graph):
     for group in groups_graph.nodes:
         db['groups'].update({'_key': group.name, 'score': group.rank,
                              'raw_rank': group.raw_rank, 'degree': group.degree})
+    db.aql.execute("""
+    FOR u in users
+        FILTER u.score > 90 && ('NodeOne' not in u.verifications || 'BrightID' not in u.verifications) 
+        update u with { verifications: append(u.verifications, ['NodeOne', 'BrightID'], true) } in users
+        OPTIONS { exclusive: true }
+    """)
+    db.aql.execute("""
+    FOR dfe in users
+        FILTER dfe.dfeAdmin == true
+        FOR c in connections
+            FILTER ( c._from == dfe._id || c._to == dfe._id ) && c.timestamp > 1564600000000
+            FOR u in users
+                FILTER ( u._id == c._from || u._id == c._to )
+                && 'DollarForEveryone' not in u.verifications
+                update u with { verifications: append(u.verifications, ['DollarForEveryone'], true) } in users
+                OPTIONS { exclusive: true }
+    """)
+    db.aql.execute("""
+    FOR dfe in users
+        FILTER dfe.dfeAdminB == true
+        FOR c in connections
+            FILTER ( c._from == dfe._id || c._to == dfe._id ) && c.timestamp > 1564600000000
+            FOR u in users
+                FILTER ( u._id == c._from || u._id == c._to )
+                && 'BrightID' in u.verifications
+                && 'DollarForEveryone' not in u.verifications
+                update u with { verifications: append(u.verifications, ['DollarForEveryone'], true) } in users
+                OPTIONS { exclusive: true }
+    """)
+
 
 def load():
     client = ArangoClient()
@@ -42,6 +70,7 @@ def load():
     graph.add_edges_from([(edge[0], edge[1]) for edge in edges])
     return graph
 
+
 def stupid_sybil_border(graph):
     reset_ranks(graph)
     ranker = algorithms.SybilGroupRank(graph)
@@ -60,6 +89,7 @@ def stupid_sybil_border(graph):
     attacker.groups.remove('stupid_sybil')
     reset_ranks(graph)
     return border
+
 
 if __name__ == '__main__':
     graph = load()
