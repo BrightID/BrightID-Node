@@ -14,7 +14,7 @@ def update(nodes_graph, groups_graph):
                              'raw_rank': group.raw_rank, 'degree': group.degree})
     db.aql.execute("""
     FOR u in users
-        FILTER u.score > 90 && ('NodeOne' not in u.verifications || 'BrightID' not in u.verifications) 
+        FILTER u.score > 90 && ( !u.verifications || 'NodeOne' not in u.verifications || 'BrightID' not in u.verifications ) 
         update u with { verifications: append(u.verifications, ['NodeOne', 'BrightID'], true) } in users
         OPTIONS { exclusive: true }
     """)
@@ -25,7 +25,7 @@ def update(nodes_graph, groups_graph):
             FILTER ( c._from == dfe._id || c._to == dfe._id ) && c.timestamp > 1564600000000
             FOR u in users
                 FILTER ( u._id == c._from || u._id == c._to )
-                && 'DollarForEveryone' not in u.verifications
+                && ( !u.verifications || 'DollarForEveryone' not in u.verifications )
                 update u with { verifications: append(u.verifications, ['DollarForEveryone'], true) } in users
                 OPTIONS { exclusive: true }
     """)
