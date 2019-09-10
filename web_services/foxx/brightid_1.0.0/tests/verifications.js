@@ -32,6 +32,11 @@ describe('verifications', function () {
   it('should not include and id still used by a different user under revocable ids', function(){
     db.revocableIds(testIdsColl, 'new', '1').should.not.include('stillUsed');
   });
+  describe('latestTimestampForContext()', function(){
+    it('should return the latest timestamp for a key', function(){
+      db.latestTimestampForContext(testIdsColl,'2').should.equal(25);
+    });
+  });
 });
 
 

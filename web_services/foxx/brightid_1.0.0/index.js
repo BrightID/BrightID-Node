@@ -4,6 +4,7 @@ const joi = require('joi');
 const nacl = require('tweetnacl');
 
 const db = require('./db');
+const arango = require('@arangodb').db;
 const enc = require('./encoding');
 
 const strToUint8Array = enc.strToUint8Array;
@@ -443,7 +444,7 @@ const handlers = {
 
     const { verification, collection } = db.getContext(context);
 
-    const coll = module.context.collection(collection);
+    const coll = arango._collection(collection);
 
     if (db.latestTimestampForContext(coll, key) > userTimestamp) {
       res.throw(400, "there was an existing mapped account with a more recent timestamp");
