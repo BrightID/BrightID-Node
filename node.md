@@ -11,4 +11,4 @@ Nodes reach a consensus about signed update operations. Once it's clear that all
 ### [BrightID API](https://github.com/BrightID/BrightID-API)
 Nodes run [systems designed to detect sybils](https://github.com/BrightID/BrightID-Node/wiki/Anti-Sybil-Systems). They use these to compute users' _brightID scores_ which they send to third-party applications.
 ## API Reference
-[BrightID Node API Reference](https://github.com/BrightID/BrightID-Node/wiki/API-Reference)
+[BrightID Node API Reference](https://app.swaggerhub.com/apis/brightid/brightid/1.0.0#/default/)
