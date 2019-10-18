@@ -164,47 +164,47 @@ function userCurrentGroups(userId){
   `.toArray();
 }
 
-function groupKnownMembers(group, connections, refUserId){
-  // knownMembers for a new group is just the founders that have already joined
-  if (group.isNew) {
-    return groupMembers(group._key, group.isNew);
+function groupToDic(group){
+  let founders = [];
+  let knownMembers;
+  if (group.founders && group.founders.map){
+    founders = group.founders.map(u => u.replace("users/", ""));
   }
-
-  const user = "users/" + refUserId;
-
-  return query`
-    LET members = (
-      FOR m in ${usersInGroupsColl}
-        FILTER m._to == ${group._id} && m._from in ${connections}
-        LIMIT 3
-        RETURN DISTINCT m._from
-    )
-    LET me = (
-      FOR m in ${usersInGroupsColl}
-        FILTER m._to == ${group._id} && m._from == ${user}
-        LIMIT 1
-        RETURN m._from
-    )
-    RETURN APPEND(members, me)
-  `.toArray()[0].map(m => m.replace("users/", ""));
-}
-
-function groupToDic(g, connections, refUserId){
+  if (group.isNew) {
+    // knownMembers for a new group is just the founders that have already joined
+    knownMembers = groupMembers(group._key, group.isNew);
+  } else {
+    knownMembers = group.knownMembers.map(m => m.replace("users/", ""));
+  }
   return {
-    isNew: g.isNew,
-    score: g.score,
-    id: g._key,
-    knownMembers: groupKnownMembers(g, connections, refUserId),
-    founders: g.founders.map(u => u.replace("users/", ""))
+    isNew: group.isNew,
+    score: group.score,
+    id: group._key,
+    knownMembers,
+    founders,
   };
 }
 
-function loadGroups(ids, connections, refUserId){
+function loadGroups(groupIds, connections, myUserId){
+  const me = "users/" + myUserId;
+
   return query`
     FOR g in ${groupsColl}
-      FILTER g._id in ${ids}
-      return g
-  `.toArray().map(g => groupToDic(g, connections, refUserId));
+      FILTER g._id in ${groupIds}
+      LET members = (
+        FOR m in usersInGroups
+          FILTER m._to == g._id && m._from in ${connections}
+          LIMIT 3
+          RETURN DISTINCT m._from
+      )
+      LET me = (
+        FOR m in usersInGroups
+          FILTER m._to == g._id && m._from == ${me}
+          LIMIT 1
+          RETURN m._from
+      )
+      return MERGE([g, {"knownMembers": APPEND(members, me)}])
+  `.toArray().map(g => groupToDic(g));
 }
 
 function loadUser(id){
