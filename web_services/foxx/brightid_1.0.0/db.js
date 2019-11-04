@@ -14,6 +14,7 @@ const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
+const recoveryColl = db._collection('recovery');
 
 const safe = require('./encoding').b64ToUrlSafeB64;
 
@@ -514,6 +515,105 @@ function revocableIds(collection, id, key){
   `.toArray();
 }
 
+function setTrustedConnections(trustedConnections, key){
+  const user = query`RETURN DOCUMENT(${usersColl}, ${key})`.toArray()[0];
+  if (!user.trustedConnections) {
+    query`
+      UPDATE ${key} WITH {trustedConnections: ${trustedConnections.split(',')}} in users
+    `;
+    return true;
+  } else {
+    return false;
+  }
+}
+
+function findRecoveringUser(key){
+  let user = query`RETURN DOCUMENT(${usersColl}, ${key})`.toArray()[0];
+  while (!user && key) {
+    key = query`
+      FOR r in ${recoveryColl}
+        FILTER r.oldPublicKey == ${key} AND r.state == "completed"
+        RETURN r.newPublicKey
+    `.toArray()[0];
+    if (!key) break;
+    user = query`RETURN DOCUMENT(${usersColl}, ${key})`.toArray()[0];
+  }
+  return user;
+}
+
+function recover(helperPublicKey, oldPublicKey, newPublicKey, timestamp){
+  const requiredHelpers = 2;
+  const user = findRecoveringUser(oldPublicKey);
+  if (!user) {
+    return `user ${oldPublicKey} not found`;
+  }
+  oldPublicKey = user._key;
+  if (!user.trustedConnections || user.trustedConnections.indexOf(helperPublicKey) == -1) {
+    return `${helperPublicKey} is not a trusted connection`;
+  }
+  // find recovery document
+  let r = query`
+    FOR r in ${recoveryColl}
+      FILTER r.oldPublicKey == ${oldPublicKey} AND r.newPublicKey == ${newPublicKey}
+      RETURN r
+    `.toArray()[0];
+  let helpers;
+  if (!r) {
+    helpers = [helperPublicKey];
+    r = query`
+      INSERT {
+        oldPublicKey: ${oldPublicKey},
+        newPublicKey: ${newPublicKey},
+        timestamp: ${timestamp},
+        state: ${helpers.length >= requiredHelpers ? "completed" : "pending"},
+        helpers: ${helpers}
+      } IN recovery RETURN NEW
+    `
+  } else {
+    helpers = [...r.helpers];
+    if (helpers.indexOf(helperPublicKey) > -1) {
+      return `${helperPublicKey} recovered ${oldPublicKey} before`;
+    }
+    helpers.push(helperPublicKey);
+    r = query`
+      UPDATE ${r._key} WITH {
+        helpers: ${helpers},
+        state: ${helpers.length >= requiredHelpers ? "completed" : "pending"}
+      } IN recovery
+    `;
+  }
+  if (helpers.length < requiredHelpers) {
+    return 'success';
+  }
+  query`REMOVE ${user._key} IN users`;
+  user['_key'] = newPublicKey;
+  user['oldKeys'] = user.oldKeys ? [...user.oldKeys, user._key] : [user._key];
+  usersColl.save(user);
+  oldPublicKey = "users/" + oldPublicKey;
+  newPublicKey = "users/" + newPublicKey;
+  query`
+    FOR c IN connections
+      FILTER c._from == ${oldPublicKey}
+      UPDATE c WITH { _from:  ${newPublicKey}} IN connections
+  `;
+  query`
+    FOR c IN connections
+      FILTER c._to == ${oldPublicKey}
+      UPDATE c WITH { _to:  ${newPublicKey}} IN connections
+  `;
+  query`
+    FOR ug IN usersInGroups
+      FILTER ug._from == ${oldPublicKey}
+      UPDATE ug WITH { _from:  ${newPublicKey}} IN usersInGroups
+  `;
+  query`
+    FOR ug IN usersInNewGroups
+      FILTER ug._from == ${oldPublicKey}
+      UPDATE ug WITH { _from:  ${newPublicKey}} IN usersInNewGroups
+  `;
+  return 'success';
+}
+
 module.exports = {
   addConnection,
   removeConnection,
@@ -538,4 +638,7 @@ module.exports = {
   userHasVerification,
   addId,
   revocableIds,
+  setTrustedConnections,
+  recover
 };
+

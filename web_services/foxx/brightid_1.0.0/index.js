@@ -132,7 +132,8 @@ schemas = Object.assign({
       currentGroups: joi.array().items(schemas.group),
       eligibleGroups: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
-      verifications: joi.array().items(joi.string())
+      verifications: joi.array().items(joi.string()),
+      oldIds: joi.array().items(joi.string())
     })
   }),
 
@@ -182,6 +183,24 @@ schemas = Object.assign({
 
   contextsGetResponse: joi.object({
     data: schemas.context
+  }),
+
+  trustedConnectionsPostBody: joi.object({
+    publicKey: joi.string().required().description('public key of the user (base64)'),
+    connections: joi.string().required().description('comma separated list of at least 3 public keys that belongs to trusted connections of the user'),
+    sig: joi.string().required()
+      .description('message (publicKey + trustedConnections + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the trusted connections are set')
+  }),
+
+  recoverPostBody: joi.object({
+    publicKey: joi.string().required().description('public key of the helper user (base64)'),
+    oldPublicKey: joi.string().required().description('old public key that is stolen/lost (base64)'),
+    newPublicKey: joi.string().required()
+      .description('new public key that should be replaced by old public key (base64)'),
+    sig: joi.string().required()
+      .description('message (publicKey + oldPublicKey + newPublicKey + timestamp) signed by the user represented by publicKey'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when the recovery request is submitted')
   }),
 
 }, schemas);
@@ -402,6 +421,8 @@ const handlers = {
       eligibleGroupsUpdated = true;
     }
 
+    const oldIds = user.oldIds ? user.oldIds : [];
+
     res.send({
       data: {
         score: user.score,
@@ -410,6 +431,7 @@ const handlers = {
         currentGroups: db.loadGroups(currentGroups, connections, safeKey),
         connections: db.loadUsers(connections),
         verifications: user.verifications,
+        oldIds
       }
     });
   },
@@ -539,6 +561,53 @@ const handlers = {
     }
   },
 
+  trustedConnections: function trustedConnections(req, res){
+    const publicKey = req.body.publicKey;
+    const timestamp = req.body.timestamp;
+    const connections = req.body.connections;
+
+    if (timestamp > Date.now() + TIME_FUDGE) {
+      res.throw(400, "timestamp can't be in the future");
+    }
+    const message = strToUint8Array(publicKey + connections + timestamp);
+
+    //Verify signature
+    try {
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
+        res.throw(403, "sig wasn't publicKey + trustedConnections + timestamp signed by the user represented by publicKey");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+    if (!db.setTrustedConnections(connections, safe(publicKey))) {
+      res.throw(403, "trusted connections can't be overwritten");
+    }
+  },
+
+  recover: function recover(req, res){
+    const publicKey = req.body.publicKey;
+    const timestamp = req.body.timestamp;
+    const oldPublicKey = req.body.oldPublicKey;
+    const newPublicKey = req.body.newPublicKey;
+
+    if (timestamp > Date.now() + TIME_FUDGE) {
+      res.throw(400, "timestamp can't be in the future");
+    }
+    const message = strToUint8Array(publicKey + oldPublicKey + newPublicKey + timestamp);
+
+    //Verify signature
+    try {
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
+        res.throw(403, "sig wasn't publicKey + oldPublicKey + newPublicKey + timestamp signed by the user represented by publicKey");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+    const result = db.recover(safe(publicKey), safe(oldPublicKey), safe(newPublicKey), timestamp);
+    if (result != 'success') {
+      res.throw(400, result);
+    }
+  },
 };
 
 router.put('/connections/', handlers.connectionsPut)
@@ -619,6 +688,18 @@ router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
+
+router.post('/trustedConnections', handlers.trustedConnections)
+  .body(schemas.trustedConnectionsPostBody.required())
+  .summary("Set trusted connections for a user")
+  .description('Set trusted connections who can help users to recover their accounts')
+  .response(null);
+
+router.post('/recover', handlers.recover)
+  .body(schemas.recoverPostBody.required())
+  .summary("Recover lost/stolen brightid")
+  .description('Set a new public key for a brightid by its trusted connections')
+  .response(null);
 
 module.exports = {
   schemas,
