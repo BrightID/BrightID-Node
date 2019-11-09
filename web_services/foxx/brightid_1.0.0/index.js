@@ -133,7 +133,7 @@ schemas = Object.assign({
       eligibleGroups: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string()),
-      oldIds: joi.array().items(joi.string())
+      oldKeys: joi.array().items(joi.string())
     })
   }),
 
@@ -421,7 +421,7 @@ const handlers = {
       eligibleGroupsUpdated = true;
     }
 
-    const oldIds = user.oldIds ? user.oldIds : [];
+    const oldKeys = user.oldKeys ? user.oldKeys : [];
 
     res.send({
       data: {
@@ -431,7 +431,7 @@ const handlers = {
         currentGroups: db.loadGroups(currentGroups, connections, safeKey),
         connections: db.loadUsers(connections),
         verifications: user.verifications,
-        oldIds
+        oldKeys
       }
     });
   },

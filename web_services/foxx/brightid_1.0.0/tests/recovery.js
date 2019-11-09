@@ -76,6 +76,8 @@ describe('recovery', function () {
     r.helpers.should.deep.equal(['b', 'c']);
     r.state.should.equal('completed');
     db.userCurrentGroups('e').length.should.equal(1);
+    db.userCurrentGroups('e').founders.should.include('users/e');
+    db.userCurrentGroups('e').founders.should.not.include('users/a');
     db.userConnections('e').length.should.equal(2);
     db.userCurrentGroups('a').length.should.equal(0);
     db.userConnections('a').length.should.equal(0);

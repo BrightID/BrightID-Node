@@ -611,6 +611,16 @@ function recover(helperPublicKey, oldPublicKey, newPublicKey, timestamp){
       FILTER ug._from == ${oldPublicKey}
       UPDATE ug WITH { _from:  ${newPublicKey}} IN usersInNewGroups
   `;
+  query`
+    FOR g in groups
+      FILTER ${oldPublicKey} in g.founders
+      UPDATE g WITH { founders: PUSH(REMOVE_VALUE(g.founders, ${oldPublicKey}), ${newPublicKey})} IN groups
+  `;
+  query`
+    FOR g in newGroups
+      FILTER ${oldPublicKey} in g.founders
+      UPDATE g WITH { founders: PUSH(REMOVE_VALUE(g.founders, ${oldPublicKey}), ${newPublicKey})} IN newGroups
+  `;
   return 'success';
 }
 
