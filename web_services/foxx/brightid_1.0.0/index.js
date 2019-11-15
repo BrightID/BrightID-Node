@@ -184,6 +184,12 @@ schemas = Object.assign({
     data: schemas.context
   }),
 
+  verificationGetResponse: joi.object({
+    data: joi.object({
+      timestamp: schemas.timestamp.description('milliseconds since epoch since the last verification')
+    })
+  }),
+
 }, schemas);
 
 const handlers = {
@@ -446,7 +452,7 @@ const handlers = {
 
     const coll = arango._collection(collection);
 
-    if (db.latestTimestampForContext(coll, key) > userTimestamp) {
+    if (db.latestVerificationByUser(coll, key) > userTimestamp) {
       res.throw(400, "there was an existing mapped account with a more recent timestamp");
     }
 
@@ -539,6 +545,20 @@ const handlers = {
     }
   },
 
+  verification: function verification(req, res){
+    const context = req.param('context');
+    const id = req.param('id');
+    const timestamp = db.latestVerificationById(context, id);
+    if (timestamp > 0){
+      res.send({
+        "data": {
+          timestamp
+        }
+      });
+    } else {
+      res.throw(404, 'Verification not found');
+    }
+  },
 };
 
 router.put('/connections/', handlers.connectionsPut)
@@ -619,6 +639,13 @@ router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
+
+router.get('/verification/:context/:id', handlers.verification)
+  .pathParam('context', joi.string().required().description('the context of the id (typically an application)'))
+  .pathParam('id', joi.string().required().description('an id used by the app represented by the context'))
+  .summary('Check whether an id is verified under a context')
+  .description('Returns the timestamp when the id was last verified.')
+  .response(schemas.verificationGetResponse);
 
 module.exports = {
   schemas,

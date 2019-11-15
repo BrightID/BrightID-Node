@@ -446,36 +446,59 @@ function getContext(context){
   return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
 }
 
-function latestTimestampForContext(collection, key){
+function latestVerificationByUser(collection, user){
   return query`
-    FOR u in ${collection}
-      FILTER u.user == ${key}
-      SORT u.timestamp DESC
+    FOR m in ${collection}
+      FILTER m.user == ${user}
+      SORT m.timestamp DESC
       LIMIT 1
-      RETURN u.timestamp
+      RETURN m.timestamp
   `.toArray()[0];
 }
 
-function userHasVerification(verification, key){
+function latestVerificationById(context, id){
+  const collName = query`
+    FOR c in ${contextsColl}
+        FILTER c._key == ${context}
+        LIMIT 1
+        RETURN c.collection
+  `.toArray()[0];
+  if(!collName){
+    return;
+  }
+  const q = `
+    FOR m in @@coll
+      FILTER m.account == @id
+      SORT m.timestamp DESC
+      LIMIT 1
+      RETURN m.timestamp
+  `;
+  return db._query(q, {
+    "@coll": collName,
+    id,
+  }).toArray()[0];
+}
+
+function userHasVerification(verification, user){
   return query`
     FOR u IN users
-      FILTER u._key == ${key}
+      FILTER u._key == ${user}
       FILTER ${verification} in u.verifications
       LIMIT 1
       RETURN 1
   `.count() > 0;
 }
 
-function addId(collection, id, key, timestamp){
+function addId(collection, id, user, timestamp){
   query`
-    upsert { user: ${key} , account: ${id} }
-    insert { user: ${key} , account: ${id}, timestamp: ${timestamp} }
+    upsert { user: ${user} , account: ${id} }
+    insert { user: ${user} , account: ${id}, timestamp: ${timestamp} }
     update { timestamp: ${timestamp} } in ${collection}
   `;
 }
 
-function revocableIds(collection, id, key){
-  // Any user can link their BrightID key to an account id under a context without proving ownership of that account.
+function revocableIds(collection, id, user){
+  // Any user can link their BrightID to an account id under a context without proving ownership of that account.
   // In this way, only a BrightID node (and not an application) has mappings of BrightIDs to application account ids.
   // Applications can see whether a user with a certain account id is verified.
   // A user can't block another user from using an id; two or more users can link to the same id.
@@ -489,7 +512,7 @@ function revocableIds(collection, id, key){
   return query`
     FOR u in ${collection}
     filter u.account != ${id}
-    filter u.user == ${key}
+    filter u.user == ${user}
       
     LET inUse = (
         FOR u2 in ${collection}
@@ -534,7 +557,8 @@ module.exports = {
   userScore,
   loadUsers,
   getContext,
-  latestTimestampForContext,
+  latestVerificationByUser,
+  latestVerificationById,
   userHasVerification,
   addId,
   revocableIds,
