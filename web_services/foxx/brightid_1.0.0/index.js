@@ -9,9 +9,7 @@ const enc = require('./encoding');
 
 const strToUint8Array = enc.strToUint8Array;
 const b64ToUint8Array = enc.b64ToUint8Array;
-
-// all keys in the DB are in the url/directory/db safe b64 format
-const safe = enc.b64ToUrlSafeB64;
+const b64ToUrlSafeB64 = enc.b64ToUrlSafeB64;
 
 const router = createRouter();
 module.context.use(router);
@@ -19,7 +17,7 @@ module.context.use(router);
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
 // Consider using this in the schemas below if they ever update joi
-// publicKey1: joi.string().base64().required(),
+// key1: joi.string().base64().required(),
 
 // lowest-level schemas
 var schemas = {
@@ -30,7 +28,7 @@ var schemas = {
 // extend lower-level schemas with higher-level schemas
 schemas = Object.assign({
   user: joi.object({
-    key: joi.string().required().description('url-safe public key of the user'),
+    id: joi.string().required().description('the user id'),
     score: schemas.score,
     verifications: joi.array().items(joi.string())
   }),
@@ -39,9 +37,9 @@ schemas = Object.assign({
     score: schemas.score,
     verifications: joi.array().items(joi.string()),
     isNew: joi.boolean().default(true),
-    knownMembers: joi.array().items(joi.string()).description('url-safe public keys of two or three current' +
+    knownMembers: joi.array().items(joi.string()).description('ids of two or three current' +
       ' members connected to the reference user, or if the group is being founded, the co-founders that have joined'),
-    founders: joi.array().items(joi.string()).description('url-safe public keys of the three founders of the group')
+    founders: joi.array().items(joi.string()).description('ids of the three founders of the group')
   }),
   context: joi.object({
     verification: joi.string().required().description('verification used by the context'),
@@ -56,50 +54,50 @@ schemas = Object.assign({
 schemas = Object.assign({
 
   connectionsPutBody: joi.object({
-    publicKey1: joi.string().required().description('public key of the first user (base64)'),
-    publicKey2: joi.string().required().description('public key of the second user (base64)'),
+    id1: joi.string().required().description('id of the first user'),
+    id2: joi.string().required().description('id of the second user'),
     sig1: joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
+      .description('message (id1 + id2 + timestamp) signed by the user represented by id1'),
     sig2: joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey2'),
+      .description('message (id1 + id2 + timestamp) signed by the user represented by id2'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the connection occurred')
   }),
 
   connectionsDeleteBody: joi.object({
-    publicKey1: joi.string().required().description('public key of the user removing the connection (base64)'),
-    publicKey2: joi.string().required().description('public key of the second user (base64)'),
+    id1: joi.string().required().description('id of the user removing the connection'),
+    id2: joi.string().required().description('id of the second user'),
     sig1: joi.string().required()
-      .description('message (publicKey1 + publicKey2 + timestamp) signed by the user represented by publicKey1'),
+      .description('message (id1 + id2 + timestamp) signed by the user represented by id1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
   membershipGetResponse: joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
-    data: joi.array().items(joi.string()).description('url-safe public keys of all members of the group')
+    data: joi.array().items(joi.string()).description('ids of all members of the group')
   }),
 
   membershipPutBody: joi.object({
-    publicKey: joi.string().required().description('public key of the user joining the group (base64)'),
+    id: joi.string().required().description('id of the user joining the group'),
     group: joi.string().required().description('group id'),
     sig: joi.string().required()
-      .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
+      .description('message (id + group + timestamp) signed by the user represented by id'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the join was requested')
   }),
 
   membershipDeleteBody: joi.object({
-    publicKey: joi.string().required().description('public key of the user leaving the group (base64)'),
+    id: joi.string().required().description('id of the user leaving the group'),
     group: joi.string().required().description('group id'),
     sig: joi.string().required()
-      .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
+      .description('message (id + group + timestamp) signed by the user represented by id'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
   groupsPostBody: joi.object({
-    publicKey1: joi.string().required().description('public key of the first founder (base64)'),
-    publicKey2: joi.string().required().description('public key of the second founder (base64)'),
-    publicKey3: joi.string().required().description('public key of the third founder (base64)'),
+    id1: joi.string().required().description('id of the first founder'),
+    id2: joi.string().required().description('id of the second founder'),
+    id3: joi.string().required().description('id of the third founder'),
     sig1: joi.string().required()
-      .description('message (publicKey1 + publicKey2 + publicKey3 + timestamp) signed by the user represented by publicKey1'),
+      .description('message (id1 + id2 + id3 + timestamp) signed by the user represented by id1'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the group creation was requested')
   }),
 
@@ -109,17 +107,17 @@ schemas = Object.assign({
   }),
 
   groupsDeleteBody: joi.object({
-    publicKey: joi.string().required().description('public key of the user deleting the group (base64)'),
+    id: joi.string().required().description('id of the user deleting the group'),
     group: joi.string().required().description('group id'),
     sig: joi.string().required()
-      .description('message (publicKey + group + timestamp) signed by the user represented by publicKey'),
+      .description('message (id + group + timestamp) signed by the user represented by id'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
   fetchUserInfoPostBody: joi.object({
-    publicKey: joi.string().required().description('public key of the user (base64)'),
+    id: joi.string().required().description('id of the user'),
     sig: joi.string().required()
-      .description('message (publicKey + timestamp) signed by the user represented by publicKey'),
+      .description('message (id + timestamp) signed by the user represented by id'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
@@ -132,13 +130,13 @@ schemas = Object.assign({
       currentGroups: joi.array().items(schemas.group),
       eligibleGroups: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
-      verifications: joi.array().items(joi.string()),
-      oldKeys: joi.array().items(joi.string())
+      verifications: joi.array().items(joi.string())
     })
   }),
 
   usersPostBody: joi.object({
-    publicKey: joi.string().required().description("user's public key")
+    id: joi.string().required().description("user's id"),
+    signingKey: joi.string().required().description("the public key of the user that is used to sign requests")
   }),
 
   usersPostResponse: joi.object({
@@ -147,10 +145,10 @@ schemas = Object.assign({
   }),
 
   fetchVerificationPostBody: joi.object({
-    publicKey: joi.string().required().description('public key of the user (base64)'),
+    id: joi.string().required().description('id of the user'),
     context: joi.string().required().description('the context of the id (typically an application)'),
-    id: joi.string().required().description('an id used by the app consuming the verification'),
-    sig: joi.string().required().description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
+    userid: joi.string().required().description('an id used by the app consuming the verification'),
+    sig: joi.string().required().description('message (context + "," + userid + "," + timestamp) signed by the user represented by id'),
     timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
   }),
 
@@ -158,7 +156,7 @@ schemas = Object.assign({
     data: joi.object({
       publicKey: joi.string().description("the node's public key."),
       revocableIds: joi.array().items(joi.string()).description("ids formerly used by this user that can be safely revoked"),
-      sig: joi.string().description('verification message ( context + "," + id +  "," + timestamp [ + "," + revocableId ... ] ) signed by the node'),
+      sig: joi.string().description('verification message ( context + "," + userid +  "," + timestamp [ + "," + revocableId ... ] ) signed by the node'),
       timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed')
     })
   }),
@@ -185,70 +183,63 @@ schemas = Object.assign({
     data: schemas.context
   }),
 
-  trustedConnectionsPostBody: joi.object({
-    publicKey: joi.string().required().description('public key of the user (base64)'),
-    connections: joi.string().required().description('comma separated list of at least 3 public keys that belongs to trusted connections of the user'),
+  trustedPutBody: joi.object({
+    id: joi.string().required().description('id of the user'),
+    trusted: joi.array().items(joi.string())
+      .required().description('list of at least 3 ids that belongs to trusted connections of the user'),
     sig: joi.string().required()
-      .description('message (publicKey + trustedConnections + timestamp) signed by the user represented by publicKey'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the trusted connections are set')
+      .description('message (id + trusted + timestamp) signed by the user represented by id'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when update is requested')
   }),
 
-  recoverPostBody: joi.object({
-    publicKey: joi.string().required().description('public key of the helper user (base64)'),
-    oldPublicKey: joi.string().required().description('old public key that is stolen/lost (base64)'),
-    newPublicKey: joi.string().required()
-      .description('new public key that should be replaced by old public key (base64)'),
-    sig: joi.string().required()
-      .description('message (publicKey + oldPublicKey + newPublicKey + timestamp) signed by the user represented by publicKey'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the recovery request is submitted')
+  signingKeyPutBody: joi.object({
+    id: joi.string().required().description('id of the user'),
+    signingKey: joi.string().required().description('new signing key for the user'),
+    sigs: joi.array().items(
+      joi.object({
+        id: joi.string(),
+        sig: joi.string()
+      })
+    ).description('list of signatures by two of trusted connections on message (id + signingKey + timestamp)'),
+    timestamp: schemas.timestamp.description('milliseconds since epoch when update is requested')
   }),
 
 }, schemas);
 
+const verify = function(message, id, sig, res, e) {
+  const user = db.loadUser(id);
+  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(user.signingKey))) {
+    res.throw(403, e);
+  }
+}
+
 const handlers = {
 
   connectionsPut: function connectionsPutHandler(req, res){
-    const publicKey1 = req.body.publicKey1;
-    const publicKey2 = req.body.publicKey2;
+    const id1 = req.body.id1;
+    const id2 = req.body.id2;
     const timestamp = req.body.timestamp;
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey1 + publicKey2 + timestamp);
-
-    //Verify signatures
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))) {
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the user represented by publicKey1");
-      }
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig2), b64ToUint8Array(publicKey2))) {
-        res.throw(403, "sig2 wasn't publicKey1 + publicKey2 + timestamp signed by the user represented by publicKey2");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
-
-    db.addConnection(safe(publicKey1), safe(publicKey2), timestamp);
+    const message = id1 + id2 + timestamp;
+    const e = " wasn't id1 + id2 + timestamp signed by the user represented by ";
+    verify(message, id1, req.body.sig1, res, "sig1" + e + "id1");
+    verify(message, id2, req.body.sig2, res, "sig2" + e + "id2");
+    db.addConnection(id1, id2, timestamp);
   },
 
   connectionsDelete: function connectionsDeleteHandler(req, res){
-    const publicKey1 = req.body.publicKey1;
-    const publicKey2 = req.body.publicKey2;
+    const id1 = req.body.id1;
+    const id2 = req.body.id2;
     const timestamp = req.body.timestamp;
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
-
-    //Verify signature
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))) {
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + timestamp signed by the user represented by publicKey1");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
-    db.removeConnection(safe(publicKey1), safe(publicKey2), timestamp);
+    const message = id1 + id2 + timestamp;
+    const e = "sig1 wasn't id1 + id2 + timestamp signed by the user represented by id1";
+    verify(message, id1, req.body.sig1, res, e);
+    db.removeConnection(id1, id2, timestamp);
   },
 
   membershipGet: function membershipGetHandler(req, res){
@@ -262,80 +253,60 @@ const handlers = {
   },
 
   membershipPut: function membershipPutHandler(req, res){
-    const publicKey = req.body.publicKey;
+    const id = req.body.id;
     const group = req.body.group;
     const timestamp = req.body.timestamp;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey + group + timestamp);
-
-    //Verify signature
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by the user represented by publicKey");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
+    const message = id + group + timestamp;
+    const e = "sig wasn't id + group + timestamp signed by the user represented by id";
+    verify(message, id, req.body.sig, res, e);
 
     try {
-      db.addMembership(group, safe(publicKey), timestamp);
+      db.addMembership(group, id, timestamp);
     } catch (e) {
       res.throw(403, e);
     }
   },
 
   membershipDelete: function membershipDeleteHandler(req, res){
-    const publicKey = req.body.publicKey;
+    const id = req.body.id;
     const group = req.body.group;
     const timestamp = req.body.timestamp;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey + group + timestamp);
-
-    //Verify signature
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by the user represented by publicKey");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
+    
+    const message = id + group + timestamp;
+    const e = "sig wasn't id + group + timestamp signed by the user represented by id";
+    verify(message, id, req.body.sig, res, e);
 
     try {
-      db.deleteMembership(group, safe(publicKey), timestamp);
+      db.deleteMembership(group, id, timestamp);
     } catch (e) {
       res.throw(403, e);
     }
   },
 
   groupsPost: function groupsPostHandler(req, res){
-    const publicKey1 = req.body.publicKey1;
-    const publicKey2 = req.body.publicKey2;
-    const publicKey3 = req.body.publicKey3;
+    const id1 = req.body.id1;
+    const id2 = req.body.id2;
+    const id3 = req.body.id3;
     const timestamp = req.body.timestamp;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey1 + publicKey2 + publicKey3 +
-      req.body.timestamp);
-
-    //Verify signature
+    
+    const message = id1 + id2 + id3 + timestamp;
+    const e = "sig1 wasn't id1 + id2 + id3 + timestamp signed by the user represented by id1";
+    verify(message, id1, req.body.sig1, res, e);
+    
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig1), b64ToUint8Array(publicKey1))) {
-        res.throw(403, "sig1 wasn't publicKey1 + publicKey2 + publicKey3 + timestamp signed by the user represented by publicKey1");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
-
-    try {
-      const group = db.createGroup(safe(publicKey1), safe(publicKey2), safe(publicKey3), timestamp);
+      const group = db.createGroup(id1, id2, id3, timestamp);
 
       const newGroup = {
         data: {
@@ -351,62 +322,45 @@ const handlers = {
   },
 
   groupsDelete: function groupsDeleteHandler(req, res){
-    const publicKey = req.body.publicKey;
+    const id = req.body.id;
     const group = req.body.group;
     const timestamp = req.body.timestamp;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey + group +
-      req.body.timestamp);
-
-    //Verify signature
+    const message = id + group + timestamp;
+    const e = "sig wasn't id + group + timestamp signed by the user represented by id";
+    verify(message, id, req.body.sig, res, e);
+    
     try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
-        res.throw(403, "sig wasn't publicKey + group + timestamp signed by the user represented by publicKey");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
-
-    try {
-      db.deleteGroup(group, safe(publicKey), timestamp);
+      db.deleteGroup(group, id, timestamp);
     } catch (e) {
       res.throw(403, e);
     }
   },
 
   fetchUserInfo: function usersHandler(req, res){
-    const key = req.body.publicKey;
+    const id = req.body.id;
     const timestamp = req.body.timestamp;
-    const sig = req.body.sig;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(key + timestamp);
 
-    //Verify signature
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))) {
-        res.throw(403, "sig wasn't publicKey + timestamp signed by the user represented by publicKey");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
+    const message = id + timestamp;
+    const e = "sig wasn't id + timestamp signed by the user represented by id";
+    verify(message, id, req.body.sig, res, e);
 
-    const safeKey = safe(key);
-    const connections = db.userConnectionsRaw(safeKey);
-
-    const user = db.loadUser(safeKey);
+    const connections = db.userConnections(id);
+    const user = db.loadUser(id);
     if (! user) {
       res.throw(404, "User not found");
     }
 
-    const currentGroups = db.userCurrentGroups(safeKey);
+    const currentGroups = db.userCurrentGroups(id);
 
-    let eligibleGroups = db.userNewGroups(safeKey, connections);
+    let eligibleGroups = db.userNewGroups(id, connections);
     let eligibleGroupsUpdated = false;
     const groupCheckInterval =
       ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
@@ -415,29 +369,26 @@ const handlers = {
       Date.now() > user.eligible_timestamp + groupCheckInterval) {
 
       eligibleGroups = eligibleGroups.concat(
-        db.userEligibleGroups(safeKey, connections, currentGroups)
+        db.userEligibleGroups(id, connections, currentGroups)
       );
-      db.updateEligibleTimestamp(safeKey, Date.now());
+      db.updateEligibleTimestamp(id, Date.now());
       eligibleGroupsUpdated = true;
     }
-
-    const oldKeys = user.oldKeys ? user.oldKeys : [];
 
     res.send({
       data: {
         score: user.score,
         eligibleGroupsUpdated,
         eligibleGroups,
-        currentGroups: db.loadGroups(currentGroups, connections, safeKey),
+        currentGroups: db.loadGroups(currentGroups, connections, id),
         connections: db.loadUsers(connections),
-        verifications: user.verifications,
-        oldKeys
+        verifications: user.verifications
       }
     });
   },
 
   fetchVerification: function fetchVerification(req, res){
-    const { publicKey: key, context, sig, id, timestamp: userTimestamp } = req.body;
+    const { id, context, sig, userid, timestamp: userTimestamp } = req.body;
 
     const serverTimestamp = Date.now();
 
@@ -454,43 +405,35 @@ const handlers = {
       res.throw(500, 'Server node key pair not configured')
     }
 
-    const message = strToUint8Array(context + ',' + id + ',' + userTimestamp);
-
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))) {
-        res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by the user represented by publicKey");
-      }
-    } catch (e) {
-      res.throw(403, e);
-    }
+    const message = context + ',' + userid + ',' + userTimestamp;
+    const e = "sig wasn't context + \",\" + userid + \",\" + timestamp signed by the user represented by id";
+    verify(message, id, sig, res, e);
 
     const { verification, collection } = db.getContext(context);
 
     const coll = arango._collection(collection);
 
-    if (db.latestTimestampForContext(coll, key) > userTimestamp) {
+    if (db.latestTimestampForContext(coll, id) > userTimestamp) {
       res.throw(400, "there was an existing mapped account with a more recent timestamp");
     }
 
-    const safeKey = safe(key);
-
     // check that the user has this verification
 
-    if (! db.userHasVerification(verification, safeKey)) {
+    if (! db.userHasVerification(verification, id)) {
       res.throw(400, "user doesn't have the verification for the context")
     }
 
-    // update the id and timestamp and mark it as current in the db
+    // update the userid and timestamp and mark it as current in the db
 
-    db.addId(coll, id, safeKey, serverTimestamp);
+    db.addId(coll, userid, id, serverTimestamp);
 
-    // find old ids for this public key that aren't currently being used by someone else
+    // find old userids for this id that aren't currently being used by someone else
 
-    const revocableIds = db.revocableIds(coll, id, safeKey);
+    const revocableIds = db.revocableIds(coll, userid, id);
 
     // sign and return the verification
 
-    const verificationMessage = context + ',' + id + ',' + serverTimestamp + revocableIds.length ? ',' : '' + revocableIds.join(',');
+    const verificationMessage = context + ',' + userid + ',' + serverTimestamp + revocableIds.length ? ',' : '' + revocableIds.join(',');
 
     const verificationSig = nacl.sign.detached(message, b64ToUint8Array(nodePrivateKey));
 
@@ -506,8 +449,9 @@ const handlers = {
   },
 
   usersPost: function usersPostHandler(req, res){
-    const key = req.body.publicKey;
-    const ret = db.createUser(safe(key));
+    const id = req.body.id;
+    const signingKey = req.body.signingKey;
+    const ret = db.createUser(id, signingKey);
     res.send({ data: ret });
   },
 
@@ -561,52 +505,84 @@ const handlers = {
     }
   },
 
-  trustedConnections: function trustedConnections(req, res){
-    const publicKey = req.body.publicKey;
+  trustedPut: function trustedPutHandler(req, res){
+    const id = req.body.id;
     const timestamp = req.body.timestamp;
-    const connections = req.body.connections;
+    const trusted = req.body.trusted;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey + connections + timestamp);
 
-    //Verify signature
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
-        res.throw(403, "sig wasn't publicKey + trustedConnections + timestamp signed by the user represented by publicKey");
-      }
-    } catch (e) {
-      res.throw(403, e);
+    const user = db.loadUser(id);
+    if (!user) {
+      res.throw(404, "User not found");
     }
-    if (!db.setTrustedConnections(connections, safe(publicKey))) {
+    if (user.updateTime && user.updateTime > timestamp) {
+      res.throw(400, "another update with bigger timestamp submitted before")
+    }
+
+    if (user.trusted) {
+      // TODO: users should be able to update their trusted connections
+      // by providing sigs of 2 trusted connections approving that
       res.throw(403, "trusted connections can't be overwritten");
     }
+
+    const message = id + trusted.join(',') + timestamp;
+    const e = "sig wasn't id + trusted + timestamp signed by the user represented by id";
+    verify(message, id, req.body.sig, res, e);
+
+    db.setTrusted(trusted, id, timestamp);
   },
 
-  recover: function recover(req, res){
-    const publicKey = req.body.publicKey;
+  signingKeyPut: function signingKeyPutHandler(req, res){
+    const id = req.body.id;
     const timestamp = req.body.timestamp;
-    const oldPublicKey = req.body.oldPublicKey;
-    const newPublicKey = req.body.newPublicKey;
+    const signingKey = req.body.signingKey;
+    const sigs = req.body.sigs;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    const message = strToUint8Array(publicKey + oldPublicKey + newPublicKey + timestamp);
 
-    //Verify signature
-    try {
-      if (! nacl.sign.detached.verify(message, b64ToUint8Array(req.body.sig), b64ToUint8Array(publicKey))) {
-        res.throw(403, "sig wasn't publicKey + oldPublicKey + newPublicKey + timestamp signed by the user represented by publicKey");
-      }
-    } catch (e) {
+    const user = db.loadUser(id);
+    if (!user) {
+      res.throw(404, "User not found");
+    }
+    if (user.updateTime && user.updateTime > timestamp) {
+      res.throw(400, "another update with bigger timestamp submitted before")
+    }
+    
+    // This part is only used by new version of mobile code to initialize signingKey
+    // and is not related to recovery process
+    if (b64ToUrlSafeB64(signingKey) == id) {
+      return db.setSigningKey(signingKey, id, timestamp);
+    }
+
+    if (!user.trusted) {
+      res.throw(403, "no trusted connection is set");
+    }
+    if (sigs.length < 2 ||
+        sigs[0].id == sigs[1].id ||
+        !user.trusted.includes(sigs[0].id) ||
+        !user.trusted.includes(sigs[1].id)) {
+      res.throw(403, "request should be signed by 2 different trusted connections")
+    }
+
+    const message = id + signingKey + timestamp;
+    const e = "sig wasn't id + signingKey + timestamp signed by trusted connection";
+    let counter = 0;
+    for (let sig of sigs) {
+      try {
+        verify(message, sig.id, sig.sig, res, e);
+        counter += 1;
+      } catch {}
+    }
+    if (counter < 2) {
       res.throw(403, e);
     }
-    const result = db.recover(safe(publicKey), safe(oldPublicKey), safe(newPublicKey), timestamp);
-    if (result != 'success') {
-      res.throw(400, result);
-    }
+    
+    db.setSigningKey(signingKey, id, timestamp);
   },
 };
 
@@ -675,12 +651,12 @@ router.get('/ip/', handlers.ip)
   .response(schemas.ipGetResponse);
 
 router.get('/userScore/:user', handlers.userScore)
-  .pathParam('user', joi.string().required().description("Public key of user (url-safe base 64)"))
+  .pathParam('user', joi.string().required().description("id of user"))
   .summary("Get a user's score")
   .response(schemas.userScore);
 
 router.get('/userConnections/:user', handlers.userConnections)
-  .pathParam('user', joi.string().required().description("Public key of user (url-safe base 64)"))
+  .pathParam('user', joi.string().required().description("id of user"))
   .summary("Get a user's connections")
   .response(schemas.userConnections);
 
@@ -689,16 +665,16 @@ router.get('/contexts/:context', handlers.contexts)
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
 
-router.post('/trustedConnections', handlers.trustedConnections)
-  .body(schemas.trustedConnectionsPostBody.required())
-  .summary("Set trusted connections for a user")
-  .description('Set trusted connections who can help users to recover their accounts')
+router.put('/trusted', handlers.trustedPut)
+  .body(schemas.trustedPutBody.required())
+  .summary("Set trusted connections for user")
+  .description('Set trusted connections who can help users to update their signing keys when their keys are stolen/lost')
   .response(null);
 
-router.post('/recover', handlers.recover)
-  .body(schemas.recoverPostBody.required())
-  .summary("Recover lost/stolen brightid")
-  .description('Set a new public key for a brightid by its trusted connections')
+router.put('/signingKey', handlers.signingKeyPut)
+  .body(schemas.signingKeyPutBody.required())
+  .summary("Update signing key of user")
+  .description('Updates signing key of a stolen/lost brightid by help of its trusted connections')
   .response(null);
 
 module.exports = {

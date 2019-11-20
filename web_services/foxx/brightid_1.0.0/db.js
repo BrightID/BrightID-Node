@@ -76,10 +76,10 @@ function userConnections(user){
 function loadUsers(users){
   return query`
       FOR u in ${usersColl}
-        FILTER u._id in ${users}
+        FILTER u._key in ${users}
           RETURN {
-              key: u._id,
-              score: u.score
+            id: u._key,
+            score: u.score
           }
   `.toArray();
 }
@@ -149,6 +149,7 @@ function userEligibleGroups(userId, connections, currentGroups = []){
 
 function userNewGroups(userId, connections){
   const user = "users/" + userId;
+  // FIXME: why connections and userId is being passed here to groupToDic?
   return query`
       FOR g in ${newGroupsColl}
         FILTER ${user} in g.founders
@@ -253,24 +254,25 @@ function updateAndCleanConnections(collection, key1, key2, timestamp){
   }
 }
 
-function createUser(key){
+function createUser(key, signingKey){
   // already exists?
   const user = loadUser(key);
 
   if (user) {
     return {
-      key: currents[0]._key,
-      score: currents[0].score || 0
+      id: user._key,
+      score: user.score || 0
     };
   }
 
   const ret = usersColl.save({
     score: 0,
+    signingKey: signingKey,
     _key: key
   });
 
   return {
-    key: ret._key,
+    id: ret._key,
     score: 0
   };
 }
@@ -515,113 +517,16 @@ function revocableIds(collection, id, key){
   `.toArray();
 }
 
-function setTrustedConnections(trustedConnections, key){
-  const user = query`RETURN DOCUMENT(${usersColl}, ${key})`.toArray()[0];
-  if (!user.trustedConnections) {
-    query`
-      UPDATE ${key} WITH {trustedConnections: ${trustedConnections.split(',')}} in users
-    `;
-    return true;
-  } else {
-    return false;
-  }
+function setTrusted(trusted, key, timestamp){
+  query`
+    UPDATE ${key} WITH {trusted: ${trusted}, updateTime: ${timestamp}} in users
+  `;
 }
 
-function findRecoveringUser(key){
-  let user = query`RETURN DOCUMENT(${usersColl}, ${key})`.toArray()[0];
-  while (!user && key) {
-    key = query`
-      FOR r in ${recoveryColl}
-        FILTER r.oldPublicKey == ${key} AND r.state == "completed"
-        RETURN r.newPublicKey
-    `.toArray()[0];
-    if (!key) break;
-    user = query`RETURN DOCUMENT(${usersColl}, ${key})`.toArray()[0];
-  }
-  return user;
-}
-
-function recover(helperPublicKey, oldPublicKey, newPublicKey, timestamp){
-  const requiredHelpers = 2;
-  const user = findRecoveringUser(oldPublicKey);
-  if (!user) {
-    return `user ${oldPublicKey} not found`;
-  }
-  oldPublicKey = user._key;
-  if (!user.trustedConnections || user.trustedConnections.indexOf(helperPublicKey) == -1) {
-    return `${helperPublicKey} is not a trusted connection`;
-  }
-  // find recovery document
-  let r = query`
-    FOR r in ${recoveryColl}
-      FILTER r.oldPublicKey == ${oldPublicKey} AND r.newPublicKey == ${newPublicKey}
-      RETURN r
-    `.toArray()[0];
-  let helpers;
-  if (!r) {
-    helpers = [helperPublicKey];
-    r = query`
-      INSERT {
-        oldPublicKey: ${oldPublicKey},
-        newPublicKey: ${newPublicKey},
-        timestamp: ${timestamp},
-        state: ${helpers.length >= requiredHelpers ? "completed" : "pending"},
-        helpers: ${helpers}
-      } IN recovery RETURN NEW
-    `
-  } else {
-    helpers = [...r.helpers];
-    if (helpers.indexOf(helperPublicKey) > -1) {
-      return `${helperPublicKey} recovered ${oldPublicKey} before`;
-    }
-    helpers.push(helperPublicKey);
-    r = query`
-      UPDATE ${r._key} WITH {
-        helpers: ${helpers},
-        state: ${helpers.length >= requiredHelpers ? "completed" : "pending"}
-      } IN recovery
-    `;
-  }
-  if (helpers.length < requiredHelpers) {
-    return 'success';
-  }
-  query`REMOVE ${user._key} IN users`;
-  user['_key'] = newPublicKey;
-  user['oldKeys'] = user.oldKeys ? [...user.oldKeys, user._key] : [user._key];
-  usersColl.save(user);
-  oldPublicKey = "users/" + oldPublicKey;
-  newPublicKey = "users/" + newPublicKey;
+function setSigningKey(signingKey, key, timestamp){
   query`
-    FOR c IN connections
-      FILTER c._from == ${oldPublicKey}
-      UPDATE c WITH { _from:  ${newPublicKey}} IN connections
+    UPDATE ${key} WITH {signingKey: ${signingKey}, updateTime: ${timestamp}} in users
   `;
-  query`
-    FOR c IN connections
-      FILTER c._to == ${oldPublicKey}
-      UPDATE c WITH { _to:  ${newPublicKey}} IN connections
-  `;
-  query`
-    FOR ug IN usersInGroups
-      FILTER ug._from == ${oldPublicKey}
-      UPDATE ug WITH { _from:  ${newPublicKey}} IN usersInGroups
-  `;
-  query`
-    FOR ug IN usersInNewGroups
-      FILTER ug._from == ${oldPublicKey}
-      UPDATE ug WITH { _from:  ${newPublicKey}} IN usersInNewGroups
-  `;
-  query`
-    FOR g in groups
-      FILTER ${oldPublicKey} in g.founders
-      UPDATE g WITH { founders: PUSH(REMOVE_VALUE(g.founders, ${oldPublicKey}), ${newPublicKey})} IN groups
-  `;
-  query`
-    FOR g in newGroups
-      FILTER ${oldPublicKey} in g.founders
-      UPDATE g WITH { founders: PUSH(REMOVE_VALUE(g.founders, ${oldPublicKey}), ${newPublicKey})} IN newGroups
-  `;
-  return 'success';
 }
 
 module.exports = {
@@ -648,7 +553,7 @@ module.exports = {
   userHasVerification,
   addId,
   revocableIds,
-  setTrustedConnections,
-  recover
+  setTrusted,
+  setSigningKey
 };
 
