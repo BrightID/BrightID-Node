@@ -150,6 +150,7 @@ schemas = Object.assign({
     context: joi.string().required().description('the context of the id (typically an application)'),
     id: joi.string().required().description('an id used by the app consuming the verification'),
     sig: joi.string().required().description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
+    sponsorshipSig: joi.string().description('message (context + "," + id + "," + timestamp) signed by a context that wants to sponsor this user'),
     timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
   }),
 
