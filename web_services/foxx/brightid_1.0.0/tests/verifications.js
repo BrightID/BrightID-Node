@@ -62,7 +62,7 @@ describe('verifications', function () {
   after(function(){
     arango._drop(testIdsColl);
     usersColl.truncate();
-    // contextsColl.truncate();
+    contextsColl.truncate();
     sponsorshipsColl.truncate();
   });
   it('should be able to map several accounts to users', function() {
