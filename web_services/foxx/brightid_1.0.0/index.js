@@ -5,13 +5,12 @@ const nacl = require('tweetnacl');
 
 const db = require('./db');
 const arango = require('@arangodb').db;
-const enc = require('./encoding');
-
-const strToUint8Array = enc.strToUint8Array;
-const b64ToUint8Array = enc.b64ToUint8Array;
-
-// all keys in the DB are in the url/directory/db safe b64 format
-const safe = enc.b64ToUrlSafeB64;
+const {
+  strToUint8Array,
+  b64ToUint8Array,
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64: safe 
+} = require('./encoding');
 
 const router = createRouter();
 module.context.use(router);
@@ -422,7 +421,7 @@ const handlers = {
   },
 
   fetchVerification: function fetchVerification(req, res){
-    const { publicKey: key, context, sig, id, timestamp: userTimestamp } = req.body;
+    const { publicKey: key, context, sig, id, timestamp: userTimestamp, sponsorshipSig } = req.body;
 
     const serverTimestamp = Date.now();
 
@@ -440,7 +439,6 @@ const handlers = {
     }
 
     const message = strToUint8Array(context + ',' + id + ',' + userTimestamp);
-
     try {
       if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))) {
         res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by the user represented by publicKey");
@@ -448,20 +446,48 @@ const handlers = {
     } catch (e) {
       res.throw(403, e);
     }
-
-    const { verification, collection } = db.getContext(context);
+    const {
+      verification,
+      collection,
+      unusedSponsorships,
+      signingKey: contextKey,
+    } = db.getContext(context);
 
     const coll = arango._collection(collection);
-
     if (db.latestVerificationByUser(coll, key) > userTimestamp) {
       res.throw(400, "there was an existing mapped account with a more recent timestamp");
     }
 
     const safeKey = safe(key);
 
-    // check that the user has this verification
+    // sponsor user if it's not sponsored but is verified.
 
-    if (! db.userHasVerification(verification, safeKey)) {
+    const isVerified = db.userHasVerification(verification, safeKey);
+    
+    if (! db.isSponsored(safeKey)) {
+      if (! sponsorshipSig) {
+        res.throw(403, "user is not sponsored");
+      }
+      if (unusedSponsorships < 1) {
+        res.throw(403, "context does not have unused sponsorships");
+      }
+      try {
+        if (! nacl.sign.detached.verify(message, b64ToUint8Array(sponsorshipSig), b64ToUint8Array(contextKey))) {
+          res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by the signingKey of the context");
+        }
+      } catch (e) {
+        res.throw(403, e);
+      }
+      if (isVerified) {
+        db.sponsor(safeKey, context);  
+      }
+    }
+
+    // Verification should be checked after sponsorship.
+    // Otherwise apps can rely on sponsorship error,
+    // as the proof that user is verified but not sponsored.
+
+    if (! isVerified) {
       res.throw(400, "user doesn't have the verification for the context")
     }
 
@@ -484,7 +510,7 @@ const handlers = {
         revocableIds,
         sig: verificationSig,
         timestamp: serverTimestamp,
-        publicKey: nodePublicKey
+        publicKey: uInt8ArrayToB64(nodePublicKey)
       }
     });
 

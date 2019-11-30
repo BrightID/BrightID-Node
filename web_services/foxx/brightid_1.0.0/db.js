@@ -14,6 +14,7 @@ const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
+const sponsorshipsColl = db._collection('sponsorships');
 
 const safe = require('./encoding').b64ToUrlSafeB64;
 
@@ -443,7 +444,35 @@ function removeConnection(key1, key2, timestamp){
 }
 
 function getContext(context){
-  return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
+  const res = query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
+  context = 'contexts/' + context;
+  const usedSponsorships = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == ${context}
+      RETURN s
+  `.count();
+  res['unusedSponsorships'] = res['totalSponsorships'] - usedSponsorships;
+  return res;
+}
+
+function isSponsored(key){
+  return query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._from == ${'users/' + key}
+      LIMIT 1
+      RETURN 1
+  `.count() > 0;
+}
+
+function sponsor(key, context){
+  key = 'users/' + key;
+  context = 'contexts/' + context;
+  query`
+    INSERT {
+      _from: ${key},
+      _to: ${context}
+    } in ${sponsorshipsColl}
+  `;
 }
 
 function latestVerificationByUser(collection, user){
@@ -480,13 +509,8 @@ function latestVerificationById(context, id){
 }
 
 function userHasVerification(verification, user){
-  return query`
-    FOR u IN users
-      FILTER u._key == ${user}
-      FILTER ${verification} in u.verifications
-      LIMIT 1
-      RETURN 1
-  `.count() > 0;
+  const u = loadUser(user);
+  return u && u.verifications && u.verifications.indexOf(verification) > -1;
 }
 
 function addId(collection, id, user, timestamp){
@@ -562,4 +586,6 @@ module.exports = {
   userHasVerification,
   addId,
   revocableIds,
+  isSponsored,
+  sponsor
 };
