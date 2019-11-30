@@ -96,54 +96,55 @@ describe('verifications', function () {
     });
   });
   context('fetchVerification()', function(){
-    const timestamp = Date.now();
-    const message = 'testContext' + ',' + 'testUserId' + ',' + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), userSecretKey))
-    );
-    const anotherSig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), anotherUserSecretKey))
-    );
-    const options = {
-      body: {
-        publicKey: userPublicKey,
-        context: 'testContext',
-        id: 'testUserId',
-        sig,
-        timestamp 
-      },
-      json: true
-    }
+    let options, sig, anotherSig, sponsorshipSig;
+    before(function(){
+      const timestamp = Date.now();
+      const message = 'testContext' + ',' + 'testUserId' + ',' + timestamp;
+      sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), userSecretKey))
+      );
+      anotherSig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), anotherUserSecretKey))
+      );
+      sponsorshipSig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), contextSecretKey))
+      );
+      options = {
+        body: {
+          context: 'testContext',
+          id: 'testUserId',
+          publicKey: userPublicKey,
+          timestamp,
+          sig
+        },
+        json: true
+      }
+    });
     it('should throw "user is not sponsored" for not sponsored users', function(){
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(403);
       resp.json.errorMessage.should.equal('user is not sponsored');
     });
     it('should return verification if user provide sponsorshipSig', function(){
-      options['body']['sponsorshipSig'] = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), contextSecretKey))
-      );
+      options.body.sponsorshipSig = sponsorshipSig;
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(200);
       resp.json.should.have.key('data');
     });
     it('should throw "context does not have unused sponsorships" if context has no unused sponsorship', function(){
-      options['body']['publicKey'] = anotherUserPublicKey;
-      options['body']['sig'] = anotherSig;
+      options.body.publicKey = anotherUserPublicKey;
+      options.body.sig = anotherSig;
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(403);
       resp.json.errorMessage.should.equal('context does not have unused sponsorships');
     });
     it('should return verification if user is sponsored before', function(){
-      delete options['body']['sponsorshipSig'];
-      options['body']['publicKey'] = userPublicKey;
-      options['body']['sig'] = sig;
+      delete options.body.sponsorshipSig;
+      options.body.publicKey = userPublicKey;
+      options.body.sig = sig;
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(200);
       resp.json.should.have.key('data');
     });
   });
 });
-
-
-
