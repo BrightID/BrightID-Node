@@ -15,42 +15,35 @@ const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
 const sponsorshipsColl = db._collection('sponsorships');
+const operationsColl = db._collection('operations');
+const operationsHashesColl = db._collection('operationsHashes');
+
+operationsColl.ensureIndex({ type: "skiplist", fields: [ "timestamp" ], sparse: false, unique: false } );
 
 const safe = require('./encoding').b64ToUrlSafeB64;
 
-function allEdges(collection, user1, user2){
-  return query`
-    for i in ${collection}
-      filter (i._from == ${user1} && i._to == ${user2})
-      || (i._from == ${user2} && i._to == ${user1})
-    sort i.timestamp desc
-    return { "key": i._key, "timestamp": i.timestamp }
-  `.toArray();
-}
-
-function removeByKeys(collection, keys){
+function removeConnection(key1, key2, timestamp){
+  const user1 = 'users/' + key1;
+  const user2 = 'users/' + key2;
   query`
-    for i in ${collection}
-      filter i._key in ${keys}
-      remove i in ${collection}
+    for c in ${connectionsColl}
+      filter (c._from == ${user1} && c._to == ${user2})
+      || (c._from == ${user2} && c._to == ${user1})
+      remove c in ${connectionsColl}
   `;
 }
 
-// function userConnections(user) {
-//   user = "users/" + user;
-//   const cons = query`
-//     for i in ${connectionsColl}
-//       filter (i._from == ${user} || i._to == ${user})
-//     sort i.timestamp desc
-//     return DISTINCT i
-//   `).toArray().map(function (u) {
-//     if (u._from == user) {
-//       return u._to.replace("users/", "");
-//     }
-//     return u._from.replace("users/", "");
-//   });
-//   return [...new Set(cons)];
-// }
+function addConnection(key1, key2, timestamp){
+  const user1 = 'users/' + key1;
+  const user2 = 'users/' + key2;
+  query`
+    insert {
+      _from: ${user1},
+      _to: ${user2},
+      timestamp: ${timestamp}
+    } in ${connectionsColl}
+  `;
+}
 
 function userConnectionsRaw(user){
   user = "users/" + user;
@@ -226,32 +219,6 @@ function updateEligibleTimestamp(key, timestamp){
   `;
 }
 
-function updateAndCleanConnections(collection, key1, key2, timestamp){
-  const user1 = 'users/' + key1;
-  const user2 = 'users/' + key2;
-
-  const added = allEdges(connectionsColl, user1, user2);
-  const removed = allEdges(removedColl, user1, user2);
-
-  // if this operation is newer than existing operations of either type
-  if ((! added || ! added.length || timestamp > added[0].timestamp)
-    && (! removed || ! removed.length || timestamp > removed[0].timestamp)) {
-    query`
-      insert {
-        _from: ${user1},
-        _to: ${user2},
-        timestamp: ${timestamp}
-      } in ${collection}
-    `;
-    // remove any operation of either type older than the new one
-    if (added && added.length) {
-      removeByKeys(connectionsColl, added.map(entry => entry.key));
-    }
-    if (removed && removed.length) {
-      removeByKeys(removedColl, removed.map(entry => entry.key));
-    }
-  }
-}
 
 function createUser(key){
   // already exists?
@@ -435,14 +402,6 @@ function deleteMembership(groupId, key, timestamp){
   `;
 }
 
-function addConnection(key1, key2, timestamp){
-  updateAndCleanConnections(connectionsColl, key1, key2, timestamp);
-}
-
-function removeConnection(key1, key2, timestamp){
-  updateAndCleanConnections(removedColl, key1, key2, timestamp);
-}
-
 function getContext(context){
   const res = query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
   context = 'contexts/' + context;
@@ -561,6 +520,26 @@ function revocableIds(collection, id, user){
   `.toArray();
 }
 
+function addOperation(hash, name, timestamp, data) {
+  query`
+    insert {
+      _key: ${hash},
+      name: ${name},
+      timestamp: ${timestamp},
+      data: ${data}
+    } in ${operationsColl}
+  `;
+  query`
+    insert {
+      _key: ${hash}
+    } in ${operationsHashesColl}
+  `;
+}
+
+function isOperationApplied(hash) {
+  return operationsHashesColl.exists(hash);
+}
+
 module.exports = {
   addConnection,
   removeConnection,
@@ -587,5 +566,7 @@ module.exports = {
   addId,
   revocableIds,
   isSponsored,
-  sponsor
+  sponsor,
+  addOperation,
+  isOperationApplied
 };

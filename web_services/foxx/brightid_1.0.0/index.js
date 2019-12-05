@@ -2,9 +2,10 @@
 const createRouter = require('@arangodb/foxx/router');
 const joi = require('joi');
 const nacl = require('tweetnacl');
-
+const crypto = require('@arangodb/crypto')
 const db = require('./db');
 const arango = require('@arangodb').db;
+
 const {
   strToUint8Array,
   b64ToUint8Array,
@@ -14,6 +15,12 @@ const {
 
 const router = createRouter();
 module.context.use(router);
+
+function hash(data) {
+  const h = crypto.sha256(data);
+  const b = Buffer.from(h, 'hex').toString('base64');
+  return safe(b);
+}
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
@@ -201,6 +208,7 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
+    
     const message = strToUint8Array(publicKey1 + publicKey2 + timestamp);
 
     //Verify signatures
@@ -215,7 +223,12 @@ const handlers = {
       res.throw(403, e);
     }
 
+    const operationHash = hash('Add Connection' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     db.addConnection(safe(publicKey1), safe(publicKey2), timestamp);
+    db.addOperation(operationHash, 'Add Connection', timestamp, req.body);
   },
 
   connectionsDelete: function connectionsDeleteHandler(req, res){
@@ -224,7 +237,7 @@ const handlers = {
     const timestamp = req.body.timestamp;
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
-    }
+    }    
     const message = strToUint8Array(publicKey1 + publicKey2 + req.body.timestamp);
 
     //Verify signature
@@ -235,7 +248,13 @@ const handlers = {
     } catch (e) {
       res.throw(403, e);
     }
+
+    const operationHash = hash('Remove Connection' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     db.removeConnection(safe(publicKey1), safe(publicKey2), timestamp);
+    db.addOperation(operationHash, 'Remove Connection', timestamp, req.body);
   },
 
   membershipGet: function membershipGetHandler(req, res){
@@ -267,8 +286,13 @@ const handlers = {
       res.throw(403, e);
     }
 
+    const operationHash = hash('Add Membership' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       db.addMembership(group, safe(publicKey), timestamp);
+      db.addOperation(operationHash, 'Add Membership', timestamp, req.body);
     } catch (e) {
       res.throw(403, e);
     }
@@ -281,7 +305,7 @@ const handlers = {
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
-    }
+    }    
     const message = strToUint8Array(publicKey + group + timestamp);
 
     //Verify signature
@@ -293,8 +317,13 @@ const handlers = {
       res.throw(403, e);
     }
 
+    const operationHash = hash('Delete Membership' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       db.deleteMembership(group, safe(publicKey), timestamp);
+      db.addOperation(operationHash, 'Delete Membership', timestamp, req.body);
     } catch (e) {
       res.throw(403, e);
     }
@@ -321,9 +350,13 @@ const handlers = {
       res.throw(403, e);
     }
 
+    const operationHash = hash('Create Group' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       const group = db.createGroup(safe(publicKey1), safe(publicKey2), safe(publicKey3), timestamp);
-
+      db.addOperation(operationHash, 'Create Group', timestamp, req.body);
       const newGroup = {
         data: {
           id: group._key,
@@ -357,8 +390,13 @@ const handlers = {
       res.throw(403, e);
     }
 
+    const operationHash = hash('Delete Group' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       db.deleteGroup(group, safe(publicKey), timestamp);
+      db.addOperation(operationHash, 'Delete Group', timestamp, req.body);
     } catch (e) {
       res.throw(403, e);
     }
