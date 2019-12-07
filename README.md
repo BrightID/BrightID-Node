@@ -2,9 +2,8 @@
 
 BrightID nodes store the social graph used by [BrightID](https://github.com/BrightID/BrightID).
 
-[BrightID's API spec and test interface](https://app.swaggerhub.com/apis/brightid/brightid/1.0.0#/default/)
-
-__[Read more about running a node.](node.md)__
+* [BrightID's API spec and test interface](https://app.swaggerhub.com/apis/brightid/brightid/1.0.0#/default/)
+* [Running a node.](https://github.com/BrightID/BrightID-Node/wiki/Installation-Guide)
 
 ## Contribute
 
