@@ -7,7 +7,7 @@ BrightID nodes store the social graph used by [BrightID](https://github.com/Brig
 
 ## Contribute
 
-Check out our [open projects](https://github.com/BrightID/BrightID-Node/projects).  Or [start a new Issue](https://github.com/BrightID/BrightID-Node/issues) and we'll add you to the conversation.
+Check out our [open projects](https://github.com/BrightID/BrightID-Node/projects).  Or [start a new issue](https://github.com/BrightID/BrightID-Node/issues) and we'll add you to the conversation.
 
 ### Dev Setup
 
