@@ -17,4 +17,3 @@ Use the [development guide](https://github.com/BrightID/BrightID-Node/wiki/Devel
 
 ## Other repos
 * [BrightID](https://github.com/BrightID/BrightID): Mobile app for connecting to other BrightID users
-* [BrightID API](https://github.com/BrightID/BrightID-API):  APIs allowing third-party apps to verify users
