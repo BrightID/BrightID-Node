@@ -23,14 +23,15 @@ const should = chai.should();
 const { baseUrl } = module.context;
 
 let { publicKey: contextPublicKey, secretKey: contextSecretKey } = nacl.sign.keyPair();
-let { publicKey: userPublicKey, secretKey: userSecretKey } = nacl.sign.keyPair();
-let { publicKey: anotherUserPublicKey, secretKey: anotherUserSecretKey } = nacl.sign.keyPair();
+let u1 = nacl.sign.keyPair();
+let u2 = nacl.sign.keyPair();
 
 contextPublicKey = uInt8ArrayToB64(Object.values(contextPublicKey));
-userPublicKey = uInt8ArrayToB64(Object.values(userPublicKey));
-anotherUserPublicKey = uInt8ArrayToB64(Object.values(anotherUserPublicKey));
+[u1, u2].map((u) => {
+  u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
+  u.id = b64ToUrlSafeB64(u.signingKey);
+});
 
-    
 describe('verifications', function () {
   before(function(){
     testIdsColl = arango._create('testIds');
@@ -48,13 +49,15 @@ describe('verifications', function () {
     `;
     query`
       INSERT {
-        _key: ${b64ToUrlSafeB64(userPublicKey)},
+        _key: ${u1.id},
+        signingKey: ${u1.signingKey},
         verifications: ["testVerification"]
       } IN ${usersColl}
     `;
     query`
       INSERT {
-        _key: ${b64ToUrlSafeB64(anotherUserPublicKey)},
+        _key: ${u2.id},
+        signingKey: ${u2.signingKey},
         verifications: ["testVerification"]
       } IN ${usersColl}
     `;
@@ -96,52 +99,53 @@ describe('verifications', function () {
     });
   });
   context('fetchVerification()', function(){
-    let options, sig, anotherSig, sponsorshipSig;
-    before(function(){
+    let options, message;
+    it('should throw "user is not sponsored" for not sponsored users', function(){
       const timestamp = Date.now();
-      const message = 'testContext' + ',' + 'testUserId' + ',' + timestamp;
-      sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), userSecretKey))
+      message = 'testContext' + ',' + 'testUserId' + ',' + timestamp;
+      u1.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
       );
-      anotherSig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), anotherUserSecretKey))
-      );
-      sponsorshipSig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), contextSecretKey))
+      u2.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
       );
       options = {
         body: {
           context: 'testContext',
-          id: 'testUserId',
-          publicKey: userPublicKey,
+          userid: 'testUserId',
+          id: u1.id,
           timestamp,
-          sig
+          sig: u1.sig
         },
         json: true
       }
-    });
-    it('should throw "user is not sponsored" for not sponsored users', function(){
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(403);
       resp.json.errorMessage.should.equal('user is not sponsored');
     });
     it('should return verification if user provide sponsorshipSig', function(){
-      options.body.sponsorshipSig = sponsorshipSig;
+      options.body.sponsorshipSig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), contextSecretKey))
+      );      
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(200);
       resp.json.should.have.key('data');
     });
     it('should throw "context does not have unused sponsorships" if context has no unused sponsorship', function(){
-      options.body.publicKey = anotherUserPublicKey;
-      options.body.sig = anotherSig;
+      options.body.id = u2.id;
+      options.body.sig = u2.sig;
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(403);
       resp.json.errorMessage.should.equal('context does not have unused sponsorships');
     });
     it('should return verification if user is sponsored before', function(){
       delete options.body.sponsorshipSig;
-      options.body.publicKey = userPublicKey;
-      options.body.sig = sig;
+      options.body.id = u1.id;
+      options.body.timestamp = Date.now();
+      message = 'testContext' + ',' + 'testUserId' + ',' + options.body.timestamp;
+      options.body.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+      );
       const resp = request.post(`${baseUrl}/fetchVerification`, options);
       resp.statusCode.should.equal(200);
       resp.json.should.have.key('data');

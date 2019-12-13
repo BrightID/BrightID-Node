@@ -26,8 +26,8 @@ const u1 = nacl.sign.keyPair();
 const u2 = nacl.sign.keyPair();
 const u3 = nacl.sign.keyPair();
 [u1, u2, u3].map((u) => {
-  u.publicKey = uInt8ArrayToB64(Object.values(u.publicKey));
-  u.safePublicKey = b64ToUrlSafeB64(u.publicKey);
+  u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
+  u.id = b64ToUrlSafeB64(u.signingKey);
 });
 
 describe('replay attack on add/remove connections/membership/groups', function () {
@@ -37,9 +37,9 @@ describe('replay attack on add/remove connections/membership/groups', function (
     groupsColl.truncate();
     usersInGroupsColl.truncate();
     operationsColl.truncate();
-    db.createUser(u1.safePublicKey);
-    db.createUser(u2.safePublicKey);
-    db.createUser(u3.safePublicKey);
+    db.createUser(u1.id, u1.signingKey);
+    db.createUser(u2.id, u2.signingKey);
+    db.createUser(u3.id, u3.signingKey);
   });
   after(function(){
     usersColl.truncate();
@@ -51,15 +51,18 @@ describe('replay attack on add/remove connections/membership/groups', function (
 
   it('should not be able to call PUT /connections with same parameters twice', function () {
     const connect = (u1, u2, timestamp) => {
-      const message = u1.publicKey + u2.publicKey + timestamp;
+      const message = u1.id + u2.id + timestamp;
+      console.log(1);
       const sig1 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
       );
+      console.log(2, sig1);
       const sig2 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
       );
+      console.log(3, sig2);
       const resp = request.put(`${baseUrl}/connections`, {
-        body: { publicKey1: u1.publicKey, publicKey2: u2.publicKey, sig1, sig2, timestamp },
+        body: { id1: u1.id, id2: u2.id, sig1, sig2, timestamp },
         json: true
       });
       return resp;
@@ -72,17 +75,17 @@ describe('replay attack on add/remove connections/membership/groups', function (
   
   it('should not be able to call DELETE /connections with same parameters twice', function () {
     const timestamp = Date.now();
-    const message = u2.publicKey + u3.publicKey + timestamp;
+    const message = u2.id + u3.id + timestamp;
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     const resp1 = request.delete(`${baseUrl}/connections`, {
-      body: { publicKey1: u2.publicKey, publicKey2: u3.publicKey, sig1, timestamp },
+      body: { id1: u2.id, id2: u3.id, sig1, timestamp },
       json: true
     });
     resp1.status.should.equal(204);
     const resp2 = request.delete(`${baseUrl}/connections`, {
-      body: { publicKey1: u1.publicKey, publicKey2: u2.publicKey, sig1, timestamp },
+      body: { id1: u1.id, id2: u2.id, sig1, timestamp },
       json: true
     });
     resp2.status.should.equal(403);
@@ -90,17 +93,17 @@ describe('replay attack on add/remove connections/membership/groups', function (
   
   it('should not be able to call POST /groups twice with same parameters', function () {
     const timestamp = Date.now();
-    const message = u1.publicKey + u2.publicKey + u3.publicKey + timestamp;
+    const message = u1.id + u2.id + u3.id + timestamp;
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     const resp1 = request.post(`${baseUrl}/groups`, {
-      body: { publicKey1: u1.publicKey, publicKey2: u2.publicKey, publicKey3: u3.publicKey, sig1, timestamp },
+      body: { id1: u1.id, id2: u2.id, id3: u3.id, sig1, timestamp },
       json: true
     });
     resp1.status.should.equal(200);
     const resp2 = request.post(`${baseUrl}/groups`, {
-      body: { publicKey1: u1.publicKey, publicKey2: u2.publicKey, publicKey3: u3.publicKey, sig1, timestamp },
+      body: { id1: u1.id, id2: u2.id, id3: u3.id, sig1, timestamp },
       json: true
     });
     resp2.status.should.equal(403);
@@ -108,18 +111,18 @@ describe('replay attack on add/remove connections/membership/groups', function (
 
   it('should not be able to call PUT /membership twice with same parameters', function () {
     const timestamp = Date.now();
-    const group = db.userNewGroups(u1.safePublicKey)[0].id;
-    const message = u2.publicKey + group + timestamp;
+    const group = db.userNewGroups(u1.id)[0].id;
+    const message = u2.id + group + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     const resp1 = request.put(`${baseUrl}/membership`, {
-      body: { publicKey: u2.publicKey, group, sig, timestamp },
+      body: { id: u2.id, group, sig, timestamp },
       json: true
     });
     resp1.status.should.equal(204);
     const resp2 = request.put(`${baseUrl}/membership`, {
-      body: { publicKey: u2.publicKey, group, sig, timestamp },
+      body: { id: u2.id, group, sig, timestamp },
       json: true
     });
     resp2.status.should.equal(403);
@@ -127,18 +130,18 @@ describe('replay attack on add/remove connections/membership/groups', function (
 
   it('should be able to call DELETE /membership twice with same parameters', function () {
     const timestamp = Date.now();
-    const group = db.userNewGroups(u1.safePublicKey)[0].id;
-    const message = u2.publicKey + group + timestamp;
+    const group = db.userNewGroups(u1.id)[0].id;
+    const message = u2.id + group + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     const resp1 = request.delete(`${baseUrl}/membership`, {
-      body: { publicKey: u2.publicKey, group, sig, timestamp },
+      body: { id: u2.id, group, sig, timestamp },
       json: true
     });
     resp1.status.should.equal(204);
     const resp2 = request.delete(`${baseUrl}/membership`, {
-      body: { publicKey: u2.publicKey, group, sig, timestamp },
+      body: { id: u2.id, group, sig, timestamp },
       json: true
     });
     resp2.status.should.equal(403);
@@ -146,20 +149,20 @@ describe('replay attack on add/remove connections/membership/groups', function (
   
   it('should not be able to call DELETE /groups twice with same parameters', function () {
     const timestamp = Date.now();
-    const group = db.userNewGroups(u1.safePublicKey)[0].id;
-    const message = u1.publicKey + group + timestamp;
+    const group = db.userNewGroups(u1.id)[0].id;
+    const message = u1.id + group + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     const resp1 = request.delete(`${baseUrl}/groups`, {
-      body: { publicKey: u1.publicKey, group: group, sig, timestamp },
+      body: { id: u1.id, group: group, sig, timestamp },
       json: true
     });
     resp1.status.should.equal(204);
     const resp2 = request.delete(`${baseUrl}/groups`, {
-      body: { publicKey: u1.publicKey, group: group, sig, timestamp },
+      body: { id: u1.id, group: group, sig, timestamp },
       json: true
     });
     resp2.status.should.equal(403);
-  });  
+  });
 });
