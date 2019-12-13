@@ -2,17 +2,26 @@
 const createRouter = require('@arangodb/foxx/router');
 const joi = require('joi');
 const nacl = require('tweetnacl');
-
+const crypto = require('@arangodb/crypto')
 const db = require('./db');
 const arango = require('@arangodb').db;
-const enc = require('./encoding');
 
-const strToUint8Array = enc.strToUint8Array;
-const b64ToUint8Array = enc.b64ToUint8Array;
-const b64ToUrlSafeB64 = enc.b64ToUrlSafeB64;
+
+const {
+  strToUint8Array,
+  b64ToUint8Array,
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64
+} = require('./encoding');
 
 const router = createRouter();
 module.context.use(router);
+
+function hash(data) {
+  const h = crypto.sha256(data);
+  const b = Buffer.from(h, 'hex').toString('base64');
+  return b64ToUrlSafeB64(b);
+}
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
@@ -68,6 +77,7 @@ schemas = Object.assign({
     id2: joi.string().required().description('id of the second user'),
     sig1: joi.string().required()
       .description('message (id1 + id2 + timestamp) signed by the user represented by id1'),
+    
     timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
@@ -149,6 +159,7 @@ schemas = Object.assign({
     context: joi.string().required().description('the context of the id (typically an application)'),
     userid: joi.string().required().description('an id used by the app consuming the verification'),
     sig: joi.string().required().description('message (context + "," + userid + "," + timestamp) signed by the user represented by id'),
+    sponsorshipSig: joi.string().description('message (context + "," + id + "," + timestamp) signed by a context that wants to sponsor this user'),
     timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
   }),
 
@@ -181,6 +192,12 @@ schemas = Object.assign({
 
   contextsGetResponse: joi.object({
     data: schemas.context
+  }),
+
+  verificationGetResponse: joi.object({
+    data: joi.object({
+      timestamp: schemas.timestamp.description('milliseconds since epoch since the last verification')
+    })
   }),
 
   trustedPutBody: joi.object({
@@ -222,11 +239,18 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
+    
     const message = id1 + id2 + timestamp;
     const e = " wasn't id1 + id2 + timestamp signed by the user represented by ";
     verify(message, id1, req.body.sig1, res, "sig1" + e + "id1");
     verify(message, id2, req.body.sig2, res, "sig2" + e + "id2");
+
+    const operationHash = hash('Add Connection' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     db.addConnection(id1, id2, timestamp);
+    db.addOperation(operationHash, 'Add Connection', timestamp, req.body);
   },
 
   connectionsDelete: function connectionsDeleteHandler(req, res){
@@ -236,10 +260,17 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
+
     const message = id1 + id2 + timestamp;
     const e = "sig1 wasn't id1 + id2 + timestamp signed by the user represented by id1";
     verify(message, id1, req.body.sig1, res, e);
+
+    const operationHash = hash('Remove Connection' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     db.removeConnection(id1, id2, timestamp);
+    db.addOperation(operationHash, 'Remove Connection', timestamp, req.body);
   },
 
   membershipGet: function membershipGetHandler(req, res){
@@ -264,8 +295,13 @@ const handlers = {
     const e = "sig wasn't id + group + timestamp signed by the user represented by id";
     verify(message, id, req.body.sig, res, e);
 
+    const operationHash = hash('Add Membership' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       db.addMembership(group, id, timestamp);
+      db.addOperation(operationHash, 'Add Membership', timestamp, req.body);
     } catch (e) {
       res.throw(403, e);
     }
@@ -279,13 +315,17 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    
     const message = id + group + timestamp;
     const e = "sig wasn't id + group + timestamp signed by the user represented by id";
     verify(message, id, req.body.sig, res, e);
 
+    const operationHash = hash('Delete Membership' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       db.deleteMembership(group, id, timestamp);
+      db.addOperation(operationHash, 'Delete Membership', timestamp, req.body);
     } catch (e) {
       res.throw(403, e);
     }
@@ -300,14 +340,17 @@ const handlers = {
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
     }
-    
     const message = id1 + id2 + id3 + timestamp;
     const e = "sig1 wasn't id1 + id2 + id3 + timestamp signed by the user represented by id1";
     verify(message, id1, req.body.sig1, res, e);
-    
+
+    const operationHash = hash('Create Group' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       const group = db.createGroup(id1, id2, id3, timestamp);
-
+      db.addOperation(operationHash, 'Create Group', timestamp, req.body);
       const newGroup = {
         data: {
           id: group._key,
@@ -332,9 +375,14 @@ const handlers = {
     const message = id + group + timestamp;
     const e = "sig wasn't id + group + timestamp signed by the user represented by id";
     verify(message, id, req.body.sig, res, e);
-    
+
+    const operationHash = hash('Delete Group' + message);
+    if (db.isOperationApplied(operationHash)) {
+      res.throw(403, "operation is applied before");
+    }
     try {
       db.deleteGroup(group, id, timestamp);
+      db.addOperation(operationHash, 'Delete Group', timestamp, req.body);
     } catch (e) {
       res.throw(403, e);
     }
@@ -388,7 +436,7 @@ const handlers = {
   },
 
   fetchVerification: function fetchVerification(req, res){
-    const { id, context, sig, userid, timestamp: userTimestamp } = req.body;
+    const { id, context, sig, userid, timestamp: userTimestamp, sponsorshipSig } = req.body;
 
     const serverTimestamp = Date.now();
 
@@ -409,17 +457,46 @@ const handlers = {
     const e = "sig wasn't context + \",\" + userid + \",\" + timestamp signed by the user represented by id";
     verify(message, id, sig, res, e);
 
-    const { verification, collection } = db.getContext(context);
+    const {
+      verification,
+      collection,
+      unusedSponsorships,
+      signingKey: contextKey,
+    } = db.getContext(context);
 
     const coll = arango._collection(collection);
-
-    if (db.latestTimestampForContext(coll, id) > userTimestamp) {
+    if (db.latestVerificationByUser(coll, id) > userTimestamp) {
       res.throw(400, "there was an existing mapped account with a more recent timestamp");
     }
 
-    // check that the user has this verification
+    // sponsor user if it's not sponsored but is verified.
 
-    if (! db.userHasVerification(verification, id)) {
+    const isVerified = db.userHasVerification(verification, id);
+    
+    if (! db.isSponsored(id)) {
+      if (! sponsorshipSig) {
+        res.throw(403, "user is not sponsored");
+      }
+      if (unusedSponsorships < 1) {
+        res.throw(403, "context does not have unused sponsorships");
+      }
+      try {
+        if (! nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sponsorshipSig), b64ToUint8Array(contextKey))) {
+          res.throw(403, "sig wasn't context + \",\" + userid + \",\" + timestamp signed by the signingKey of the context");
+        }
+      } catch (e) {
+        res.throw(403, e);
+      }
+      if (isVerified) {
+        db.sponsor(id, context);  
+      }
+    }
+
+    // Verification should be checked after sponsorship.
+    // Otherwise apps can rely on sponsorship error,
+    // as the proof that user is verified but not sponsored.
+
+    if (! isVerified) {
       res.throw(400, "user doesn't have the verification for the context")
     }
 
@@ -435,7 +512,7 @@ const handlers = {
 
     const verificationMessage = context + ',' + userid + ',' + serverTimestamp + revocableIds.length ? ',' : '' + revocableIds.join(',');
 
-    const verificationSig = nacl.sign.detached(message, b64ToUint8Array(nodePrivateKey));
+    const verificationSig = nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(nodePrivateKey));
 
     res.send({
       data: {
@@ -584,6 +661,21 @@ const handlers = {
     
     db.setSigningKey(signingKey, id, timestamp);
   },
+
+  verification: function verification(req, res){
+    const context = req.param('context');
+    const userid = req.param('userid');
+    const timestamp = db.latestVerificationById(context, userid);
+    if (timestamp > 0){
+      res.send({
+        "data": {
+          timestamp
+        }
+      });
+    } else {
+      res.throw(404, 'Verification not found');
+    }
+  },
 };
 
 router.put('/connections/', handlers.connectionsPut)
@@ -664,6 +756,13 @@ router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
+
+router.get('/verification/:context/:userid', handlers.verification)
+  .pathParam('context', joi.string().required().description('the context of the id (typically an application)'))
+  .pathParam('userid', joi.string().required().description('an id used by the app represented by the context'))
+  .summary('Check whether an id is verified under a context')
+  .description('Returns the timestamp when the id was last verified.')
+  .response(schemas.verificationGetResponse);
 
 router.put('/trusted', handlers.trustedPut)
   .body(schemas.trustedPutBody.required())

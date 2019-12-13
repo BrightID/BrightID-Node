@@ -15,42 +15,36 @@ const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
 const recoveryColl = db._collection('recovery');
+const sponsorshipsColl = db._collection('sponsorships');
+const operationsColl = db._collection('operations');
+const operationsHashesColl = db._collection('operationsHashes');
+
+operationsColl.ensureIndex({ type: "skiplist", fields: [ "timestamp" ], sparse: false, unique: false } );
 
 const safe = require('./encoding').b64ToUrlSafeB64;
 
-function allEdges(collection, user1, user2){
-  return query`
-    for i in ${collection}
-      filter (i._from == ${user1} && i._to == ${user2})
-      || (i._from == ${user2} && i._to == ${user1})
-    sort i.timestamp desc
-    return { "key": i._key, "timestamp": i.timestamp }
-  `.toArray();
-}
-
-function removeByKeys(collection, keys){
+function removeConnection(key1, key2, timestamp){
+  const user1 = 'users/' + key1;
+  const user2 = 'users/' + key2;
   query`
-    for i in ${collection}
-      filter i._key in ${keys}
-      remove i in ${collection}
+    for c in ${connectionsColl}
+      filter (c._from == ${user1} && c._to == ${user2})
+      || (c._from == ${user2} && c._to == ${user1})
+      remove c in ${connectionsColl}
   `;
 }
 
-// function userConnections(user) {
-//   user = "users/" + user;
-//   const cons = query`
-//     for i in ${connectionsColl}
-//       filter (i._from == ${user} || i._to == ${user})
-//     sort i.timestamp desc
-//     return DISTINCT i
-//   `).toArray().map(function (u) {
-//     if (u._from == user) {
-//       return u._to.replace("users/", "");
-//     }
-//     return u._from.replace("users/", "");
-//   });
-//   return [...new Set(cons)];
-// }
+function addConnection(key1, key2, timestamp){
+  const user1 = 'users/' + key1;
+  const user2 = 'users/' + key2;
+  query`
+    insert {
+      _from: ${user1},
+      _to: ${user2},
+      timestamp: ${timestamp}
+    } in ${connectionsColl}
+  `;
+}
 
 function userConnectionsRaw(user){
   user = "users/" + user;
@@ -227,32 +221,6 @@ function updateEligibleTimestamp(key, timestamp){
   `;
 }
 
-function updateAndCleanConnections(collection, key1, key2, timestamp){
-  const user1 = 'users/' + key1;
-  const user2 = 'users/' + key2;
-
-  const added = allEdges(connectionsColl, user1, user2);
-  const removed = allEdges(removedColl, user1, user2);
-
-  // if this operation is newer than existing operations of either type
-  if ((! added || ! added.length || timestamp > added[0].timestamp)
-    && (! removed || ! removed.length || timestamp > removed[0].timestamp)) {
-    query`
-      insert {
-        _from: ${user1},
-        _to: ${user2},
-        timestamp: ${timestamp}
-      } in ${collection}
-    `;
-    // remove any operation of either type older than the new one
-    if (added && added.length) {
-      removeByKeys(connectionsColl, added.map(entry => entry.key));
-    }
-    if (removed && removed.length) {
-      removeByKeys(removedColl, removed.map(entry => entry.key));
-    }
-  }
-}
 
 function createUser(key, signingKey){
   // already exists?
@@ -437,48 +405,86 @@ function deleteMembership(groupId, key, timestamp){
   `;
 }
 
-function addConnection(key1, key2, timestamp){
-  updateAndCleanConnections(connectionsColl, key1, key2, timestamp);
-}
-
-function removeConnection(key1, key2, timestamp){
-  updateAndCleanConnections(removedColl, key1, key2, timestamp);
-}
-
 function getContext(context){
-  return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
+  const res = query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
+  context = 'contexts/' + context;
+  const usedSponsorships = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == ${context}
+      RETURN s
+  `.count();
+  res['unusedSponsorships'] = res['totalSponsorships'] - usedSponsorships;
+  return res;
 }
 
-function latestTimestampForContext(collection, key){
+function isSponsored(key){
   return query`
-    FOR u in ${collection}
-      FILTER u.user == ${key}
-      SORT u.timestamp DESC
-      LIMIT 1
-      RETURN u.timestamp
-  `.toArray()[0];
-}
-
-function userHasVerification(verification, key){
-  return query`
-    FOR u IN users
-      FILTER u._key == ${key}
-      FILTER ${verification} in u.verifications
+    FOR s in ${sponsorshipsColl}
+      FILTER s._from == ${'users/' + key}
       LIMIT 1
       RETURN 1
   `.count() > 0;
 }
 
-function addId(collection, id, key, timestamp){
+function sponsor(key, context){
+  key = 'users/' + key;
+  context = 'contexts/' + context;
   query`
-    upsert { user: ${key} , account: ${id} }
-    insert { user: ${key} , account: ${id}, timestamp: ${timestamp} }
+    INSERT {
+      _from: ${key},
+      _to: ${context}
+    } in ${sponsorshipsColl}
+  `;
+}
+
+function latestVerificationByUser(collection, user){
+  return query`
+    FOR m in ${collection}
+      FILTER m.user == ${user}
+      SORT m.timestamp DESC
+      LIMIT 1
+      RETURN m.timestamp
+  `.toArray()[0];
+}
+
+function latestVerificationById(context, id){
+  const collName = query`
+    FOR c in ${contextsColl}
+        FILTER c._key == ${context}
+        LIMIT 1
+        RETURN c.collection
+  `.toArray()[0];
+  if(!collName){
+    return;
+  }
+  const q = `
+    FOR m in @@coll
+      FILTER m.account == @id
+      SORT m.timestamp DESC
+      LIMIT 1
+      RETURN m.timestamp
+  `;
+  return db._query(q, {
+    "@coll": collName,
+    id,
+  }).toArray()[0];
+}
+
+function userHasVerification(verification, user){
+  const u = loadUser(user);
+  return u && u.verifications && u.verifications.indexOf(verification) > -1;
+}
+
+function addId(collection, id, user, timestamp){
+  query`
+    upsert { user: ${user} , account: ${id} }
+    insert { user: ${user} , account: ${id}, timestamp: ${timestamp} }
     update { timestamp: ${timestamp} } in ${collection}
   `;
 }
 
-function revocableIds(collection, id, key){
-  // Any user can link their BrightID key to an account id under a context without proving ownership of that account.
+function revocableIds(collection, id, user){
+  // Any user can link their BrightID to an account id under a context without proving ownership of that account.
   // In this way, only a BrightID node (and not an application) has mappings of BrightIDs to application account ids.
   // Applications can see whether a user with a certain account id is verified.
   // A user can't block another user from using an id; two or more users can link to the same id.
@@ -492,7 +498,7 @@ function revocableIds(collection, id, key){
   return query`
     FOR u in ${collection}
     filter u.account != ${id}
-    filter u.user == ${key}
+    filter u.user == ${user}
       
     LET inUse = (
         FOR u2 in ${collection}
@@ -529,6 +535,26 @@ function setSigningKey(signingKey, key, timestamp){
   `;
 }
 
+function addOperation(hash, name, timestamp, data) {
+  query`
+    insert {
+      _key: ${hash},
+      name: ${name},
+      timestamp: ${timestamp},
+      data: ${data}
+    } in ${operationsColl}
+  `;
+  query`
+    insert {
+      _key: ${hash}
+    } in ${operationsHashesColl}
+  `;
+}
+
+function isOperationApplied(hash) {
+  return operationsHashesColl.exists(hash);
+}
+
 module.exports = {
   addConnection,
   removeConnection,
@@ -549,11 +575,15 @@ module.exports = {
   userScore,
   loadUsers,
   getContext,
-  latestTimestampForContext,
+  latestVerificationByUser,
+  latestVerificationById,
   userHasVerification,
   addId,
   revocableIds,
+  isSponsored,
+  sponsor,
+  addOperation,
+  isOperationApplied,
   setTrusted,
   setSigningKey
 };
-
