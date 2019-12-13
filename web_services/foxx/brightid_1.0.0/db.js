@@ -14,6 +14,7 @@ const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
+const recoveryColl = db._collection('recovery');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
 const operationsHashesColl = db._collection('operationsHashes');
@@ -69,10 +70,10 @@ function userConnections(user){
 function loadUsers(users){
   return query`
       FOR u in ${usersColl}
-        FILTER u._id in ${users}
+        FILTER u._key in ${users}
           RETURN {
-              key: u._id,
-              score: u.score
+            id: u._key,
+            score: u.score
           }
   `.toArray();
 }
@@ -142,6 +143,7 @@ function userEligibleGroups(userId, connections, currentGroups = []){
 
 function userNewGroups(userId, connections){
   const user = "users/" + userId;
+  // FIXME: why connections and userId is being passed here to groupToDic?
   return query`
       FOR g in ${newGroupsColl}
         FILTER ${user} in g.founders
@@ -220,24 +222,25 @@ function updateEligibleTimestamp(key, timestamp){
 }
 
 
-function createUser(key){
+function createUser(key, signingKey){
   // already exists?
   const user = loadUser(key);
 
   if (user) {
     return {
-      key: currents[0]._key,
-      score: currents[0].score || 0
+      id: user._key,
+      score: user.score || 0
     };
   }
 
   const ret = usersColl.save({
     score: 0,
+    signingKey: signingKey,
     _key: key
   });
 
   return {
-    key: ret._key,
+    id: ret._key,
     score: 0
   };
 }
@@ -520,6 +523,18 @@ function revocableIds(collection, id, user){
   `.toArray();
 }
 
+function setTrusted(trusted, key, timestamp){
+  query`
+    UPDATE ${key} WITH {trusted: ${trusted}, updateTime: ${timestamp}} in users
+  `;
+}
+
+function setSigningKey(signingKey, key, timestamp){
+  query`
+    UPDATE ${key} WITH {signingKey: ${signingKey}, updateTime: ${timestamp}} in users
+  `;
+}
+
 function addOperation(hash, name, timestamp, data) {
   query`
     insert {
@@ -568,5 +583,7 @@ module.exports = {
   isSponsored,
   sponsor,
   addOperation,
-  isOperationApplied
+  isOperationApplied,
+  setTrusted,
+  setSigningKey
 };
