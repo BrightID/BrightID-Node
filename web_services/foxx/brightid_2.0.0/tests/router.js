@@ -20,7 +20,6 @@ const newGroupsColl = arango._collection('newGroups');
 const usersInGroupsColl = arango._collection('usersInGroups');
 const usersInNewGroupsColl = arango._collection('usersInNewGroups');
 const usersColl = arango._collection('users');
-const recoveryColl = arango._collection('recovery');
 
 const chai = require('chai');
 const should = chai.should();
