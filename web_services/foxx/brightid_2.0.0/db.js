@@ -14,7 +14,6 @@ const usersInGroupsColl = db._collection('usersInGroups');
 const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
-const recoveryColl = db._collection('recovery');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
 const operationsHashesColl = db._collection('operationsHashes');
