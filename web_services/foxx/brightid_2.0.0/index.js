@@ -627,7 +627,7 @@ const handlers = {
       res.throw(404, "User not found");
     }
     if (user.updateTime && user.updateTime > timestamp) {
-      res.throw(400, "another update with bigger timestamp submitted before")
+      res.throw(400, "another update with bigger timestamp submitted before");
     }
     
     // This part is only used by new version of mobile code to initialize signingKey
@@ -643,7 +643,7 @@ const handlers = {
         sigs[0].id == sigs[1].id ||
         !user.trusted.includes(sigs[0].id) ||
         !user.trusted.includes(sigs[1].id)) {
-      res.throw(403, "request should be signed by 2 different trusted connections")
+      res.throw(403, "request should be signed by 2 different trusted connections");
     }
 
     const message = id + signingKey + timestamp;
@@ -653,7 +653,7 @@ const handlers = {
       try {
         verify(message, sig.id, sig.sig, res, e);
         counter += 1;
-      } catch {}
+      } catch (e) {}
     }
     if (counter < 2) {
       res.throw(403, e);
