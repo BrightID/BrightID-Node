@@ -1,0 +1,2 @@
+*/5 * * * * root bash -c "cd /code; python3 -u update.py >> /var/log/cron.log 2>&1"
+#
