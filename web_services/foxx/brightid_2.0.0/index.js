@@ -512,7 +512,7 @@ const handlers = {
 
     const verificationMessage = context + ',' + userid + ',' + serverTimestamp + revocableIds.length ? ',' : '' + revocableIds.join(',');
 
-    const verificationSig = nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(nodePrivateKey));
+    const verificationSig = nacl.sign.detached(strToUint8Array(verificationMessage), b64ToUint8Array(nodePrivateKey));
 
     res.send({
       data: {
