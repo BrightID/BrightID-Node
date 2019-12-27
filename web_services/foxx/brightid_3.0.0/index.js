@@ -9,20 +9,22 @@ const operations = require('./operations');
 const router = createRouter();
 module.context.use(router);
 const handlers = {
-  addOperation: function membershipGetHandler(req, res){
+  addOperation: function(req, res){
     const op = req.body;
     try {
       operations.verify(op);
     } catch (e) {
       res.throw(400, e);
     }
-    op['state'] = 'init'
+    if (op.name == 'Verify Account') {
+      operations.encrypt(op);  
+    }
+    op.state = 'init'
     db.upsertOperation(op);
   },
 
-  applyOperation: function applyOperation(req, res){
-    const consensusAPIKey =
-      ((module.context && module.context.configuration && module.context.configuration.consensusAPIKey) || '');
+  applyOperation: function(req, res){
+    const consensusAPIKey = ((module.context && module.context.configuration && module.context.configuration.consensusAPIKey) || '');
     if (!consensusAPIKey) {
       res.throw(500, 'Server node consensus api key not configured');
     }
@@ -30,17 +32,20 @@ const handlers = {
       res.throw(403, 'invalid consensus api key');
     }
     const op = req.body;
+    if (op.name == 'Verify Account') {
+      operations.decrypt(op);
+    }
     try {
       operations.verify(op);
-      op['result'] = operations.apply(op);
-      op['state'] = 'applied'
-
+      op.result = operations.apply(op);
+      op.state = 'applied';
     } catch (e) {
-      console.log(e);
-      op['state'] = 'failed';
-      op['result'] = e;
+      op.state = 'failed';
+      op.result = e + (e.stack ? '\n' + e.stack : '');
     }
-
+    if (op.name == 'Verify Account') {
+      operations.encrypt(op);
+    }
     db.upsertOperation(op);
     res.send({'success': true});
   },
@@ -150,7 +155,22 @@ const handlers = {
         "data": context,
       });
     }
-  }
+  },
+
+  verification: function verification(req, res){
+    const context = req.param('context');
+    const account = req.param('account');
+    const timestamp = db.latestVerificationByAccount(context, account);
+    if (timestamp > 0){
+      res.send({
+        "data": {
+          timestamp
+        }
+      });
+    } else {
+      res.throw(404, 'Verification not found');
+    }
+  },
 };
 
 // get requests will return results instantly
@@ -167,7 +187,7 @@ router.post('/applyOperation/', handlers.applyOperation)
   .description("Apply operation after consensus.")
   .response(null);
 
-router.post('/fetchUserInfo/', handlers.fetchUserInfo)
+router.get('/fetchUserInfo/', handlers.fetchUserInfo)
   .body(schemas.fetchUserInfoPostBody.required())
   .summary('Get information about a user')
   .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")

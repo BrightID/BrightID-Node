@@ -34,72 +34,9 @@ schemas = Object.assign({
 // extend lower-level schemas with higher-level schemas
 schemas = Object.assign({
 
-  applyOperationPostBody: joi.object(),
-
-  addOperationPostBody: joi.object({
-    op: joi.string().required().description('json serialized version of the operation that should be applied after consensus')
-  }),
-
-  connectionsPutBody: joi.object({
-    id1: joi.string().required().description('id of the first user'),
-    id2: joi.string().required().description('id of the second user'),
-    sig1: joi.string().required()
-      .description('message (id1 + id2 + timestamp) signed by the user represented by id1'),
-    sig2: joi.string().required()
-      .description('message (id1 + id2 + timestamp) signed by the user represented by id2'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the connection occurred')
-  }),
-
-  connectionsDeleteBody: joi.object({
-    id1: joi.string().required().description('id of the user removing the connection'),
-    id2: joi.string().required().description('id of the second user'),
-    sig1: joi.string().required()
-      .description('message (id1 + id2 + timestamp) signed by the user represented by id1'),
-    
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
-  }),
-
   membershipGetResponse: joi.object({
     // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
     data: joi.array().items(joi.string()).description('ids of all members of the group')
-  }),
-
-  membershipPutBody: joi.object({
-    id: joi.string().required().description('id of the user joining the group'),
-    group: joi.string().required().description('group id'),
-    sig: joi.string().required()
-      .description('message (id + group + timestamp) signed by the user represented by id'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the join was requested')
-  }),
-
-  membershipDeleteBody: joi.object({
-    id: joi.string().required().description('id of the user leaving the group'),
-    group: joi.string().required().description('group id'),
-    sig: joi.string().required()
-      .description('message (id + group + timestamp) signed by the user represented by id'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
-  }),
-
-  groupsPostBody: joi.object({
-    id1: joi.string().required().description('id of the first founder'),
-    id2: joi.string().required().description('id of the second founder'),
-    id3: joi.string().required().description('id of the third founder'),
-    sig1: joi.string().required()
-      .description('message (id1 + id2 + id3 + timestamp) signed by the user represented by id1'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the group creation was requested')
-  }),
-
-  groupsPostResponse: joi.object({
-    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
-    data: schemas.group
-  }),
-
-  groupsDeleteBody: joi.object({
-    id: joi.string().required().description('id of the user deleting the group'),
-    group: joi.string().required().description('group id'),
-    sig: joi.string().required()
-      .description('message (id + group + timestamp) signed by the user represented by id'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
   }),
 
   fetchUserInfoPostBody: joi.object({
@@ -178,26 +115,6 @@ schemas = Object.assign({
     })
   }),
 
-  trustedPutBody: joi.object({
-    id: joi.string().required().description('id of the user'),
-    trusted: joi.array().items(joi.string())
-      .required().description('list of at least 3 ids that belongs to trusted connections of the user'),
-    sig: joi.string().required()
-      .description('message (id + trusted + timestamp) signed by the user represented by id'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when update is requested')
-  }),
-
-  signingKeyPutBody: joi.object({
-    id: joi.string().required().description('id of the user'),
-    signingKey: joi.string().required().description('new signing key for the user'),
-    sigs: joi.array().items(
-      joi.object({
-        id: joi.string(),
-        sig: joi.string()
-      })
-    ).description('list of signatures by two of trusted connections on message (id + signingKey + timestamp)'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when update is requested')
-  }),
 
 }, schemas);
 

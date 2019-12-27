@@ -1,6 +1,6 @@
 'use strict';
 
-const randomBytes = require('@arangodb/crypto').genRandomBytes;
+const { sha256 } = require('@arangodb/crypto');
 
 const { query, db } = require('@arangodb');
 
@@ -20,7 +20,11 @@ const operationsHashesColl = db._collection('operationsHashes');
 
 operationsColl.ensureIndex({ type: "skiplist", fields: [ "timestamp" ], sparse: false, unique: false } );
 
-const safe = require('./encoding').b64ToUrlSafeB64;
+const {
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64
+} = require('./encoding');
+
 
 function removeConnection(key1, key2, timestamp){
   const user1 = 'users/' + key1;
@@ -270,9 +274,10 @@ function createGroup(key1, key2, key3, timestamp){
     throw "Creator isn't connected to one or both of the co-founders";
   }
 
-  const groupId = safe(randomBytes(9).toString('base64'));
+  let groupId = sha256([key1, key2, key3].sort().join(','));
+  groupId = b64ToUrlSafeB64(uInt8ArrayToB64(groupId));
 
-  const ret = newGroupsColl.save({
+  newGroupsColl.save({
     _key: groupId,
     score: 0,
     isNew: true,
@@ -281,9 +286,7 @@ function createGroup(key1, key2, key3, timestamp){
   });
 
   // Add the creator to the group now. The other two "co-founders" have to join using /membership
-  addUserToGroup(usersInNewGroupsColl, ret._key, key1, timestamp, "newGroups");
-
-  return ret;
+  addUserToGroup(usersInNewGroupsColl, groupId, key1, timestamp, "newGroups");
 }
 
 function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
@@ -405,67 +408,20 @@ function deleteMembership(groupId, key, timestamp){
 }
 
 function getContext(context){
-  const res = query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
-  context = 'contexts/' + context;
-  const usedSponsorships = query`
-    FOR s in ${sponsorshipsColl}
-      FILTER s._to == ${context}
-      RETURN s
-  `.count();
-  res['unusedSponsorships'] = res['totalSponsorships'] - usedSponsorships;
-  return res;
+  return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
 }
 
-function isSponsored(key){
-  return query`
-    FOR s in ${sponsorshipsColl}
-      FILTER s._from == ${'users/' + key}
-      LIMIT 1
-      RETURN 1
-  `.count() > 0;
-}
-
-function sponsor(key, context){
-  key = 'users/' + key;
-  context = 'contexts/' + context;
-  query`
-    INSERT {
-      _from: ${key},
-      _to: ${context}
-    } in ${sponsorshipsColl}
-  `;
-}
-
-function latestVerificationByUser(collection, user){
-  return query`
-    FOR m in ${collection}
-      FILTER m.user == ${user}
-      SORT m.timestamp DESC
-      LIMIT 1
-      RETURN m.timestamp
-  `.toArray()[0];
-}
-
-function latestVerificationById(context, id){
-  const collName = query`
-    FOR c in ${contextsColl}
-        FILTER c._key == ${context}
-        LIMIT 1
-        RETURN c.collection
-  `.toArray()[0];
-  if(!collName){
-    return;
-  }
+function latestVerificationByAccount(context, account){
   const q = `
     FOR m in @@coll
-      FILTER m.account == @id
+      FILTER m.account == @account
       SORT m.timestamp DESC
       LIMIT 1
       RETURN m.timestamp
   `;
   return db._query(q, {
-    "@coll": collName,
-    id,
+    "@coll": getContext(context).collection,
+    account,
   }).toArray()[0];
 }
 
@@ -474,30 +430,42 @@ function userHasVerification(verification, user){
   return u && u.verifications && u.verifications.indexOf(verification) > -1;
 }
 
-function addId(collection, id, user, timestamp){
+function linkAccount(context, id, account, timestamp){
+  let { collection } = getContext(context);
+  collection = db._collection(collection);
+  const latestTimestamp = query`
+    FOR m in ${collection}
+      FILTER m.user == ${id}
+      SORT m.timestamp DESC
+      LIMIT 1
+      RETURN m.timestamp
+  `.toArray()[0];
+  if (latestTimestamp && latestTimestamp > timestamp) {
+    throw "there was an existing linked account with a more recent timestamp";
+  }
   query`
-    upsert { user: ${user} , account: ${id} }
-    insert { user: ${user} , account: ${id}, timestamp: ${timestamp} }
+    upsert { user: ${id} , account: ${account} }
+    insert { user: ${id} , account: ${account}, timestamp: ${timestamp} }
     update { timestamp: ${timestamp} } in ${collection}
   `;
 }
 
-function revocableIds(collection, id, user){
+function revocableAccounts(collection, account, id){
   // Any user can link their BrightID to an account id under a context without proving ownership of that account.
   // In this way, only a BrightID node (and not an application) has mappings of BrightIDs to application account ids.
-  // Applications can see whether a user with a certain account id is verified.
-  // A user can't block another user from using an id; two or more users can link to the same id.
-  // A user can't revoke another user's id; the id isn't revoked until no users are linking to it.
-  // A user can't link to another id without revoking any previous ids.
+  // Applications can see whether a certain account is verified.
+  // A user can't block another user from using an account; two or more users can link to the same account.
+  // A user can't revoke another user's account; the account isn't revoked until no users are linking to it.
+  // A user can't link to another account without revoking any previous accounts.
   // A verification always has all past revocations attached to it.
-  // Revocable ids must remain in the DB forever to ensure that the issuing application is aware of all revocations.
-  // The latest id (by timestamp) for each user in a context is the only one that's in use.
-  // Any id not in use by any user is revocable. The actual revocation is done by the issuing application.
+  // Revocable accounts must remain in the DB forever to ensure that the issuing application is aware of all revocations.
+  // The latest account (by timestamp) for each user in a context is the only one that's in use.
+  // Any account not in use by any user is revocable. The actual revocation is done by the issuing application.
 
   return query`
     FOR u in ${collection}
-    filter u.account != ${id}
-    filter u.user == ${user}
+    filter u.account != ${account}
+    filter u.user == ${id}
       
     LET inUse = (
         FOR u2 in ${collection}
@@ -523,7 +491,7 @@ function revocableIds(collection, id, user){
 }
 
 function setTrusted(trusted, key, timestamp){
-  const user = db.loadUser(key);
+  const user = loadUser(key);
   if (user.trusted) {
     // TODO: users should be able to update their trusted connections
     // by providing sigs of 2 trusted connections approving that
@@ -536,7 +504,7 @@ function setTrusted(trusted, key, timestamp){
 }
 
 function setSigningKey(signingKey, key, signers, timestamp){
-  const user = db.loadUser(key);
+  const user = loadUser(key);
   if (signers[0] == signers[1] ||
       !user.trusted.includes(signers[0]) ||
       !user.trusted.includes(signers[1])) {
@@ -545,6 +513,54 @@ function setSigningKey(signingKey, key, signers, timestamp){
   query`
     UPDATE ${key} WITH {signingKey: ${signingKey}, updateTime: ${timestamp}} in users
   `;
+}
+
+function verifyAccount(id, account, context, timestamp, sponsorshipSig){
+  // check if user is sponsored before having verification
+  // to not allow apps using sponsorship error as a proof that user is verified
+  if (!isSponsored(id)) {
+    if (!sponsorshipSig) {
+      throw 'user is not sponsored';
+    }
+    if (unusedSponsorship(context) < 1) {
+      throw "context does not have unused sponsorships";
+    }
+  }
+
+  const { verification } = getContext(context);
+  if (!userHasVerification(verification, id)) {
+    throw 'user can not be verified for this context';
+  }
+
+  // call sponsor after checking if user has verification to not waste
+  // sponsorships of the context for fake users
+  if (!isSponsored(id) && sponsorshipSig) {
+    sponsor(id, context);
+  }
+
+  // update the account and timestamp and mark it as current in the db
+  linkAccount(context, id, account, timestamp);
+}
+
+function isSponsored(key){
+  return sponsorshipsColl.firstExample({ '_from': key })!=null;
+}
+
+function unusedSponsorship(context){
+  const usedSponsorships = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == ${'contexts/' + context}
+      RETURN s
+  `.count();
+  const { totalSponsorships } = getContext(context);
+  return totalSponsorships - usedSponsorships;
+}
+
+function sponsor(key, context){
+  sponsorshipsColl.save({
+    _from: 'users/' + key,
+    _to: 'contexts/' + context
+  });
 }
 
 function upsertOperation(op) {
@@ -579,15 +595,12 @@ module.exports = {
   userScore,
   loadUsers,
   getContext,
-  latestVerificationByUser,
-  latestVerificationById,
   userHasVerification,
-  addId,
-  revocableIds,
-  isSponsored,
-  sponsor,
+  latestVerificationByAccount,
+  verifyAccount,
+  revocableAccounts,
   upsertOperation,
   isOperationApplied,
   setTrusted,
-  setSigningKey
+  setSigningKey,
 };

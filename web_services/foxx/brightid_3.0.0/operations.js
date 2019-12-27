@@ -1,5 +1,6 @@
 const db = require('./db');
 const crypto = require('@arangodb/crypto')
+var CryptoJS = require("crypto-js");
 const nacl = require('tweetnacl');
 const {
   strToUint8Array,
@@ -39,6 +40,7 @@ const operationsData = {
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
   'Set Trusted Connections': {'attrs': ['id1', 'id2', 'sig1', 'sig2']},
   'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
+  'Verify Account': {'attrs': ['id', 'account', 'context', 'sig', 'sponsorshipSig']},
 };
 
 const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
@@ -46,9 +48,6 @@ const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
 function verify(op) {
   if (op.timestamp > Date.now() + TIME_FUDGE) {
     throw "timestamp can't be in the future";
-  }
-  if (JSON.stringify(op).length > 1000) {
-    throw "operation size is bigger than limit";
   }
   let message, validAttributes;
   if (op['name'] == 'Add Connection') {
@@ -77,9 +76,13 @@ function verify(op) {
     message = op.name + op.id + op.signingKey + op.timestamp;
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
-  } else if (op['name'] == 'Sponsor') {
-    message = op.name + op.userid + op.context + op.timestamp;
-    verifyContextSig(message, op.context, op.sig);
+  } else if (op['name'] == 'Verify Account') {
+    message = op.name + op.context + op.account + op.timestamp;
+    verifyUserSig(message, op.id, op.sig);
+    if (op.sponsorshipSig) {
+      message = 'Sponsor' + op.context + op.account + op.timestamp;
+      verifyContextSig(message, op.context, op.sponsorshipSig);
+    }
   } else {
     throw "invalid operation";
   }
@@ -114,14 +117,35 @@ function apply(op) {
     return db.setTrusted(op.trusted, op.id, op.timestamp);
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
+  } else if (op['name'] == 'Verify Account') {
+    return db.verifyAccount(op.id, op.account, op.context, op.timestamp, op.sponsorshipSig);
   } else {
     throw "invalid operation";
   }
   // fixme: add operation to operationHashes
 }
 
+function encrypt(op) {
+  const { secretKey } = db.getContext(op.context);
+  const jsonStr = JSON.stringify({ 'id': op.id, 'account': op.account });
+  op.encrypted = CryptoJS.AES.encrypt(jsonStr, secretKey).toString();
+  delete op.id;
+  delete op.account;
+}
+
+function decrypt(op) {
+  const { secretKey } = db.getContext(op.context);
+  const decrypted = CryptoJS.AES.decrypt(op.encrypted, secretKey)
+                      .toString(CryptoJS.enc.Utf8);
+  const json = JSON.parse(decrypted);
+  delete op.encrypted;
+  op.id = json.id;
+  op.account = json.account;
+}
+
 module.exports = {
   verify,
-  apply
+  apply,
+  encrypt,
+  decrypt
 };
-
