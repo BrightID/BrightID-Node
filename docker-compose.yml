@@ -23,7 +23,9 @@ services:
     image: brightid/contexts_updater
 
   db:
-    build: db
+    build:
+      context: ./db
+      dockerfile: Dockerfile.with-backup
     network_mode: host
     image: brightid/db
 
