@@ -19,6 +19,9 @@ function hash(data) {
 
 const verifyUserSig = function(message, id, sig) {
   const user = db.loadUser(id);
+  if (!user) {
+    throw 'invalid id';
+  }
   if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(user.signingKey))) {
     throw 'invalid signature';
   }
@@ -26,6 +29,9 @@ const verifyUserSig = function(message, id, sig) {
 
 const verifyContextSig = function(message, context, sig) {
   context = db.getContext(context);
+  if (!context) {
+    throw 'invalid context';
+  }
   if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(context.signingKey))) {
     throw 'invalid signature';
   }
@@ -38,7 +44,7 @@ const operationsData = {
   'Remove Group': {'attrs': ['id', 'group', 'sig']},
   'Add Membership': {'attrs': ['id', 'group', 'sig']},
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
-  'Set Trusted Connections': {'attrs': ['id1', 'id2', 'sig1', 'sig2']},
+  'Set Trusted Connections': {'attrs': ['id', 'trusted', 'sig']},
   'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
   'Verify Account': {'attrs': ['id', 'account', 'context', 'sig', 'sponsorshipSig']},
 };
@@ -70,7 +76,7 @@ function verify(op) {
     message = op.name + op.id + op.group + op.timestamp;
     verifyUserSig(message, op.id, op.sig);
   } else if (op['name'] == 'Set Trusted Connections') {
-    message = op.name + op.id + op.trusted + op.timestamp;
+    message = op.name + op.id + op.trusted.join(',') + op.timestamp;
     verifyUserSig(message, op.id, op.sig);
   } else if (op['name'] == 'Set Signing Key') {
     message = op.name + op.id + op.signingKey + op.timestamp;
@@ -147,5 +153,6 @@ module.exports = {
   verify,
   apply,
   encrypt,
-  decrypt
+  decrypt,
+  verifyUserSig
 };

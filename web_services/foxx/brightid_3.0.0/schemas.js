@@ -78,11 +78,11 @@ schemas = Object.assign({
     timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
   }),
 
-  fetchVerificationPostResponse: joi.object({
+  signedVerificationGetResponse: joi.object({
     data: joi.object({
       publicKey: joi.string().description("the node's public key."),
-      revocableIds: joi.array().items(joi.string()).description("ids formerly used by this user that can be safely revoked"),
-      sig: joi.string().description('verification message ( context + "," + userid +  "," + timestamp [ + "," + revocableId ... ] ) signed by the node'),
+      revocableAccounts: joi.array().items(joi.string()).description("accounts formerly used by this user that can be safely revoked"),
+      sig: joi.string().description('verification message ( context + "," + account +  "," + timestamp [ + "," + revocableAccounts ... ] ) signed by the node'),
       timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed')
     })
   }),

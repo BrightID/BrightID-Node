@@ -229,23 +229,13 @@ function createUser(key, signingKey){
   // already exists?
   const user = loadUser(key);
 
-  if (user) {
-    return {
-      id: user._key,
-      score: user.score || 0
-    };
+  if (!user) {
+    usersColl.save({
+      score: 0,
+      signingKey: signingKey,
+      _key: key
+    });
   }
-
-  const ret = usersColl.save({
-    score: 0,
-    signingKey: signingKey,
-    _key: key
-  });
-
-  return {
-    id: ret._key,
-    score: 0
-  };
 }
 
 function createGroup(key1, key2, key3, timestamp){
@@ -273,9 +263,9 @@ function createGroup(key1, key2, key3, timestamp){
   if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
     throw "Creator isn't connected to one or both of the co-founders";
   }
-
-  let groupId = sha256([key1, key2, key3].sort().join(','));
-  groupId = b64ToUrlSafeB64(uInt8ArrayToB64(groupId));
+  const h = sha256([key1, key2, key3].sort().join(','));
+  const b = Buffer.from(h, 'hex').toString('base64');
+  const groupId = b64ToUrlSafeB64(b);
 
   newGroupsColl.save({
     _key: groupId,
@@ -411,46 +401,45 @@ function getContext(context){
   return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
 }
 
-function latestVerificationByAccount(context, account){
-  const q = `
-    FOR m in @@coll
-      FILTER m.account == @account
+function latestVerificationByAccount(coll, account){
+  return query`
+    FOR m in ${coll}
+      FILTER m.account == ${account}
       SORT m.timestamp DESC
       LIMIT 1
-      RETURN m.timestamp
-  `;
-  return db._query(q, {
-    "@coll": getContext(context).collection,
-    account,
-  }).toArray()[0];
+      RETURN m
+  `.toArray()[0];
 }
+
+function latestVerificationById(coll, id){
+  return query`
+    FOR m in ${coll}
+      FILTER m.user == ${id}
+      SORT m.timestamp DESC
+      LIMIT 1
+      RETURN m
+  `.toArray()[0];
+}
+
 
 function userHasVerification(verification, user){
   const u = loadUser(user);
   return u && u.verifications && u.verifications.indexOf(verification) > -1;
 }
 
-function linkAccount(context, id, account, timestamp){
-  let { collection } = getContext(context);
-  collection = db._collection(collection);
-  const latestTimestamp = query`
-    FOR m in ${collection}
-      FILTER m.user == ${id}
-      SORT m.timestamp DESC
-      LIMIT 1
-      RETURN m.timestamp
-  `.toArray()[0];
-  if (latestTimestamp && latestTimestamp > timestamp) {
+function linkAccount(coll, id, account, timestamp){
+  const v = latestVerificationById(coll, id);
+  if (v && v.timestamp > timestamp) {
     throw "there was an existing linked account with a more recent timestamp";
   }
   query`
     upsert { user: ${id} , account: ${account} }
     insert { user: ${id} , account: ${account}, timestamp: ${timestamp} }
-    update { timestamp: ${timestamp} } in ${collection}
+    update { timestamp: ${timestamp} } in ${coll}
   `;
 }
 
-function revocableAccounts(collection, account, id){
+function revocableAccounts(coll, account, id){
   // Any user can link their BrightID to an account id under a context without proving ownership of that account.
   // In this way, only a BrightID node (and not an application) has mappings of BrightIDs to application account ids.
   // Applications can see whether a certain account is verified.
@@ -463,17 +452,17 @@ function revocableAccounts(collection, account, id){
   // Any account not in use by any user is revocable. The actual revocation is done by the issuing application.
 
   return query`
-    FOR u in ${collection}
+    FOR u in ${coll}
     filter u.account != ${account}
     filter u.user == ${id}
       
     LET inUse = (
-        FOR u2 in ${collection}
+        FOR u2 in ${coll}
             filter u2.account == u.account
             filter u2.user != u.user
             
             LET latest = (
-                FOR u3 in ${collection}
+                FOR u3 in ${coll}
                     filter u3.user == u2.user
                     SORT u3.timestamp DESC
                     LIMIT 1
@@ -527,7 +516,7 @@ function verifyAccount(id, account, context, timestamp, sponsorshipSig){
     }
   }
 
-  const { verification } = getContext(context);
+  const { verification, collection } = getContext(context);
   if (!userHasVerification(verification, id)) {
     throw 'user can not be verified for this context';
   }
@@ -539,11 +528,12 @@ function verifyAccount(id, account, context, timestamp, sponsorshipSig){
   }
 
   // update the account and timestamp and mark it as current in the db
-  linkAccount(context, id, account, timestamp);
+  const coll = db._collection(collection);
+  linkAccount(coll, id, account, timestamp);
 }
 
 function isSponsored(key){
-  return sponsorshipsColl.firstExample({ '_from': key })!=null;
+  return sponsorshipsColl.firstExample({ '_from': 'users/' + key }) != null;
 }
 
 function unusedSponsorship(context){
@@ -597,6 +587,8 @@ module.exports = {
   getContext,
   userHasVerification,
   latestVerificationByAccount,
+  latestVerificationById,
+  sponsor,
   verifyAccount,
   revocableAccounts,
   upsertOperation,

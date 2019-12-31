@@ -2,9 +2,15 @@
 const createRouter = require('@arangodb/foxx/router');
 const joi = require('joi');
 const arango = require('@arangodb').db;
+const nacl = require('tweetnacl');
 const db = require('./db');
 const schemas = require('./schemas').schemas;
 const operations = require('./operations');
+const {
+  strToUint8Array,
+  b64ToUint8Array,
+  uInt8ArrayToB64
+} = require('./encoding');
 
 const router = createRouter();
 module.context.use(router);
@@ -68,9 +74,9 @@ const handlers = {
       res.throw(400, "timestamp can't be in the future");
     }
 
-    const message = id + timestamp;
+    const message = 'fetchUserInfo' + id + timestamp;
     const e = "sig wasn't id + timestamp signed by the user represented by id";
-    verifyUserSig(message, id, req.body.sig, res, e);
+    operations.verifyUserSig(message, id, req.body.sig, res, e);
 
     const connections = db.userConnections(id);
     const user = db.loadUser(id);
@@ -106,6 +112,51 @@ const handlers = {
       }
     });
   },
+
+  getSignedVerification: function(req, res){
+    const id = req.param('id');
+    const context = req.param('context');
+    const sig = req.header('sig');
+    const message = 'getSignedVerification' + id + context;
+    try {
+      operations.verifyUserSig(message, id, sig);
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    const { collection } = db.getContext(context);
+    const coll = arango._collection(collection);
+    const v = db.latestVerificationById(coll, id);
+    if (!v) {
+      res.throw(403, 'no verified account linked to this id under this context');
+    }
+
+    // find old accounts for this id that aren't currently being used by someone else
+    const revocableAccounts = db.revocableAccounts(coll, v.account, id);
+
+    // sign and return the verification
+    const verificationMessage = context + ',' + v.account + ',' + v.timestamp + (revocableAccounts.length ?  ',' + revocableAccounts.join(',') : '');
+
+    if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
+      res.throw(500, 'Server node key pair not configured')
+    }
+    
+    const nodePublicKey = module.context.configuration.publicKey;
+    const nodePrivateKey = module.context.configuration.privateKey;
+    const verificationSig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(verificationMessage), b64ToUint8Array(nodePrivateKey)))
+    );
+
+    res.send({
+      data: {
+        revocableAccounts,
+        timestamp: v.timestamp,
+        sig: verificationSig,
+        publicKey: nodePublicKey
+      }
+    });
+  },
+
 
   ip: function ip(req, res){
     let ip = module.context && module.context.configuration && module.context.configuration.ip;
@@ -192,6 +243,15 @@ router.get('/fetchUserInfo/', handlers.fetchUserInfo)
   .summary('Get information about a user')
   .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")
   .response(schemas.fetchUserInfoPostResponse);
+
+router.get('/signedVerification/:context/:id', handlers.getSignedVerification)
+  .pathParam('context', joi.string().required().description('the context in which the user should be verified'))
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .header('sig', joi.string().required()
+    .description('message ("getSignedVerification" + id + context) signed by the user represented by id'))
+  .summary('Get a signed verification')
+  .description("Gets a signed verification for the user that is signed by the node")
+  .response(schemas.signedVerificationGetResponse);
 
 router.get('/membership/:groupId', handlers.membershipGet)
   .pathParam('groupId', joi.string().required())
