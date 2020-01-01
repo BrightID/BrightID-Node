@@ -4,15 +4,19 @@ const db = require('../db.js');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
 const request = require("@arangodb/request");
-const crypto = require('@arangodb/crypto')
 const nacl = require('tweetnacl');
 nacl.setPRNG(function(x, n) {
   for (let i = 0; i < n; i++) {
     x[i] = Math.floor(Math.random() * 256);
   }
 });
-const { b64ToUrlSafeB64, uInt8ArrayToB64, strToUint8Array, b64ToUint8Array } = require('../encoding');
-const safe = b64ToUrlSafeB64;
+const {
+  b64ToUrlSafeB64,
+  uInt8ArrayToB64,
+  strToUint8Array,
+  b64ToUint8Array,
+  hash
+} = require('../encoding');
 
 const { baseUrl } = module.context;
 
@@ -41,12 +45,6 @@ const contextSecretKey = 'blyEVelon1mwqKLbjK8ZK1o4GEkIrUJeaNpXTi+YtP6LOuGITpAr7i
 const account = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
 
-function hash(data) {
-  const h = crypto.sha256(data);
-  const b = Buffer.from(h, 'hex').toString('base64');
-  return b64ToUrlSafeB64(b);
-}
-
 function apply(op) {
   const resp1 = request.post(`${baseUrl}/addOperation`, {
     body: op,
@@ -68,7 +66,7 @@ function apply(op) {
 
 describe('operations', function () {
   before(function(){
-    // accountsColl = arango._create(context);
+    accountsColl = arango._create(contextName);
     usersColl.truncate();
     connectionsColl.truncate();
     groupsColl.truncate();
@@ -80,7 +78,7 @@ describe('operations', function () {
     sponsorshipsColl.truncate();
     [u1, u2, u3, u4].map((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
-      u.id = safe(u.signingKey);
+      u.id = b64ToUrlSafeB64(u.signingKey);
       db.createUser(u.id, u.signingKey);
     });
     query`

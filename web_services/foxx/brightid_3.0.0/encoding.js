@@ -1,5 +1,6 @@
 "use strict";
 const B64 = require('base64-js');
+const crypto = require('@arangodb/crypto');
 
 function uInt8ArrayToB64(array) {
   const b = Buffer.from(array);
@@ -25,9 +26,16 @@ function b64ToUrlSafeB64(s) {
   return s.replace(/[/+=]/g, (c) => alts[c]);
 }
 
+function hash(data) {
+  const h = crypto.sha256(data);
+  const b = Buffer.from(h, 'hex').toString('base64');
+  return b64ToUrlSafeB64(b);
+}
+
 module.exports = {
   uInt8ArrayToB64,
   b64ToUint8Array,
   strToUint8Array,
   b64ToUrlSafeB64,
+  hash
 };

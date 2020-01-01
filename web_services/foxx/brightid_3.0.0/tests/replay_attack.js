@@ -1,6 +1,5 @@
 "use strict";
 
-const db = require('../db.js');
 const arango = require('@arangodb').db;
 const request = require("@arangodb/request");
 const nacl = require('tweetnacl');
@@ -9,7 +8,13 @@ nacl.setPRNG(function(x, n) {
     x[i] = Math.floor(Math.random() * 256);
   }
 });
-const { strToUint8Array, uInt8ArrayToB64, b64ToUrlSafeB64 } = require('../encoding');
+const {
+  strToUint8Array,
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64,
+  hash 
+} = require('../encoding');
+const db = require('../db.js');
 
 const { baseUrl } = module.context;
 
@@ -30,7 +35,7 @@ const u3 = nacl.sign.keyPair();
   u.id = b64ToUrlSafeB64(u.signingKey);
 });
 
-describe('replay attack on add/remove connections/membership/groups', function () {
+describe('replay attack on operations', function () {
   before(function(){
     usersColl.truncate();
     connectionsColl.truncate();
@@ -49,120 +54,60 @@ describe('replay attack on add/remove connections/membership/groups', function (
     operationsColl.truncate();
   });
 
-  it('should not be able to call PUT /connections with same parameters twice', function () {
-    const connect = (u1, u2, timestamp) => {
-      const message = u1.id + u2.id + timestamp;
-      console.log(1);
-      const sig1 = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-      );
-      console.log(2, sig1);
-      const sig2 = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-      );
-      console.log(3, sig2);
-      const resp = request.put(`${baseUrl}/connections`, {
-        body: { id1: u1.id, id2: u2.id, sig1, sig2, timestamp },
-        json: true
-      });
-      return resp;
+  it('should not be able to add an operation twice', function () {
+    const timestamp = Date.now();
+    const message = 'Add Connection' + u1.id + u2.id + timestamp;
+    const sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    const sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    
+    let op = {
+      '_key': hash(message),
+      'name': 'Add Connection',
+      'id1': u1.id,
+      'id2': u2.id,
+      timestamp,
+      sig1,
+      sig2
     }
-    connect(u1, u2, 1).status.should.equal(204);
-    connect(u2, u3, 1).status.should.equal(204);
-    connect(u3, u1, 1).status.should.equal(204);
-    connect(u1, u2, 1).status.should.equal(403);
-  });
-  
-  it('should not be able to call DELETE /connections with same parameters twice', function () {
-    const timestamp = Date.now();
-    const message = u2.id + u3.id + timestamp;
-    const sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    const resp1 = request.delete(`${baseUrl}/connections`, {
-      body: { id1: u2.id, id2: u3.id, sig1, timestamp },
-      json: true
-    });
-    resp1.status.should.equal(204);
-    const resp2 = request.delete(`${baseUrl}/connections`, {
-      body: { id1: u1.id, id2: u2.id, sig1, timestamp },
-      json: true
-    });
-    resp2.status.should.equal(403);
-  });
-  
-  it('should not be able to call POST /groups twice with same parameters', function () {
-    const timestamp = Date.now();
-    const message = u1.id + u2.id + u3.id + timestamp;
-    const sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
-    const resp1 = request.post(`${baseUrl}/groups`, {
-      body: { id1: u1.id, id2: u2.id, id3: u3.id, sig1, timestamp },
-      json: true
-    });
-    resp1.status.should.equal(200);
-    const resp2 = request.post(`${baseUrl}/groups`, {
-      body: { id1: u1.id, id2: u2.id, id3: u3.id, sig1, timestamp },
-      json: true
-    });
-    resp2.status.should.equal(403);
-  });
 
-  it('should not be able to call PUT /membership twice with same parameters', function () {
-    const timestamp = Date.now();
-    const group = db.userNewGroups(u1.id)[0].id;
-    const message = u2.id + group + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    const resp1 = request.put(`${baseUrl}/membership`, {
-      body: { id: u2.id, group, sig, timestamp },
+    const resp1 = request.post(`${baseUrl}/addOperation`, {
+      body: op,
       json: true
     });
     resp1.status.should.equal(204);
-    const resp2 = request.put(`${baseUrl}/membership`, {
-      body: { id: u2.id, group, sig, timestamp },
-      json: true
-    });
-    resp2.status.should.equal(403);
-  });
 
-  it('should be able to call DELETE /membership twice with same parameters', function () {
-    const timestamp = Date.now();
-    const group = db.userNewGroups(u1.id)[0].id;
-    const message = u2.id + group + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    const resp1 = request.delete(`${baseUrl}/membership`, {
-      body: { id: u2.id, group, sig, timestamp },
+    op = operationsColl.document(op._key);
+    delete op._rev;
+    delete op._id;
+    const resp2 = request.post(`${baseUrl}/applyOperation`, {
+      body: op,
+      headers: {
+        'CONSENSUS-API-KEY': module.context.configuration.consensusAPIKey
+      },
       json: true
     });
-    resp1.status.should.equal(204);
-    const resp2 = request.delete(`${baseUrl}/membership`, {
-      body: { id: u2.id, group, sig, timestamp },
+    resp2.json.success.should.equal(true);
+    resp2.json.state.should.equal('applied');
+
+    const resp3 = request.post(`${baseUrl}/addOperation`, {
+      body: op,
       json: true
     });
-    resp2.status.should.equal(403);
-  });
-  
-  it('should not be able to call DELETE /groups twice with same parameters', function () {
-    const timestamp = Date.now();
-    const group = db.userNewGroups(u1.id)[0].id;
-    const message = u1.id + group + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
-    const resp1 = request.delete(`${baseUrl}/groups`, {
-      body: { id: u1.id, group: group, sig, timestamp },
+    resp3.status.should.equal(400);
+    resp3.json.errorMessage.should.equal('operation is applied before');
+    
+    const resp4 = request.post(`${baseUrl}/applyOperation`, {
+      body: op,
+      headers: {
+        'CONSENSUS-API-KEY': module.context.configuration.consensusAPIKey
+      },
       json: true
     });
-    resp1.status.should.equal(204);
-    const resp2 = request.delete(`${baseUrl}/groups`, {
-      body: { id: u1.id, group: group, sig, timestamp },
-      json: true
-    });
-    resp2.status.should.equal(403);
+    resp4.json.success.should.equal(true);
+    resp4.json.state.should.equal('duplicate');
   });
 });

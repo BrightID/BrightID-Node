@@ -2,6 +2,8 @@
 
 const db = require('../db.js');
 const arango = require('@arangodb').db;
+const { hash } = require('../encoding');
+
 const connectionsColl = arango._collection('connections');
 const removedColl = arango._collection('removed');
 const groupsColl = arango._collection('groups');
@@ -13,7 +15,6 @@ const usersColl = arango._collection('users');
 const chai = require('chai');
 const should = chai.should();
 const expect = chai.expect;
-
 
 describe('groups', function () {
   before(function(){
@@ -40,16 +41,20 @@ describe('groups', function () {
   });
   let groupId;
   it('should be able to create a group', function () {
-     groupId = db.createGroup('b', 'c', 'd', Date.now())._id.replace(/^newGroups\//, '');
+     db.createGroup('b', 'c', 'd', Date.now());
      newGroupsColl.count().should.equal(1);
+     groupId = hash(['b', 'c', 'd'].sort().join(','));
+     newGroupsColl.any()._key.should.equal(groupId);
   });
   it('should be able to delete a group', function() {
     db.deleteGroup(groupId, 'b', Date.now());
     newGroupsColl.count().should.equal(0);
   })
   it('should be able to create the group again', function () {
-    groupId = db.createGroup('b', 'c', 'd', Date.now())._id.replace(/^newGroups\//, '');
+    db.createGroup('b', 'c', 'd', Date.now());
     newGroupsColl.count().should.equal(1);
+    groupId = hash(['b', 'c', 'd'].sort().join(','));
+ 	newGroupsColl.any()._key.should.equal(groupId);
   });
   it('the two co-founders should be able to join the group', function (){
     db.addMembership(groupId, 'c', Date.now());

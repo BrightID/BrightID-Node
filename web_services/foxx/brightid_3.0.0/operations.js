@@ -1,21 +1,15 @@
 const db = require('./db');
-const crypto = require('@arangodb/crypto')
 var CryptoJS = require("crypto-js");
 const nacl = require('tweetnacl');
 const {
   strToUint8Array,
   b64ToUint8Array,
   uInt8ArrayToB64,
-  b64ToUrlSafeB64
+  b64ToUrlSafeB64,
+  hash
 } = require('./encoding');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
-
-function hash(data) {
-  const h = crypto.sha256(data);
-  const b = Buffer.from(h, 'hex').toString('base64');
-  return b64ToUrlSafeB64(b);
-}
 
 const verifyUserSig = function(message, id, sig) {
   const user = db.loadUser(id);
