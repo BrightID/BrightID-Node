@@ -16,9 +16,6 @@ const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
-const operationsHashesColl = db._collection('operationsHashes');
-
-operationsColl.ensureIndex({ type: "skiplist", fields: [ "timestamp" ], sparse: false, unique: false } );
 
 const {
   uInt8ArrayToB64,
@@ -427,7 +424,7 @@ function userHasVerification(verification, user){
   return u && u.verifications && u.verifications.indexOf(verification) > -1;
 }
 
-function linkAccount(coll, id, account, timestamp){
+function linkAccount(coll, account, id, timestamp){
   const v = latestVerificationById(coll, id);
   if (v && v.timestamp > timestamp) {
     throw "there was an existing linked account with a more recent timestamp";
@@ -529,7 +526,7 @@ function verifyAccount(id, account, context, timestamp, sponsorshipSig){
 
   // update the account and timestamp and mark it as current in the db
   const coll = db._collection(collection);
-  linkAccount(coll, id, account, timestamp);
+  linkAccount(coll, account, id, timestamp);
 }
 
 function isSponsored(key){
@@ -561,10 +558,6 @@ function upsertOperation(op) {
   }
 }
 
-function isOperationApplied(hash) {
-  return operationsHashesColl.exists(hash);
-}
-
 module.exports = {
   addConnection,
   removeConnection,
@@ -590,9 +583,9 @@ module.exports = {
   latestVerificationById,
   sponsor,
   verifyAccount,
+  linkAccount,
   revocableAccounts,
   upsertOperation,
-  isOperationApplied,
   setTrusted,
   setSigningKey,
 };
