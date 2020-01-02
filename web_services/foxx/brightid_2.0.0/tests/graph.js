@@ -3,7 +3,6 @@
 const db = require('../db.js');
 const arango = require('@arangodb').db;
 const connectionsColl = arango._collection('connections');
-const removedColl = arango._collection('removed');
 const groupsColl = arango._collection('groups');
 const newGroupsColl = arango._collection('newGroups');
 const usersInGroupsColl = arango._collection('usersInGroups');
@@ -16,14 +15,12 @@ const should = chai.should();
 describe('db graph', function () {
   before(function(){
     connectionsColl.truncate();
-    removedColl.truncate();
     usersColl.truncate();
     db.createUser('a');
     db.createUser('b');
   });
   after(function(){
     connectionsColl.truncate();
-    removedColl.truncate();
     usersColl.truncate();
   });
   it('should be able to retrieve a score for a user', function() {
