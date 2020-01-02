@@ -212,12 +212,12 @@ schemas = Object.assign({
   signingKeyPutBody: joi.object({
     id: joi.string().required().description('id of the user'),
     signingKey: joi.string().required().description('new signing key for the user'),
-    sigs: joi.array().items(
-      joi.object({
-        id: joi.string(),
-        sig: joi.string()
-      })
-    ).description('list of signatures by two of trusted connections on message (id + signingKey + timestamp)'),
+    id1: joi.string().required().description('id of a trusted connection'),
+    id2: joi.string().required().description('id of another trusted connection'),
+    sig1: joi.string().required()
+      .description('message (id + signingKey + timestamp) signed by a trusted connection'),
+    sig2: joi.string().required()
+      .description('message (id + signingKey + timestamp) signed by another trusted connection'),
     timestamp: schemas.timestamp.description('milliseconds since epoch when update is requested')
   }),
 
@@ -613,10 +613,14 @@ const handlers = {
   },
 
   signingKeyPut: function signingKeyPutHandler(req, res){
+    console.log(req.body);
     const id = req.body.id;
     const timestamp = req.body.timestamp;
     const signingKey = req.body.signingKey;
-    const sigs = req.body.sigs;
+    const sig1 = req.body.sig1;
+    const sig2 = req.body.sig2;
+    const id1 = req.body.id1;
+    const id2 = req.body.id2;
 
     if (timestamp > Date.now() + TIME_FUDGE) {
       res.throw(400, "timestamp can't be in the future");
@@ -639,25 +643,16 @@ const handlers = {
     if (!user.trusted) {
       res.throw(403, "no trusted connection is set");
     }
-    if (sigs.length < 2 ||
-        sigs[0].id == sigs[1].id ||
-        !user.trusted.includes(sigs[0].id) ||
-        !user.trusted.includes(sigs[1].id)) {
+    if (id1 == id2 ||
+        !user.trusted.includes(id1) ||
+        !user.trusted.includes(id2)) {
       res.throw(403, "request should be signed by 2 different trusted connections");
     }
 
     const message = id + signingKey + timestamp;
     const e = "sig wasn't id + signingKey + timestamp signed by trusted connection";
-    let counter = 0;
-    for (let sig of sigs) {
-      try {
-        verify(message, sig.id, sig.sig, res, e);
-        counter += 1;
-      } catch (e) {}
-    }
-    if (counter < 2) {
-      res.throw(403, e);
-    }
+    verify(message, id1, sig1, res, e);
+    verify(message, id2, sig2, res, e);
     
     db.setSigningKey(signingKey, id, timestamp);
   },

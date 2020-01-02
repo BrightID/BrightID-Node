@@ -52,15 +52,12 @@ describe('replay attack on add/remove connections/membership/groups', function (
   it('should not be able to call PUT /connections with same parameters twice', function () {
     const connect = (u1, u2, timestamp) => {
       const message = u1.id + u2.id + timestamp;
-      console.log(1);
       const sig1 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
       );
-      console.log(2, sig1);
       const sig2 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
       );
-      console.log(3, sig2);
       const resp = request.put(`${baseUrl}/connections`, {
         body: { id1: u1.id, id2: u2.id, sig1, sig2, timestamp },
         json: true

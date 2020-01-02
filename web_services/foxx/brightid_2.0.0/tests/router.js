@@ -197,7 +197,15 @@ describe('router', function () {
     );
     const sigs = [{ id: u2.id, sig: sig2 }, { id: u3.id, sig: sig3 }]
     const resp = request.put(`${baseUrl}/signingKey`, {
-      body: { id: u1.id, signingKey: newPair.signingKey, sigs, timestamp },
+      body: {
+        id: u1.id,
+        signingKey: newPair.signingKey,
+        id1: u2.id,
+        id2: u3.id,
+        sig1: sig2,
+        sig2: sig3,
+        timestamp 
+      },
       json: true
     });
     resp.status.should.equal(204);
