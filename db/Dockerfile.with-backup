@@ -53,7 +53,17 @@ VOLUME ["/var/lib/arangodb3", "/var/lib/arangodb3-apps"]
 
 COPY docker-entrypoint.sh /entrypoint.sh
 
-COPY backup.sh /etc/periodic/15min/backup
+COPY backup.sh /backup.sh
+
+# this specifies the frequency with which a backup job will run.
+# The default setting is specified to run a backup of the database every 12 hours.
+# Some alternative backup times:
+# every 24 hrs: RUN echo "0 0 * * * /backup.sh" | crontab -
+# every 6 hrs: RUN echo "0 */6 * * * /backup.sh" | crontab -
+# every 3 hrs: RUN echo "0 */3 * * * /backup.sh" | crontab -
+# every 1 hr: RUN echo "0 * * * * /backup.sh" | crontab -
+# See https://en.wikipedia.org/wiki/Cron to learn how to specify a specific job frequency.
+RUN echo "0 */12 * * * /backup.sh" | crontab -
 
 ADD . /code
 WORKDIR /code/
