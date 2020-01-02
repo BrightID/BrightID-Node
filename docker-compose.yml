@@ -25,7 +25,7 @@ services:
   db:
     build:
       context: ./db
-      dockerfile: Dockerfile.with-backup
+      dockerfile: Dockerfile
     network_mode: host
     image: brightid/db
 
