@@ -16,6 +16,8 @@ case "$1" in
   *) ;;
 esac
 
+crond
+
 if [ "$1" = 'arangod' ]; then
     # /var/lib/arangodb3 and /var/lib/arangodb3-apps must exist and
     # be writable by the user under which we run the container.
