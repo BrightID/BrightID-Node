@@ -6,6 +6,7 @@ const {
   b64ToUint8Array,
   uInt8ArrayToB64,
   b64ToUrlSafeB64,
+  urlSafeB64Tob64,
   hash
 } = require('./encoding');
 
@@ -13,9 +14,8 @@ const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (m
 
 const verifyUserSig = function(message, id, sig) {
   const user = db.loadUser(id);
-  if (!user) {
-    throw 'invalid id';
-  }
+  // this will happen for "Add Connection" when one party is not created
+  const signingKey = user ? user.signingKey : urlSafeB64Tob64(id);
   if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(user.signingKey))) {
     throw 'invalid signature';
   }
@@ -88,9 +88,6 @@ function verify(op) {
   }
   if (hash(message) != op._key) {
     throw 'invalid hash'
-  }
-  if (db.isOperationApplied(op._key)) {
-    throw "operation is applied before";
   }
   for (let k of Object.keys(op)) {
     if (defaultOperationKeys.indexOf(k)<0 && operationsData[op.name].attrs.indexOf(k)<0) {

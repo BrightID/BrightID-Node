@@ -14,9 +14,14 @@ const {
 
 const router = createRouter();
 module.context.use(router);
+const operationsHashesColl = arango._collection('operationsHashes');
+
 const handlers = {
   addOperation: function(req, res){
     const op = req.body;
+    if (operationsHashesColl.exists(op._key)) {
+      res.throw(400, 'operation is applied before');
+    }
     try {
       operations.verify(op);
     } catch (e) {
@@ -38,6 +43,12 @@ const handlers = {
       res.throw(403, 'invalid consensus api key');
     }
     const op = req.body;
+    
+    if (operationsHashesColl.exists(op._key)) {
+      return res.send({'success': true, 'state': 'duplicate'});
+    }
+    operationsHashesColl.insert({ _key: op._key });
+
     if (op.name == 'Verify Account') {
       operations.decrypt(op);
     }
@@ -53,7 +64,7 @@ const handlers = {
       operations.encrypt(op);
     }
     db.upsertOperation(op);
-    res.send({'success': true});
+    res.send({'success': true, 'state': op.state, 'result': op.result});
   },
 
   membershipGet: function membershipGetHandler(req, res){

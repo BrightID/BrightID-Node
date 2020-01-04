@@ -26,6 +26,21 @@ function b64ToUrlSafeB64(s) {
   return s.replace(/[/+=]/g, (c) => alts[c]);
 }
 
+function urlSafeB64Tob64(s) {
+  const alts = {
+    '_': '/',
+    '-': '+'
+  };
+  s = s.replace(/[/+=]/g, (c) => alts[c]);
+  if (s.length%4 == 2) {
+    return s + '==';
+  } else if (s.length%4 == 3) {
+    return s + '=';
+  } else {
+    return s;
+  }
+}
+
 function hash(data) {
   const h = crypto.sha256(data);
   const b = Buffer.from(h, 'hex').toString('base64');

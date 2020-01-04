@@ -37,6 +37,16 @@ function removeConnection(key1, key2, timestamp){
 function addConnection(key1, key2, timestamp){
   const user1 = 'users/' + key1;
   const user2 = 'users/' + key2;
+  const u1 = loadUser(key1);
+  const u2 = loadUser(key2);
+  // todo: we should prevent non-verified users from creating
+  // new accounts by making connections.
+  if (!u1) {
+    createUser(key1);
+  }
+  if (!u2) {
+    createUser(key2);
+  }
   query`
     insert {
       _from: ${user1},
