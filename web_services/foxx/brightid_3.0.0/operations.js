@@ -77,10 +77,10 @@ function verify(op) {
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
   } else if (op['name'] == 'Verify Account') {
-    message = op.name + op.context + op.account + op.timestamp;
+    message = op.name + ',' + op.context + ',' + op.account + ',' + op.timestamp;
     verifyUserSig(message, op.id, op.sig);
     if (op.sponsorshipSig) {
-      message = 'Sponsor' + op.context + op.account + op.timestamp;
+      message = 'Sponsor' + ',' + op.context + ',' + op.account + ',' + op.timestamp;
       verifyContextSig(message, op.context, op.sponsorshipSig);
     }
   } else {

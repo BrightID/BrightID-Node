@@ -274,11 +274,11 @@ describe('operations', function () {
   it('should be able to "Verify Account"', function () {
     const timestamp = Date.now();
     let message;
-    message = 'Verify Account' + contextName + account + timestamp;
+    message = 'Verify Account' + ',' + contextName + ',' + account + ',' + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
     );
-    message = 'Sponsor' + contextName + account + timestamp;
+    message = 'Sponsor' + ',' + contextName + ',' + account + ',' + timestamp;
     const sponsorshipSig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(contextSecretKey)))
     );
