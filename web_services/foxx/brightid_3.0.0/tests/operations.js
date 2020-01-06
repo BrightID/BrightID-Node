@@ -19,6 +19,7 @@ const {
 } = require('../encoding');
 
 const { baseUrl } = module.context;
+const applyBaseUrl = baseUrl.replace('/brightid', '/apply');
 
 let accountsColl;
 const connectionsColl = arango._collection('connections');
@@ -46,7 +47,7 @@ const account = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
 
 function apply(op) {
-  const resp1 = request.post(`${baseUrl}/addOperation`, {
+  const resp1 = request.put(`${baseUrl}/operations`, {
     body: op,
     json: true
   });
@@ -54,11 +55,8 @@ function apply(op) {
   op = operationsColl.document(op._key);
   delete op._rev;
   delete op._id;
-  const resp2 = request.post(`${baseUrl}/applyOperation`, {
+  const resp2 = request.put(`${applyBaseUrl}/operations`, {
     body: op,
-    headers: {
-      'CONSENSUS-API-KEY': module.context.configuration.consensusAPIKey
-    },
     json: true
   });
   resp2.json.success.should.equal(true);
@@ -295,12 +293,15 @@ describe('operations', function () {
     }
     apply(op);
 
-    message = 'getSignedVerification' + u1.id + contextName;
+    message = 'Get Signed Verification' + u1.id + contextName + timestamp;
     const verificationSig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
     );
     const resp = request.get(`${baseUrl}/signedVerification/${contextName}/${u1.id}`, {
-      headers: { sig: verificationSig }
+      headers: {
+        'x-brightid-signature': verificationSig,
+        'x-brightid-timestamp': timestamp
+      }
     });
     const publicKey = resp.json.data.publicKey;
     module.context.configuration.publicKey.should.equal(publicKey);

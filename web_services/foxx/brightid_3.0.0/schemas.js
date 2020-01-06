@@ -39,13 +39,6 @@ schemas = Object.assign({
     data: joi.array().items(joi.string()).description('ids of all members of the group')
   }),
 
-  fetchUserInfoPostBody: joi.object({
-    id: joi.string().required().description('id of the user'),
-    sig: joi.string().required()
-      .description('message (id + timestamp) signed by the user represented by id'),
-    timestamp: schemas.timestamp.description('milliseconds since epoch when the removal was requested')
-  }),
-
   fetchUserInfoPostResponse: joi.object({
     data: joi.object({
       score: schemas.score,

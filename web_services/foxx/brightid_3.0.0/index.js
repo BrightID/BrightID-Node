@@ -16,8 +16,10 @@ const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
 
+const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
+
 const handlers = {
-  addOperation: function(req, res){
+  operationsPut: function(req, res){
     const op = req.body;
     if (operationsHashesColl.exists(op._key)) {
       res.throw(400, 'operation is applied before');
@@ -34,39 +36,6 @@ const handlers = {
     db.upsertOperation(op);
   },
 
-  applyOperation: function(req, res){
-    const consensusAPIKey = ((module.context && module.context.configuration && module.context.configuration.consensusAPIKey) || '');
-    if (!consensusAPIKey) {
-      res.throw(500, 'Server node consensus api key not configured');
-    }
-    if (req.header('CONSENSUS-API-KEY') != consensusAPIKey) {
-      res.throw(403, 'invalid consensus api key');
-    }
-    const op = req.body;
-    
-    if (operationsHashesColl.exists(op._key)) {
-      return res.send({'success': true, 'state': 'duplicate'});
-    }
-    operationsHashesColl.insert({ _key: op._key });
-
-    if (op.name == 'Verify Account') {
-      operations.decrypt(op);
-    }
-    try {
-      operations.verify(op);
-      op.result = operations.apply(op);
-      op.state = 'applied';
-    } catch (e) {
-      op.state = 'failed';
-      op.result = e + (e.stack ? '\n' + e.stack : '');
-    }
-    if (op.name == 'Verify Account') {
-      operations.encrypt(op);
-    }
-    db.upsertOperation(op);
-    res.send({'success': true, 'state': op.state, 'result': op.result});
-  },
-
   membershipGet: function membershipGetHandler(req, res){
     const members = db.groupMembers(req.param('groupId'));
     if (! (members && members.length)) {
@@ -77,17 +46,21 @@ const handlers = {
     });
   },
 
-  fetchUserInfo: function usersHandler(req, res){
-    const id = req.body.id;
-    const timestamp = req.body.timestamp;
+  getUser: function getUserHandler(req, res){
+    const id = req.param('id');
+    const timestamp = req.header('x-brightid-timestamp');;
+    const sig = req.header('x-brightid-signature');
 
-    if (timestamp > Date.now() + TIME_FUDGE) {
-      res.throw(400, "timestamp can't be in the future");
+    if (timestamp < Date.now() - TIME_FUDGE || timestamp > Date.now() + TIME_FUDGE) {
+      res.throw(400, "bad timestamp");
     }
 
-    const message = 'fetchUserInfo' + id + timestamp;
-    const e = "sig wasn't id + timestamp signed by the user represented by id";
-    operations.verifyUserSig(message, id, req.body.sig, res, e);
+    const message = 'Get User' + id + timestamp;
+    try {
+      operations.verifyUserSig(message, id, sig);
+    } catch (e) {
+      res.throw(403, e);
+    }
 
     const connections = db.userConnections(id);
     const user = db.loadUser(id);
@@ -127,8 +100,14 @@ const handlers = {
   getSignedVerification: function(req, res){
     const id = req.param('id');
     const context = req.param('context');
-    const sig = req.header('sig');
-    const message = 'getSignedVerification' + id + context;
+    const sig = req.header('x-brightid-signature');
+    const timestamp = req.header('x-brightid-timestamp');
+
+    if (timestamp < Date.now() - TIME_FUDGE || timestamp > Date.now() + TIME_FUDGE) {
+      res.throw(400, "bad timestamp");
+    }
+
+    const message = 'Get Signed Verification' + id + context + timestamp;
     try {
       operations.verifyUserSig(message, id, sig);
     } catch (e) {
@@ -235,31 +214,27 @@ const handlers = {
   },
 };
 
-// get requests will return results instantly
-
-router.post('/addOperation/', handlers.addOperation)
-  .body(joi.object().required())
+router.put('/operations', handlers.operationsPut)
+  .body(joi.object())
   .summary('Add an operation to be applied after consensus')
   .description("Add an operation be applied after consensus.")
   .response(null);
 
-router.post('/applyOperation/', handlers.applyOperation)
-  .body(joi.object().required())
-  .summary('Apply operation after consensus')
-  .description("Apply operation after consensus.")
-  .response(null);
-
-router.get('/fetchUserInfo/', handlers.fetchUserInfo)
-  .body(schemas.fetchUserInfoPostBody.required())
+router.get('/user/:id', handlers.getUser)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
+  .header('x-brightid-signature', joi.string().required()
+    .description('message ("Get User" + id) signed by the user represented by id'))
+  .header('x-brightid-timestamp', joi.string().required())
   .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")
   .response(schemas.fetchUserInfoPostResponse);
 
 router.get('/signedVerification/:context/:id', handlers.getSignedVerification)
   .pathParam('context', joi.string().required().description('the context in which the user should be verified'))
   .pathParam('id', joi.string().required().description('the brightid of the user'))
-  .header('sig', joi.string().required()
-    .description('message ("getSignedVerification" + id + context) signed by the user represented by id'))
+  .header('x-brightid-signature', joi.string().required()
+    .description('message ("Get Signed Verification" + id + context) signed by the user represented by id'))
+  .header('x-brightid-timestamp', joi.string().required())
   .summary('Get a signed verification')
   .description("Gets a signed verification for the user that is signed by the node")
   .response(schemas.signedVerificationGetResponse);

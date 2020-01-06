@@ -17,6 +17,7 @@ const {
 const db = require('../db.js');
 
 const { baseUrl } = module.context;
+const applyBaseUrl = baseUrl.replace('/brightid', '/apply');
 
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
@@ -74,7 +75,7 @@ describe('replay attack on operations', function () {
       sig2
     }
 
-    const resp1 = request.post(`${baseUrl}/addOperation`, {
+    const resp1 = request.put(`${baseUrl}/operations`, {
       body: op,
       json: true
     });
@@ -83,28 +84,22 @@ describe('replay attack on operations', function () {
     op = operationsColl.document(op._key);
     delete op._rev;
     delete op._id;
-    const resp2 = request.post(`${baseUrl}/applyOperation`, {
+    const resp2 = request.put(`${applyBaseUrl}/operations`, {
       body: op,
-      headers: {
-        'CONSENSUS-API-KEY': module.context.configuration.consensusAPIKey
-      },
       json: true
     });
     resp2.json.success.should.equal(true);
     resp2.json.state.should.equal('applied');
 
-    const resp3 = request.post(`${baseUrl}/addOperation`, {
+    const resp3 = request.put(`${baseUrl}/operations`, {
       body: op,
       json: true
     });
     resp3.status.should.equal(400);
     resp3.json.errorMessage.should.equal('operation is applied before');
     
-    const resp4 = request.post(`${baseUrl}/applyOperation`, {
+    const resp4 = request.put(`${applyBaseUrl}/operations`, {
       body: op,
-      headers: {
-        'CONSENSUS-API-KEY': module.context.configuration.consensusAPIKey
-      },
       json: true
     });
     resp4.json.success.should.equal(true);

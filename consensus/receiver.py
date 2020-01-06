@@ -14,9 +14,10 @@ def process(data):
         op = json.loads(data)
     except ValueError as e:
         return False
-    url = 'http://localhost:8529/_db/_system/brightid/applyOperation'
-    r = requests.post(url, json=op, headers={'CONSENSUS-API-KEY': config.API_KEY})
+    url = 'http://localhost:8529/_db/_system/apply/operations'
+    r = requests.put(url, json=op)
     print(r.json())
+
     assert r.json() == {'success': True}
 
 def main():

@@ -25,11 +25,6 @@
       "description": "Private key of this server node; used for signing verifications",
       "type": "string",
       "required": false
-    },
-    "consensusAPIKey": {
-      "description": "API key of this server node; used for calling applyOperation by consensus module",
-      "type": "string",
-      "required": false
     }
   }
 }
