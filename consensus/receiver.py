@@ -16,9 +16,10 @@ def process(data):
         return False
     url = 'http://localhost:8529/_db/_system/apply/operations'
     r = requests.put(url, json=op)
+    print(op)
     print(r.json())
 
-    assert r.json() == {'success': True}
+    assert r.json().get('success') == True
 
 def main():
     with open(config.LAST_BLOCK_FILE) as f:

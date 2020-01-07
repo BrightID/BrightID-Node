@@ -52,5 +52,6 @@ module.exports = {
   b64ToUint8Array,
   strToUint8Array,
   b64ToUrlSafeB64,
+  urlSafeB64Tob64,
   hash
 };

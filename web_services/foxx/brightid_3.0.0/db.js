@@ -19,7 +19,8 @@ const operationsColl = db._collection('operations');
 
 const {
   uInt8ArrayToB64,
-  b64ToUrlSafeB64
+  b64ToUrlSafeB64,
+  urlSafeB64Tob64
 } = require('./encoding');
 
 
@@ -232,14 +233,14 @@ function updateEligibleTimestamp(key, timestamp){
 }
 
 
-function createUser(key, signingKey){
+function createUser(key){
   // already exists?
   const user = loadUser(key);
 
   if (!user) {
     usersColl.save({
       score: 0,
-      signingKey: signingKey,
+      signingKey: urlSafeB64Tob64(key),
       _key: key
     });
   }

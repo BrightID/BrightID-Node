@@ -14,5 +14,3 @@ dir_path = os.path.dirname(os.path.realpath(__file__))
 LAST_BLOCK_FILE = os.path.join(dir_path, 'last_block')
 CONFIRM_NUM = 2
 FIRST_BLOCK = 15602090
-
-API_KEY = ''

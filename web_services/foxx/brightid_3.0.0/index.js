@@ -46,7 +46,7 @@ const handlers = {
     });
   },
 
-  getUser: function getUserHandler(req, res){
+  userGet: function userGetHandler(req, res){
     const id = req.param('id');
     const timestamp = req.header('x-brightid-timestamp');;
     const sig = req.header('x-brightid-signature');
@@ -62,14 +62,12 @@ const handlers = {
       res.throw(403, e);
     }
 
-    const connections = db.userConnections(id);
     const user = db.loadUser(id);
     if (! user) {
       res.throw(404, "User not found");
     }
-
+    const connections = db.userConnections(id);
     const currentGroups = db.userCurrentGroups(id);
-
     let eligibleGroups = db.userNewGroups(id, connections);
     let eligibleGroupsUpdated = false;
     const groupCheckInterval =
@@ -220,7 +218,7 @@ router.put('/operations', handlers.operationsPut)
   .description("Add an operation be applied after consensus.")
   .response(null);
 
-router.get('/user/:id', handlers.getUser)
+router.get('/user/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
   .header('x-brightid-signature', joi.string().required()

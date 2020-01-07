@@ -16,7 +16,7 @@ const verifyUserSig = function(message, id, sig) {
   const user = db.loadUser(id);
   // this will happen for "Add Connection" when one party is not created
   const signingKey = user ? user.signingKey : urlSafeB64Tob64(id);
-  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(user.signingKey))) {
+  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
     throw 'invalid signature';
   }
 }
