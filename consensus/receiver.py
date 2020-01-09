@@ -9,8 +9,8 @@ from web3.auto.infura.kovan import w3
 import requests
   
 def process(data):
-    data = bytes.fromhex(data.strip('0x')).decode('utf-8')
     try:
+        data = bytes.fromhex(data.strip('0x')).decode('utf-8')
         op = json.loads(data)
     except ValueError as e:
         return False
