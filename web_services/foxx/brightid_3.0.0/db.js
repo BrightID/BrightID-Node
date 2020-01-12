@@ -436,55 +436,16 @@ function userHasVerification(verification, user){
 }
 
 function linkAccount(coll, account, id, timestamp){
+  // todo: is it required to prevent users to link account with old timestamp
   const v = latestVerificationById(coll, id);
   if (v && v.timestamp > timestamp) {
     throw "there was an existing linked account with a more recent timestamp";
   }
   query`
-    upsert { user: ${id} , account: ${account} }
-    insert { user: ${id} , account: ${account}, timestamp: ${timestamp} }
-    update { timestamp: ${timestamp} } in ${coll}
+    upsert { user: ${id} }
+    insert { user: ${id}, account: ${account}, timestamp: ${timestamp} }
+    update { timestamp: ${timestamp}, account: ${account} } in ${coll}
   `;
-}
-
-function revocableAccounts(coll, account, id){
-  // Any user can link their BrightID to an account id under a context without proving ownership of that account.
-  // In this way, only a BrightID node (and not an application) has mappings of BrightIDs to application account ids.
-  // Applications can see whether a certain account is verified.
-  // A user can't block another user from using an account; two or more users can link to the same account.
-  // A user can't revoke another user's account; the account isn't revoked until no users are linking to it.
-  // A user can't link to another account without revoking any previous accounts.
-  // A verification always has all past revocations attached to it.
-  // Revocable accounts must remain in the DB forever to ensure that the issuing application is aware of all revocations.
-  // The latest account (by timestamp) for each user in a context is the only one that's in use.
-  // Any account not in use by any user is revocable. The actual revocation is done by the issuing application.
-
-  return query`
-    FOR u in ${coll}
-    filter u.account != ${account}
-    filter u.user == ${id}
-      
-    LET inUse = (
-        FOR u2 in ${coll}
-            filter u2.account == u.account
-            filter u2.user != u.user
-            
-            LET latest = (
-                FOR u3 in ${coll}
-                    filter u3.user == u2.user
-                    SORT u3.timestamp DESC
-                    LIMIT 1
-                    RETURN u3._key
-            )
-            
-            filter latest[0] == u2._key
-            LIMIT 1
-            RETURN 1
-    )
-    
-    filter length(inUse) == 0
-    RETURN u.account
-  `.toArray();
 }
 
 function setTrusted(trusted, key, timestamp){
@@ -595,7 +556,6 @@ module.exports = {
   sponsor,
   verifyAccount,
   linkAccount,
-  revocableAccounts,
   upsertOperation,
   setTrusted,
   setSigningKey,

@@ -9,7 +9,8 @@ const operations = require('./operations');
 const {
   strToUint8Array,
   b64ToUint8Array,
-  uInt8ArrayToB64
+  uInt8ArrayToB64,
+  hash
 } = require('./encoding');
 
 const router = createRouter();
@@ -95,35 +96,21 @@ const handlers = {
     });
   },
 
-  getSignedVerification: function(req, res){
-    const id = req.param('id');
+  verificationGet: function(req, res){
+    const account = req.param('account');
     const context = req.param('context');
-    const sig = req.header('x-brightid-signature');
-    const timestamp = req.header('x-brightid-timestamp');
 
-    if (timestamp < Date.now() - TIME_FUDGE || timestamp > Date.now() + TIME_FUDGE) {
-      res.throw(400, "bad timestamp");
-    }
-
-    const message = 'Get Signed Verification' + id + context + timestamp;
-    try {
-      operations.verifyUserSig(message, id, sig);
-    } catch (e) {
-      res.throw(403, e);
-    }
-
-    const { collection } = db.getContext(context);
+    const { collection, secretKey } = db.getContext(context);
     const coll = arango._collection(collection);
-    const v = db.latestVerificationById(coll, id);
-    if (!v) {
-      res.throw(403, 'no verified account linked to this id under this context');
-    }
+    const v = db.latestVerificationByAccount(coll, account);
 
-    // find old accounts for this id that aren't currently being used by someone else
-    const revocableAccounts = db.revocableAccounts(coll, v.account, id);
+    if (!v) {
+      res.throw(404, 'Verification not found');
+    }
+    const hashedId = hash(v.user + secretKey);
 
     // sign and return the verification
-    const verificationMessage = context + ',' + v.account + ',' + v.timestamp + (revocableAccounts.length ?  ',' + revocableAccounts.join(',') : '');
+    const verificationMessage = context + ',' + v.account + ',' + v.timestamp + ',' + hashedId;
 
     if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
       res.throw(500, 'Server node key pair not configured')
@@ -137,7 +124,7 @@ const handlers = {
 
     res.send({
       data: {
-        revocableAccounts,
+        hashedId,
         timestamp: v.timestamp,
         sig: verificationSig,
         publicKey: nodePublicKey
@@ -194,22 +181,7 @@ const handlers = {
         "data": context,
       });
     }
-  },
-
-  verification: function verification(req, res){
-    const context = req.param('context');
-    const account = req.param('account');
-    const timestamp = db.latestVerificationByAccount(context, account);
-    if (timestamp > 0){
-      res.send({
-        "data": {
-          timestamp
-        }
-      });
-    } else {
-      res.throw(404, 'Verification not found');
-    }
-  },
+  }
 };
 
 router.put('/operations', handlers.operationsPut)
@@ -227,15 +199,12 @@ router.get('/user/:id', handlers.userGet)
   .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")
   .response(schemas.fetchUserInfoPostResponse);
 
-router.get('/signedVerification/:context/:id', handlers.getSignedVerification)
-  .pathParam('context', joi.string().required().description('the context in which the user should be verified'))
-  .pathParam('id', joi.string().required().description('the brightid of the user'))
-  .header('x-brightid-signature', joi.string().required()
-    .description('message ("Get Signed Verification" + id + context) signed by the user represented by id'))
-  .header('x-brightid-timestamp', joi.string().required())
+router.get('/verification/:context/:account', handlers.verificationGet)
+  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
+  .pathParam('account', joi.string().required().description('the account of user within the context'))
   .summary('Get a signed verification')
   .description("Gets a signed verification for the user that is signed by the node")
-  .response(schemas.signedVerificationGetResponse);
+  .response(schemas.verificationGetResponse);
 
 router.get('/membership/:groupId', handlers.membershipGet)
   .pathParam('groupId', joi.string().required())

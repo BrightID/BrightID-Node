@@ -62,20 +62,11 @@ schemas = Object.assign({
     data: schemas.user
   }),
 
-  fetchVerificationPostBody: joi.object({
-    id: joi.string().required().description('id of the user'),
-    context: joi.string().required().description('the context of the id (typically an application)'),
-    userid: joi.string().required().description('an id used by the app consuming the verification'),
-    sig: joi.string().required().description('message (context + "," + userid + "," + timestamp) signed by the user represented by id'),
-    sponsorshipSig: joi.string().description('message (context + "," + id + "," + timestamp) signed by a context that wants to sponsor this user'),
-    timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
-  }),
-
-  signedVerificationGetResponse: joi.object({
+  verificationGetResponse: joi.object({
     data: joi.object({
       publicKey: joi.string().description("the node's public key."),
-      revocableAccounts: joi.array().items(joi.string()).description("accounts formerly used by this user that can be safely revoked"),
-      sig: joi.string().description('verification message ( context + "," + account +  "," + timestamp [ + "," + revocableAccounts ... ] ) signed by the node'),
+      hashedId: joi.array().items(joi.string()).description('sha256 hash of ( brightid + context_secret_key)'),
+      sig: joi.string().description('verification message ( context + "," + account +  "," + timestamp + "," + hashedId ) signed by the node'),
       timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed')
     })
   }),

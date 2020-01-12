@@ -55,39 +55,30 @@ describe('verifications', function () {
     contextsColl.truncate();
     sponsorshipsColl.truncate();
   });
-  it('should be able to map several accounts to users', function() {
-    db.linkAccount(testIdsColl, 'old', '1', 1);
-    db.linkAccount(testIdsColl, 'stillUsed', '1', 5);
-    db.linkAccount(testIdsColl, 'unused', '1', 10);
-
-    db.linkAccount(testIdsColl, 'unused', '2', 15);
-    db.linkAccount(testIdsColl, 'stillUsed', '2', 25);
-  });
-  it('should include an old, unused account under revocable accounts', function() {
-    db.revocableAccounts(testIdsColl, 'new', '1').should.include('old');
-  });
-  it('should include an id no longer used by a different user under revocable ids', function(){
-    db.revocableAccounts(testIdsColl, 'new', '1').should.include('unused');
-  });
-  it('should not include an id still used by a different user under revocable ids', function(){
-    db.revocableAccounts(testIdsColl, 'new', '1').should.not.include('stillUsed');
+  it('should be able to map only a single account to each user', function() {
+    db.linkAccount(testIdsColl, 'used', '1', 5);
+    db.linkAccount(testIdsColl, 'old', '2', 15);
+    db.linkAccount(testIdsColl, 'used', '2', 25);
   });
   context('latestVerificationById()', function(){
     it('should return the latest verification for a BrightId', function(){
       const v = db.latestVerificationById(testIdsColl,'2');
       v.user.should.equal('2');
-      v.account.should.equal('stillUsed');
+      v.account.should.equal('used');
       v.timestamp.should.equal(25);
     });
   });
   context('latestVerificationByAccount()', function(){
-    it('should return the latest timestamp for an id', function(){
-      const v = db.latestVerificationByAccount(testIdsColl,'stillUsed');
+    it('should return the latest verification for an account', function(){
+      const v = db.latestVerificationByAccount(testIdsColl,'used');
       v.user.should.equal('2');
-      v.account.should.equal('stillUsed');
-      v.timestamp.should.equal(25);
+      v.account.should.equal('used');
+      v.timestamp.should.equal(25);      
     });
-    it("should not return an id that isn't verified", function(){
+    it("should return null for an account that its verifier, verified another account", function(){
+      should.not.exist(db.latestVerificationByAccount(testIdsColl,'old'));
+    });  
+    it("should return null for an account that isn't verified", function(){
       should.not.exist(db.latestVerificationByAccount(testIdsColl,'notVerified'));
     });
   });

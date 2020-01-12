@@ -293,20 +293,11 @@ describe('operations', function () {
     }
     apply(op);
 
-    message = 'Get Signed Verification' + u1.id + contextName + timestamp;
-    const verificationSig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
-    );
-    const resp = request.get(`${baseUrl}/signedVerification/${contextName}/${u1.id}`, {
-      headers: {
-        'x-brightid-signature': verificationSig,
-        'x-brightid-timestamp': timestamp
-      }
-    });
+    const resp = request.get(`${baseUrl}/verification/${contextName}/${account}`);
     const publicKey = resp.json.data.publicKey;
     module.context.configuration.publicKey.should.equal(publicKey);
 
-    message = contextName + ',' + account + ',' + resp.json.data.timestamp;
+    message = contextName + ',' + account + ',' + resp.json.data.timestamp + ',' + resp.json.data.hashedId;
     nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(resp.json.data.sig), b64ToUint8Array(publicKey)).should.equal(true);
   });
     
