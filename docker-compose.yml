@@ -1,4 +1,4 @@
-version: '3'
+version: '3.2'
 services:
   ws:
     build: web_services
@@ -14,6 +14,23 @@ services:
       - db
     network_mode: host
     image: brightid/scorer
+    volumes:
+      - type: volume
+        source: graph
+        target: /graph
+
+  consensus:
+    build: consensus
+    depends_on:
+      - ws
+      - db
+    network_mode: host
+    image: brightid/consensus
+    volumes:
+      - type: volume
+        source: graph
+        target: /graph
+
 
   contexts_updater:
     build: contexts_updater
@@ -34,3 +51,6 @@ services:
     volumes:
       - ./web_services/brightid-nginx.conf:/etc/nginx/nginx.conf
     network_mode: host
+
+volumes:
+  graph:
