@@ -59,8 +59,8 @@ describe('encoding', function () {
         enc.urlSafeB64ToB64(safeB64[i]).should.equal(regularB64[i]);
       });
     });
-    describe(`The url-safe b64 string "${regularB64[i]}"`, function(){
-      it(`should convert to the b64 string "${safeB64[i]}"`, function(){
+    describe(`The b64 string "${regularB64[i]}"`, function(){
+      it(`should convert to the url-safe b64 string "${safeB64[i]}"`, function(){
         enc.b64ToUrlSafeB64(regularB64[i]).should.equal(safeB64[i]);
       });
     });
