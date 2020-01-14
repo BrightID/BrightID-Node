@@ -26,19 +26,16 @@ function b64ToUrlSafeB64(s) {
   return s.replace(/[/+=]/g, (c) => alts[c]);
 }
 
-function urlSafeB64Tob64(s) {
+function urlSafeB64ToB64(s) {
   const alts = {
     '_': '/',
     '-': '+'
   };
-  s = s.replace(/[/+=]/g, (c) => alts[c]);
-  if (s.length%4 == 2) {
-    return s + '==';
-  } else if (s.length%4 == 3) {
-    return s + '=';
-  } else {
-    return s;
+  s = s.replace(/[-_]/g, (c) => alts[c]);
+  while (s.length % 4) {
+    s += '=';
   }
+  return s;
 }
 
 function hash(data) {
@@ -52,6 +49,6 @@ module.exports = {
   b64ToUint8Array,
   strToUint8Array,
   b64ToUrlSafeB64,
-  urlSafeB64Tob64,
+  urlSafeB64ToB64,
   hash
 };

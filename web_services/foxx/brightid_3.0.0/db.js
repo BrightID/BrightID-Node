@@ -20,7 +20,7 @@ const operationsColl = db._collection('operations');
 const {
   uInt8ArrayToB64,
   b64ToUrlSafeB64,
-  urlSafeB64Tob64
+  urlSafeB64ToB64
 } = require('./encoding');
 
 
@@ -240,7 +240,7 @@ function createUser(key){
   if (!user) {
     usersColl.save({
       score: 0,
-      signingKey: urlSafeB64Tob64(key),
+      signingKey: urlSafeB64ToB64(key),
       _key: key
     });
   }

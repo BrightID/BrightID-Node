@@ -41,6 +41,32 @@ describe('encoding', function () {
     });
   });
 
+  let safeB64 = [];
+  let regularB64 = [];
+
+  safeB64[0] = 'test-';
+  regularB64[0] = 'test+===';
+  safeB64[1] = '_test-';
+  regularB64[1] = '/test+==';
+  safeB64[2] = '__test-';
+  regularB64[2] = '//test+=';
+  safeB64[3] = '___test-';
+  regularB64[3] = '///test+';
+
+  for (let i = 0; i <= 3; ++i) {
+    describe(`The url-safe b64 string "${safeB64[i]}"`, function(){
+      it(`should convert to the b64 string "${regularB64[i]}"`, function() {
+        enc.urlSafeB64ToB64(safeB64[i]).should.equal(regularB64[i]);
+      });
+    });
+    describe(`The url-safe b64 string "${regularB64[i]}"`, function(){
+      it(`should convert to the b64 string "${safeB64[i]}"`, function(){
+        enc.b64ToUrlSafeB64(regularB64[i]).should.equal(safeB64[i]);
+      });
+    });
+  }
+
+
   describe(`A b64 encoded publicKey and sig`, function () {
     it(`should be usable by tweetnacl`, function () {
       const publicKey = 'zcsKbTYYKYc31hj/FCAmJlsizz2gOJRk+oOQYgQIpUg=';
