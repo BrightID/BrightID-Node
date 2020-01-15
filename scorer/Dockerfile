@@ -6,4 +6,4 @@ ADD . /code
 WORKDIR /code/
 RUN pip install -r requirements.txt
 
-CMD touch /var/log/cron.log && service cron start && tail -f /var/log/cron.log
+CMD python -u runner.py >> /var/log/runner.log
