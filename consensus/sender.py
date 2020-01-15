@@ -2,11 +2,12 @@ import os
 import time
 import json
 import binascii
+import copy
 import config
 from web3.auto.infura.kovan import w3
-from pyArango.connection import *
+from arango import ArangoClient
 
-db = Connection()['_system']
+db = ArangoClient().db('_system')
 nonce = w3.eth.getTransactionCount(config.ADDRESS)
 
 def sendTransaction(data):
@@ -26,19 +27,18 @@ def sendTransaction(data):
     return tx
 
 def main():
-    aql = "FOR op IN operations FILTER op.state == 'init' RETURN op"
-    res = db.AQLQuery(aql)
-    for op in res:
-        d = op.getStore()
+    for op in db.collection('operations').find({'state': 'init'}):
+        d = copy.deepcopy(op)
         del d['_id']
         del d['_rev']
         print(d)
         data = '0x'+binascii.hexlify(json.dumps(d).encode('utf-8')).decode('utf-8')
         sendTransaction(data)
         op['state'] = 'sent'
-        op.save()
+        db.update_document(op)
 
 if __name__ == '__main__':
+    print('sender started ...')
     while True:
         main()
         time.sleep(1)

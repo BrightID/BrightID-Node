@@ -16,8 +16,8 @@ services:
     image: brightid/scorer
     volumes:
       - type: volume
-        source: graph
-        target: /graph
+        source: snapshots
+        target: /snapshots
 
   consensus:
     build: consensus
@@ -28,8 +28,8 @@ services:
     image: brightid/consensus
     volumes:
       - type: volume
-        source: graph
-        target: /graph
+        source: snapshots
+        target: /snapshots
 
 
   contexts_updater:
@@ -53,4 +53,4 @@ services:
     network_mode: host
 
 volumes:
-  graph:
+  snapshots:
