@@ -26,11 +26,12 @@ def process(data):
     assert r.json().get('success') == True
 
 def save_state(block):
-    url = 'http://localhost:8529/_api/replication/dump?batchId={}&collection={}'
+    url = 'http://localhost:8529/_api/replication/dump?batchId={}&collection={}&chunkSize={}'
     batch = db.replication.create_dump_batch(ttl=1000)
     zf = zipfile.ZipFile(config.SNAPSHOTS_PATH.format(block), mode='w')
     for collection in ('users', 'groups', 'usersInGroups', 'connections'):
-        r = requests.get(url.format(batch['id'], collection))
+        # fixme: what if the collection size be more than 1GB?
+        r = requests.get(url.format(batch['id'], collection, 10**9))
         zf.writestr('dump/{}_{}.data.json'.format(collection, batch['id']), r.text)
     zf.close()
     db.replication.delete_dump_batch(batch['id'])
