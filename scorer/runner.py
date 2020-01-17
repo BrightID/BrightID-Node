@@ -1,3 +1,5 @@
+import time
+from datetime import datetime
 import anti_sybil.algorithms as algorithms
 from anti_sybil.utils import *
 from arango import ArangoClient
@@ -89,5 +91,7 @@ if __name__ == '__main__':
             continue
         snapshots.sort(key = lambda fname: int(fname.strip('dump_').strip('.zip')))
         fname = os.path.join(SNAPSHOTS_PATH, snapshots[0])
+        print('{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
         process(fname)
         os.remove(fname)
+        print('{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
