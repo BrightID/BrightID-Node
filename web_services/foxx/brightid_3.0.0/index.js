@@ -37,6 +37,21 @@ const handlers = {
     db.upsertOperation(op);
   },
 
+  operationGet: function operationGetHandler(req, res){
+    const hash = req.param('hash');
+    const op = db.loadOperation(hash);
+    if (op) {
+      res.send({
+        "data": {
+          "state": op.state,
+          "result": op.result
+        }
+      });
+    } else {
+      res.throw(404, "Operation not found");
+    }
+  },
+
   membershipGet: function membershipGetHandler(req, res){
     const members = db.groupMembers(req.param('groupId'));
     if (! (members && members.length)) {
@@ -197,7 +212,12 @@ router.get('/user/:id', handlers.userGet)
     .description('message ("Get User" + id) signed by the user represented by id'))
   .header('x-brightid-timestamp', joi.string().required())
   .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")
-  .response(schemas.fetchUserInfoPostResponse);
+  .response(schemas.userGetResponse);
+
+router.get('/operation/:hash', handlers.operationGet)
+  .pathParam('hash', joi.string().required().description('hash of operation'))
+  .summary('Get state and result of an operation')
+  .response(schemas.operationGetResponse);
 
 router.get('/verification/:context/:account', handlers.verificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))

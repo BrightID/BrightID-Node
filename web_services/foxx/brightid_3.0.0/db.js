@@ -522,6 +522,10 @@ function sponsor(key, context){
   });
 }
 
+function loadOperation(key) {
+  return query`RETURN DOCUMENT(${operationsColl}, ${key})`.toArray()[0];
+}
+
 function upsertOperation(op) {
   if (!operationsColl.exists(op)) {
     operationsColl.insert(op); 
@@ -556,6 +560,7 @@ module.exports = {
   sponsor,
   verifyAccount,
   linkAccount,
+  loadOperation,
   upsertOperation,
   setTrusted,
   setSigningKey,

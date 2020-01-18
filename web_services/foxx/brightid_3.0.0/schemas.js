@@ -39,7 +39,7 @@ schemas = Object.assign({
     data: joi.array().items(joi.string()).description('ids of all members of the group')
   }),
 
-  fetchUserInfoPostResponse: joi.object({
+  userGetResponse: joi.object({
     data: joi.object({
       score: schemas.score,
       eligibleGroupsUpdated: joi.boolean()
@@ -52,14 +52,11 @@ schemas = Object.assign({
     })
   }),
 
-  usersPostBody: joi.object({
-    id: joi.string().required().description("user's id"),
-    signingKey: joi.string().required().description("the public key of the user that is used to sign requests")
-  }),
-
-  usersPostResponse: joi.object({
-    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
-    data: schemas.user
+  operationGetResponse: joi.object({
+    data: joi.object({
+      state: joi.string(),
+      result: joi.string()
+    })
   }),
 
   verificationGetResponse: joi.object({
@@ -92,13 +89,6 @@ schemas = Object.assign({
   contextsGetResponse: joi.object({
     data: schemas.context
   }),
-
-  verificationGetResponse: joi.object({
-    data: joi.object({
-      timestamp: schemas.timestamp.description('milliseconds since epoch since the last verification')
-    })
-  }),
-
 
 }, schemas);
 
