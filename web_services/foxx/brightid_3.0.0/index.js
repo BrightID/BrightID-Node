@@ -117,43 +117,44 @@ const handlers = {
 
     const { verification, collection, secretKey } = db.getContext(context);
     const coll = arango._collection(collection);
-    const v = db.getLinkByContextId(coll, contextId);
-    if (!v) {
-      res.throw(404, 'link not found');
+    const user = db.getUserByContextId(coll, contextId);
+    if (!user) {
+      res.throw(404, 'contextId not found');
     }
 
-    if (!db.userHasVerification(verification, v.user)) {
-      throw 'user can not be verified for this context';
+    if (!db.isSponsored(user)) {
+      res.throw(403, 'user is not sponsored');
     }
 
-    if (!db.isSponsored(v.user)) {
-      throw 'user is not sponsored';
+    if (!db.userHasVerification(verification, user)) {
+      res.throw(403, 'user can not be verified for this context');
     }
 
-    const contextIds = db.getContextIdsByUser(coll, v.user);
-    if (v.contextId != contextIds.pop()) {
-      res.throw(400, 'verification is out of date');
+    const contextIds = db.getContextIdsByUser(coll, user);
+    if (contextId != contextIds.pop()) {
+      res.throw(403, 'user is not using this account anymore');
     }
 
+    const timestamp = Date.now();
     // sign and return the verification
-    const verificationMessage = context + ',' + v.contextId + ',' + v.timestamp + (contextIds.length ?  ',' + contextIds.join(',') : '');
+    const message = context + ',' + contextId + ',' + timestamp + (contextIds.length ?  ',' + contextIds.join(',') : '');
 
     if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
       res.throw(500, 'Server node key pair not configured')
     }
 
-    const nodePublicKey = module.context.configuration.publicKey;
-    const nodePrivateKey = module.context.configuration.privateKey;
-    const verificationSig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(verificationMessage), b64ToUint8Array(nodePrivateKey)))
+    const publicKey = module.context.configuration.publicKey;
+    const privateKey = module.context.configuration.privateKey;
+    const sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
     );
 
     res.send({
       data: {
         revocableContextIds: contextIds,
-        timestamp: v.timestamp,
-        sig: verificationSig,
-        publicKey: nodePublicKey
+        timestamp: timestamp,
+        sig: sig,
+        publicKey: publicKey
       }
     });
   },

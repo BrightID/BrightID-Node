@@ -66,28 +66,15 @@ describe('verifications', function () {
     db.linkContextId('2', 'testContext', 'old', 15);
     db.linkContextId('2', 'testContext', 'new', 25);
   });
-  context('getLatestLinkByUser()', function(){
-    it('should return the latest verification for a BrightId', function(){
-      const v = db.getLatestLinkByUser(contextIdsColl,'2');
-      v.user.should.equal('2');
-      v.contextId.should.equal('new');
-      v.timestamp.should.equal(25);
-    });
-  });
   context('linkContextId()', function(){
     it('should throw "contextId is duplicate" for not duplicate contextId', function(){
       (() => {
         db.linkContextId('3', 'testContext', 'used', 30);
       }).should.throw('contextId is duplicate');
     });
-    it('should throw "there was an existing linked contextId with a more recent timestamp" for old timestamp', function(){
-      (() => {
-        db.linkContextId('1', 'testContext', 'used2', 2);
-      }).should.throw('there was an existing linked contextId with a more recent timestamp');
-    });
     it('should return add link if contextId and timestamp are OK', function(){
       db.linkContextId('3', 'testContext', 'testContextId', 30);
-      db.getLatestLinkByUser(contextIdsColl,'3').timestamp.should.equal(30);
+      db.getUserByContextId(contextIdsColl, 'testContextId').should.equal('3');
     });
   });
   it('should be able to sponsor a user if context has unused sponsorships and user did not sponsor before', function() {

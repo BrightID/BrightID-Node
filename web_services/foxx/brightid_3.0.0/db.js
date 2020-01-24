@@ -20,8 +20,7 @@ const operationsColl = db._collection('operations');
 const {
   uInt8ArrayToB64,
   b64ToUrlSafeB64,
-  urlSafeB64ToB64,
-  hash
+  urlSafeB64ToB64
 } = require('./encoding');
 
 function removeConnection(key1, key2, timestamp){
@@ -408,11 +407,11 @@ function getContext(context){
   return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
 }
 
-function getLinkByContextId(coll, contextId){
+function getUserByContextId(coll, contextId){
   return query`
     FOR u in ${coll}
       FILTER u.contextId == ${contextId}
-      RETURN u
+      RETURN u.user
   `.toArray()[0];
 }
 
@@ -425,38 +424,21 @@ function getContextIdsByUser(coll, id){
   `.toArray();
 }
 
-function getLatestLinkByUser(coll, id){
-  return query`
-    FOR u in ${coll}
-      FILTER u.user == ${id}
-      SORT u.timestamp DESC
-      LIMIT 1
-      RETURN u
-  `.toArray()[0];
-}
-
 function userHasVerification(verification, user){
   const u = loadUser(user);
   return u && u.verifications && u.verifications.indexOf(verification) > -1;
 }
 
 function linkContextId(id, context, contextId, timestamp){
-  // todo: is it required to prevent users to link contextId with old timestamp?
   const { collection } = getContext(context);
   const coll = db._collection(collection);
-  const v = getLatestLinkByUser(coll, id);
-  if (v && v.timestamp > timestamp) {
-    throw "there was an existing linked contextId with a more recent timestamp";
-  }
-
-  const link = getLinkByContextId(coll, contextId);
-  if (link) {
+  
+  if (getUserByContextId(coll, contextId)) {
     throw 'contextId is duplicate';
   }
 
   query`
     insert {
-      _key: ${hash(contextId)},
       user: ${id},
       contextId: ${contextId},
       timestamp: ${timestamp}
@@ -551,8 +533,7 @@ module.exports = {
   loadUsers,
   getContext,
   userHasVerification,
-  getLinkByContextId,
-  getLatestLinkByUser,
+  getUserByContextId,
   getContextIdsByUser,
   sponsor,
   isSponsored,

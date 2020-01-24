@@ -40,7 +40,7 @@ const operationsData = {
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
   'Set Trusted Connections': {'attrs': ['id', 'trusted', 'sig']},
   'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
-  'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sponsorshipSig']},
+  'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
 };
 
@@ -79,7 +79,7 @@ function verify(op) {
     verifyUserSig(message, op.id2, op.sig2);
   } else if (op['name'] == 'Sponsor') {
     message = 'Sponsor' + ',' + op.context + ',' + op.contextId;
-    verifyContextSig(message, op.context, op.sponsorshipSig);
+    verifyContextSig(message, op.context, op.sig);
   } else if (op['name'] == 'Link ContextId') {
     message = op.name + ',' + op.context + ',' + op.contextId + ',' + op.timestamp;
     verifyUserSig(message, op.id, op.sig);

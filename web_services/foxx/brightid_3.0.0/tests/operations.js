@@ -275,7 +275,7 @@ describe('operations', function(){
 
   it('should be able to "Sponsor"', function () {
     const message = 'Sponsor' + ',' + contextName + ',' + contextId;
-    const sponsorshipSig = uInt8ArrayToB64(
+    const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(contextSecretKey)))
     );
     const op = {
@@ -284,7 +284,7 @@ describe('operations', function(){
       'id': u1.id,
       contextId,
       '_key': hash(message),
-      sponsorshipSig
+      sig
     }
     apply(op);
     db.isSponsored(u1.id).should.equal(true);
@@ -306,16 +306,6 @@ describe('operations', function(){
       sig
     }
     apply(op);
-    db.getLatestLinkByUser(contextIdsColl, u1.id).contextId.should.equal(contextId);
-  });
-
-  it('should be able to "Get verification for a contextId in a context"', function () {
-    const resp = request.get(`${baseUrl}/verification/${contextName}/${contextId}`);
-    const publicKey = resp.json.data.publicKey;
-    module.context.configuration.publicKey.should.equal(publicKey);
-    const contextIds = db.getContextIdsByUser(contextIdsColl, u1.id);
-    contextIds.pop()
-    const message = contextName + ',' + contextId + ',' + resp.json.data.timestamp + (contextIds.length ?  ',' + contextIds.join(',') : '');
-    nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(resp.json.data.sig), b64ToUint8Array(publicKey)).should.equal(true);
+    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
   });
 });
