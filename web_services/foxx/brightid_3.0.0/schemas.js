@@ -63,7 +63,7 @@ schemas = Object.assign({
     data: joi.object({
       publicKey: joi.string().description("the node's public key."),
       hashedId: joi.array().items(joi.string()).description('sha256 hash of ( brightid + context_secret_key)'),
-      sig: joi.string().description('verification message ( context + "," + account +  "," + timestamp + "," + hashedId ) signed by the node'),
+      sig: joi.string().description('verification message ( context + "," + contextId +  "," + timestamp + "," + revocableContextIds ) signed by the node'),
       timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed')
     })
   }),

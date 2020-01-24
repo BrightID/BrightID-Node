@@ -13,13 +13,13 @@ const operationsHashesColl = arango._collection('operationsHashes');
 const handlers = {
   operationsPut: function(req, res){
     const op = req.body;
-    
+
     if (operationsHashesColl.exists(op._key)) {
       return res.send({'success': true, 'state': 'duplicate'});
     }
     operationsHashesColl.insert({ _key: op._key });
 
-    if (op.name == 'Verify Account') {
+    if (op.name == 'Link ContextId') {
       operations.decrypt(op);
     }
     try {
@@ -30,7 +30,7 @@ const handlers = {
       op.state = 'failed';
       op.result = e + (e.stack ? '\n' + e.stack : '');
     }
-    if (op.name == 'Verify Account') {
+    if (op.name == 'Link ContextId') {
       operations.encrypt(op);
     }
     db.upsertOperation(op);

@@ -30,8 +30,8 @@ const handlers = {
     } catch (e) {
       res.throw(400, e);
     }
-    if (op.name == 'Verify Account') {
-      operations.encrypt(op);  
+    if (op.name == 'Link ContextId') {
+      operations.encrypt(op);
     }
     op.state = 'init'
     db.upsertOperation(op);
@@ -112,25 +112,36 @@ const handlers = {
   },
 
   verificationGet: function(req, res){
-    const account = req.param('account');
+    const contextId = req.param('contextId');
     const context = req.param('context');
 
-    const { collection, secretKey } = db.getContext(context);
+    const { verification, collection, secretKey } = db.getContext(context);
     const coll = arango._collection(collection);
-    const v = db.latestVerificationByAccount(coll, account);
-
+    const v = db.getLinkByContextId(coll, contextId);
     if (!v) {
-      res.throw(404, 'Verification not found');
+      res.throw(404, 'link not found');
     }
-    const hashedId = hash(v.user + secretKey);
+
+    if (!db.userHasVerification(verification, v.user)) {
+      throw 'user can not be verified for this context';
+    }
+
+    if (!db.isSponsored(v.user)) {
+      throw 'user is not sponsored';
+    }
+
+    const contextIds = db.getContextIdsByUser(coll, v.user);
+    if (v.contextId != contextIds.pop()) {
+      res.throw(400, 'verification is out of date');
+    }
 
     // sign and return the verification
-    const verificationMessage = context + ',' + v.account + ',' + v.timestamp + ',' + hashedId;
+    const verificationMessage = context + ',' + v.contextId + ',' + v.timestamp + (contextIds.length ?  ',' + contextIds.join(',') : '');
 
     if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
       res.throw(500, 'Server node key pair not configured')
     }
-    
+
     const nodePublicKey = module.context.configuration.publicKey;
     const nodePrivateKey = module.context.configuration.privateKey;
     const verificationSig = uInt8ArrayToB64(
@@ -139,14 +150,13 @@ const handlers = {
 
     res.send({
       data: {
-        hashedId,
+        revocableContextIds: contextIds,
         timestamp: v.timestamp,
         sig: verificationSig,
         publicKey: nodePublicKey
       }
     });
   },
-
 
   ip: function ip(req, res){
     let ip = module.context && module.context.configuration && module.context.configuration.ip;
@@ -219,9 +229,9 @@ router.get('/operation/:hash', handlers.operationGet)
   .summary('Get state and result of an operation')
   .response(schemas.operationGetResponse);
 
-router.get('/verification/:context/:account', handlers.verificationGet)
+router.get('/verification/:context/:contextId', handlers.verificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
-  .pathParam('account', joi.string().required().description('the account of user within the context'))
+  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .summary('Get a signed verification')
   .description("Gets a signed verification for the user that is signed by the node")
   .response(schemas.verificationGetResponse);

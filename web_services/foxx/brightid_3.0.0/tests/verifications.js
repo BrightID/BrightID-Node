@@ -12,7 +12,7 @@ nacl.setPRNG(function(x, n) {
   }
 });
 
-let testIdsColl;
+let contextIdsColl;
 const usersColl = arango._collection('users');
 const contextsColl = arango._collection('contexts');
 const sponsorshipsColl = arango._collection('sponsorships');
@@ -24,10 +24,10 @@ const { baseUrl } = module.context;
 
 describe('verifications', function () {
   before(function(){
-    testIdsColl = arango._create('testIds');
+    contextIdsColl = arango._create('testIds');
     usersColl.truncate();
     contextsColl.truncate();
-    sponsorshipsColl.truncate();    
+    sponsorshipsColl.truncate();
     query`
       INSERT {
         _key: "testContext",
@@ -35,6 +35,12 @@ describe('verifications', function () {
         verification: "testVerification",
         totalSponsorships: 1
       } IN ${contextsColl}
+    `;
+    query`
+      INSERT {
+        _key: "2",
+        verifications: ["testVerification"]
+      } IN ${usersColl}
     `;
     query`
       INSERT {
@@ -50,52 +56,47 @@ describe('verifications', function () {
     `;
   });
   after(function(){
-    arango._drop(testIdsColl);
+    arango._drop(contextIdsColl);
     usersColl.truncate();
     contextsColl.truncate();
     sponsorshipsColl.truncate();
   });
-  it('should be able to map only a single account to each user', function() {
-    db.linkAccount(testIdsColl, 'used', '1', 5);
-    db.linkAccount(testIdsColl, 'old', '2', 15);
-    db.linkAccount(testIdsColl, 'used', '2', 25);
+  it('should be able to map only a single contextId to each user', function() {
+    db.linkContextId('1', 'testContext', 'used', 5);
+    db.linkContextId('2', 'testContext', 'old', 15);
+    db.linkContextId('2', 'testContext', 'new', 25);
   });
-  context('latestVerificationById()', function(){
+  context('getLatestLinkByUser()', function(){
     it('should return the latest verification for a BrightId', function(){
-      const v = db.latestVerificationById(testIdsColl,'2');
+      const v = db.getLatestLinkByUser(contextIdsColl,'2');
       v.user.should.equal('2');
-      v.account.should.equal('used');
+      v.contextId.should.equal('new');
       v.timestamp.should.equal(25);
     });
   });
-  context('latestVerificationByAccount()', function(){
-    it('should return the latest verification for an account', function(){
-      const v = db.latestVerificationByAccount(testIdsColl,'used');
-      v.user.should.equal('2');
-      v.account.should.equal('used');
-      v.timestamp.should.equal(25);      
+  context('linkContextId()', function(){
+    it('should throw "contextId is duplicate" for not duplicate contextId', function(){
+      (() => {
+        db.linkContextId('3', 'testContext', 'used', 30);
+      }).should.throw('contextId is duplicate');
     });
-    it("should return null for an account that its verifier, verified another account", function(){
-      should.not.exist(db.latestVerificationByAccount(testIdsColl,'old'));
-    });  
-    it("should return null for an account that isn't verified", function(){
-      should.not.exist(db.latestVerificationByAccount(testIdsColl,'notVerified'));
+    it('should throw "there was an existing linked contextId with a more recent timestamp" for old timestamp', function(){
+      (() => {
+        db.linkContextId('1', 'testContext', 'used2', 2);
+      }).should.throw('there was an existing linked contextId with a more recent timestamp');
+    });
+    it('should return add link if contextId and timestamp are OK', function(){
+      db.linkContextId('3', 'testContext', 'testContextId', 30);
+      db.getLatestLinkByUser(contextIdsColl,'3').timestamp.should.equal(30);
     });
   });
-  context('verifyAccount()', function(){
-    let options, message;
-    it('should throw "user is not sponsored" for not sponsored users', function(){
-      (() => {
-        db.verifyAccount('3', 'testAccount', 'testContext', 30);
-      }).should.throw('user is not sponsored');
-    });
-    it('should return verification if user provide sponsorshipSig', function(){
-      db.verifyAccount('3', 'testAccount', 'testContext', 30, 'sig');
-      db.latestVerificationById(testIdsColl,'3').timestamp.should.equal(30);
-    });
+  it('should be able to sponsor a user if context has unused sponsorships and user did not sponsor before', function() {
+    db.sponsor('2', 'testContext');
+  });
+  context('sponsor()', function(){
     it('should throw "context does not have unused sponsorships" if context has no unused sponsorship', function(){
       (() => {
-        db.verifyAccount('4', 'testAccount', 'testContext', 30, 'sig');
+        db.sponsor('4', 'testContext');
       }).should.throw('context does not have unused sponsorships');
     });
   });

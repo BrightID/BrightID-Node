@@ -21,7 +21,7 @@ const {
 const { baseUrl } = module.context;
 const applyBaseUrl = baseUrl.replace('/brightid', '/apply');
 
-let accountsColl;
+let contextIdsColl;
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
 const newGroupsColl = arango._collection('newGroups');
@@ -31,6 +31,7 @@ const usersColl = arango._collection('users');
 const operationsColl = arango._collection('operations');
 const contextsColl = arango._collection('contexts');
 const sponsorshipsColl = arango._collection('sponsorships');
+const operationsHashes = arango._collection('operationsHashes');
 
 const chai = require('chai');
 const should = chai.should();
@@ -43,7 +44,7 @@ const u4 = nacl.sign.keyPair();
 const contextPublicKey = 'izrhiE6QK+4trDqZ4SKFBRll800teGWOLzFbFvfxvlQ=';
 const contextSecretKey = 'blyEVelon1mwqKLbjK8ZK1o4GEkIrUJeaNpXTi+YtP6LOuGITpAr7i2sOpnhIoUFGWXzTS14ZY4vMVsW9/G+VA==';
 
-const account = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
+const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
 
 function apply(op) {
@@ -62,9 +63,10 @@ function apply(op) {
   resp2.json.success.should.equal(true);
 }
 
-describe('operations', function () {
-  before(function(){
-    accountsColl = arango._create(contextName);
+describe('operations', function(){
+  before(function () {
+    contextIdsColl = arango._create(contextName);
+    operationsHashes.truncate();
     usersColl.truncate();
     connectionsColl.truncate();
     groupsColl.truncate();
@@ -92,10 +94,12 @@ describe('operations', function () {
         secretKey: ${contextSecretKey}
       } IN ${contextsColl}
     `;
-    
   });
-  after(function(){
-    arango._drop(accountsColl);
+
+  after(function () {
+    operationsHashes.truncate();
+    contextsColl.truncate();
+    arango._drop(contextIdsColl);
     usersColl.truncate();
     connectionsColl.truncate();
     groupsColl.truncate();
@@ -115,7 +119,7 @@ describe('operations', function () {
       const sig2 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
       );
-      
+
       let op = {
         '_key': hash(message),
         'name': 'Add Connection',
@@ -141,7 +145,7 @@ describe('operations', function () {
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
-    
+
     let op = {
       '_key': hash(message),
       'name': 'Remove Connection',
@@ -152,7 +156,7 @@ describe('operations', function () {
     }
 
     apply(op);
-    
+
     db.userConnectionsRaw(u1.id).length.should.equal(2);
     db.userConnectionsRaw(u2.id).length.should.equal(1);
     db.userConnectionsRaw(u3.id).length.should.equal(1);
@@ -164,7 +168,7 @@ describe('operations', function () {
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
-    
+
     const op = {
       '_key': hash(message),
       'name': 'Add Group',
@@ -269,36 +273,49 @@ describe('operations', function () {
     db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
   });
 
-  it('should be able to "Verify Account"', function () {
-    const timestamp = Date.now();
-    let message;
-    message = 'Verify Account' + ',' + contextName + ',' + account + ',' + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
-    );
-    message = 'Sponsor' + ',' + contextName + ',' + account + ',' + timestamp;
+  it('should be able to "Sponsor"', function () {
+    const message = 'Sponsor' + ',' + contextName + ',' + contextId;
     const sponsorshipSig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(contextSecretKey)))
     );
-    
     const op = {
-      'name': 'Verify Account',
+      'name': 'Sponsor',
       'context': contextName,
-      timestamp,
       'id': u1.id,
-      'account': account,
+      contextId,
       '_key': hash(message),
-      sig,
       sponsorshipSig
     }
     apply(op);
+    db.isSponsored(u1.id).should.equal(true);
+  });
 
-    const resp = request.get(`${baseUrl}/verification/${contextName}/${account}`);
+  it('should be able to "Link ContextId"', function () {
+    const timestamp = Date.now();
+    const message = 'Link ContextId' + ',' + contextName + ',' + contextId + ',' + timestamp;
+    const sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
+    );
+    const op = {
+      'name': 'Link ContextId',
+      'context': contextName,
+      timestamp,
+      'id': u1.id,
+      contextId,
+      '_key': hash(message),
+      sig
+    }
+    apply(op);
+    db.getLatestLinkByUser(contextIdsColl, u1.id).contextId.should.equal(contextId);
+  });
+
+  it('should be able to "Get verification for a contextId in a context"', function () {
+    const resp = request.get(`${baseUrl}/verification/${contextName}/${contextId}`);
     const publicKey = resp.json.data.publicKey;
     module.context.configuration.publicKey.should.equal(publicKey);
-
-    message = contextName + ',' + account + ',' + resp.json.data.timestamp + ',' + resp.json.data.hashedId;
+    const contextIds = db.getContextIdsByUser(contextIdsColl, u1.id);
+    contextIds.pop()
+    const message = contextName + ',' + contextId + ',' + resp.json.data.timestamp + (contextIds.length ?  ',' + contextIds.join(',') : '');
     nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(resp.json.data.sig), b64ToUint8Array(publicKey)).should.equal(true);
   });
-    
 });

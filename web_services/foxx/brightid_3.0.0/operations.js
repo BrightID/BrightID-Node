@@ -40,7 +40,8 @@ const operationsData = {
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
   'Set Trusted Connections': {'attrs': ['id', 'trusted', 'sig']},
   'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
-  'Verify Account': {'attrs': ['id', 'account', 'context', 'sig', 'sponsorshipSig']},
+  'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sponsorshipSig']},
+  'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
 };
 
 const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
@@ -76,13 +77,12 @@ function verify(op) {
     message = op.name + op.id + op.signingKey + op.timestamp;
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
-  } else if (op['name'] == 'Verify Account') {
-    message = op.name + ',' + op.context + ',' + op.account + ',' + op.timestamp;
+  } else if (op['name'] == 'Sponsor') {
+    message = 'Sponsor' + ',' + op.context + ',' + op.contextId;
+    verifyContextSig(message, op.context, op.sponsorshipSig);
+  } else if (op['name'] == 'Link ContextId') {
+    message = op.name + ',' + op.context + ',' + op.contextId + ',' + op.timestamp;
     verifyUserSig(message, op.id, op.sig);
-    if (op.sponsorshipSig) {
-      message = 'Sponsor' + ',' + op.context + ',' + op.account + ',' + op.timestamp;
-      verifyContextSig(message, op.context, op.sponsorshipSig);
-    }
   } else {
     throw "invalid operation";
   }
@@ -114,8 +114,10 @@ function apply(op) {
     return db.setTrusted(op.trusted, op.id, op.timestamp);
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
-  } else if (op['name'] == 'Verify Account') {
-    return db.verifyAccount(op.id, op.account, op.context, op.timestamp, op.sponsorshipSig);
+  } else if (op['name'] == 'Sponsor') {
+    return db.sponsor(op.id, op.context);
+  } else if (op['name'] == 'Link ContextId') {
+    return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
   } else {
     throw "invalid operation";
   }
@@ -124,10 +126,10 @@ function apply(op) {
 
 function encrypt(op) {
   const { secretKey } = db.getContext(op.context);
-  const jsonStr = JSON.stringify({ 'id': op.id, 'account': op.account });
+  const jsonStr = JSON.stringify({ 'id': op.id, 'contextId': op.contextId });
   op.encrypted = CryptoJS.AES.encrypt(jsonStr, secretKey).toString();
   delete op.id;
-  delete op.account;
+  delete op.contextId;
 }
 
 function decrypt(op) {
@@ -137,7 +139,7 @@ function decrypt(op) {
   const json = JSON.parse(decrypted);
   delete op.encrypted;
   op.id = json.id;
-  op.account = json.account;
+  op.contextId = json.contextId;
 }
 
 module.exports = {

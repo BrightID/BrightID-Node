@@ -20,9 +20,9 @@ const operationsColl = db._collection('operations');
 const {
   uInt8ArrayToB64,
   b64ToUrlSafeB64,
-  urlSafeB64ToB64
+  urlSafeB64ToB64,
+  hash
 } = require('./encoding');
-
 
 function removeConnection(key1, key2, timestamp){
   const user1 = 'users/' + key1;
@@ -41,7 +41,7 @@ function addConnection(key1, key2, timestamp){
   const u1 = loadUser(key1);
   const u2 = loadUser(key2);
   // todo: we should prevent non-verified users from creating
-  // new accounts by making connections.
+  // new users by making connections.
   if (!u1) {
     createUser(key1);
   }
@@ -232,7 +232,6 @@ function updateEligibleTimestamp(key, timestamp){
   `;
 }
 
-
 function createUser(key){
   // already exists?
   const user = loadUser(key);
@@ -409,42 +408,59 @@ function getContext(context){
   return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
 }
 
-function latestVerificationByAccount(coll, account){
+function getLinkByContextId(coll, contextId){
   return query`
-    FOR m in ${coll}
-      FILTER m.account == ${account}
-      SORT m.timestamp DESC
-      LIMIT 1
-      RETURN m
+    FOR u in ${coll}
+      FILTER u.contextId == ${contextId}
+      RETURN u
   `.toArray()[0];
 }
 
-function latestVerificationById(coll, id){
+function getContextIdsByUser(coll, id){
   return query`
-    FOR m in ${coll}
-      FILTER m.user == ${id}
-      SORT m.timestamp DESC
-      LIMIT 1
-      RETURN m
-  `.toArray()[0];
+    FOR u in ${coll}
+      FILTER u.user == ${id}
+      SORT u.timestamp DESC
+      RETURN u.contextId
+  `.toArray();
 }
 
+function getLatestLinkByUser(coll, id){
+  return query`
+    FOR u in ${coll}
+      FILTER u.user == ${id}
+      SORT u.timestamp DESC
+      LIMIT 1
+      RETURN u
+  `.toArray()[0];
+}
 
 function userHasVerification(verification, user){
   const u = loadUser(user);
   return u && u.verifications && u.verifications.indexOf(verification) > -1;
 }
 
-function linkAccount(coll, account, id, timestamp){
-  // todo: is it required to prevent users to link account with old timestamp
-  const v = latestVerificationById(coll, id);
+function linkContextId(id, context, contextId, timestamp){
+  // todo: is it required to prevent users to link contextId with old timestamp?
+  const { collection } = getContext(context);
+  const coll = db._collection(collection);
+  const v = getLatestLinkByUser(coll, id);
   if (v && v.timestamp > timestamp) {
-    throw "there was an existing linked account with a more recent timestamp";
+    throw "there was an existing linked contextId with a more recent timestamp";
   }
+
+  const link = getLinkByContextId(coll, contextId);
+  if (link) {
+    throw 'contextId is duplicate';
+  }
+
   query`
-    upsert { user: ${id} }
-    insert { user: ${id}, account: ${account}, timestamp: ${timestamp} }
-    update { timestamp: ${timestamp}, account: ${account} } in ${coll}
+    insert {
+      _key: ${hash(contextId)},
+      user: ${id},
+      contextId: ${contextId},
+      timestamp: ${timestamp}
+    } in ${coll}
   `;
 }
 
@@ -473,34 +489,6 @@ function setSigningKey(signingKey, key, signers, timestamp){
   `;
 }
 
-function verifyAccount(id, account, context, timestamp, sponsorshipSig){
-  // check if user is sponsored before having verification
-  // to not allow apps using sponsorship error as a proof that user is verified
-  if (!isSponsored(id)) {
-    if (!sponsorshipSig) {
-      throw 'user is not sponsored';
-    }
-    if (unusedSponsorship(context) < 1) {
-      throw "context does not have unused sponsorships";
-    }
-  }
-
-  const { verification, collection } = getContext(context);
-  if (!userHasVerification(verification, id)) {
-    throw 'user can not be verified for this context';
-  }
-
-  // call sponsor after checking if user has verification to not waste
-  // sponsorships of the context for fake users
-  if (!isSponsored(id) && sponsorshipSig) {
-    sponsor(id, context);
-  }
-
-  // update the account and timestamp and mark it as current in the db
-  const coll = db._collection(collection);
-  linkAccount(coll, account, id, timestamp);
-}
-
 function isSponsored(key){
   return sponsorshipsColl.firstExample({ '_from': 'users/' + key }) != null;
 }
@@ -515,9 +503,17 @@ function unusedSponsorship(context){
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(key, context){
+function sponsor(id, context){
+  if (unusedSponsorship(context) < 1) {
+    throw "context does not have unused sponsorships";
+  }
+
+  if (isSponsored(id)) {
+    throw "sponsored before";
+  }
+
   sponsorshipsColl.save({
-    _from: 'users/' + key,
+    _from: 'users/' + id,
     _to: 'contexts/' + context
   });
 }
@@ -528,7 +524,7 @@ function loadOperation(key) {
 
 function upsertOperation(op) {
   if (!operationsColl.exists(op)) {
-    operationsColl.insert(op); 
+    operationsColl.insert(op);
   } else {
     operationsColl.replace(op['_key'], op);
   }
@@ -555,11 +551,12 @@ module.exports = {
   loadUsers,
   getContext,
   userHasVerification,
-  latestVerificationByAccount,
-  latestVerificationById,
+  getLinkByContextId,
+  getLatestLinkByUser,
+  getContextIdsByUser,
   sponsor,
-  verifyAccount,
-  linkAccount,
+  isSponsored,
+  linkContextId,
   loadOperation,
   upsertOperation,
   setTrusted,
