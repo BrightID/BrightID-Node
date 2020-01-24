@@ -3,10 +3,11 @@ import time
 import json
 import binascii
 import copy
-import config
-from web3.auto.infura.kovan import w3
 from arango import ArangoClient
+from web3 import Web3, HTTPProvider
+import config
 
+w3 = Web3(HTTPProvider(config.INFURA_URL))
 db = ArangoClient().db('_system')
 nonce = w3.eth.getTransactionCount(config.ADDRESS)
 

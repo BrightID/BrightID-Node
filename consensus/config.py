@@ -2,18 +2,18 @@ import os
 from eth_keys import keys
 from eth_utils import decode_hex
 
-os.environ['WEB3_INFURA_PROJECT_ID'] = ''
-PRIVATE_KEY = ''
+INFURA_URL = os.environ['BN_CONSENSUS_INFURA_URL']
+PRIVATE_KEY = os.environ['BN_CONSENSUS_PRIVATE_KEY']
 ADDRESS = keys.PrivateKey(decode_hex(PRIVATE_KEY)).public_key.to_checksum_address()
 
-GAS = 50000
-GAS_PRICE = 25*10**9
-TO_ADDRESS = '0x0000000000000000000000000000000000000000'
+GAS = int(os.environ['BN_CONSENSUS_GAS'])
+GAS_PRICE = int(os.environ['BN_CONSENSUS_GAS_PRICE'])
+TO_ADDRESS = os.environ['BN_CONSENSUS_TO_ADDRESS']
+CONFIRM_NUM = int(os.environ['BN_CONSENSUS_CONFIRM_NUM'])
 
-dir_path = os.path.dirname(os.path.realpath(__file__))
-LAST_BLOCK_FILE = os.path.join(dir_path, 'last_block')
-CONFIRM_NUM = 1
-FIRST_BLOCK = 15602090
+SNAPSHOTS_PERIOD = int(os.environ['BN_CONSENSUS_SNAPSHOTS_PERIOD'])
+SNAPSHOTS_PATH = os.environ['BN_CONSENSUS_SNAPSHOTS_PATH']
 
-SAVE_STATE_PERIOD = 12 # 10 minutes if each block take 5 seconds
-SNAPSHOTS_PATH = '/snapshots/dump_{}.zip'
+APPLY_URL = os.environ['BN_CONSENSUS_APPLY_URL']
+DUMP_URL = os.environ['BN_CONSENSUS_DUMP_URL']
+MAX_COLLECTION_SIZE = os.environ['BN_CONSENSUS_MAX_COLLECTION_SIZE']

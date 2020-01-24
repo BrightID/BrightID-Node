@@ -6,8 +6,7 @@ from arango import ArangoClient
 from config import *
 
 def update(nodes_graph, groups_graph):
-    client = ArangoClient()
-    db = client.db(DB_NAME, username=DB_USER, password=DB_PASS)
+    db = ArangoClient().db('_system')
     for node in nodes_graph.nodes:
         db['users'].update({'_key': node.name, 'score': node.rank})
     for group in groups_graph.nodes:

@@ -1,5 +1,3 @@
-DB_NAME = '_system'
-DB_USER = 'root'
-DB_PASS = 'a'
+import os
 
-SNAPSHOTS_PATH = '/snapshots/'
+SNAPSHOTS_PATH = os.environ['BN_SCORER_SNAPSHOTS_PATH']
