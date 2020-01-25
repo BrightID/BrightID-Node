@@ -75,7 +75,7 @@ describe('replay attack on operations', function () {
       sig2
     }
 
-    const resp1 = request.put(`${baseUrl}/operations`, {
+    const resp1 = request.put(`${baseUrl}/operations/${op._key}`, {
       body: op,
       json: true
     });
@@ -84,21 +84,21 @@ describe('replay attack on operations', function () {
     op = operationsColl.document(op._key);
     delete op._rev;
     delete op._id;
-    const resp2 = request.put(`${applyBaseUrl}/operations`, {
+    const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
       body: op,
       json: true
     });
     resp2.json.success.should.equal(true);
     resp2.json.state.should.equal('applied');
 
-    const resp3 = request.put(`${baseUrl}/operations`, {
+    const resp3 = request.put(`${baseUrl}/operations/${op._key}`, {
       body: op,
       json: true
     });
     resp3.status.should.equal(400);
     resp3.json.errorMessage.should.equal('operation is applied before');
     
-    const resp4 = request.put(`${applyBaseUrl}/operations`, {
+    const resp4 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
       body: op,
       json: true
     });

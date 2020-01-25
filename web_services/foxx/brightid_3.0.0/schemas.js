@@ -29,6 +29,18 @@ schemas = Object.assign({
     appLogo: joi.string().description('app logo (base64 encoded image)'),
     appUrl: joi.string().description('the base url for the web app associated with the context'),
   }),
+  operation: joi.object().description(`Following operations have these operation specific attributes:
+
+Add Connection: id1, id2, sig1, sig2
+Remove Connection: id1, id2, sig1
+Add Group: id1, id2, id3, sig1
+Remove Group: id1, id2, sig1
+Add Membership: id, group, sig
+Remove Membership: id, group, sig
+Set Trusted Connections: id, trusted, sig
+Set Signing Key: id, signingKey, id1, id2, sig1, sig2
+Link Context: id, contextId, context, sig
+Sponsor: id, contextId, context, sig`)
 }, schemas);
 
 // extend lower-level schemas with higher-level schemas
@@ -71,18 +83,6 @@ schemas = Object.assign({
   ipGetResponse: joi.object({
     data: joi.object({
       ip: joi.string().description("IPv4 address in dot-decimal notation.")
-    })
-  }),
-
-  userScore: joi.object({
-    data: joi.object({
-      score: schemas.score
-    })
-  }),
-
-  userConnections: joi.object({
-    data: joi.object({
-      users: joi.array().items(joi.string())
     })
   }),
 

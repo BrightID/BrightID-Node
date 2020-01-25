@@ -5,6 +5,7 @@ const arango = require('@arangodb').db;
 const nacl = require('tweetnacl');
 const db = require('./db');
 const operations = require('./operations');
+const schemas = require('./schemas').schemas;
 
 const router = createRouter();
 module.context.use(router);
@@ -13,7 +14,9 @@ const operationsHashesColl = arango._collection('operationsHashes');
 const handlers = {
   operationsPut: function(req, res){
     const op = req.body;
-
+    const hash = req.param('hash');
+    op._key = hash;
+    
     if (operationsHashesColl.exists(op._key)) {
       return res.send({'success': true, 'state': 'duplicate'});
     }
@@ -38,8 +41,9 @@ const handlers = {
   }
 };
 
-router.put('/operations', handlers.operationsPut)
-  .body(joi.object().required())
+router.put('/operations/:hash', handlers.operationsPut)
+  .pathParam('hash', joi.string().required().description('hash of operation'))
+  .body(schemas.operation)
   .summary('Apply operation after consensus')
   .description("Apply operation after consensus.")
   .response(null);

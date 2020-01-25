@@ -22,6 +22,8 @@ const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (m
 const handlers = {
   operationsPut: function(req, res){
     const op = req.body;
+    const hash = req.param('hash');
+    op._key = hash;
     if (operationsHashesColl.exists(op._key)) {
       res.throw(400, 'operation is applied before');
     }
@@ -172,32 +174,6 @@ const handlers = {
     }
   },
 
-  userScore: function userScore(req, res){
-    const score = db.userScore(req.param('user'));
-    if (score == null) {
-      res.throw(404, "User not found");
-    } else {
-      res.send({
-        "data": {
-          score,
-        }
-      });
-    }
-  },
-
-  userConnections: function userConnections(req, res){
-    const users = db.userConnections(req.param('user'));
-    if (users == null) {
-      res.throw(404, "User not found");
-    } else {
-      res.send({
-        "data": {
-          users,
-        }
-      });
-    }
-  },
-
   contexts: function contexts(req, res){
     const context = db.getContext(req.param('context'));
     if (context == null) {
@@ -210,13 +186,14 @@ const handlers = {
   }
 };
 
-router.put('/operations', handlers.operationsPut)
-  .body(joi.object())
+router.put('/operations/:hash', handlers.operationsPut)
+  .pathParam('hash', joi.string().required().description('hash of operation'))
+  .body(schemas.operation)
   .summary('Add an operation to be applied after consensus')
-  .description("Add an operation be applied after consensus.")
+  .description('Add an operation be applied after consensus.')
   .response(null);
 
-router.get('/user/:id', handlers.userGet)
+router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
   .header('x-brightid-signature', joi.string().required()
@@ -225,19 +202,19 @@ router.get('/user/:id', handlers.userGet)
   .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")
   .response(schemas.userGetResponse);
 
-router.get('/operation/:hash', handlers.operationGet)
+router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('hash of operation'))
   .summary('Get state and result of an operation')
   .response(schemas.operationGetResponse);
 
-router.get('/verification/:context/:contextId', handlers.verificationGet)
+router.get('/verifications/:context/:contextId', handlers.verificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .summary('Get a signed verification')
   .description("Gets a signed verification for the user that is signed by the node")
   .response(schemas.verificationGetResponse);
 
-router.get('/membership/:groupId', handlers.membershipGet)
+router.get('/memberships/:groupId', handlers.membershipGet)
   .pathParam('groupId', joi.string().required())
   .summary('Get group members')
   .description('Gets all members of a group.')
@@ -246,16 +223,6 @@ router.get('/membership/:groupId', handlers.membershipGet)
 router.get('/ip/', handlers.ip)
   .summary("Get this server's IPv4 address")
   .response(schemas.ipGetResponse);
-
-router.get('/userScore/:user', handlers.userScore)
-  .pathParam('user', joi.string().required().description("id of user"))
-  .summary("Get a user's score")
-  .response(schemas.userScore);
-
-router.get('/userConnections/:user', handlers.userConnections)
-  .pathParam('user', joi.string().required().description("id of user"))
-  .summary("Get a user's connections")
-  .response(schemas.userConnections);
 
 router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))

@@ -409,9 +409,9 @@ function getContext(context){
 
 function getUserByContextId(coll, contextId){
   return query`
-    FOR u in ${coll}
-      FILTER u.contextId == ${contextId}
-      RETURN u.user
+    FOR l in ${coll}
+      FILTER l.contextId == ${contextId}
+      RETURN l.user
   `.toArray()[0];
 }
 

@@ -48,7 +48,7 @@ const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
 
 function apply(op) {
-  const resp1 = request.put(`${baseUrl}/operations`, {
+  const resp1 = request.put(`${baseUrl}/operations/${op._key}`, {
     body: op,
     json: true
   });
@@ -56,7 +56,7 @@ function apply(op) {
   op = operationsColl.document(op._key);
   delete op._rev;
   delete op._id;
-  const resp2 = request.put(`${applyBaseUrl}/operations`, {
+  const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
     body: op,
     json: true
   });
@@ -307,5 +307,6 @@ describe('operations', function(){
     }
     apply(op);
     db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
+
   });
 });
