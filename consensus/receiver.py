@@ -37,26 +37,26 @@ def save_snapshot(block):
 
 def main():
     variables = db.collection('variables')
-    try:
-        last_block = variables.get('LAST_BLOCK')
-    except DocumentGetError:
-        last_block = variables.insert({
+    if variables.has('LAST_BLOCK'):
+        last_block = variables.get('LAST_BLOCK').value
+    else:
+        last_block = w3.eth.getBlock('latest').number
+        variables.insert({
             '_key': 'LAST_BLOCK',
-            'value': w3.eth.getBlock('latest').number
+            'value': last_block
         })
-
 
     while True:
         current_block = w3.eth.getBlock('latest').number
-        for block in range(last_block['value']+1, current_block-config.CONFIRM_NUM+1):
+        for block in range(last_block+1, current_block-config.CONFIRM_NUM+1):
             print('processing block {}'.format(block))
             for i, tx in enumerate(w3.eth.getBlock(block, True)['transactions']):
                 if tx['to'] and tx['to'].lower() == config.TO_ADDRESS.lower():
                     process(tx['input'])
             if block % config.SNAPSHOTS_PERIOD == 0:
                 save_snapshot(block)
-            last_block['value'] = block
-            last_block = variables.update(last_block)
+            last_block = block
+            variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
         time.sleep(5)
 
 if __name__ == '__main__':
