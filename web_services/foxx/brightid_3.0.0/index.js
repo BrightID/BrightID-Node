@@ -187,7 +187,7 @@ const handlers = {
 };
 
 router.put('/operations/:hash', handlers.operationsPut)
-  .pathParam('hash', joi.string().required().description('hash of operation'))
+  .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
   .body(schemas.operation)
   .summary('Add an operation to be applied after consensus')
   .description('Add an operation be applied after consensus.')
@@ -203,7 +203,7 @@ router.get('/users/:id', handlers.userGet)
   .response(schemas.userGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
-  .pathParam('hash', joi.string().required().description('hash of operation'))
+  .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
   .summary('Get state and result of an operation')
   .response(schemas.operationGetResponse);
 

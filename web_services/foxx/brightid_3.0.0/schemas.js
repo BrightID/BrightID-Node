@@ -29,7 +29,9 @@ schemas = Object.assign({
     appLogo: joi.string().description('app logo (base64 encoded image)'),
     appUrl: joi.string().description('the base url for the web app associated with the context'),
   }),
-  operation: joi.object().description(`Following operations have these operation specific attributes:
+  operation: joi.object().description(`
+All operations have a "name" and "timestamp" attributes.
+Operations have also these operation specific attributes:
 
 Add Connection: id1, id2, sig1, sig2
 Remove Connection: id1, id2, sig1

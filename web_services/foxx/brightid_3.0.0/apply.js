@@ -42,7 +42,7 @@ const handlers = {
 };
 
 router.put('/operations/:hash', handlers.operationsPut)
-  .pathParam('hash', joi.string().required().description('hash of operation'))
+  .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
   .body(schemas.operation)
   .summary('Apply operation after consensus')
   .description("Apply operation after consensus.")
