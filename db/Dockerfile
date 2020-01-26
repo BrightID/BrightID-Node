@@ -55,7 +55,9 @@ COPY docker-entrypoint.sh /entrypoint.sh
 
 ADD . /code
 WORKDIR /code/
-RUN mkdir -p /docker-entrypoint-initdb.d/dumps/_system/ && cp dumps/* /docker-entrypoint-initdb.d/dumps/_system/
+
+RUN wget https://storage.googleapis.com/brightid-backups/brightid.tar.gz && tar xvzf brightid.tar.gz && rm brightid.tar.gz
+RUN mkdir -p /docker-entrypoint-initdb.d/dumps/_system/ && cp dump/* /docker-entrypoint-initdb.d/dumps/_system/
 
 ENTRYPOINT ["/entrypoint.sh"]
 
