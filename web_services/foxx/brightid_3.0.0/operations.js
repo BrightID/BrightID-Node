@@ -1,4 +1,5 @@
 const db = require('./db');
+const arango = require('@arangodb').db;
 var CryptoJS = require("crypto-js");
 const nacl = require('tweetnacl');
 const {
@@ -115,7 +116,10 @@ function apply(op) {
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
   } else if (op['name'] == 'Sponsor') {
-    return db.sponsor(op.id, op.context);
+    const { collection } = db.getContext(op.context);
+    const coll = arango._collection(collection);
+    const id = db.getUserByContextId(coll, op.contextId)
+    return db.sponsor(id, op.context);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
   } else {

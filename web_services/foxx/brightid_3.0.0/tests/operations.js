@@ -273,23 +273,6 @@ describe('operations', function(){
     db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
   });
 
-  it('should be able to "Sponsor"', function () {
-    const message = 'Sponsor' + ',' + contextName + ',' + contextId;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(contextSecretKey)))
-    );
-    const op = {
-      'name': 'Sponsor',
-      'context': contextName,
-      'id': u1.id,
-      contextId,
-      '_key': hash(message),
-      sig
-    }
-    apply(op);
-    db.isSponsored(u1.id).should.equal(true);
-  });
-
   it('should be able to "Link ContextId"', function () {
     const timestamp = Date.now();
     const message = 'Link ContextId' + ',' + contextName + ',' + contextId + ',' + timestamp;
@@ -308,5 +291,21 @@ describe('operations', function(){
     apply(op);
     db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
 
+  });
+
+  it('should be able to "Sponsor"', function () {
+    const message = 'Sponsor' + ',' + contextName + ',' + contextId;
+    const sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(contextSecretKey)))
+    );
+    const op = {
+      'name': 'Sponsor',
+      'context': contextName,
+      contextId,
+      '_key': hash(message),
+      sig
+    }
+    apply(op);
+    db.isSponsored(u1.id).should.equal(true);
   });
 });
