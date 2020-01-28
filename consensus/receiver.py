@@ -20,7 +20,7 @@ def process(data):
         op = json.loads(data)
     except ValueError as e:
         return False
-    r = requests.put(config.APPLY_URL, json=op)
+    r = requests.put(config.APPLY_URL.format(op._key.format(hash=op['_key'])), json=op)
     print(op)
     print(r.json())
     assert r.json().get('success') == True
@@ -38,7 +38,7 @@ def save_snapshot(block):
 def main():
     variables = db.collection('variables')
     if variables.has('LAST_BLOCK'):
-        last_block = variables.get('LAST_BLOCK').value
+        last_block = variables.get('LAST_BLOCK')['value']
     else:
         last_block = w3.eth.getBlock('latest').number
         variables.insert({
