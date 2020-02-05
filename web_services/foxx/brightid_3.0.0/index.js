@@ -220,7 +220,7 @@ router.get('/memberships/:groupId', handlers.membershipGet)
   .description('Gets all members of a group.')
   .response(schemas.membershipGetResponse);
 
-router.get('/ip/', handlers.ip)
+router.get('/ip', handlers.ip)
   .summary("Get this server's IPv4 address")
   .response(schemas.ipGetResponse);
 
