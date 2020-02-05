@@ -53,7 +53,7 @@ schemas = Object.assign({
     data: joi.array().items(joi.string()).description('ids of all members of the group')
   }),
 
-  userGetResponse: joi.object({
+  meGetResponse: joi.object({
     data: joi.object({
       score: schemas.score,
       eligibleGroupsUpdated: joi.boolean()
@@ -63,6 +63,14 @@ schemas = Object.assign({
       eligibleGroups: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string())
+    })
+  }),
+
+  userGetResponse: joi.object({
+    data: joi.object({
+      currentGroups: joi.array().items(schemas.group),
+      eligibleGroups: joi.array().items(schemas.group),
+      connections: joi.array().items(schemas.user)
     })
   }),
 

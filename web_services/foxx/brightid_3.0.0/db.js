@@ -42,10 +42,10 @@ function addConnection(key1, key2, timestamp){
   // todo: we should prevent non-verified users from creating
   // new users by making connections.
   if (!u1) {
-    createUser(key1);
+    createUser(key1, timestamp);
   }
   if (!u2) {
-    createUser(key2);
+    createUser(key2, timestamp);
   }
   query`
     insert {
@@ -83,7 +83,8 @@ function loadUsers(users){
         FILTER u._key in ${users}
           RETURN {
             id: u._key,
-            score: u.score
+            score: u.score,
+            createdAt: u.createdAt
           }
   `.toArray();
 }
@@ -231,7 +232,7 @@ function updateEligibleTimestamp(key, timestamp){
   `;
 }
 
-function createUser(key){
+function createUser(key, timestamp){
   // already exists?
   const user = loadUser(key);
 
@@ -239,6 +240,7 @@ function createUser(key){
     usersColl.save({
       score: 0,
       signingKey: urlSafeB64ToB64(key),
+      createdAt: timestamp,
       _key: key
     });
   }
