@@ -64,21 +64,8 @@ const handlers = {
     });
   },
 
-  meGet: function meGetHandler(req, res){
+  userGet: function userGetHandler(req, res){
     const id = req.param('id');
-    const timestamp = req.header('x-brightid-timestamp');;
-    const sig = req.header('x-brightid-signature');
-
-    if (timestamp < Date.now() - TIME_FUDGE || timestamp > Date.now() + TIME_FUDGE) {
-      res.throw(400, "bad timestamp");
-    }
-
-    const message = 'Get User' + id + timestamp;
-    try {
-      operations.verifyUserSig(message, id, sig);
-    } catch (e) {
-      res.throw(403, e);
-    }
 
     const user = db.loadUser(id);
     if (! user) {
@@ -104,32 +91,12 @@ const handlers = {
     res.send({
       data: {
         score: user.score,
+        createdAt: user.createdAt,
         eligibleGroupsUpdated,
         eligibleGroups,
         currentGroups: db.loadGroups(currentGroups, connections, id),
         connections: db.loadUsers(connections),
         verifications: user.verifications
-      }
-    });
-  },
-
-  userGet: function userGetHandler(req, res){
-    const id = req.param('id');
-
-    const user = db.loadUser(id);
-    if (! user) {
-      res.throw(404, "User not found");
-    }
-    const connections = db.userConnections(id);
-    const currentGroups = db.userCurrentGroups(id);
-    let eligibleGroups = db.userNewGroups(id, connections);
-
-    res.send({
-      data: {
-        eligibleGroups,
-        currentGroups: db.loadGroups(currentGroups, connections, id),
-        connections: db.loadUsers(connections),
-        createdAt: user.createdAt,
       }
     });
   },
@@ -214,19 +181,10 @@ router.put('/operations/:hash', handlers.operationsPut)
   .description('Add an operation be applied after consensus.')
   .response(null);
 
-router.get('/me/:id', handlers.meGet)
-  .pathParam('id', joi.string().required().description('the brightid of the user'))
-  .summary('Get information about a user')
-  .header('x-brightid-signature', joi.string().required()
-    .description('message ("Get User" + id) signed by the user represented by id'))
-  .header('x-brightid-timestamp', joi.string().required())
-  .description("Gets a user's score, verifications, lists of current groups, eligible groups, and current connections.")
-  .response(schemas.meGetResponse);
-
 router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
-  .description("Gets a user's join date, lists of , current groups, eligible groups, and current connections.")
+  .description("Gets a user's score, verifications, joining date, lists of , current groups, eligible groups, and current connections.")
   .response(schemas.userGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)

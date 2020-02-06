@@ -53,9 +53,10 @@ schemas = Object.assign({
     data: joi.array().items(joi.string()).description('ids of all members of the group')
   }),
 
-  meGetResponse: joi.object({
+  userGetResponse: joi.object({
     data: joi.object({
       score: schemas.score,
+      creatdAt: schemas.timestamp,
       eligibleGroupsUpdated: joi.boolean()
         .description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, ' +
           '`eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
@@ -63,14 +64,6 @@ schemas = Object.assign({
       eligibleGroups: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string())
-    })
-  }),
-
-  userGetResponse: joi.object({
-    data: joi.object({
-      currentGroups: joi.array().items(schemas.group),
-      eligibleGroups: joi.array().items(schemas.group),
-      connections: joi.array().items(schemas.user)
     })
   }),
 
