@@ -56,6 +56,7 @@ schemas = Object.assign({
   userGetResponse: joi.object({
     data: joi.object({
       score: schemas.score,
+      creatdAt: schemas.timestamp,
       eligibleGroupsUpdated: joi.boolean()
         .description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, ' +
           '`eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
