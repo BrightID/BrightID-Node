@@ -7,7 +7,6 @@ const { query, db } = require('@arangodb');
 const _ = require('lodash');
 
 const connectionsColl = db._collection('connections');
-const removedColl = db._collection('removed');
 const groupsColl = db._collection('groups');
 const newGroupsColl = db._collection('newGroups');
 const usersInGroupsColl = db._collection('usersInGroups');
@@ -23,37 +22,78 @@ const {
   urlSafeB64ToB64
 } = require('./encoding');
 
-function removeConnection(key1, key2, timestamp){
-  const user1 = 'users/' + key1;
-  const user2 = 'users/' + key2;
-  query`
-    for c in ${connectionsColl}
-      filter (c._from == ${user1} && c._to == ${user2})
-      || (c._from == ${user2} && c._to == ${user1})
-      remove c in ${connectionsColl}
-  `;
+function getConnection(key1, key2) {
+  let conn = connectionsColl.firstExample({
+    _from: 'users/' + key1,
+    _to: 'users/' + key2
+  });
+  if (! conn) {
+    conn = connectionsColl.firstExample({
+      _from: 'users/' + key2,
+      _to: 'users/' + key1
+    });
+  }
+  return conn;
 }
 
 function addConnection(key1, key2, timestamp){
-  const user1 = 'users/' + key1;
-  const user2 = 'users/' + key2;
+  // create user by adding connection if it's not created
+  // todo: we should prevent non-verified users from creating new users by making connections.
   const u1 = loadUser(key1);
   const u2 = loadUser(key2);
-  // todo: we should prevent non-verified users from creating
-  // new users by making connections.
   if (!u1) {
     createUser(key1, timestamp);
   }
   if (!u2) {
     createUser(key2, timestamp);
   }
-  query`
-    insert {
-      _from: ${user1},
-      _to: ${user2},
-      timestamp: ${timestamp}
-    } in ${connectionsColl}
-  `;
+
+  const conn = getConnection(key1, key2);
+  if (! conn) {
+    connectionsColl.save({
+      _from: 'users/' + key1,
+      _to: 'users/' + key2,
+      timestamp
+    });
+  } else {
+    connectionsColl.update(conn, { timestamp });
+  }
+}
+
+function removeConnection(key1, key2, timestamp){
+  const conn = getConnection(key1, key2);
+  if (conn) {
+    connectionsColl.remove(conn);
+  }
+}
+
+function flagUser(flagger, flagged, reason, timestamp){
+  const conn = getConnection(flagger, flagged);
+  if (! conn) {
+    throw 'no connection found';
+  }
+  connectionsColl.remove(conn);
+  
+  // add flagger to the flaggers on the flagged user
+  const flaggedUser = userscoll.document(flagged);
+  let flaggers = flaggedUser.flaggers;
+  if (! flaggers) {
+    flaggers = {}
+  }
+  flaggers[flagger] = reason;
+  usersColl.update(flaggedUser, { flaggers });
+
+  // remove the flaged user from all groups that two or more members of them
+  // flagged that user
+  const edges = usersInGroupsColl.byExample({ _from: 'users/' + flagged }).toArray();
+  edges.map(edge => {
+    const edges2 = usersInGroupsColl.byExample({ _to: edge._to }).toArray();
+    const members = edges2.map(edge2 => edge2._from.replace('users/', ''));
+    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
+    if (intersection.length >= 2) {
+      usersInGroupsColl.remove(edge);
+    }
+  });
 }
 
 function userConnectionsRaw(user){
@@ -84,7 +124,8 @@ function loadUsers(users){
           RETURN {
             id: u._key,
             score: u.score,
-            createdAt: u.createdAt
+            createdAt: u.createdAt,
+            flaggers: u.flaggers
           }
   `.toArray();
 }
@@ -291,11 +332,30 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   const user = 'users/' + key;
   const group = groupCollName + '/' + groupId;
 
-  return collection.save({
-    timestamp: timestamp,
+  // flagged users can't join a group that have 2 or more flaggers in them
+  const flaggers = usersColl.document(key).flaggers;
+  if (flaggers) {
+    const members = collection.byExample({ _to: group }).map(e => e._from.replace('users/', ''));
+    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
+    if (intersection.length >= 2) {
+      throw 'user is flagged by two or more members of the group';
+    }
+  }
+
+  const edge = collection.firstExample({
     _from: user,
     _to: group
   });
+  if (! edge) {
+    collection.save({
+      timestamp: timestamp,
+      _from: user,
+      _to: group
+    });
+  } else {
+    collection.update(conn, { timestamp });
+  }
+  
 }
 
 function deleteGroup(groupId, key, timestamp){
@@ -528,6 +588,7 @@ module.exports = {
   updateEligibleTimestamp,
   userNewGroups,
   createUser,
+  flagUser,
   groupMembers,
   userConnections,
   userConnectionsRaw,

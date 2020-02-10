@@ -45,6 +45,7 @@ const operationsData = {
   'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
   'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
+  'Flag User': {'attrs': ['flagger', 'flagged', 'reason', 'sig']},
 };
 
 const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
@@ -86,6 +87,9 @@ function verify(op) {
   } else if (op['name'] == 'Link ContextId') {
     message = op.name + ',' + op.context + ',' + op.contextId + ',' + op.timestamp;
     verifyUserSig(message, op.id, op.sig);
+  } else if (op['name'] == 'Flag User') {
+    message = op.name + op.flagger + op.flagged + op.reason + op.timestamp;
+    verifyUserSig(message, op.flagger, op.sig);
   } else {
     throw "invalid operation";
   }
@@ -105,7 +109,6 @@ function apply(op) {
   } else if (op['name'] == 'Remove Connection') {
     return db.removeConnection(op.id1, op.id2, op.timestamp);
   } else if (op['name'] == 'Add Group') {
-    // fixme: group id should be a hash of its founders id
     return db.createGroup(op.id1, op.id2, op.id3, op.timestamp);
   } else if (op['name'] == 'Remove Group') {
     return db.deleteGroup(op.group, op.id, op.timestamp);
@@ -124,6 +127,8 @@ function apply(op) {
     return db.sponsor(id, op.context);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
+  } else if (op['name'] == 'Flag User') {
+    return db.flagUser(op.flagger, op.flagged, op.reason, op.timestamp);
   } else {
     throw "invalid operation";
   }
