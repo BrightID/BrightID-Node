@@ -28,6 +28,8 @@ describe('groups', function () {
     db.createUser('b');
     db.createUser('c');
     db.createUser('d');
+    db.createUser('e');
+    db.createUser('f');
     db.addConnection('b', 'c', 0);
     db.addConnection('b', 'd', 0);
   });
@@ -86,7 +88,56 @@ describe('groups', function () {
     it('should be able to leave the group', function (){
       db.deleteMembership(groupId, 'a', Date.now());
       usersInGroupsColl.count().should.equal(3);
-    })
+    });
   });
+  describe('flagging', function() {
+    before(function() {
+      db.addConnection('a', 'd', 0);
+      db.addConnection('a', 'e', 0);
+      db.addConnection('a', 'f', 0);
+      db.addConnection('b', 'd', 0);
+      db.addConnection('b', 'e', 0);
+      db.addConnection('b', 'f', 0);
+      db.addConnection('c', 'd', 0);
+      db.addConnection('c', 'e', 0);
+      db.addConnection('c', 'f', 0);
+      db.addMembership(groupId, 'a', Date.now());
+      db.addMembership(groupId, 'e', Date.now());
+      db.addMembership(groupId, 'f', Date.now());
 
+    });
+
+    it('should not be able to flag someone without having connection', function(){
+      (() => {
+        db.flagUser('e', 'f', 'duplicate', 0);
+      }).should.throw('no connection found');
+    });
+
+    it('should be able to flag a connection', function(){
+      db.flagUser('b', 'a', 'duplicate', 0);
+      usersColl.document('a').flaggers.should.deep.equal({'b': 'duplicate'});
+      db.userConnections('b').should.not.include('a');
+    });
+
+    it('user should be removed from a group after being flagged by 2 members', function(){      
+      db.flagUser('c', 'a', 'duplicate', 0);
+      usersColl.document('a').flaggers.should.deep.equal({'b': 'duplicate', 'c': 'duplicate'});
+      db.userConnections('a').should.not.include('c');
+      usersInGroupsColl.byExample({'_from': 'users/a'}).count().should.equal(0);
+      usersInGroupsColl.byExample({'_from': 'users/b'}).count().should.equal(1);
+      usersInGroupsColl.byExample({'_from': 'users/c'}).count().should.equal(1);
+    });
+
+    it('flagged user should not be able to join a group that is flagged by 2 members', function(){
+      (() => {
+        db.addMembership(groupId, 'a', Date.now());
+      }).should.throw('user is flagged by two or more members of the group');
+    });
+
+    it('should be able to remove a flag by making connection again', function(){
+      db.addConnection('a', 'b', 0);
+      usersColl.document('a').flaggers.should.deep.equal({'c': 'duplicate'});
+    });
+
+  });
 });

@@ -308,4 +308,24 @@ describe('operations', function(){
     apply(op);
     db.isSponsored(u1.id).should.equal(true);
   });
+
+  it('should be able to "Flag User"', function () {
+    const timestamp = Date.now();
+    const message = 'Flag User' + u2.id + u1.id + 'duplicate' + timestamp;
+    const sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const op = {
+      'name': 'Flag User',
+      'flagger': u2.id,
+      'flagged': u1.id,
+      'reason': 'duplicate',
+      '_key': hash(message),
+      timestamp,
+      sig
+    }
+    apply(op);
+    usersColl.document(u1.id).flaggers.should.have.property(u2.id);
+  });
+
 });
