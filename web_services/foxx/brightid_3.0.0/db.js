@@ -48,6 +48,18 @@ function addConnection(key1, key2, timestamp){
     createUser(key2, timestamp);
   }
 
+  // remove flag if exists
+  if (u1.flaggers && key2 in u1.flaggers) {
+    const flaggers = {...u1.flaggers};
+    delete flaggers[key2];
+    usersColl.update(u1, { flaggers }, { mergeObjects: false });
+  }
+  if (u2.flaggers && key1 in u2.flaggers) {
+    const flaggers = {...u2.flaggers};
+    delete flaggers[key1];
+    usersColl.update(u2, { flaggers }, { mergeObjects: false });
+  }
+
   const conn = getConnection(key1, key2);
   if (! conn) {
     connectionsColl.save({
@@ -68,14 +80,18 @@ function removeConnection(key1, key2, timestamp){
 }
 
 function flagUser(flagger, flagged, reason, timestamp){
+  if (! ['fake', 'duplicate', 'deceased'].includes(reason)) {
+    throw 'invalid reason';
+  }
   const conn = getConnection(flagger, flagged);
   if (! conn) {
     throw 'no connection found';
   }
+
   connectionsColl.remove(conn);
   
   // add flagger to the flaggers on the flagged user
-  const flaggedUser = userscoll.document(flagged);
+  const flaggedUser = usersColl.document(flagged);
   let flaggers = flaggedUser.flaggers;
   if (! flaggers) {
     flaggers = {}
@@ -335,7 +351,7 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   // flagged users can't join a group that have 2 or more flaggers in them
   const flaggers = usersColl.document(key).flaggers;
   if (flaggers) {
-    const members = collection.byExample({ _to: group }).map(e => e._from.replace('users/', ''));
+    const members = collection.byExample({ _to: group }).toArray().map(e => e._from.replace('users/', ''));
     const intersection = Object.keys(flaggers).filter(u => members.includes(u));
     if (intersection.length >= 2) {
       throw 'user is flagged by two or more members of the group';
