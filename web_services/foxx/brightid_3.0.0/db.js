@@ -426,6 +426,15 @@ function getContextIdsByUser(coll, id){
   `.toArray();
 }
 
+function getLastContextIds(coll){
+  return query`
+    FOR u IN ${coll}
+      SORT u.timestamp DESC
+      COLLECT user = u.user INTO contextIds = u.contextId
+      RETURN contextIds[0]
+  `.toArray();
+}
+
 function userHasVerification(verification, user){
   const u = loadUser(user);
   return u && u.verifications && u.verifications.indexOf(verification) > -1;
@@ -434,7 +443,7 @@ function userHasVerification(verification, user){
 function linkContextId(id, context, contextId, timestamp){
   const { collection } = getContext(context);
   const coll = db._collection(collection);
-  
+
   if (getUserByContextId(coll, contextId)) {
     throw 'contextId is duplicate';
   }
@@ -544,4 +553,5 @@ module.exports = {
   upsertOperation,
   setTrusted,
   setSigningKey,
+  getLastContextIds
 };

@@ -25,6 +25,11 @@
       "description": "Private key of this server node; used for signing verifications",
       "type": "string",
       "required": false
+    },
+    "ethPrivateKey": {
+      "description": "Ethereum private key of this server node; used for signing verifications",
+      "type": "string",
+      "required": false
     }
   }
 }
