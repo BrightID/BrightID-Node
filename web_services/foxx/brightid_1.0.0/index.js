@@ -155,7 +155,8 @@ schemas = Object.assign({
     id: joi.string().required().description('an id used by the app consuming the verification'),
     sig: joi.string().required().description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
     signed: joi.string().description('value will be eth or nacl and should be provided if signature is required in the response'),
-    timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
+    timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested'),
+    sponsorshipSig: joi.string().description('message (context + "," + id + "," + timestamp) signed by the context owner publicKey to verify usage of its sponsorships by user'),
   }),
 
   fetchVerificationPostResponse: joi.object({
@@ -429,8 +430,9 @@ const handlers = {
   },
 
   fetchVerification: function fetchVerification(req, res){
-    const { publicKey: key, context, sig, id, timestamp: userTimestamp, signed } = req.body;
+    const { publicKey: key, context, sig, id, timestamp: userTimestamp, signed, sponsorshipSig } = req.body;
 
+    const safeKey = safe(key);
     const serverTimestamp = Date.now();
 
     if (userTimestamp > serverTimestamp + TIME_FUDGE) {
@@ -457,21 +459,35 @@ const handlers = {
       res.throw(403, e);
     }
 
-    const { verification, collection } = db.getContext(context);
+    const {
+      verification,
+      collection,
+      publicKey: contextKey
+    } = db.getContext(context);
 
     const coll = arango._collection(collection);
 
     try {
-      if (db.latestVerificationByUser(coll, key) > userTimestamp) {
-        throw "there was an existing mapped account with a more recent timestamp";
-      }
-
-      const safeKey = safe(key);
-
-      // check that the user has this verification
 
       if (! db.userHasVerification(verification, safeKey)) {
         throw "user doesn't have the verification for the context";
+      }
+
+      if (db.latestVerificationByUser(coll, safeKey) > userTimestamp) {
+        throw "there was an existing mapped account with a more recent timestamp";
+      }
+
+      if (! db.isSponsored(safeKey)) {
+        if (! sponsorshipSig) {
+          throw "user is not sponsored";
+        }
+        if (db.unusedSponsorships(context) < 1) {
+          throw "context does not have unused sponsorships";
+        }
+        if (! nacl.sign.detached.verify(message, b64ToUint8Array(sponsorshipSig), b64ToUint8Array(contextKey))) {
+          throw "sig wasn't context + \",\" + userid + \",\" + timestamp signed by the publicKey of the context";
+        }
+        db.sponsor(safeKey, context);
       }
 
       // update the id and timestamp and mark it as current in the db
@@ -483,19 +499,19 @@ const handlers = {
       const revocableIds = db.revocableIds(coll, id, safeKey);
       const contextIds = [id, ...revocableIds]
 
-      let sig, publicKey;
+      let verificationSig, publicKey;
       if (signed == 'nacl') {
         // sign and return the verification
         const verificationMessage = context + ',' + contextIds.join(',');
         publicKey = nodePublicKey;
-        sig = nacl.sign.detached(verificationMessage, b64ToUint8Array(nodePrivateKey));
+        verificationSig = nacl.sign.detached(verificationMessage, b64ToUint8Array(nodePrivateKey));
       } else if (signed   == 'eth') {
         const verificationMessage = pad32(context) + contextIds.map(pad32).join('');
         const h = new Uint8Array(createKeccakHash('keccak256').update(verificationMessage).digest());
         ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
         publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
         const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
-        sig = {
+        verificationSig = {
           r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
           s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
           v: _sig.recid + 27,
@@ -506,7 +522,7 @@ const handlers = {
           unique: true,
           context: context,
           contextIds: contextIds,
-          sig,
+          sig: verificationSig,
           publicKey
         }
       });
@@ -516,7 +532,7 @@ const handlers = {
           unique: false,
           context: context,
           contextIds: [],
-          errorMessage: e.message
+          errorMessage: e
         }
       });
     }
