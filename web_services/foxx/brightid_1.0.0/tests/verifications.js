@@ -3,6 +3,10 @@
 const db = require('../db.js');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
+const request = require("@arangodb/request");
+const { strToUint8Array, b64ToUint8Array } = require('../encoding');
+const nacl = require('tweetnacl');
+const { baseUrl } = module.context;
 
 const contextsColl = arango._collection('contexts');
 
@@ -33,6 +37,21 @@ describe('verifications', function () {
 
     db.addId(testIdsColl, 'unused', '2', 15);
     db.addId(testIdsColl, 'stillUsed', '2', 25);
+  });
+  it('should be able to get all latest accounts', function() {
+    const resp = request.get(`${baseUrl}/verifications/testContext`, {});
+    resp.json.data.contextIds.should.deep.equal(['unused','stillUsed']);
+  });
+  it('should be able to get verifications of an account', function() {
+    const resp = request.get(`${baseUrl}/verifications/testContext/unused`, {});
+    resp.json.data.unique.should.equal(true);
+    resp.json.data.contextIds.should.deep.equal(['unused','stillUsed','old']);
+  });
+  it('should be able to get nacl signed verifications of an account', function() {
+    const resp = request.get(`${baseUrl}/verifications/testContext/unused?signed=nacl`, {});
+    const message = 'testContext' + (resp.json.data.contextIds.length ?  ',' + resp.json.data.contextIds.join(',') : '');
+    const publicKey = module.context.configuration.publicKey;
+    nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(resp.json.data.sig), b64ToUint8Array(publicKey)).should.equal(true);
   });
   it('should include an old, unused id under revocable ids', function() {
     db.revocableIds(testIdsColl, 'new', '1').should.include('old');
