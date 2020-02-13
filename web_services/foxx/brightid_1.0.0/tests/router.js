@@ -17,6 +17,7 @@ const { baseUrl } = module.context;
 
 const contextsColl = arango._collection('contexts');
 const usersColl = arango._collection('users');
+const sponsorshipsColl = arango._collection('sponsorships');
 
 const chai = require('chai');
 const should = chai.should();
@@ -34,6 +35,7 @@ describe('fetchVerification', function () {
     testIdsColl = arango._create('ethereum');
     contextsColl.truncate();
     usersColl.truncate();
+    sponsorshipsColl.truncate();
     query`
       INSERT {
         _key: "ethereum",
@@ -54,6 +56,7 @@ describe('fetchVerification', function () {
     arango._drop(testIdsColl);
     contextsColl.truncate();
     usersColl.truncate();
+    sponsorshipsColl.truncate();
   });
 
   it('should be able to fetchVerification', function () {
