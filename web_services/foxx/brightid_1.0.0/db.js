@@ -537,32 +537,6 @@ function revocableIds(collection, id, user){
   `.toArray();
 }
 
-function getLastContextIds(coll){
-  return query`
-    FOR u IN ${coll}
-      SORT u.timestamp DESC
-      COLLECT user = u.user INTO contextIds = u.account
-      RETURN contextIds[0]
-  `.toArray();
-}
-
-function getUserByContextId(coll, contextId){
-  return query`
-    FOR l in ${coll}
-      FILTER l.account == ${contextId}
-      RETURN l.user
-  `.toArray()[0];
-}
-
-function getContextIdsByUser(coll, id){
-  return query`
-    FOR u in ${coll}
-      FILTER u.user == ${id}
-      SORT u.timestamp DESC
-      RETURN u.account
-  `.toArray();
-}
-
 module.exports = {
   addConnection,
   removeConnection,
@@ -588,7 +562,4 @@ module.exports = {
   userHasVerification,
   addId,
   revocableIds,
-  getLastContextIds,
-	getUserByContextId,
-	getContextIdsByUser,
 };

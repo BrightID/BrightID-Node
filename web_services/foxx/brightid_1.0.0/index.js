@@ -149,20 +149,24 @@ schemas = Object.assign({
     data: schemas.user
   }),
 
-  verificationGetResponse: joi.object({
-    data: joi.object({
-      unique: joi.string().description("the node's public key."),
-      context: joi.string().description("the context name."),
-      contextIds: joi.array().items(joi.string()).description('an array of contextIDs'),
-      sig: joi.string().description('verification message ( context + "," + contextIds ) signed by the node'),
-      publicKey: joi.string().description("the node's public key"),
-      erroeMessage: joi.string().description("the error message")
-    })
+  fetchVerificationPostBody: joi.object({
+    publicKey: joi.string().required().description('public key of the user (base64)'),
+    context: joi.string().required().description('the context of the id (typically an application)'),
+    id: joi.string().required().description('an id used by the app consuming the verification'),
+    sig: joi.string().required().description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
+    signed: joi.string().description('value will be eth or nacl and should be provided if signature is required in the response'),
+    timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested')
   }),
 
-  contextVerificationGetResponse: joi.object({
+  fetchVerificationPostResponse: joi.object({
     data: joi.object({
-      contextIds: joi.array().items(joi.string()).description('an array of contextIDs')
+      unique: joi.boolean().description('true if verification is successful'),
+      publicKey: joi.string().description("the node's public key."),
+      contextIds: joi.array().items(joi.string()).description("ids used by this user"),
+      context: joi.string().description('the context of the id (typically an application)'),
+      sig: joi.string().description('verification message ( context + "," + id +  "," + timestamp [ + "," + revocableId ... ] ) signed by the node'),
+      timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed'),
+      errorMessage: joi.string().description("the error message if verification is not seccussful")
     })
   }),
 
@@ -424,72 +428,71 @@ const handlers = {
     });
   },
 
-  contextVerificationGet: function(req, res){
-    const contextName = req.param('context');
+  fetchVerification: function fetchVerification(req, res){
+    const { publicKey: key, context, sig, id, timestamp: userTimestamp, signed } = req.body;
 
-    const context = db.getContext(contextName);
-    if (!context) {
-      res.throw(404, 'context not found');
+    const serverTimestamp = Date.now();
+
+    if (userTimestamp > serverTimestamp + TIME_FUDGE) {
+      res.throw(400, "timestamp can't be in the future");
     }
 
-    const coll = arango._collection(context.collection);
-    const contextIds = db.getLastContextIds(coll);
+    let nodePublicKey, nodePrivateKey, ethPrivateKey;
 
-    res.send({
-      data: {
-        contextIds: contextIds
-      }
-    });
-  },
+    if (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey && module.context.configuration.ethPrivateKey) {
+      nodePublicKey = module.context.configuration.publicKey;
+      nodePrivateKey = module.context.configuration.privateKey;
+      ethPrivateKey = module.context.configuration.ethPrivateKey;
+    } else {
+      res.throw(500, 'Server node key pair not configured')
+    }
 
-  verificationGet: function(req, res){
+    const message = strToUint8Array(context + ',' + id + ',' + userTimestamp);
+
     try {
-      const contextId = req.param('contextId');
-      let contextName = req.param('context');
-      const signed = req.param('signed');
-      const context = db.getContext(contextName);
-      if (!context) {
-        res.throw(404, 'context not found');
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))) {
+        res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by the user represented by publicKey");
+      }
+    } catch (e) {
+      res.throw(403, e);
+    }
+
+    const { verification, collection } = db.getContext(context);
+
+    const coll = arango._collection(collection);
+
+    try {
+      if (db.latestVerificationByUser(coll, key) > userTimestamp) {
+        throw "there was an existing mapped account with a more recent timestamp";
       }
 
-      const coll = arango._collection(context.collection);
-      const user = db.getUserByContextId(coll, contextId);
-      if (!user) {
-        res.throw(404, 'contextId not found');
+      const safeKey = safe(key);
+
+      // check that the user has this verification
+
+      if (! db.userHasVerification(verification, safeKey)) {
+        throw "user doesn't have the verification for the context";
       }
 
-      if (!db.userHasVerification(context.verification, user)) {
-        res.throw(403, 'user can not be verified for this context');
-      }
+      // update the id and timestamp and mark it as current in the db
 
-      let contextIds = db.getContextIdsByUser(coll, user);
-      if (contextId != contextIds[0]) {
-        res.throw(403, 'user is not using this account anymore');
-      }
+      db.addId(coll, id, safeKey, serverTimestamp);
 
-      // sign and return the verification
+      // find old ids for this public key that aren't currently being used by someone else
+
+      const revocableIds = db.revocableIds(coll, id, safeKey);
+      const contextIds = [id, ...revocableIds]
+
       let sig, publicKey;
       if (signed == 'nacl') {
-        if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-          res.throw(500, 'Server node key pair not configured')
-        }
-
-        const message = contextName + (contextIds.length ?  ',' + contextIds.join(',') : '');
-        const privateKey = module.context.configuration.privateKey;
-        publicKey = module.context.configuration.publicKey;
-        sig = uInt8ArrayToB64(
-          Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
-        );
-      } else if (signed == 'eth') {
-        if (!(module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
-          res.throw(500, 'Server node ethereum privateKey not configured')
-        }
-
-        let paddedContextIds = contextIds.map(pad32);
-        const message = pad32(contextName) + paddedContextIds.join('');
-        let ethPrivateKey = module.context.configuration.ethPrivateKey;
+        // sign and return the verification
+        const verificationMessage = context + ',' + contextIds.join(',');
+        publicKey = nodePublicKey;
+        sig = nacl.sign.detached(verificationMessage, b64ToUint8Array(nodePrivateKey));
+      } else if (signed   == 'eth') {
+        const verificationMessage = pad32(context) + contextIds.map(pad32).join('');
+        const h = new Uint8Array(createKeccakHash('keccak256').update(verificationMessage).digest());
         ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
-        const h = new Uint8Array(createKeccakHash('keccak256').update(message).digest());
         publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
         const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
         sig = {
@@ -501,7 +504,7 @@ const handlers = {
       res.send({
         data: {
           unique: true,
-          context: contextName,
+          context: context,
           contextIds: contextIds,
           sig,
           publicKey
@@ -511,9 +514,9 @@ const handlers = {
       res.send({
         data: {
           unique: false,
-          context: req.param('context'),
+          context: context,
           contextIds: [],
-          erroeMessage: e.message
+          errorMessage: e.message
         }
       });
     }
@@ -645,19 +648,11 @@ router.post('/users/', handlers.usersPost)
   .description("Create a user")
   .response(schemas.usersPostResponse);
 
-router.get('/verifications/:context/:contextId', handlers.verificationGet)
-  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
-  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
-  .summary('Gets a signed verification')
-  .description("Gets a signed verification for the user that is signed by the node")
-  .response(schemas.verificationGetResponse);
-
-router.get('/verifications/:context', handlers.contextVerificationGet)
-  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
-  .summary('Gets list of all of contextIDs')
-  .description("Gets list of all of contextIDs in the context that are currently linked to unique humans")
-  .response(schemas.contextVerificationGetResponse);
+router.post('/fetchVerification', handlers.fetchVerification)
+  .body(schemas.fetchVerificationPostBody.required())
+  .summary("Get a signed verification from a server node")
+  .description("Gets a signed verification for a user under a given id and context.")
+  .response(schemas.fetchVerificationPostResponse);
 
 router.get('/ip/', handlers.ip)
   .summary("Get this server's IPv4 address")
