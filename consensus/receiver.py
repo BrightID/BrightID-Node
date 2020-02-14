@@ -5,7 +5,7 @@ import binascii
 import base64
 import hashlib
 import zipfile
-import requests 
+import requests
 from arango import ArangoClient
 from arango.exceptions import DocumentGetError
 from web3 import Web3, HTTPProvider
@@ -51,7 +51,8 @@ def main():
 
     while True:
         current_block = w3.eth.getBlock('latest').number
-        for block in range(last_block+1, current_block-config.CONFIRM_NUM+1):
+        time.sleep(1)
+        for block in range(last_block+1, current_block+1):
             print('processing block {}'.format(block))
             for i, tx in enumerate(w3.eth.getBlock(block, True)['transactions']):
                 if tx['to'] and tx['to'].lower() == config.TO_ADDRESS.lower():
@@ -60,7 +61,6 @@ def main():
                 save_snapshot(block)
             last_block = block
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
-        time.sleep(5)
 
 if __name__ == '__main__':
     print('receiver started ...')
