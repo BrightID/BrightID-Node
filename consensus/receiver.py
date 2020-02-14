@@ -9,9 +9,12 @@ import requests
 from arango import ArangoClient
 from arango.exceptions import DocumentGetError
 from web3 import Web3, HTTPProvider
+from web3.middleware import geth_poa_middleware
 import config
 
 w3 = Web3(HTTPProvider(config.INFURA_URL))
+if config.INFURA_URL.count('rinkeby') > 0:
+    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 db = ArangoClient().db('_system')
 
 def process(data):
