@@ -460,7 +460,7 @@ function unusedSponsorships(context){
 function isSponsored(key){
   return query`
     FOR s in ${sponsorshipsColl}
-      FILTER s._from == ${'users/' + key}
+      FILTER s._to == ${'users/' + key}
       LIMIT 1
       RETURN 1
   `.count() > 0;
@@ -471,8 +471,8 @@ function sponsor(key, context){
   context = 'contexts/' + context;
   query`
     INSERT {
-      _from: ${key},
-      _to: ${context}
+      _from: ${context},
+      _to: ${key}
     } in ${sponsorshipsColl}
   `;
 }

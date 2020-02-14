@@ -149,7 +149,7 @@ schemas = Object.assign({
     data: schemas.user
   }),
 
-  fetchVerificationPostBody: joi.object({
+  linkContextIdPostBody: joi.object({
     publicKey: joi.string().required().description('public key of the user (base64)'),
     context: joi.string().required().description('the context of the id (typically an application)'),
     contextId: joi.string().required().description('an id used by the app consuming the verification'),
@@ -421,7 +421,7 @@ const handlers = {
     });
   },
 
-  fetchVerification: function fetchVerification(req, res){
+  linkContextId: function linkContextId(req, res){
     const { publicKey: key, context, sig, contextId, timestamp: userTimestamp, signed, sponsorshipSig } = req.body;
 
     const safeKey = safe(key);
@@ -454,7 +454,7 @@ const handlers = {
     }
 
     if (db.latestVerificationByUser(coll, safeKey) > userTimestamp) {
-      res.throw(400, "there was an existing mapped account with a more recent timestamp");
+      res.throw(400, "there was an existing linked contextId with a more recent timestamp");
     }
 
     if (! db.isSponsored(safeKey)) {
@@ -558,7 +558,6 @@ const handlers = {
       });
     }
     const contextIds = db.getContextIdsByUser(coll, user);
-
     let verificationSig, publicKey;
     if (signed == 'nacl') {
       // sign and return the verification
@@ -643,8 +642,8 @@ router.post('/users/', handlers.usersPost)
   .description("Create a user")
   .response(schemas.usersPostResponse);
 
-router.post('/fetchVerification', handlers.fetchVerification)
-  .body(schemas.fetchVerificationPostBody.required())
+router.post('/linkContextId', handlers.linkContextId)
+  .body(schemas.linkContextIdPostBody.required())
   .summary("Get a signed verification from a server node")
   .description("Gets a signed verification for a user under a given id and context.")
   .response(null);
