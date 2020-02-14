@@ -520,51 +520,33 @@ function userHasVerification(verification, user){
   `.count() > 0;
 }
 
-function addId(collection, id, user, timestamp){
+function linkContextId(collection, contextId, user, timestamp){
+  if (getUserByContextId(collection, contextId)) {
+    throw 'contextId is duplicate';
+  }
   query`
-    upsert { user: ${user} , account: ${id} }
-    insert { user: ${user} , account: ${id}, timestamp: ${timestamp} }
-    update { timestamp: ${timestamp} } in ${collection}
+    insert {
+      user: ${user},
+      account: ${contextId},
+      timestamp: ${timestamp}
+    } in ${collection}
   `;
 }
 
-function revocableIds(collection, id, user){
-  // Any user can link their BrightID to an account id under a context without proving ownership of that account.
-  // In this way, only a BrightID node (and not an application) has mappings of BrightIDs to application account ids.
-  // Applications can see whether a user with a certain account id is verified.
-  // A user can't block another user from using an id; two or more users can link to the same id.
-  // A user can't revoke another user's id; the id isn't revoked until no users are linking to it.
-  // A user can't link to another id without revoking any previous ids.
-  // A verification always has all past revocations attached to it.
-  // Revocable ids must remain in the DB forever to ensure that the issuing application is aware of all revocations.
-  // The latest id (by timestamp) for each user in a context is the only one that's in use.
-  // Any id not in use by any user is revocable. The actual revocation is done by the issuing application.
+function getUserByContextId(collection, contextId){
+  return query`
+    FOR l in ${collection}
+      FILTER l.account == ${contextId}
+      RETURN l.user
+  `.toArray()[0];
+}
 
+function getContextIdsByUser(collection, user){
   return query`
     FOR u in ${collection}
-    filter u.account != ${id}
-    filter u.user == ${user}
-      
-    LET inUse = (
-        FOR u2 in ${collection}
-            filter u2.account == u.account
-            filter u2.user != u.user
-            
-            LET latest = (
-                FOR u3 in ${collection}
-                    filter u3.user == u2.user
-                    SORT u3.timestamp DESC
-                    LIMIT 1
-                    RETURN u3._key
-            )
-            
-            filter latest[0] == u2._key
-            LIMIT 1
-            RETURN 1
-    )
-    
-    filter length(inUse) == 0
-    RETURN u.account
+      FILTER u.user == ${user}
+      SORT u.timestamp DESC
+      RETURN u.account
   `.toArray();
 }
 
@@ -591,8 +573,9 @@ module.exports = {
   latestVerificationByUser,
   latestVerificationById,
   userHasVerification,
-  addId,
-  revocableIds,
+  linkContextId,
+  getUserByContextId,
+  getContextIdsByUser,
   isSponsored,
   sponsor,
   unusedSponsorships

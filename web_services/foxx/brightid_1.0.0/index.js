@@ -152,23 +152,10 @@ schemas = Object.assign({
   fetchVerificationPostBody: joi.object({
     publicKey: joi.string().required().description('public key of the user (base64)'),
     context: joi.string().required().description('the context of the id (typically an application)'),
-    id: joi.string().required().description('an id used by the app consuming the verification'),
-    sig: joi.string().required().description('message (context + "," + id + "," + timestamp) signed by the user represented by publicKey'),
-    signed: joi.string().description('value will be eth or nacl and should be provided if signature is required in the response'),
+    contextId: joi.string().required().description('an id used by the app consuming the verification'),
+    sig: joi.string().required().description('message (context + "," + contextId + "," + timestamp) signed by the user represented by publicKey'),
     timestamp: schemas.timestamp.required().description('milliseconds since epoch when the verification was requested'),
-    sponsorshipSig: joi.string().description('message (context + "," + id + "," + timestamp) signed by the context owner publicKey to verify usage of its sponsorships by user'),
-  }),
-
-  fetchVerificationPostResponse: joi.object({
-    data: joi.object({
-      unique: joi.boolean().description('true if verification is successful'),
-      publicKey: joi.string().description("the node's public key."),
-      contextIds: joi.array().items(joi.string()).description("ids used by this user"),
-      context: joi.string().description('the context of the id (typically an application)'),
-      sig: joi.string().description('verification message ( context + "," + id +  "," + timestamp [ + "," + revocableId ... ] ) signed by the node'),
-      timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed'),
-      errorMessage: joi.string().description("the error message if verification is not seccussful")
-    })
+    sponsorshipSig: joi.string().description('message (context + "," + contextId + "," + timestamp) signed by the context owner publicKey to verify usage of its sponsorships by user'),
   }),
 
   ipGetResponse: joi.object({
@@ -195,7 +182,12 @@ schemas = Object.assign({
 
   verificationGetResponse: joi.object({
     data: joi.object({
-      timestamp: schemas.timestamp.description('milliseconds since epoch since the last verification')
+      unique: joi.boolean().description('true if verification is successful'),
+      publicKey: joi.string().description("the node's public key."),
+      contextIds: joi.array().items(joi.string()).description("ids used by this user"),
+      context: joi.string().description('the context of the id (typically an application)'),
+      sig: joi.string().description('verification message context + "," + contextId [ + "," + revocableId ... ] signed by the node'),
+      timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed'),
     })
   }),
 
@@ -430,7 +422,7 @@ const handlers = {
   },
 
   fetchVerification: function fetchVerification(req, res){
-    const { publicKey: key, context, sig, id, timestamp: userTimestamp, signed, sponsorshipSig } = req.body;
+    const { publicKey: key, context, sig, contextId, timestamp: userTimestamp, signed, sponsorshipSig } = req.body;
 
     const safeKey = safe(key);
     const serverTimestamp = Date.now();
@@ -439,21 +431,11 @@ const handlers = {
       res.throw(400, "timestamp can't be in the future");
     }
 
-    let nodePublicKey, nodePrivateKey, ethPrivateKey;
-
-    if (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey && module.context.configuration.ethPrivateKey) {
-      nodePublicKey = module.context.configuration.publicKey;
-      nodePrivateKey = module.context.configuration.privateKey;
-      ethPrivateKey = module.context.configuration.ethPrivateKey;
-    } else {
-      res.throw(500, 'Server node key pair not configured')
-    }
-
-    const message = strToUint8Array(context + ',' + id + ',' + userTimestamp);
+    const message = strToUint8Array(context + ',' + contextId + ',' + userTimestamp);
 
     try {
       if (! nacl.sign.detached.verify(message, b64ToUint8Array(sig), b64ToUint8Array(key))) {
-        res.throw(403, "sig wasn't context + \",\" + id + \",\" + timestamp signed by the user represented by publicKey");
+        res.throw(403, "sig wasn't context + \",\" + contextId + \",\" + timestamp signed by the user represented by publicKey");
       }
     } catch (e) {
       res.throw(403, e);
@@ -467,75 +449,28 @@ const handlers = {
 
     const coll = arango._collection(collection);
 
-    try {
-
-      if (! db.userHasVerification(verification, safeKey)) {
-        throw "user doesn't have the verification for the context";
-      }
-
-      if (db.latestVerificationByUser(coll, safeKey) > userTimestamp) {
-        throw "there was an existing mapped account with a more recent timestamp";
-      }
-
-      if (! db.isSponsored(safeKey)) {
-        if (! sponsorshipSig) {
-          throw "user is not sponsored";
-        }
-        if (db.unusedSponsorships(context) < 1) {
-          throw "context does not have unused sponsorships";
-        }
-        if (! nacl.sign.detached.verify(message, b64ToUint8Array(sponsorshipSig), b64ToUint8Array(contextKey))) {
-          throw "sig wasn't context + \",\" + userid + \",\" + timestamp signed by the publicKey of the context";
-        }
-        db.sponsor(safeKey, context);
-      }
-
-      // update the id and timestamp and mark it as current in the db
-
-      db.addId(coll, id, safeKey, serverTimestamp);
-
-      // find old ids for this public key that aren't currently being used by someone else
-
-      const revocableIds = db.revocableIds(coll, id, safeKey);
-      const contextIds = [id, ...revocableIds]
-
-      let verificationSig, publicKey;
-      if (signed == 'nacl') {
-        // sign and return the verification
-        const verificationMessage = context + ',' + contextIds.join(',');
-        publicKey = nodePublicKey;
-        verificationSig = nacl.sign.detached(verificationMessage, b64ToUint8Array(nodePrivateKey));
-      } else if (signed   == 'eth') {
-        const verificationMessage = pad32(context) + contextIds.map(pad32).join('');
-        const h = new Uint8Array(createKeccakHash('keccak256').update(verificationMessage).digest());
-        ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
-        publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
-        const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
-        verificationSig = {
-          r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
-          s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
-          v: _sig.recid + 27,
-        }
-      }
-      res.send({
-        data: {
-          unique: true,
-          context: context,
-          contextIds: contextIds,
-          sig: verificationSig,
-          publicKey
-        }
-      });
-    } catch(e) {
-      res.send({
-        data: {
-          unique: false,
-          context: context,
-          contextIds: [],
-          errorMessage: e
-        }
-      });
+    if (! db.userHasVerification(verification, safeKey)) {
+      res.throw(400, "user doesn't have the verification for the context");
     }
+
+    if (db.latestVerificationByUser(coll, safeKey) > userTimestamp) {
+      res.throw(400, "there was an existing mapped account with a more recent timestamp");
+    }
+
+    if (! db.isSponsored(safeKey)) {
+      if (! sponsorshipSig) {
+        res.throw(400, "user is not sponsored");
+      }
+      if (db.unusedSponsorships(context) < 1) {
+        res.throw(400, "context does not have unused sponsorships");
+      }
+      if (! nacl.sign.detached.verify(message, b64ToUint8Array(sponsorshipSig), b64ToUint8Array(contextKey))) {
+        res.throw(400, "sig wasn't context + \",\" + contextId + \",\" + timestamp signed by the publicKey of the context");
+      }
+      db.sponsor(safeKey, context);
+    }
+
+    db.linkContextId(coll, contextId, safeKey, serverTimestamp);
   },
 
   usersPost: function usersPostHandler(req, res){
@@ -596,17 +531,61 @@ const handlers = {
 
   verification: function verification(req, res){
     const context = req.param('context');
-    const id = req.param('id');
-    const timestamp = db.latestVerificationById(context, id);
-    if (timestamp > 0){
-      res.send({
-        "data": {
-          timestamp
+    const contextId = req.param('contextId');
+    const signed = req.param('signed');
+    const timestamp = db.latestVerificationById(context, contextId);
+    const { collection } = db.getContext(context);
+    const coll = arango._collection(collection);
+
+    let nodePublicKey, nodePrivateKey, ethPrivateKey;
+
+    if (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey && module.context.configuration.ethPrivateKey) {
+      nodePublicKey = module.context.configuration.publicKey;
+      nodePrivateKey = module.context.configuration.privateKey;
+      ethPrivateKey = module.context.configuration.ethPrivateKey;
+    } else {
+      res.throw(500, 'Server node key pair not configured')
+    }
+
+    const user = db.getUserByContextId(coll, contextId);
+    if (! user) {
+      return res.send({
+        data: {
+          unique: false,
+          context: context,
+          contextIds: [],
         }
       });
-    } else {
-      res.throw(404, 'Verification not found');
     }
+    const contextIds = db.getContextIdsByUser(coll, user);
+
+    let verificationSig, publicKey;
+    if (signed == 'nacl') {
+      // sign and return the verification
+      const verificationMessage = context + ',' + contextIds.join(',');
+      publicKey = nodePublicKey;
+      verificationSig = nacl.sign.detached(verificationMessage, b64ToUint8Array(nodePrivateKey));
+    } else if (signed   == 'eth') {
+      const verificationMessage = pad32(context) + contextIds.map(pad32).join('');
+      const h = new Uint8Array(createKeccakHash('keccak256').update(verificationMessage).digest());
+      ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
+      publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
+      const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
+      verificationSig = {
+        r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
+        s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
+        v: _sig.recid + 27,
+      }
+    }
+    res.send({
+      data: {
+        unique: true,
+        context: context,
+        contextIds: contextIds,
+        sig: verificationSig,
+        publicKey
+      }
+    });
   },
 };
 
@@ -668,7 +647,7 @@ router.post('/fetchVerification', handlers.fetchVerification)
   .body(schemas.fetchVerificationPostBody.required())
   .summary("Get a signed verification from a server node")
   .description("Gets a signed verification for a user under a given id and context.")
-  .response(schemas.fetchVerificationPostResponse);
+  .response(null);
 
 router.get('/ip/', handlers.ip)
   .summary("Get this server's IPv4 address")
@@ -689,9 +668,10 @@ router.get('/contexts/:context', handlers.contexts)
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
 
-router.get('/verification/:context/:id', handlers.verification)
+router.get('/verifications/:context/:contextId', handlers.verification)
   .pathParam('context', joi.string().required().description('the context of the id (typically an application)'))
-  .pathParam('id', joi.string().required().description('an id used by the app represented by the context'))
+  .pathParam('contextId', joi.string().required().description('an id used by the app represented by the context'))
+  .queryParam('signed', joi.string().description('value will be eth or nacl and should be provided if signature is required in the response'))
   .summary('Check whether an id is verified under a context')
   .description('Returns the timestamp when the id was last verified.')
   .response(schemas.verificationGetResponse);
