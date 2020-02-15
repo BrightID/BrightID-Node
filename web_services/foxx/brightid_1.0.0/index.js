@@ -149,7 +149,7 @@ schemas = Object.assign({
     data: schemas.user
   }),
 
-  linkContextIdPostBody: joi.object({
+  fetchVerificationPostBody: joi.object({
     publicKey: joi.string().required().description('public key of the user (base64)'),
     context: joi.string().required().description('the context of the id (typically an application)'),
     contextId: joi.string().required().description('an id used by the app consuming the verification'),
@@ -421,7 +421,7 @@ const handlers = {
     });
   },
 
-  linkContextId: function linkContextId(req, res){
+  fetchVerification: function fetchVerification(req, res){
     const { publicKey: key, context, sig, contextId, timestamp: userTimestamp, signed, sponsorshipSig } = req.body;
 
     const safeKey = safe(key);
@@ -642,8 +642,8 @@ router.post('/users/', handlers.usersPost)
   .description("Create a user")
   .response(schemas.usersPostResponse);
 
-router.post('/linkContextId', handlers.linkContextId)
-  .body(schemas.linkContextIdPostBody.required())
+router.post('/fetchVerification', handlers.fetchVerification)
+  .body(schemas.fetchVerificationPostBody.required())
   .summary("Get a signed verification from a server node")
   .description("Gets a signed verification for a user under a given id and context.")
   .response(null);

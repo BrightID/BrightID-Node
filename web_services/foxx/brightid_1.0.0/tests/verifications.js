@@ -64,7 +64,7 @@ describe('verifications', function () {
   });
 
   it('should not be able to link a context id if user does not have required verification', function () {
-    const resp = request.post(`${baseUrl}/linkContextId`, {
+    const resp = request.post(`${baseUrl}/fetchVerification`, {
       body: { publicKey: u.b64PublicKey, context: contextName, sig, contextId, timestamp },
       json: true
     });
@@ -72,7 +72,7 @@ describe('verifications', function () {
   });
   it('should not be able to link a context id without providing sponsorshipSig if user is not sponsored', function () {
     usersColl.update(safe(u.b64PublicKey), {'verifications': [contextName]});
-    const resp = request.post(`${baseUrl}/linkContextId`, {
+    const resp = request.post(`${baseUrl}/fetchVerification`, {
       body: { publicKey: u.b64PublicKey, context: contextName, sig, contextId, timestamp },
       json: true
     });
@@ -82,7 +82,7 @@ describe('verifications', function () {
     const sponsorshipSig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(contextSecretKey)))
     );
-    let resp = request.post(`${baseUrl}/linkContextId`, {
+    let resp = request.post(`${baseUrl}/fetchVerification`, {
       body: { publicKey: u.b64PublicKey, context: contextName, sig, contextId, timestamp, sponsorshipSig },
       json: true
     });
@@ -106,7 +106,7 @@ describe('verifications', function () {
     sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u.secretKey))
     );
-    let resp = request.post(`${baseUrl}/linkContextId`, {
+    let resp = request.post(`${baseUrl}/fetchVerification`, {
       body: { publicKey: u.b64PublicKey, context: contextName, sig, contextId, timestamp },
       json: true
     });
