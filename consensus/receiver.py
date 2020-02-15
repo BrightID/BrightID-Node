@@ -50,8 +50,18 @@ def main():
         })
 
     while True:
-        current_block = w3.eth.getBlock('latest').number
+        # This sleep is for not calling the ethereum node endpoint
+        # for getting the last block number more than once per second
         time.sleep(1)
+        current_block = w3.eth.getBlock('latest').number
+
+        if current_block>last_block:
+            # Here we should go to process the block imediately, but there seems
+            # to be a bug in getBlock that cause error when we get the transactions
+            # instantly. This delay is added to avoid that error.
+            # When error is raised, the file will run again and no bad problem occur.
+            time.sleep(3)
+
         for block in range(last_block+1, current_block+1):
             print('processing block {}'.format(block))
             for i, tx in enumerate(w3.eth.getBlock(block, True)['transactions']):
