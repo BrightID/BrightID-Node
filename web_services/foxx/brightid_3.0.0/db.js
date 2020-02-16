@@ -49,11 +49,11 @@ function addConnection(key1, key2, timestamp){
   }
 
   // remove flag if exists
-  if (u1.flaggers && key2 in u1.flaggers) {
+  if (u1 && u1.flaggers && key2 in u1.flaggers) {
     delete u1.flaggers[key2];
     usersColl.update(u1, { flaggers: u1.flaggers }, { mergeObjects: false });
   }
-  if (u2.flaggers && key1 in u2.flaggers) {
+  if (u2 && u2.flaggers && key1 in u2.flaggers) {
     delete u2.flaggers[key1];
     usersColl.update(u2, { flaggers: u2.flaggers }, { mergeObjects: false });
   }
