@@ -45,7 +45,7 @@ function hash(data) {
 }
 
 function pad32(data) {
-  return data + String.fromCharCode('00').repeat(32 - data.length);
+  return data + String.fromCharCode(0).repeat(32 - data.length);
 };
 
 module.exports = {

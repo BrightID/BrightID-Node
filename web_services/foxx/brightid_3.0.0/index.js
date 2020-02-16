@@ -130,36 +130,36 @@ const handlers = {
       const signed = req.param('signed');
       const context = db.getContext(contextName);
       if (!context) {
-        res.throw(404, 'context not found');
+        throw 'context not found';
       }
 
       const coll = arango._collection(context.collection);
       const user = db.getUserByContextId(coll, contextId);
       if (!user) {
-        res.throw(404, 'contextId not found');
+        throw 'contextId not found';
       }
 
       if (!db.isSponsored(user)) {
-        res.throw(403, 'user is not sponsored');
+        throw 'user is not sponsored';
       }
 
       if (!db.userHasVerification(context.verification, user)) {
-        res.throw(403, 'user can not be verified for this context');
+        throw 'user can not be verified for this context';
       }
 
       let contextIds = db.getContextIdsByUser(coll, user);
       if (contextId != contextIds[0]) {
-        res.throw(403, 'user is not using this account anymore');
+        throw 'user is not using this account anymore';
       }
 
       // sign and return the verification
       let sig, publicKey;
       if (signed == 'nacl') {
         if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-          res.throw(500, 'Server node key pair not configured')
+          throw 'Server node key pair not configured';
         }
 
-        const message = contextName + (contextIds.length ?  ',' + contextIds.join(',') : '');
+        const message = contextName + ',' + contextIds.join(',');
         const privateKey = module.context.configuration.privateKey;
         publicKey = module.context.configuration.publicKey;
         sig = uInt8ArrayToB64(
@@ -167,11 +167,10 @@ const handlers = {
         );
       } else if (signed == 'eth') {
         if (!(module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
-          res.throw(500, 'Server node ethereum privateKey not configured')
+          throw 'Server node ethereum privateKey not configured';
         }
 
-        let paddedContextIds = contextIds.map(pad32);
-        const message = pad32(contextName) + paddedContextIds.join('');
+        const message = pad32(contextName) + contextIds.map(pad32).join('');
         let ethPrivateKey = module.context.configuration.ethPrivateKey;
         ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
         const h = new Uint8Array(createKeccakHash('keccak256').update(message).digest());
@@ -198,7 +197,7 @@ const handlers = {
           unique: false,
           context: req.param('context'),
           contextIds: [],
-          erroeMessage: e.message
+          erroeMessage: e
         }
       });
     }
@@ -257,8 +256,8 @@ router.get('/verifications/:context/:contextId', handlers.verificationGet)
 
 router.get('/verifications/:context', handlers.contextVerificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
-  .summary('Gets list of all of contextIDs')
-  .description("Gets list of all of contextIDs in the context that are currently linked to unique humans")
+  .summary('Gets list of all of contextIds')
+  .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
   .response(schemas.contextVerificationGetResponse);
 
 router.get('/memberships/:groupId', handlers.membershipGet)
