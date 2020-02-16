@@ -44,11 +44,16 @@ function hash(data) {
   return b64ToUrlSafeB64(b);
 }
 
+function pad32(data) {
+  return data + String.fromCharCode(0).repeat(32 - data.length);
+};
+
 module.exports = {
   uInt8ArrayToB64,
   b64ToUint8Array,
   strToUint8Array,
   b64ToUrlSafeB64,
   urlSafeB64ToB64,
-  hash
+  hash,
+  pad32
 };

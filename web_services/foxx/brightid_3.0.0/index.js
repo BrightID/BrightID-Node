@@ -1,4 +1,7 @@
 'use strict';
+const secp256k1 = require('secp256k1');
+const createKeccakHash = require('keccak');
+
 const createRouter = require('@arangodb/foxx/router');
 const joi = require('joi');
 const arango = require('@arangodb').db;
@@ -10,7 +13,8 @@ const {
   strToUint8Array,
   b64ToUint8Array,
   uInt8ArrayToB64,
-  hash
+  hash,
+  pad32
 } = require('./encoding');
 
 const router = createRouter();
@@ -101,52 +105,102 @@ const handlers = {
     });
   },
 
-  verificationGet: function(req, res){
-    const contextId = req.param('contextId');
-    const context = req.param('context');
+  contextVerificationGet: function(req, res){
+    const contextName = req.param('context');
 
-    const { verification, collection, secretKey } = db.getContext(context);
-    const coll = arango._collection(collection);
-    const user = db.getUserByContextId(coll, contextId);
-    if (!user) {
-      res.throw(404, 'contextId not found');
+    const context = db.getContext(contextName);
+    if (!context) {
+      res.throw(404, 'context not found');
     }
 
-    if (!db.isSponsored(user)) {
-      res.throw(403, 'user is not sponsored');
-    }
-
-    if (!db.userHasVerification(verification, user)) {
-      res.throw(403, 'user can not be verified for this context');
-    }
-
-    const contextIds = db.getContextIdsByUser(coll, user);
-    if (contextId != contextIds.pop()) {
-      res.throw(403, 'user is not using this account anymore');
-    }
-
-    const timestamp = Date.now();
-    // sign and return the verification
-    const message = context + ',' + contextId + ',' + timestamp + (contextIds.length ?  ',' + contextIds.join(',') : '');
-
-    if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-      res.throw(500, 'Server node key pair not configured')
-    }
-
-    const publicKey = module.context.configuration.publicKey;
-    const privateKey = module.context.configuration.privateKey;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
-    );
+    const coll = arango._collection(context.collection);
+    const contextIds = db.getLastContextIds(coll);
 
     res.send({
       data: {
-        revocableContextIds: contextIds,
-        timestamp: timestamp,
-        sig: sig,
-        publicKey: publicKey
+        contextIds: contextIds
       }
     });
+  },
+
+  verificationGet: function(req, res){
+    try {
+      const contextId = req.param('contextId');
+      let contextName = req.param('context');
+      const signed = req.param('signed');
+      const context = db.getContext(contextName);
+      if (!context) {
+        throw 'context not found';
+      }
+
+      const coll = arango._collection(context.collection);
+      const user = db.getUserByContextId(coll, contextId);
+      if (!user) {
+        throw 'contextId not found';
+      }
+
+      if (!db.isSponsored(user)) {
+        throw 'user is not sponsored';
+      }
+
+      if (!db.userHasVerification(context.verification, user)) {
+        throw 'user can not be verified for this context';
+      }
+
+      let contextIds = db.getContextIdsByUser(coll, user);
+      if (contextId != contextIds[0]) {
+        throw 'user is not using this account anymore';
+      }
+
+      // sign and return the verification
+      let sig, publicKey;
+      if (signed == 'nacl') {
+        if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
+          throw 'Server node key pair not configured';
+        }
+
+        const message = contextName + ',' + contextIds.join(',');
+        const privateKey = module.context.configuration.privateKey;
+        publicKey = module.context.configuration.publicKey;
+        sig = uInt8ArrayToB64(
+          Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
+        );
+      } else if (signed == 'eth') {
+        if (!(module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
+          throw 'Server node ethereum privateKey not configured';
+        }
+
+        const message = pad32(contextName) + contextIds.map(pad32).join('');
+        let ethPrivateKey = module.context.configuration.ethPrivateKey;
+        ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
+        const h = new Uint8Array(createKeccakHash('keccak256').update(message).digest());
+        publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
+        const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
+        sig = {
+          r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
+          s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
+          v: _sig.recid + 27,
+        }
+      }
+      res.send({
+        data: {
+          unique: true,
+          context: contextName,
+          contextIds: contextIds,
+          sig,
+          publicKey
+        }
+      });
+    } catch(e) {
+      res.send({
+        data: {
+          unique: false,
+          context: req.param('context'),
+          contextIds: [],
+          erroeMessage: e
+        }
+      });
+    }
   },
 
   ip: function ip(req, res){
@@ -195,9 +249,16 @@ router.get('/operations/:hash', handlers.operationGet)
 router.get('/verifications/:context/:contextId', handlers.verificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .summary('Get a signed verification')
+  .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
+  .summary('Gets a signed verification')
   .description("Gets a signed verification for the user that is signed by the node")
   .response(schemas.verificationGetResponse);
+
+router.get('/verifications/:context', handlers.contextVerificationGet)
+  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
+  .summary('Gets list of all of contextIds')
+  .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
+  .response(schemas.contextVerificationGetResponse);
 
 router.get('/memberships/:groupId', handlers.membershipGet)
   .pathParam('groupId', joi.string().required())

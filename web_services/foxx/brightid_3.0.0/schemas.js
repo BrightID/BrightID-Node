@@ -76,10 +76,17 @@ schemas = Object.assign({
 
   verificationGetResponse: joi.object({
     data: joi.object({
-      publicKey: joi.string().description("the node's public key."),
-      hashedId: joi.array().items(joi.string()).description('sha256 hash of ( brightid + context_secret_key)'),
-      sig: joi.string().description('verification message ( context + "," + contextId +  "," + timestamp + "," + revocableContextIds ) signed by the node'),
-      timestamp: schemas.timestamp.description('milliseconds since epoch when the verification was signed')
+      unique: joi.string().description("true if user is unique under given context"),
+      context: joi.string().description("the context name"),
+      contextIds: joi.array().items(joi.string()).description('an array of contextIds'),
+      sig: joi.string().description('verification message ( context + "," + contextIds ) signed by the node'),
+      publicKey: joi.string().description("the node's public key")
+    })
+  }),
+
+  contextVerificationGetResponse: joi.object({
+    data: joi.object({
+      contextIds: joi.array().items(joi.string()).description('an array of contextIds')
     })
   }),
 
