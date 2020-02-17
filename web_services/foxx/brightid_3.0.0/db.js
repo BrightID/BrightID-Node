@@ -15,6 +15,7 @@ const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
+const invitationsColl = db._collection('invitations');
 
 const {
   uInt8ArrayToB64,
@@ -269,6 +270,25 @@ function loadGroups(groupIds, connections, myUserId){
   `.toArray().map(g => groupToDic(g));
 }
 
+function invite(inviter, invitee, groupId, timestamp){
+  if (! groupsColl.exists(groupId)) {
+    throw 'invalid group id';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(inviter)) {
+    throw 'inviter is not admin of group';
+  }
+  if (!isEligible(groupId, invitee)) {
+    throw 'invitee is not eligible to join this group';
+  }
+  invitationsColl.insert({
+    _from: 'users/' + invitee,
+    _to: 'groups/' + groupId,
+    inviter,
+    timestamp
+  });
+}
+
 function loadUser(id){
   return query`RETURN DOCUMENT(${usersColl}, ${id})`.toArray()[0];
 }
@@ -301,45 +321,36 @@ function createUser(key, timestamp){
   }
 }
 
-function createGroup(key1, key2, key3, timestamp){
-  const user1 = 'users/' + key1;
-  const user2 = 'users/' + key2;
-  const user3 = 'users/' + key3;
-
-  const founders = [user1, user2, user3].sort();
-
-  function isDuplicate(collection){
-    return query`
-      for i in ${collection}
-        filter (${user1} in i.founders && ${user2} in i.founders && ${user3} in i.founders )
-        limit 1
-      return 1
-    `.count() > 0;
-  }
-
-  if (isDuplicate(newGroupsColl) || isDuplicate(groupsColl)) {
-    throw 'Duplicate group';
-  }
-
-  const conns = userConnections(key1);
-
-  if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
-    throw "Creator isn't connected to one or both of the co-founders";
-  }
+function createGroup(key1, key2, key3, inviteOnly, timestamp){
+  
   const h = sha256([key1, key2, key3].sort().join(','));
   const b = Buffer.from(h, 'hex').toString('base64');
   const groupId = b64ToUrlSafeB64(b);
+  if (newGroupsColl.exists(groupId) || groupsColl.exists(groupId)) {
+    throw 'duplicate group';
+  }
 
+  const conns = userConnections(key1);
+  if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
+    throw "Creator isn't connected to one or both of the co-founders";
+  }
+
+  const user1 = 'users/' + key1;
+  const user2 = 'users/' + key2;
+  const user3 = 'users/' + key3;
+  const founders = [user1, user2, user3].sort();
   newGroupsColl.save({
     _key: groupId,
     score: 0,
     isNew: true,
-    timestamp: timestamp,
-    founders: founders
+    inviteOnly: inviteOnly ? true : false,
+    timestamp,
+    founders
   });
 
   // Add the creator to the group now. The other two "co-founders" have to join using /membership
   addUserToGroup(usersInNewGroupsColl, groupId, key1, timestamp, "newGroups");
+  return groupId;
 }
 
 function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
@@ -362,9 +373,9 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   });
   if (! edge) {
     collection.save({
-      timestamp: timestamp,
       _from: user,
-      _to: group
+      _to: group,
+      timestamp
     });
   } else {
     collection.update(conn, { timestamp });
@@ -402,27 +413,18 @@ function deleteGroup(groupId, key, timestamp){
 }
 
 function addMembership(groupId, key, timestamp){
-  let groups = query`
-    for i in ${groupsColl}
-      filter i._key == ${groupId}
-    return i
-  `.toArray();
-  const user = "users/" + key;
-  let isNew = false;
-  if (! groups.length) {
-    // load from newGroups
+  let group, isNew;
+  if (groupsColl.exists(groupId)) {
+    group = groupsColl.document(groupId);
+    isNew = false;
+  } else if (newGroupsColl.exists(groupId)) {
+    group = newGroupsColl.document(groupId);
     isNew = true;
-    groups = query`
-      for i in ${newGroupsColl}
-        filter i._key == ${groupId}
-      return i
-    `.toArray();
-  }
-  if (! groups.length) {
+  } else {
     throw 'Group not found';
   }
-  const group = groups[0];
-  if (isNew && group.founders.indexOf(user) < 0) {
+  const user = "users/" + key;
+  if (isNew && ! group.founders.includes(user)) {
     throw 'Access denied';
   }
 
@@ -444,6 +446,8 @@ function addMembership(groupId, key, timestamp){
         isNew: false,
         timestamp: group.timestamp,
         founders: group.founders,
+        admins: group.founders.map(u => u.replace('users/', '')),
+        inviteOnly: group.inviteOnly,
         _key: group._key
       });
 
@@ -460,11 +464,20 @@ function addMembership(groupId, key, timestamp){
       query`remove ${group._key} in ${newGroupsColl}`;
     }
   } else {
-    if (isEligible(groupId, key)) {
-      addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");
-    } else {
+    if (! isEligible(groupId, key)) {
       throw 'Not eligible to join this group';
     }
+    if (group.inviteOnly) {
+      const invitation = invitationsColl.firstExample({
+        _from: 'users/' + key,
+        _to: 'groups/' + groupId
+      });
+      // invitations will expire after 24 hours
+      if (!invitation || timestamp - invitation.timestamp >= 86400000) {
+        throw 'not invited to join this group';
+      }
+    }
+    addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");
   }
 }
 
@@ -570,17 +583,21 @@ function unusedSponsorship(context){
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(id, context){
+function sponsor(contextId, context){
+  const { collection } = getContext(context);
+  const coll = db._collection(collection);
+  const user = getUserByContextId(coll, contextId)
+
   if (unusedSponsorship(context) < 1) {
     throw "context does not have unused sponsorships";
   }
 
-  if (isSponsored(id)) {
+  if (isSponsored(user)) {
     throw "sponsored before";
   }
 
   sponsorshipsColl.save({
-    _from: 'users/' + id,
+    _from: 'users/' + user,
     _to: 'contexts/' + context
   });
 }
@@ -605,6 +622,7 @@ module.exports = {
   addMembership,
   deleteMembership,
   userEligibleGroups,
+  invite,
   userCurrentGroups,
   loadUser,
   loadGroups,

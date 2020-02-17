@@ -37,7 +37,7 @@ const verifyContextSig = function(message, context, sig) {
 const operationsData = {
   'Add Connection': {'attrs': ['id1', 'id2', 'sig1', 'sig2']},
   'Remove Connection': {'attrs': ['id1', 'id2', 'sig1']},
-  'Add Group': {'attrs': ['id1', 'id2', 'id3', 'sig1']},
+  'Add Group': {'attrs': ['id1', 'id2', 'id3', 'sig1', 'inviteOnly']},
   'Remove Group': {'attrs': ['id', 'group', 'sig']},
   'Add Membership': {'attrs': ['id', 'group', 'sig']},
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
@@ -46,6 +46,7 @@ const operationsData = {
   'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Flag User': {'attrs': ['flagger', 'flagged', 'reason', 'sig']},
+  'Invite': {'attrs': ['inviter', 'invitee', 'group', 'sig']},
 };
 
 const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
@@ -90,11 +91,14 @@ function verify(op) {
   } else if (op['name'] == 'Flag User') {
     message = op.name + op.flagger + op.flagged + op.reason + op.timestamp;
     verifyUserSig(message, op.flagger, op.sig);
+  } else if (op['name'] == 'Invite') {
+    message = op.name + op.inviter + op.invitee + op.group + op.timestamp;
+    verifyUserSig(message, op.inviter, op.sig);
   } else {
     throw "invalid operation";
   }
   if (hash(message) != op._key) {
-    throw 'invalid hash'
+    throw 'invalid hash';
   }
   for (let k of Object.keys(op)) {
     if (defaultOperationKeys.indexOf(k)<0 && operationsData[op.name].attrs.indexOf(k)<0) {
@@ -109,7 +113,7 @@ function apply(op) {
   } else if (op['name'] == 'Remove Connection') {
     return db.removeConnection(op.id1, op.id2, op.timestamp);
   } else if (op['name'] == 'Add Group') {
-    return db.createGroup(op.id1, op.id2, op.id3, op.timestamp);
+    return db.createGroup(op.id1, op.id2, op.id3, op.inviteOnly, op.timestamp);
   } else if (op['name'] == 'Remove Group') {
     return db.deleteGroup(op.group, op.id, op.timestamp);
   } else if (op['name'] == 'Add Membership') {
@@ -121,14 +125,13 @@ function apply(op) {
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
   } else if (op['name'] == 'Sponsor') {
-    const { collection } = db.getContext(op.context);
-    const coll = arango._collection(collection);
-    const id = db.getUserByContextId(coll, op.contextId)
-    return db.sponsor(id, op.context);
+    return db.sponsor(op.contextId, op.context);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
   } else if (op['name'] == 'Flag User') {
     return db.flagUser(op.flagger, op.flagged, op.reason, op.timestamp);
+  } else if (op['name'] == 'Invite') {
+    return db.invite(op.inviter, op.invitee, op.group, op.timestamp);
   } else {
     throw "invalid operation";
   }

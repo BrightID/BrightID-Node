@@ -11,6 +11,7 @@ const newGroupsColl = arango._collection('newGroups');
 const usersInGroupsColl = arango._collection('usersInGroups');
 const usersInNewGroupsColl = arango._collection('usersInNewGroups');
 const usersColl = arango._collection('users');
+const invitationsColl = arango._collection('invitations');
 
 const chai = require('chai');
 const should = chai.should();
@@ -24,6 +25,7 @@ describe('groups', function () {
     usersInGroupsColl.truncate();
     newGroupsColl.truncate();
     usersInNewGroupsColl.truncate();
+    invitationsColl.truncate();
     db.createUser('a');
     db.createUser('b');
     db.createUser('c');
@@ -40,12 +42,12 @@ describe('groups', function () {
     usersInGroupsColl.truncate();
     newGroupsColl.truncate();
     usersInNewGroupsColl.truncate();
+    invitationsColl.truncate();
   });
   let groupId;
   it('should be able to create a group', function () {
-     db.createGroup('b', 'c', 'd', Date.now());
+     groupId = db.createGroup('b', 'c', 'd', false, Date.now());
      newGroupsColl.count().should.equal(1);
-     groupId = hash(['b', 'c', 'd'].sort().join(','));
      newGroupsColl.any()._key.should.equal(groupId);
   });
   it('should be able to delete a group', function() {
@@ -53,9 +55,8 @@ describe('groups', function () {
     newGroupsColl.count().should.equal(0);
   })
   it('should be able to create the group again', function () {
-    db.createGroup('b', 'c', 'd', Date.now());
+    groupId = db.createGroup('b', 'c', 'd', false, Date.now());
     newGroupsColl.count().should.equal(1);
-    groupId = hash(['b', 'c', 'd'].sort().join(','));
  	newGroupsColl.any()._key.should.equal(groupId);
   });
   it('the two co-founders should be able to join the group', function (){
@@ -104,7 +105,6 @@ describe('groups', function () {
       db.addMembership(groupId, 'a', Date.now());
       db.addMembership(groupId, 'e', Date.now());
       db.addMembership(groupId, 'f', Date.now());
-
     });
 
     it('should not be able to flag someone without having connection', function(){
@@ -138,6 +138,43 @@ describe('groups', function () {
       db.addConnection('a', 'b', 0);
       usersColl.document('a').flaggers.should.deep.equal({'c': 'duplicate'});
     });
-
   });
+
+  describe('invitations', function() {
+    before(function() {
+      db.createUser('g');
+      db.addConnection('a', 'b', 0);
+      db.addConnection('a', 'c', 0);
+      db.addConnection('a', 'd', 0);
+      db.addConnection('b', 'd', 0);
+      db.addConnection('c', 'd', 0);
+      groupId = db.createGroup('a', 'b', 'c', true, Date.now());
+      db.addMembership(groupId, 'b', Date.now());
+      db.addMembership(groupId, 'c', Date.now());
+    });
+    it('no one should be able to join an invite only group without invitation', function (){
+      (() => {
+        db.addMembership(groupId, 'd', Date.now());
+      }).should.throw('not invited to join this group');
+    });
+    it('admins should not be able to invite non-eligible users to the group', function (){
+      (() => {
+        db.invite('a', 'g', groupId, Date.now());
+      }).should.throw('invitee is not eligible to join this group');
+    });
+    it('admins should be able to invite eligible users to the group', function (){
+      db.invite('b', 'd', groupId, Date.now());
+      invitationsColl.any()._to.replace('groups/', '').should.equal(groupId);
+    });
+    it('invited user should be able to join the group', function (){
+      db.addMembership(groupId, 'd', Date.now());
+      db.groupMembers(groupId).should.include('d');
+    });
+    it('non-admins should not be able to invite others to the group', function (){
+      (() => {
+        db.invite('d', 'e', groupId, Date.now());
+      }).should.throw('inviter is not admin of group');
+    });
+  });
+
 });
