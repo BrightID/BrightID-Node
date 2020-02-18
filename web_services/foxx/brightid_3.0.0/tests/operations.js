@@ -31,7 +31,8 @@ const usersColl = arango._collection('users');
 const operationsColl = arango._collection('operations');
 const contextsColl = arango._collection('contexts');
 const sponsorshipsColl = arango._collection('sponsorships');
-const operationsHashes = arango._collection('operationsHashes');
+const operationsHashesColl = arango._collection('operationsHashes');
+const invitationsColl = arango._collection('invitations');
 
 const chai = require('chai');
 const should = chai.should();
@@ -66,7 +67,7 @@ function apply(op) {
 describe('operations', function(){
   before(function () {
     contextIdsColl = arango._create(contextName);
-    operationsHashes.truncate();
+    operationsHashesColl.truncate();
     usersColl.truncate();
     connectionsColl.truncate();
     groupsColl.truncate();
@@ -76,6 +77,7 @@ describe('operations', function(){
     operationsColl.truncate();
     contextsColl.truncate();
     sponsorshipsColl.truncate();
+    invitationsColl.truncate();
     [u1, u2, u3, u4].map((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
@@ -97,7 +99,7 @@ describe('operations', function(){
   });
 
   after(function () {
-    operationsHashes.truncate();
+    operationsHashesColl.truncate();
     contextsColl.truncate();
     arango._drop(contextIdsColl);
     usersColl.truncate();
@@ -108,6 +110,7 @@ describe('operations', function(){
     usersInNewGroupsColl.truncate();
     operationsColl.truncate();
     sponsorshipsColl.truncate();
+    invitationsColl.truncate();
   });
   it('should be able to "Add Connection"', function () {
     const connect = (u1, u2) => {
@@ -134,9 +137,11 @@ describe('operations', function(){
     connect(u1, u2);
     connect(u1, u3);
     connect(u2, u3);
+    connect(u2, u4);
+    connect(u3, u4);
     db.userConnectionsRaw(u1.id).length.should.equal(2);
-    db.userConnectionsRaw(u2.id).length.should.equal(2);
-    db.userConnectionsRaw(u3.id).length.should.equal(2);
+    db.userConnectionsRaw(u2.id).length.should.equal(3);
+    db.userConnectionsRaw(u3.id).length.should.equal(3);
   });
 
   it('should be able to "Remove Connection"', function () {
@@ -158,8 +163,8 @@ describe('operations', function(){
     apply(op);
 
     db.userConnectionsRaw(u1.id).length.should.equal(2);
-    db.userConnectionsRaw(u2.id).length.should.equal(1);
-    db.userConnectionsRaw(u3.id).length.should.equal(1);
+    db.userConnectionsRaw(u2.id).length.should.equal(2);
+    db.userConnectionsRaw(u3.id).length.should.equal(2);
   });
 
   it('should be able to "Add Group"', function () {
@@ -175,6 +180,7 @@ describe('operations', function(){
       'id1': u1.id,
       'id2': u2.id,
       'id3': u3.id,
+      'inviteOnly': true,
       timestamp,
       sig1
     }
@@ -229,6 +235,29 @@ describe('operations', function(){
     members.should.not.include(u1.id);
     members.should.include(u2.id);
     members.should.include(u3.id);
+  });
+
+  it('should be able to "Invite" someone to the group', function () {
+    const timestamp = Date.now();
+    const groupId = db.userCurrentGroups(u2.id)[0].replace('groups/', '');
+    const message = "Invite" + u2.id + u4.id + groupId + timestamp;
+    const sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const op = {
+      '_key': hash(message),
+      'name': 'Invite',
+      'inviter': u2.id,
+      'invitee': u4.id,
+      'group': groupId,
+      timestamp,
+      sig
+    }
+    apply(op);
+    invitationsColl.byExample({
+      '_from': 'users/' + u4.id,
+      '_to': 'groups/' + groupId
+    }).count().should.equal(1);
   });
 
   it('should be able to "Set Trusted Connections"', function () {
