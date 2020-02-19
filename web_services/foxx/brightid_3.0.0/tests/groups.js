@@ -78,9 +78,9 @@ describe('groups', function () {
       db.userConnections('a').length.should.equal(3);
     });
     it('should be eligible to join the group', function (){
-      const eligibleGroups = db.userEligibleGroups('a', db.userConnectionsRaw('a'));
+      const eligibleGroups = db.updateEligibleGroups('a', db.userConnections('a'), []);
       eligibleGroups.should.not.be.empty;
-      eligibleGroups[0].id.should.equal(groupId);
+      eligibleGroups[0].should.equal(groupId);
     });
     it('should be able to join the group', function (){
       db.addMembership(groupId, 'a', Date.now());

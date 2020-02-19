@@ -111,7 +111,7 @@ function flagUser(flagger, flagged, reason, timestamp){
   });
 }
 
-function userConnectionsRaw(user){
+function userConnections(user){
   user = "users/" + user;
   return query`
       LET userConnections1 = (
@@ -125,11 +125,7 @@ function userConnectionsRaw(user){
           RETURN c._from
       )
       RETURN UNION_DISTINCT(userConnections1, userConnections2)
-  `.toArray()[0]
-}
-
-function userConnections(user){
-  return userConnectionsRaw(user).map(u => u.replace("users/", ""))
+  `.toArray()[0].map(u => u.replace("users/", ""))
 }
 
 function loadUsers(users){
@@ -140,7 +136,8 @@ function loadUsers(users){
             id: u._key,
             score: u.score,
             createdAt: u.createdAt,
-            flaggers: u.flaggers
+            flaggers: u.flaggers,
+            eligible_groups: u.eligible_groups
           }
   `.toArray();
 }
@@ -169,7 +166,9 @@ function isEligible(groupId, userId){
   return count * 2 > groupMems.length;
 }
 
-function userEligibleGroups(userId, connections, currentGroups = []){
+function updateEligibleGroups(userId, connections, currentGroups){
+  connections = connections.map(uId => 'users/' + uId);
+  currentGroups = currentGroups.map(gId => 'groups/' + gId);
   const user = "users/" + userId;
   const candidates = query`
       FOR edge in ${usersInGroupsColl}
@@ -183,7 +182,6 @@ function userEligibleGroups(userId, connections, currentGroups = []){
               count
           }
   `.toArray();
-
   const groupIds = candidates.map(x => x.group);
   const groupCounts = query`
     FOR ug in ${usersInGroupsColl}
@@ -201,21 +199,24 @@ function userEligibleGroups(userId, connections, currentGroups = []){
     groupCountsDic[row.id] = row.count;
   });
 
-  const eligibles = candidates
+  const eligible_groups = candidates
     .filter(g => g.count * 2 > groupCountsDic[g.group])
-    .map(g => g.group);
-
-  return loadGroups(eligibles, connections, userId);
+    .map(g => g.group.replace('groups/', ''));
+  usersColl.update(userId, {
+    eligible_groups,
+    eligible_timestamp: Date.now()
+  });
+  return eligible_groups;
 }
 
-function userNewGroups(userId, connections){
+
+function userNewGroups(userId){
   const user = "users/" + userId;
-  // FIXME: why connections and userId is being passed here to groupToDic?
   return query`
       FOR g in ${newGroupsColl}
         FILTER ${user} in g.founders
-      return g
-  `.toArray().map(g => groupToDic(g, connections, userId));
+      return g._key
+  `.toArray();
 }
 
 function userCurrentGroups(userId){
@@ -224,7 +225,7 @@ function userCurrentGroups(userId){
     FOR ug in ${usersInGroupsColl}
       FILTER ug._from == ${user}
       return DISTINCT ug._to
-  `.toArray();
+  `.toArray().map(gId => gId.replace('groups/', ''));
 }
 
 function groupToDic(group){
@@ -251,9 +252,9 @@ function groupToDic(group){
 function loadGroups(groupIds, connections, myUserId){
   const me = "users/" + myUserId;
 
-  return query`
+  const res = query`
     FOR g in ${groupsColl}
-      FILTER g._id in ${groupIds}
+      FILTER g._key in ${groupIds}
       LET members = (
         FOR m in usersInGroups
           FILTER m._to == g._id && m._from in ${connections}
@@ -268,6 +269,11 @@ function loadGroups(groupIds, connections, myUserId){
       )
       return MERGE([g, {"knownMembers": APPEND(members, me)}])
   `.toArray().map(g => groupToDic(g));
+  res.concat(
+    newGroupsColl.documents(groupIds).documents.map(g => groupToDic(g))
+  );
+  return res;
+
 }
 
 function invite(inviter, invitee, groupId, timestamp){
@@ -278,7 +284,7 @@ function invite(inviter, invitee, groupId, timestamp){
   if (! group.admins || ! group.admins.includes(inviter)) {
     throw 'inviter is not admin of group';
   }
-  if (!isEligible(groupId, invitee)) {
+  if (! isEligible(groupId, invitee)) {
     throw 'invitee is not eligible to join this group';
   }
   invitationsColl.insert({
@@ -299,12 +305,6 @@ function userScore(key){
       FILTER u._key  == ${key}
       RETURN u.score
   `.toArray()[0];
-}
-
-function updateEligibleTimestamp(key, timestamp){
-  return query`
-    UPDATE ${key} WITH {eligible_timestamp: ${timestamp}} in users
-  `;
 }
 
 function createUser(key, timestamp){
@@ -439,7 +439,6 @@ function addMembership(groupId, key, timestamp){
     `.toArray();
 
     const memberIds = [...new Set(groupMembers.map(x => x._from))];
-
     if (memberIds.length == group.founders.length) {
       groupsColl.save({
         score: 0,
@@ -621,18 +620,16 @@ module.exports = {
   deleteGroup,
   addMembership,
   deleteMembership,
-  userEligibleGroups,
+  updateEligibleGroups,
   invite,
   userCurrentGroups,
   loadUser,
   loadGroups,
-  updateEligibleTimestamp,
   userNewGroups,
   createUser,
   flagUser,
   groupMembers,
   userConnections,
-  userConnectionsRaw,
   userScore,
   loadUsers,
   getContext,

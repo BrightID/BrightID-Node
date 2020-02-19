@@ -139,9 +139,9 @@ describe('operations', function(){
     connect(u2, u3);
     connect(u2, u4);
     connect(u3, u4);
-    db.userConnectionsRaw(u1.id).length.should.equal(2);
-    db.userConnectionsRaw(u2.id).length.should.equal(3);
-    db.userConnectionsRaw(u3.id).length.should.equal(3);
+    db.userConnections(u1.id).length.should.equal(2);
+    db.userConnections(u2.id).length.should.equal(3);
+    db.userConnections(u3.id).length.should.equal(3);
   });
 
   it('should be able to "Remove Connection"', function () {
@@ -162,9 +162,9 @@ describe('operations', function(){
 
     apply(op);
 
-    db.userConnectionsRaw(u1.id).length.should.equal(2);
-    db.userConnectionsRaw(u2.id).length.should.equal(2);
-    db.userConnectionsRaw(u3.id).length.should.equal(2);
+    db.userConnections(u1.id).length.should.equal(2);
+    db.userConnections(u2.id).length.should.equal(2);
+    db.userConnections(u3.id).length.should.equal(2);
   });
 
   it('should be able to "Add Group"', function () {
@@ -193,7 +193,7 @@ describe('operations', function(){
   });
 
   it('should be able to "Add Membership"', function () {
-    const groupId = db.userNewGroups(u1.id)[0].id;
+    const groupId = db.userNewGroups(u1.id)[0];
     [u2, u3].map((u) => {
       const timestamp = Date.now();
       const message = "Add Membership" + u.id + groupId + timestamp;
@@ -217,7 +217,7 @@ describe('operations', function(){
 
   it('should be able to "Remove Membership"', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u1.id)[0].replace('groups/', '');
+    const groupId = db.userCurrentGroups(u1.id);
     const message = "Remove Membership" + u1.id + groupId + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
@@ -239,7 +239,7 @@ describe('operations', function(){
 
   it('should be able to "Invite" someone to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u2.id)[0].replace('groups/', '');
+    const groupId = db.userCurrentGroups(u2.id)[0];
     const message = "Invite" + u2.id + u4.id + groupId + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))

@@ -77,27 +77,24 @@ const handlers = {
     }
     const connections = db.userConnections(id);
     const currentGroups = db.userCurrentGroups(id);
-    let eligibleGroups = db.userNewGroups(id, connections);
-    let eligibleGroupsUpdated = false;
-    const groupCheckInterval =
-      ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
+    let eligibleGroups = db.userNewGroups();
 
-    if (! user.eligible_timestamp ||
-      Date.now() > user.eligible_timestamp + groupCheckInterval) {
-
+    const groupCheckInterval = ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
+    if (! user.eligible_timestamp || Date.now() > user.eligible_timestamp + groupCheckInterval) {
       eligibleGroups = eligibleGroups.concat(
-        db.userEligibleGroups(id, connections, currentGroups)
+        db.updateEligibleGroups(id, connections, currentGroups)
       );
-      db.updateEligibleTimestamp(id, Date.now());
-      eligibleGroupsUpdated = true;
+    } else {
+      eligibleGroups = eligibleGroups.concat(
+        user.eligibleGroups.filter(gId => !currentGroups.includes(gId))
+      );
     }
 
     res.send({
       data: {
         score: user.score,
         createdAt: user.createdAt,
-        eligibleGroupsUpdated,
-        eligibleGroups,
+        eligibleGroups: db.loadGroups(eligibleGroups, connections, id),
         currentGroups: db.loadGroups(currentGroups, connections, id),
         connections: db.loadUsers(connections),
         verifications: user.verifications
