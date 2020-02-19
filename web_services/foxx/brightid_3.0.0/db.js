@@ -244,8 +244,9 @@ function groupToDic(group){
     isNew: group.isNew,
     score: group.score,
     id: group._key,
+    admins: group.admins,
     knownMembers,
-    founders,
+    founders
   };
 }
 
