@@ -37,7 +37,7 @@ const verifyContextSig = function(message, context, sig) {
 const operationsData = {
   'Add Connection': {'attrs': ['id1', 'id2', 'sig1', 'sig2']},
   'Remove Connection': {'attrs': ['id1', 'id2', 'sig1']},
-  'Add Group': {'attrs': ['id1', 'id2', 'id3', 'sig1', 'inviteOnly']},
+  'Add Group': {'attrs': ['id1', 'id2', 'id3', 'sig1', 'type']},
   'Remove Group': {'attrs': ['id', 'group', 'sig']},
   'Add Membership': {'attrs': ['id', 'group', 'sig']},
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
@@ -47,6 +47,7 @@ const operationsData = {
   'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Flag User': {'attrs': ['flagger', 'flagged', 'reason', 'sig']},
   'Invite': {'attrs': ['inviter', 'invitee', 'group', 'sig']},
+  'Dismiss': {'attrs': ['dismisser', 'dismissee', 'group', 'sig']},
 };
 
 const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
@@ -94,6 +95,9 @@ function verify(op) {
   } else if (op['name'] == 'Invite') {
     message = op.name + op.inviter + op.invitee + op.group + op.timestamp;
     verifyUserSig(message, op.inviter, op.sig);
+  } else if (op['name'] == 'Dismiss') {
+    message = op.name + op.dismisser + op.dismissee + op.group + op.timestamp;
+    verifyUserSig(message, op.dismisser, op.sig);
   } else {
     throw "invalid operation";
   }
@@ -113,7 +117,7 @@ function apply(op) {
   } else if (op['name'] == 'Remove Connection') {
     return db.removeConnection(op.id1, op.id2, op.timestamp);
   } else if (op['name'] == 'Add Group') {
-    return db.createGroup(op.id1, op.id2, op.id3, op.inviteOnly, op.timestamp);
+    return db.createGroup(op.id1, op.id2, op.id3, op.type, op.timestamp);
   } else if (op['name'] == 'Remove Group') {
     return db.deleteGroup(op.group, op.id, op.timestamp);
   } else if (op['name'] == 'Add Membership') {
@@ -132,6 +136,8 @@ function apply(op) {
     return db.flagUser(op.flagger, op.flagged, op.reason, op.timestamp);
   } else if (op['name'] == 'Invite') {
     return db.invite(op.inviter, op.invitee, op.group, op.timestamp);
+  } else if (op['name'] == 'Dismiss') {
+    return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else {
     throw "invalid operation";
   }

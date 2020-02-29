@@ -46,7 +46,7 @@ describe('groups', function () {
   });
   let groupId;
   it('should be able to create a group', function () {
-     groupId = db.createGroup('b', 'c', 'd', false, Date.now());
+     groupId = db.createGroup('b', 'c', 'd', 'general', Date.now());
      newGroupsColl.count().should.equal(1);
      newGroupsColl.any()._key.should.equal(groupId);
   });
@@ -55,7 +55,7 @@ describe('groups', function () {
     newGroupsColl.count().should.equal(0);
   })
   it('should be able to create the group again', function () {
-    groupId = db.createGroup('b', 'c', 'd', false, Date.now());
+    groupId = db.createGroup('b', 'c', 'd', 'general', Date.now());
     newGroupsColl.count().should.equal(1);
  	newGroupsColl.any()._key.should.equal(groupId);
   });
@@ -148,7 +148,7 @@ describe('groups', function () {
       db.addConnection('a', 'd', 0);
       db.addConnection('b', 'd', 0);
       db.addConnection('c', 'd', 0);
-      groupId = db.createGroup('a', 'b', 'c', true, Date.now());
+      groupId = db.createGroup('a', 'b', 'c', 'primary', Date.now());
       db.addMembership(groupId, 'b', Date.now());
       db.addMembership(groupId, 'c', Date.now());
     });

@@ -180,7 +180,7 @@ describe('operations', function(){
       'id1': u1.id,
       'id2': u2.id,
       'id3': u3.id,
-      'inviteOnly': true,
+      'type': 'primary',
       timestamp,
       sig1
     }

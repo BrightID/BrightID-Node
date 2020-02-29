@@ -209,7 +209,6 @@ function updateEligibleGroups(userId, connections, currentGroups){
   return eligible_groups;
 }
 
-
 function userNewGroups(userId){
   const user = "users/" + userId;
   return query`
@@ -296,6 +295,27 @@ function invite(inviter, invitee, groupId, timestamp){
   });
 }
 
+function dismiss(dismisser, dismissee, groupId, timestamp){
+  if (! groupsColl.exists(groupId)) {
+    throw 'invalid group id';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(dismisser)) {
+    throw 'dismisser is not admin of group';
+  }
+  if (group.admins.includes(dismissee)) {
+    throw 'admins can not be dismissed from group';
+  }
+  if (! groupMembers(groupId).includes(dismissee)) {
+    throw 'dismisse is not member of group';
+  }
+
+  usersInGroupsColl.removeByExample({
+    _from: 'users/' + dismissee,
+    _to: 'groups/' + groupId,
+  });
+}
+
 function loadUser(id){
   return query`RETURN DOCUMENT(${usersColl}, ${id})`.toArray()[0];
 }
@@ -322,8 +342,11 @@ function createUser(key, timestamp){
   }
 }
 
-function createGroup(key1, key2, key3, inviteOnly, timestamp){
-  
+function createGroup(key1, key2, key3, type, timestamp){
+  if (! ['general', 'seed', 'primary'].includes(type)) {
+    throw 'invalid type';
+  }
+
   const h = sha256([key1, key2, key3].sort().join(','));
   const b = Buffer.from(h, 'hex').toString('base64');
   const groupId = b64ToUrlSafeB64(b);
@@ -344,7 +367,7 @@ function createGroup(key1, key2, key3, inviteOnly, timestamp){
     _key: groupId,
     score: 0,
     isNew: true,
-    inviteOnly: inviteOnly ? true : false,
+    type,
     timestamp,
     founders
   });
@@ -447,7 +470,7 @@ function addMembership(groupId, key, timestamp){
         timestamp: group.timestamp,
         founders: group.founders,
         admins: group.founders.map(u => u.replace('users/', '')),
-        inviteOnly: group.inviteOnly,
+        type: group.type,
         _key: group._key
       });
 
@@ -467,7 +490,7 @@ function addMembership(groupId, key, timestamp){
     if (! isEligible(groupId, key)) {
       throw 'Not eligible to join this group';
     }
-    if (group.inviteOnly) {
+    if (inviteOnly(group)) {
       const invitation = invitationsColl.firstExample({
         _from: 'users/' + key,
         _to: 'groups/' + groupId
@@ -476,9 +499,15 @@ function addMembership(groupId, key, timestamp){
       if (!invitation || timestamp - invitation.timestamp >= 86400000) {
         throw 'not invited to join this group';
       }
+      // remove invitation after joining to not allow reusing that
+      invitationsColl.remove(invitation);
     }
     addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");
   }
+}
+
+function inviteOnly(group){
+  return group.type != 'general';
 }
 
 function deleteMembership(groupId, key, timestamp){
