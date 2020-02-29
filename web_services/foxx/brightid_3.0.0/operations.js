@@ -43,7 +43,7 @@ const operationsData = {
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
   'Set Trusted Connections': {'attrs': ['id', 'trusted', 'sig']},
   'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
-  'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sig']},
+  'Sponsor': {'attrs': ['contextId', 'context', 'sig']},
   'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Flag User': {'attrs': ['flagger', 'flagged', 'reason', 'sig']},
   'Invite': {'attrs': ['inviter', 'invitee', 'group', 'sig']},
