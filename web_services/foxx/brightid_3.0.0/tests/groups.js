@@ -109,18 +109,18 @@ describe('groups', function () {
 
     it('should not be able to flag someone without having connection', function(){
       (() => {
-        db.flagUser('e', 'f', 'duplicate', 0);
+        db.removeConnection('e', 'f', 'duplicate', 0);
       }).should.throw('no connection found');
     });
 
     it('should be able to flag a connection', function(){
-      db.flagUser('b', 'a', 'duplicate', 0);
+      db.removeConnection('b', 'a', 'duplicate', 0);
       usersColl.document('a').flaggers.should.deep.equal({'b': 'duplicate'});
       db.userConnections('b').should.not.include('a');
     });
 
     it('user should be removed from a group after being flagged by 2 members', function(){      
-      db.flagUser('c', 'a', 'duplicate', 0);
+      db.removeConnection('c', 'a', 'duplicate', 0);
       usersColl.document('a').flaggers.should.deep.equal({'b': 'duplicate', 'c': 'duplicate'});
       db.userConnections('a').should.not.include('c');
       usersInGroupsColl.byExample({'_from': 'users/a'}).count().should.equal(0);

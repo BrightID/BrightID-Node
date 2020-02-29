@@ -146,7 +146,8 @@ describe('operations', function(){
 
   it('should be able to "Remove Connection"', function () {
     const timestamp = Date.now();
-    const message = 'Remove Connection' + u2.id + u3.id + timestamp;
+    const reason = "duplicate";
+    const message = 'Remove Connection' + u2.id + u3.id + reason + timestamp;
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
@@ -156,6 +157,7 @@ describe('operations', function(){
       'name': 'Remove Connection',
       'id1': u2.id,
       'id2': u3.id,
+      reason,
       timestamp,
       sig1
     }
@@ -336,25 +338,6 @@ describe('operations', function(){
     }
     apply(op);
     db.isSponsored(u1.id).should.equal(true);
-  });
-
-  it('should be able to "Flag User"', function () {
-    const timestamp = Date.now();
-    const message = 'Flag User' + u2.id + u1.id + 'duplicate' + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    const op = {
-      'name': 'Flag User',
-      'flagger': u2.id,
-      'flagged': u1.id,
-      'reason': 'duplicate',
-      '_key': hash(message),
-      timestamp,
-      sig
-    }
-    apply(op);
-    usersColl.document(u1.id).flaggers.should.have.property(u2.id);
   });
 
 });

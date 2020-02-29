@@ -71,14 +71,7 @@ function addConnection(key1, key2, timestamp){
   }
 }
 
-function removeConnection(key1, key2, timestamp){
-  const conn = getConnection(key1, key2);
-  if (conn) {
-    connectionsColl.remove(conn);
-  }
-}
-
-function flagUser(flagger, flagged, reason, timestamp){
+function removeConnection(flagger, flagged, reason, timestamp){
   if (! ['fake', 'duplicate', 'deceased'].includes(reason)) {
     throw 'invalid reason';
   }
@@ -657,7 +650,6 @@ module.exports = {
   loadGroups,
   userNewGroups,
   createUser,
-  flagUser,
   groupMembers,
   userConnections,
   userScore,
