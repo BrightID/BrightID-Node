@@ -237,6 +237,7 @@ function groupToDic(group){
     score: group.score,
     id: group._key,
     admins: group.admins,
+    type: group.type,
     knownMembers,
     founders
   };
@@ -336,7 +337,7 @@ function createUser(key, timestamp){
 }
 
 function createGroup(key1, key2, key3, type, timestamp){
-  if (! ['general', 'seed', 'primary'].includes(type)) {
+  if (! ['general', 'primary'].includes(type)) {
     throw 'invalid type';
   }
 
@@ -500,7 +501,7 @@ function addMembership(groupId, key, timestamp){
 }
 
 function inviteOnly(group){
-  return group.type != 'general';
+  return true;
 }
 
 function deleteMembership(groupId, key, timestamp){
@@ -645,6 +646,7 @@ module.exports = {
   deleteMembership,
   updateEligibleGroups,
   invite,
+  dismiss,
   userCurrentGroups,
   loadUser,
   loadGroups,

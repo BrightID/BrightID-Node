@@ -64,7 +64,7 @@ function verify(op) {
     message = op.name + op.id1 + op.id2 + op.reason + op.timestamp;
     verifyUserSig(message, op.id1, op.sig1);
   } else if (op['name'] == 'Add Group') {
-    message = op.name + op.id1 + op.id2 + op.id3 + op.timestamp;
+    message = op.name + op.id1 + op.id2 + op.id3 + op.type + op.timestamp;
     verifyUserSig(message, op.id1, op.sig1);
   } else if (op['name'] == 'Remove Group') {
     message = op.name + op.id + op.group + op.timestamp;
