@@ -84,13 +84,13 @@ const handlers = {
     }
 
     const newGroups = db.userNewGroups();
-    const invitedGroups = db.invitedGroups().concat(newGroups);
+    const eligibleGroups = db.userInvitedGroups().concat(newGroups);
 
     res.send({
       data: {
         score: user.score,
         createdAt: user.createdAt,
-        invitedGroups: db.loadGroups(invitedGroups, connections, id),
+        eligibleGroups: db.loadGroups(eligibleGroups, connections, id),
         currentGroups: db.loadGroups(currentGroups, connections, id),
         connections: db.loadUsers(connections),
         verifications: user.verifications
