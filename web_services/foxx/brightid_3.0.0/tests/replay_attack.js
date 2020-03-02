@@ -17,7 +17,7 @@ const {
 const db = require('../db.js');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid', '/apply');
+const applyBaseUrl = baseUrl.replace('/brightid3', '/apply');
 
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');

@@ -19,7 +19,7 @@ const {
 } = require('../encoding');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid', '/apply');
+const applyBaseUrl = baseUrl.replace('/brightid3', '/apply');
 
 let contextIdsColl;
 const connectionsColl = arango._collection('connections');
@@ -171,7 +171,7 @@ describe('operations', function(){
 
   it('should be able to "Add Group"', function () {
     const timestamp = Date.now();
-    const message = 'Add Group' + u1.id + u2.id + u3.id + timestamp;
+    const message = 'Add Group' + u1.id + u2.id + u3.id + 'primary' + timestamp;
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );

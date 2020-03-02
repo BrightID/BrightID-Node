@@ -220,6 +220,12 @@ function userCurrentGroups(userId){
   `.toArray().map(gId => gId.replace('groups/', ''));
 }
 
+function userInvitedGroups(userId){
+  return invitationsColl.byExample({
+    _from: 'users/' + userId
+  }).toArray().map(i => i._to.replace('groups/', ''));
+}
+
 function groupToDic(group){
   let founders = [];
   let knownMembers;
@@ -239,7 +245,7 @@ function groupToDic(group){
     admins: group.admins,
     type: group.type,
     knownMembers,
-    founders
+    founders,
   };
 }
 
@@ -267,7 +273,6 @@ function loadGroups(groupIds, connections, myUserId){
     newGroupsColl.documents(groupIds).documents.map(g => groupToDic(g))
   );
   return res;
-
 }
 
 function invite(inviter, invitee, groupId, timestamp){
@@ -651,6 +656,7 @@ module.exports = {
   loadUser,
   loadGroups,
   userNewGroups,
+  userInvitedGroups,
   createUser,
   groupMembers,
   userConnections,

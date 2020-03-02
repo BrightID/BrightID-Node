@@ -82,7 +82,13 @@ describe('groups', function () {
       eligibleGroups.should.not.be.empty;
       eligibleGroups[0].should.equal(groupId);
     });
-    it('should be able to join the group', function (){
+    it('should not be able to join the group without invitation', function (){
+      (() => {
+        db.addMembership(groupId, 'a', Date.now());
+      }).should.throw('not invited to join this group');
+    });
+    it('should be able to join the group after invitation', function (){
+      db.invite('b', 'a', groupId, Date.now());
       db.addMembership(groupId, 'a', Date.now());
       usersInGroupsColl.count().should.equal(4);
     });
@@ -102,8 +108,11 @@ describe('groups', function () {
       db.addConnection('c', 'd', 0);
       db.addConnection('c', 'e', 0);
       db.addConnection('c', 'f', 0);
+      db.invite('b', 'a', groupId, Date.now());
       db.addMembership(groupId, 'a', Date.now());
+      db.invite('b', 'e', groupId, Date.now());
       db.addMembership(groupId, 'e', Date.now());
+      db.invite('b', 'f', groupId, Date.now());
       db.addMembership(groupId, 'f', Date.now());
     });
 
@@ -130,6 +139,7 @@ describe('groups', function () {
 
     it('flagged user should not be able to join a group that is flagged by 2 members', function(){
       (() => {
+        db.invite('b', 'a', groupId, Date.now());
         db.addMembership(groupId, 'a', Date.now());
       }).should.throw('user is flagged by two or more members of the group');
     });
@@ -164,11 +174,12 @@ describe('groups', function () {
     });
     it('admins should be able to invite eligible users to the group', function (){
       db.invite('b', 'd', groupId, Date.now());
-      invitationsColl.any()._to.replace('groups/', '').should.equal(groupId);
+      db.userInvitedGroups('d').should.deep.equal([groupId]);
     });
     it('invited user should be able to join the group', function (){
       db.addMembership(groupId, 'd', Date.now());
       db.groupMembers(groupId).should.include('d');
+      db.userInvitedGroups('d').length.should.equal(0);
     });
     it('non-admins should not be able to invite others to the group', function (){
       (() => {
