@@ -5,7 +5,6 @@ const arango = require('@arangodb').db;
 const { hash } = require('../encoding');
 
 const connectionsColl = arango._collection('connections');
-const removedColl = arango._collection('removed');
 const groupsColl = arango._collection('groups');
 const newGroupsColl = arango._collection('newGroups');
 const usersInGroupsColl = arango._collection('usersInGroups');
@@ -57,7 +56,7 @@ describe('groups', function () {
   it('should be able to create the group again', function () {
     groupId = db.createGroup('b', 'c', 'd', 'general', Date.now());
     newGroupsColl.count().should.equal(1);
- 	newGroupsColl.any()._key.should.equal(groupId);
+  newGroupsColl.any()._key.should.equal(groupId);
   });
   it('the two co-founders should be able to join the group', function (){
     db.addMembership(groupId, 'c', Date.now());
@@ -150,7 +149,7 @@ describe('groups', function () {
     });
   });
 
-  describe('invitations', function() {
+  describe('inviting', function() {
     before(function() {
       db.createUser('g');
       db.addConnection('a', 'b', 0);
@@ -185,6 +184,49 @@ describe('groups', function () {
       (() => {
         db.invite('d', 'e', groupId, Date.now());
       }).should.throw('inviter is not admin of group');
+    });
+  });
+
+  describe('dismissing', function() {
+    before(function() {
+      db.invite('b', 'd', groupId, Date.now());
+      db.invite('b', 'e', groupId, Date.now());
+      db.addMembership(groupId, 'd', Date.now());
+      db.addMembership(groupId, 'e', Date.now());
+    });
+    it('non-admins should not be able to dismiss others from the group', function (){
+      (() => {
+        db.dismiss('d', 'e', groupId, Date.now());
+      }).should.throw('dismisser is not admin of group');
+    });
+    it('admins should be able to dismiss others from the group', function (){
+      db.dismiss('b', 'd', groupId, Date.now());
+      db.groupMembers(groupId).should.not.include('d');
+    });
+    it('admins should not be able to dismiss each other from the group', function (){
+      (() => {
+        db.dismiss('b', 'c', groupId, Date.now());
+      }).should.throw('admins can not be dismissed from group');
+    });
+  });
+
+  describe('adding new admins', function() {
+    before(function() {
+      db.invite('b', 'd', groupId, Date.now());
+      db.addMembership(groupId, 'd', Date.now());
+    });
+    it('non-admins should not be able to add new admins', function (){
+      (() => {
+        db.addAdmin('e', 'd', groupId, Date.now());
+      }).should.throw('only admins can add new admins');
+    });
+    it('admins should be able to add new admins', function (){
+      db.addAdmin('b', 'd', groupId, Date.now());
+      groupsColl.document(groupId).admins.should.include('d');
+    });
+    it('new admins should be able to dismiss others from the group', function (){
+      db.dismiss('d', 'e', groupId, Date.now());
+      db.groupMembers(groupId).should.not.include('e');
     });
   });
 

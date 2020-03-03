@@ -239,7 +239,7 @@ describe('operations', function(){
     members.should.include(u3.id);
   });
 
-  it('should be able to "Invite" someone to the group', function () {
+  it('admins should be able to "Invite" someone to the group', function () {
     const timestamp = Date.now();
     const groupId = db.userCurrentGroups(u2.id)[0];
     const message = "Invite" + u2.id + u4.id + groupId + timestamp;
@@ -260,6 +260,51 @@ describe('operations', function(){
       '_from': 'users/' + u4.id,
       '_to': 'groups/' + groupId
     }).count().should.equal(1);
+  });
+
+  it('admins should be able to "Dismiss" someone from the group', function () {
+    const timestamp = Date.now();
+    const groupId = db.userCurrentGroups(u2.id)[0];
+    db.addMembership(groupId, u4.id, Date.now());
+    db.groupMembers(groupId).should.include(u4.id);
+    const message = "Dismiss" + u2.id + u4.id + groupId + timestamp;
+    const sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const op = {
+      '_key': hash(message),
+      'name': 'Dismiss',
+      'dismisser': u2.id,
+      'dismissee': u4.id,
+      'group': groupId,
+      timestamp,
+      sig
+    }
+    apply(op);
+    db.groupMembers(groupId).should.not.include(u4.id);
+  });
+
+  it('admins should be able to "Add Admin" to the group', function () {
+    const timestamp = Date.now();
+    const groupId = db.userCurrentGroups(u2.id)[0];
+    db.invite(u2.id, u4.id, groupId, Date.now());
+    db.addMembership(groupId, u4.id, Date.now());
+    db.groupMembers(groupId).should.include(u4.id);
+    const message = "Add Admin" + u2.id + u4.id + groupId + timestamp;
+    const sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const op = {
+      '_key': hash(message),
+      'name': 'Add Admin',
+      'id': u2.id,
+      'admin': u4.id,
+      'group': groupId,
+      timestamp,
+      sig
+    }
+    apply(op);
+    groupsColl.document(groupId).admins.should.include(u4.id);
   });
 
   it('should be able to "Set Trusted Connections"', function () {

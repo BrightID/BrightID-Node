@@ -47,6 +47,7 @@ const operationsData = {
   'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Invite': {'attrs': ['inviter', 'invitee', 'group', 'sig']},
   'Dismiss': {'attrs': ['dismisser', 'dismissee', 'group', 'sig']},
+  'Add Admin': {'attrs': ['id', 'admin', 'group', 'sig']},
 };
 
 const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
@@ -94,6 +95,9 @@ function verify(op) {
   } else if (op['name'] == 'Dismiss') {
     message = op.name + op.dismisser + op.dismissee + op.group + op.timestamp;
     verifyUserSig(message, op.dismisser, op.sig);
+  } else if (op['name'] == 'Add Admin') {
+    message = op.name + op.id + op.admin + op.group + op.timestamp;
+    verifyUserSig(message, op.id, op.sig);
   } else {
     throw "invalid operation";
   }
@@ -132,6 +136,8 @@ function apply(op) {
     return db.invite(op.inviter, op.invitee, op.group, op.timestamp);
   } else if (op['name'] == 'Dismiss') {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
+  } else if (op['name'] == 'Add Admin') {
+    return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
   } else {
     throw "invalid operation";
   }

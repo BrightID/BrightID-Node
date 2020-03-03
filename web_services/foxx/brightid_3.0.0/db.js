@@ -306,7 +306,7 @@ function dismiss(dismisser, dismissee, groupId, timestamp){
     throw 'admins can not be dismissed from group';
   }
   if (! groupMembers(groupId).includes(dismissee)) {
-    throw 'dismisse is not member of group';
+    throw 'dismissee is not member of group';
   }
 
   usersInGroupsColl.removeByExample({
@@ -376,6 +376,24 @@ function createGroup(key1, key2, key3, type, timestamp){
   return groupId;
 }
 
+function addAdmin(key, admin, groupId){
+  if (! groupsColl.exists(groupId)) {
+    throw 'group not found';
+  }
+  if (! usersInGroupsColl.firstExample({
+    _from: 'users/' + admin,
+    _to: 'groups/' + groupId
+  })) {
+    throw 'new admin is not member of the group';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(key)) {
+    throw 'only admins can add new admins';
+  }
+  group.admins.push(admin);
+  groupsColl.update(group, { admins: group.admins });
+}
+
 function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   const user = 'users/' + key;
   const group = groupCollName + '/' + groupId;
@@ -401,7 +419,7 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
       timestamp
     });
   } else {
-    collection.update(conn, { timestamp });
+    collection.update(edge, { timestamp });
   }
   
 }
@@ -647,6 +665,7 @@ module.exports = {
   removeConnection,
   createGroup,
   deleteGroup,
+  addAdmin,
   addMembership,
   deleteMembership,
   updateEligibleGroups,
