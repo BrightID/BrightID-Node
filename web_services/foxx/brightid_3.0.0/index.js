@@ -58,16 +58,6 @@ const handlers = {
     }
   },
 
-  membershipGet: function membershipGetHandler(req, res){
-    const members = db.groupMembers(req.param('groupId'));
-    if (! (members && members.length)) {
-      res.throw(404, "Group not found");
-    }
-    res.send({
-      "data": members
-    });
-  },
-
   userGet: function userGetHandler(req, res){
     const id = req.param('id');
 
@@ -252,12 +242,6 @@ router.get('/verifications/:context', handlers.contextVerificationGet)
   .summary('Gets list of all of contextIds')
   .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
   .response(schemas.contextVerificationGetResponse);
-
-router.get('/memberships/:groupId', handlers.membershipGet)
-  .pathParam('groupId', joi.string().required())
-  .summary('Get group members')
-  .description('Gets all members of a group.')
-  .response(schemas.membershipGetResponse);
 
 router.get('/ip', handlers.ip)
   .summary("Get this server's IPv4 address")

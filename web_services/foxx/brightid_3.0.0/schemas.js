@@ -48,11 +48,6 @@ Sponsor: id, contextId, context, sig`)
 // extend lower-level schemas with higher-level schemas
 schemas = Object.assign({
 
-  membershipGetResponse: joi.object({
-    // wrap the data in a "data" object https://jsonapi.org/format/#document-top-level
-    data: joi.array().items(joi.string()).description('ids of all members of the group')
-  }),
-
   userGetResponse: joi.object({
     data: joi.object({
       score: schemas.score,

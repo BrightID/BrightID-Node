@@ -232,9 +232,10 @@ function groupToDic(group){
   if (group.founders && group.founders.map){
     founders = group.founders.map(u => u.replace("users/", ""));
   }
+  const members = groupMembers(group._key, group.isNew);
   if (group.isNew) {
     // knownMembers for a new group is just the founders that have already joined
-    knownMembers = groupMembers(group._key, group.isNew);
+    knownMembers = members;
   } else {
     knownMembers = group.knownMembers.map(m => m.replace("users/", ""));
   }
@@ -245,6 +246,7 @@ function groupToDic(group){
     admins: group.admins,
     type: group.type,
     knownMembers,
+    members,
     founders,
   };
 }
