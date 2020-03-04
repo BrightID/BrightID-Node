@@ -228,6 +228,11 @@ describe('groups', function () {
       db.dismiss('d', 'e', groupId, Date.now());
       db.groupMembers(groupId).should.not.include('e');
     });
+    it('admins should be removed from admins list when they leave the group', function (){
+      groupsColl.document(groupId).admins.should.include('d');
+      db.deleteMembership(groupId, 'd', Date.now());
+      groupsColl.document(groupId).admins.should.not.include('d');
+    });
   });
 
 });

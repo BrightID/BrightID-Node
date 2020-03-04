@@ -530,14 +530,18 @@ function inviteOnly(group){
 }
 
 function deleteMembership(groupId, key, timestamp){
-  const user = "users/" + key;
-  const group = "groups/" + groupId;
-
-  query`
-    for i in ${usersInGroupsColl}
-      filter i._to == ${group} && i._from == ${user}
-      remove i in ${usersInGroupsColl}
-  `;
+  if (! groupsColl.exists(groupId)) {
+    throw 'group not found';
+  }
+  usersInGroupsColl.removeByExample({
+    _from: "users/" + key,
+    _to: "groups/" + groupId,
+  });
+  const group = groupsColl.document(groupId);
+  if (group.admins && group.admins.includes(key)) {
+    const admins = group.admins.filter(admin => key != admin);
+    groupsColl.update(group, { admins });
+  }
 }
 
 function getContext(context){
