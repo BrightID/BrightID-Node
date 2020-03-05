@@ -254,7 +254,7 @@ function groupToDic(group){
 function loadGroups(groupIds, connections, myUserId){
   const me = "users/" + myUserId;
 
-  const res = query`
+  let res = query`
     FOR g in ${groupsColl}
       FILTER g._key in ${groupIds}
       LET members = (
@@ -271,7 +271,7 @@ function loadGroups(groupIds, connections, myUserId){
       )
       return MERGE([g, {"knownMembers": APPEND(members, me)}])
   `.toArray().map(g => groupToDic(g));
-  res.concat(
+  res = res.concat(
     newGroupsColl.documents(groupIds).documents.map(g => groupToDic(g))
   );
   return res;

@@ -73,9 +73,8 @@ const handlers = {
       db.updateEligibleGroups(id, connections, currentGroups)
     }
 
-    const newGroups = db.userNewGroups();
+    const newGroups = db.userNewGroups(id);
     const eligibleGroups = db.userInvitedGroups().concat(newGroups);
-
     res.send({
       data: {
         score: user.score,
