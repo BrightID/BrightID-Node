@@ -1,4 +1,4 @@
-version: '3'
+version: '3.2'
 services:
   ws:
     build: web_services
@@ -6,6 +6,8 @@ services:
       - db
     network_mode: host
     image: brightid/web_services
+    env_file:
+      - config.env
 
   scorer:
     build: scorer
@@ -14,14 +16,52 @@ services:
       - db
     network_mode: host
     image: brightid/scorer
+    volumes:
+      - type: volume
+        source: snapshots
+        target: /snapshots
+    env_file:
+      - config.env
+
+  consensus:
+    build: consensus
+    depends_on:
+      - ws
+      - db
+    network_mode: host
+    image: brightid/consensus
+    volumes:
+      - type: volume
+        source: snapshots
+        target: /snapshots
+    env_file:
+      - config.env
+
+  sp_updater:
+    build: sp_updater
+    depends_on:
+      - db
+    network_mode: host
+    image: brightid/sp_updater
+    env_file:
+      - config.env
 
   db:
-    build: db
+    build:
+      context: ./db
+      dockerfile: Dockerfile
     network_mode: host
     image: brightid/db
+    env_file:
+      - config.env
 
   web:
     image: nginx
     volumes:
       - ./web_services/brightid-nginx.conf:/etc/nginx/nginx.conf
     network_mode: host
+    env_file:
+      - config.env
+
+volumes:
+  snapshots:
