@@ -202,13 +202,18 @@ function updateEligibleGroups(userId, connections, currentGroups){
   return eligible_groups;
 }
 
+function groupToDic(group){
+  group.members = groupMembers(group._key, group.isNew);
+  group.id = group._key;
+  return group;
+}
+
 function userNewGroups(userId){
-  const user = "users/" + userId;
   return query`
       FOR g in ${newGroupsColl}
-        FILTER ${user} in g.founders
-      return g._key
-  `.toArray();
+        FILTER ${userId} in g.founders
+      return g
+  `.toArray().map(groupToDic);
 }
 
 function userCurrentGroups(userId){
@@ -217,64 +222,17 @@ function userCurrentGroups(userId){
     FOR ug in ${usersInGroupsColl}
       FILTER ug._from == ${user}
       return DISTINCT ug._to
-  `.toArray().map(gId => gId.replace('groups/', ''));
+  `.toArray().map(gId => groupsColl.document(gId)).map(groupToDic);
 }
 
 function userInvitedGroups(userId){
   return invitationsColl.byExample({
     _from: 'users/' + userId
-  }).toArray().map(i => i._to.replace('groups/', ''));
-}
-
-function groupToDic(group){
-  let founders = [];
-  let knownMembers;
-  if (group.founders && group.founders.map){
-    founders = group.founders.map(u => u.replace("users/", ""));
-  }
-  const members = groupMembers(group._key, group.isNew);
-  if (group.isNew) {
-    // knownMembers for a new group is just the founders that have already joined
-    knownMembers = members;
-  } else {
-    knownMembers = group.knownMembers.map(m => m.replace("users/", ""));
-  }
-  return {
-    isNew: group.isNew,
-    score: group.score,
-    id: group._key,
-    admins: group.admins,
-    type: group.type,
-    knownMembers,
-    members,
-    founders,
-  };
-}
-
-function loadGroups(groupIds, connections, myUserId){
-  const me = "users/" + myUserId;
-
-  let res = query`
-    FOR g in ${groupsColl}
-      FILTER g._key in ${groupIds}
-      LET members = (
-        FOR m in usersInGroups
-          FILTER m._to == g._id && m._from in ${connections}
-          LIMIT 3
-          RETURN DISTINCT m._from
-      )
-      LET me = (
-        FOR m in usersInGroups
-          FILTER m._to == g._id && m._from == ${me}
-          LIMIT 1
-          RETURN m._from
-      )
-      return MERGE([g, {"knownMembers": APPEND(members, me)}])
-  `.toArray().map(g => groupToDic(g));
-  res = res.concat(
-    newGroupsColl.documents(groupIds).documents.map(g => groupToDic(g))
-  );
-  return res;
+  }).toArray().map(invite => {
+    const group = groupsColl.document(invite._to);
+    group.inviter = invite.inviter;
+    return groupToDic(group);
+  });
 }
 
 function invite(inviter, invitee, groupId, timestamp){
@@ -348,7 +306,8 @@ function createGroup(key1, key2, key3, type, timestamp){
     throw 'invalid type';
   }
 
-  const h = sha256([key1, key2, key3].sort().join(','));
+  const founders = [key1, key2, key3].sort()
+  const h = sha256(founders.join(','));
   const b = Buffer.from(h, 'hex').toString('base64');
   const groupId = b64ToUrlSafeB64(b);
   if (newGroupsColl.exists(groupId) || groupsColl.exists(groupId)) {
@@ -360,10 +319,6 @@ function createGroup(key1, key2, key3, type, timestamp){
     throw "Creator isn't connected to one or both of the co-founders";
   }
 
-  const user1 = 'users/' + key1;
-  const user2 = 'users/' + key2;
-  const user3 = 'users/' + key3;
-  const founders = [user1, user2, user3].sort();
   newGroupsColl.save({
     _key: groupId,
     score: 0,
@@ -439,7 +394,7 @@ function deleteGroup(groupId, key, timestamp){
   }
   const group = groups[0];
 
-  if (group.founders.indexOf('users/' + key) < 0) {
+  if (group.founders.indexOf(key) < 0) {
     throw 'Access Denied';
   }
   // Remove members
@@ -466,8 +421,7 @@ function addMembership(groupId, key, timestamp){
   } else {
     throw 'Group not found';
   }
-  const user = "users/" + key;
-  if (isNew && ! group.founders.includes(user)) {
+  if (isNew && ! group.founders.includes(key)) {
     throw 'Access denied';
   }
 
@@ -488,7 +442,7 @@ function addMembership(groupId, key, timestamp){
         isNew: false,
         timestamp: group.timestamp,
         founders: group.founders,
-        admins: group.founders.map(u => u.replace('users/', '')),
+        admins: group.founders,
         type: group.type,
         _key: group._key
       });
@@ -679,7 +633,6 @@ module.exports = {
   dismiss,
   userCurrentGroups,
   loadUser,
-  loadGroups,
   userNewGroups,
   userInvitedGroups,
   createUser,

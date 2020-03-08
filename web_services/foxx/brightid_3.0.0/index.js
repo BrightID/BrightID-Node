@@ -79,8 +79,8 @@ const handlers = {
       data: {
         score: user.score,
         createdAt: user.createdAt,
-        eligibleGroups: db.loadGroups(eligibleGroups, connections, id),
-        currentGroups: db.loadGroups(currentGroups, connections, id),
+        eligibleGroups: eligibleGroups,
+        currentGroups: currentGroups,
         connections: db.loadUsers(connections),
         verifications: user.verifications
       }
