@@ -65,6 +65,7 @@ const handlers = {
     if (! user) {
       res.throw(404, "User not found");
     }
+
     const connections = db.userConnections(id);
     const currentGroups = db.userCurrentGroups(id);
 
@@ -82,7 +83,8 @@ const handlers = {
         eligibleGroups: eligibleGroups,
         currentGroups: currentGroups,
         connections: db.loadUsers(connections),
-        verifications: user.verifications
+        verifications: user.verifications,
+        isSponsored: db.isSponsored(user)
       }
     });
   },
@@ -199,10 +201,12 @@ const handlers = {
   },
 
   contexts: function contexts(req, res){
-    const context = db.getContext(req.param('context'));
+    const contextName = req.param('context');
+    let context = db.getContext(contextName);
     if (context == null) {
       res.throw(404, 'Context not found');
     } else {
+      context.hasSponsorships = db.unusedSponsorship(contextName) > 0;
       res.send({
         "data": context,
       });

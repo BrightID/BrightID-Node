@@ -58,7 +58,8 @@ schemas = Object.assign({
       currentGroups: joi.array().items(schemas.group),
       eligibleGroups: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
-      verifications: joi.array().items(joi.string())
+      verifications: joi.array().items(joi.string()),
+      isSponsored: joi.boolean()
     })
   }),
 

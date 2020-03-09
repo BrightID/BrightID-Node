@@ -651,5 +651,6 @@ module.exports = {
   upsertOperation,
   setTrusted,
   setSigningKey,
-  getLastContextIds
+  getLastContextIds,
+  unusedSponsorship
 };
