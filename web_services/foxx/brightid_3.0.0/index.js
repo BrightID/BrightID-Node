@@ -84,7 +84,7 @@ const handlers = {
         currentGroups: currentGroups,
         connections: db.loadUsers(connections),
         verifications: user.verifications,
-        isSponsored: db.isSponsored(user)
+        isSponsored: db.isSponsored(id)
       }
     });
   },
