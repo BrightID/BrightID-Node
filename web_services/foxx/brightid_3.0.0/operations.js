@@ -18,7 +18,7 @@ const verifyUserSig = function(message, id, sig) {
   // this will happen for "Add Connection" when one party is not created
   // this also enable this version of code to be used by the old users collection
   // for users that don't have signingKey
-  const signingKey = user ? user.signingKey : urlSafeB64ToB64(id);
+  const signingKey = (user && user.signingKey) ? user.signingKey : urlSafeB64ToB64(id);
   if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
     throw 'invalid signature';
   }

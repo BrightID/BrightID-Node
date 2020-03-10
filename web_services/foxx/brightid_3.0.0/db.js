@@ -246,6 +246,10 @@ function invite(inviter, invitee, groupId, timestamp){
   if (! isEligible(groupId, invitee)) {
     throw 'invitee is not eligible to join this group';
   }
+  if (group.type == 'primary' && hasPrimaryGroup(invitee)) {
+    throw 'user already has a primary group';
+  }
+
   invitationsColl.insert({
     _from: 'users/' + invitee,
     _to: 'groups/' + groupId,
@@ -301,6 +305,14 @@ function createUser(key, timestamp){
   }
 }
 
+function hasPrimaryGroup(key){
+  const groupIds = usersInGroupsColl.byExample({
+    _from: 'users/' + key
+  }).toArray().map(ug => ug._to.replace('groups/', ''));
+  const groups = groupsColl.documents(groupIds).documents;
+  return groups.filter(group => group.type == 'primary').length > 0;
+}
+
 function createGroup(key1, key2, key3, type, timestamp){
   if (! ['general', 'primary'].includes(type)) {
     throw 'invalid type';
@@ -317,6 +329,10 @@ function createGroup(key1, key2, key3, type, timestamp){
   const conns = userConnections(key1);
   if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
     throw "Creator isn't connected to one or both of the co-founders";
+  }
+
+  if (type == 'primary' && founders.some(hasPrimaryGroup)) {
+    throw 'some of founders already have primary groups';
   }
 
   newGroupsColl.save({
@@ -378,36 +394,7 @@ function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
   } else {
     collection.update(edge, { timestamp });
   }
-  
-}
 
-function deleteGroup(groupId, key, timestamp){
-
-  const groups = query`
-    for i in ${newGroupsColl}
-      filter i._key == ${groupId}
-    return i
-  `.toArray();
-
-  if (! groups || ! groups.length) {
-    throw 'Group not found';
-  }
-  const group = groups[0];
-
-  if (group.founders.indexOf(key) < 0) {
-    throw 'Access Denied';
-  }
-  // Remove members
-
-  const newGroup = "newGroups/" + groupId;
-  query`
-    for i in ${usersInNewGroupsColl}
-      filter i._to == ${newGroup}
-      remove i in ${usersInNewGroupsColl}
-  `;
-
-  // Remove group
-  query`remove ${group._key} in ${newGroupsColl}`;
 }
 
 function addMembership(groupId, key, timestamp){
@@ -423,6 +410,10 @@ function addMembership(groupId, key, timestamp){
   }
   if (isNew && ! group.founders.includes(key)) {
     throw 'Access denied';
+  }
+
+  if (group.type == 'primary' && hasPrimaryGroup(key)) {
+    throw 'user already has a primary group';
   }
 
   if (isNew) {
@@ -481,6 +472,35 @@ function addMembership(groupId, key, timestamp){
 
 function inviteOnly(group){
   return true;
+}
+
+function deleteGroup(groupId, key, timestamp){
+
+  const groups = query`
+    for i in ${newGroupsColl}
+      filter i._key == ${groupId}
+    return i
+  `.toArray();
+
+  if (! groups || ! groups.length) {
+    throw 'Group not found';
+  }
+  const group = groups[0];
+
+  if (group.founders.indexOf(key) < 0) {
+    throw 'Access Denied';
+  }
+  // Remove members
+
+  const newGroup = "newGroups/" + groupId;
+  query`
+    for i in ${usersInNewGroupsColl}
+      filter i._to == ${newGroup}
+      remove i in ${usersInNewGroupsColl}
+  `;
+
+  // Remove group
+  query`remove ${group._key} in ${newGroupsColl}`;
 }
 
 function deleteMembership(groupId, key, timestamp){

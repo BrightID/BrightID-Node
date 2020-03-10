@@ -157,7 +157,7 @@ describe('groups', function () {
       db.addConnection('a', 'd', 0);
       db.addConnection('b', 'd', 0);
       db.addConnection('c', 'd', 0);
-      groupId = db.createGroup('a', 'b', 'c', 'primary', Date.now());
+      groupId = db.createGroup('a', 'b', 'c', 'general', Date.now());
       db.addMembership(groupId, 'b', Date.now());
       db.addMembership(groupId, 'c', Date.now());
     });
@@ -173,7 +173,7 @@ describe('groups', function () {
     });
     it('admins should be able to invite eligible users to the group', function (){
       db.invite('b', 'd', groupId, Date.now());
-      db.userInvitedGroups('d').should.deep.equal([groupId]);
+      db.userInvitedGroups('d').map(group => group.id).should.deep.equal([groupId]);
     });
     it('invited user should be able to join the group', function (){
       db.addMembership(groupId, 'd', Date.now());
@@ -232,6 +232,39 @@ describe('groups', function () {
       groupsColl.document(groupId).admins.should.include('d');
       db.deleteMembership(groupId, 'd', Date.now());
       groupsColl.document(groupId).admins.should.not.include('d');
+    });
+  });
+
+  describe('primary groups', function() {
+    before(function() {
+      groupsColl.truncate();
+      newGroupsColl.truncate();
+      usersInGroupsColl.truncate();
+      usersInNewGroupsColl.truncate();
+      groupId = db.createGroup('a', 'b', 'c', 'primary', Date.now());
+      db.addMembership(groupId, 'b', Date.now());
+      db.addMembership(groupId, 'c', Date.now());
+    });
+    it('users that have primary groups should not be able to create new primary groups', function (){
+      (() => {
+        db.createGroup('a', 'd', 'e', 'primary', Date.now());
+      }).should.throw('some of founders already have primary groups');
+    });
+    it('users with no primary group should be able to join a primary group', function (){
+      db.invite('a', 'd', groupId, Date.now());
+      db.addMembership(groupId, 'd', Date.now());
+      db.userCurrentGroups('d').map(group => group.id).should.deep.equal([groupId]);
+    });
+    it('users that have primary groups should not be able to invited to other primary groups', function (){
+      db.addConnection('e', 'f', Date.now());
+      db.addConnection('e', 'g', Date.now());
+      const newGroupId = db.createGroup('e', 'f', 'g', 'primary', Date.now());
+      db.addMembership(newGroupId, 'f', Date.now());
+      db.addMembership(newGroupId, 'g', Date.now());
+      (() => {
+        db.invite('a', 'e', groupId, Date.now());
+      }).should.throw('user already has a primary group');
+
     });
   });
 

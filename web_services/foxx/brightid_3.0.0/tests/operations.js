@@ -171,7 +171,8 @@ describe('operations', function(){
 
   it('should be able to "Add Group"', function () {
     const timestamp = Date.now();
-    const message = 'Add Group' + u1.id + u2.id + u3.id + 'primary' + timestamp;
+    const type = 'general';
+    const message = 'Add Group' + u1.id + u2.id + u3.id + type + timestamp;
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
@@ -182,7 +183,7 @@ describe('operations', function(){
       'id1': u1.id,
       'id2': u2.id,
       'id3': u3.id,
-      'type': 'primary',
+      type,
       timestamp,
       sig1
     }
@@ -195,7 +196,7 @@ describe('operations', function(){
   });
 
   it('should be able to "Add Membership"', function () {
-    const groupId = db.userNewGroups(u1.id)[0];
+    const groupId = db.userNewGroups(u1.id)[0].id;
     [u2, u3].map((u) => {
       const timestamp = Date.now();
       const message = "Add Membership" + u.id + groupId + timestamp;
@@ -219,7 +220,7 @@ describe('operations', function(){
 
   it('should be able to "Remove Membership"', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u1.id);
+    const groupId = db.userCurrentGroups(u1.id)[0].id;
     const message = "Remove Membership" + u1.id + groupId + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
@@ -241,7 +242,7 @@ describe('operations', function(){
 
   it('admins should be able to "Invite" someone to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u2.id)[0];
+    const groupId = db.userCurrentGroups(u2.id)[0].id;
     const message = "Invite" + u2.id + u4.id + groupId + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
@@ -264,7 +265,7 @@ describe('operations', function(){
 
   it('admins should be able to "Dismiss" someone from the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u2.id)[0];
+    const groupId = db.userCurrentGroups(u2.id)[0].id;
     db.addMembership(groupId, u4.id, Date.now());
     db.groupMembers(groupId).should.include(u4.id);
     const message = "Dismiss" + u2.id + u4.id + groupId + timestamp;
@@ -286,7 +287,7 @@ describe('operations', function(){
 
   it('admins should be able to "Add Admin" to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u2.id)[0];
+    const groupId = db.userCurrentGroups(u2.id)[0].id;
     db.invite(u2.id, u4.id, groupId, Date.now());
     db.addMembership(groupId, u4.id, Date.now());
     db.groupMembers(groupId).should.include(u4.id);
