@@ -37,7 +37,6 @@ services:
     env_file:
       - config.env
 
-
   sp_updater:
     build: sp_updater
     depends_on:
@@ -55,7 +54,6 @@ services:
     image: brightid/db
     env_file:
       - config.env
-
 
   web:
     image: nginx

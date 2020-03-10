@@ -69,10 +69,7 @@ const handlers = {
     const connections = db.userConnections(id);
     const currentGroups = db.userCurrentGroups(id);
 
-    const groupCheckInterval = ((module.context && module.context.configuration && module.context.configuration.groupCheckInterval) || 0);
-    if (! user.eligible_timestamp || Date.now() > user.eligible_timestamp + groupCheckInterval) {
-      db.updateEligibleGroups(id, connections, currentGroups)
-    }
+    db.updateEligibleGroups(id, connections, currentGroups);
 
     const newGroups = db.userNewGroups(id);
     const eligibleGroups = db.userInvitedGroups(id).concat(newGroups);
@@ -93,7 +90,7 @@ const handlers = {
     const contextName = req.param('context');
 
     const context = db.getContext(contextName);
-    if (!context) {
+    if (! context) {
       res.throw(404, 'context not found');
     }
 
@@ -113,21 +110,21 @@ const handlers = {
       let contextName = req.param('context');
       const signed = req.param('signed');
       const context = db.getContext(contextName);
-      if (!context) {
+      if (! context) {
         throw 'context not found';
       }
 
       const coll = arango._collection(context.collection);
       const user = db.getUserByContextId(coll, contextId);
-      if (!user) {
+      if (! user) {
         throw 'contextId not found';
       }
 
-      if (!db.isSponsored(user)) {
+      if (! db.isSponsored(user)) {
         throw 'user is not sponsored';
       }
 
-      if (!db.userHasVerification(context.verification, user)) {
+      if (! db.userHasVerification(context.verification, user)) {
         throw 'user can not be verified for this context';
       }
 
@@ -139,7 +136,7 @@ const handlers = {
       // sign and return the verification
       let sig, publicKey;
       if (signed == 'nacl') {
-        if (!(module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
+        if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
           throw 'Server node key pair not configured';
         }
 
@@ -150,7 +147,7 @@ const handlers = {
           Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
         );
       } else if (signed == 'eth') {
-        if (!(module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
+        if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
           throw 'Server node ethereum privateKey not configured';
         }
 
@@ -175,7 +172,7 @@ const handlers = {
           publicKey
         }
       });
-    } catch(e) {
+    } catch (e) {
       res.send({
         data: {
           unique: false,
@@ -208,7 +205,13 @@ const handlers = {
     } else {
       context.hasSponsorships = db.unusedSponsorship(contextName) > 0;
       res.send({
-        "data": context,
+        "data": {
+          verification: context.verification,
+          verificationUrl: context.verificationUrl,
+          isApp: context.isApp,
+          appLogo: context.appLogo,
+          appUrl: context.appUrl
+        }
       });
     }
   }

@@ -30,12 +30,14 @@ def process(data):
 
 def save_snapshot(block):
     batch = db.replication.create_dump_batch(ttl=1000)
-    zf = zipfile.ZipFile(config.SNAPSHOTS_PATH.format(block), mode='w')
+    fname = config.SNAPSHOTS_PATH.format(block)
+    zf = zipfile.ZipFile(fname+'.tmp', mode='w')
     for collection in ('users', 'groups', 'usersInGroups', 'connections'):
         params = {'batchId': batch['id'], 'collection': collection, 'chunkSize': config.MAX_COLLECTION_SIZE}
         r = requests.get(config.DUMP_URL, params=params)
         zf.writestr('dump/{}_{}.data.json'.format(collection, batch['id']), r.text)
     zf.close()
+    os.rename(fname+'.tmp', fname)
     db.replication.delete_dump_batch(batch['id'])
 
 def main():

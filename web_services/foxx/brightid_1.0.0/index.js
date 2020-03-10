@@ -524,7 +524,13 @@ const handlers = {
       res.throw(404, 'Context not found');
     } else {
       res.send({
-        "data": context,
+        "data": {
+          verification: context.verification,
+          verificationUrl: context.verificationUrl,
+          isApp: context.isApp,
+          appLogo: context.appLogo,
+          appUrl: context.appUrl
+        }
       });
     }
   },

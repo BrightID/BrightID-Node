@@ -84,7 +84,7 @@ avg: {}'''.format(border, max(raw_ranks), min(raw_ranks), sum(raw_ranks) / len(r
 
 if __name__ == '__main__':
     while True:
-        snapshots = os.listdir(SNAPSHOTS_PATH)
+        snapshots = [fname for fname in os.listdir(SNAPSHOTS_PATH) if fname.endswith('.zip')]
         if len(snapshots) == 0:
             time.sleep(1)
             continue
