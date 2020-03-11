@@ -203,14 +203,14 @@ const handlers = {
     if (context == null) {
       res.throw(404, 'Context not found');
     } else {
-      context.hasSponsorships = db.unusedSponsorship(contextName) > 0;
       res.send({
         "data": {
           verification: context.verification,
           verificationUrl: context.verificationUrl,
           isApp: context.isApp,
           appLogo: context.appLogo,
-          appUrl: context.appUrl
+          appUrl: context.appUrl,
+          hasSponsorships: db.unusedSponsorship(contextName) > 0
         }
       });
     }

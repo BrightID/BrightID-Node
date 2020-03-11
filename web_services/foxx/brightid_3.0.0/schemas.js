@@ -28,6 +28,7 @@ schemas = Object.assign({
     isApp: joi.boolean().default(false),
     appLogo: joi.string().description('app logo (base64 encoded image)'),
     appUrl: joi.string().description('the base url for the web app associated with the context'),
+    hasSponsorships:  joi.boolean().description('true if the context has sponsorships'),
   }),
   operation: joi.object().description(`
 All operations have a "name" and "timestamp" attributes.
