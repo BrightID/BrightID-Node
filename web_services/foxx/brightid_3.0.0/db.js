@@ -132,7 +132,10 @@ function loadUsers(users){
             flaggers: u.flaggers,
             eligible_groups: u.eligible_groups
           }
-  `.toArray();
+  `.toArray().map(u => {
+    u.hasPrimaryGroup = hasPrimaryGroup(u.id);
+    return u;
+  });
 }
 
 function groupMembers(groupId, isNew = false){
