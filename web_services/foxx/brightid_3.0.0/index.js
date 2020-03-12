@@ -95,7 +95,7 @@ const handlers = {
     }
 
     const coll = arango._collection(context.collection);
-    const contextIds = db.getLastContextIds(coll);
+    const contextIds = db.getLastContextIds(coll, context.verification);
 
     res.send({
       data: {
