@@ -8,9 +8,7 @@ const _ = require('lodash');
 
 const connectionsColl = db._collection('connections');
 const groupsColl = db._collection('groups');
-const newGroupsColl = db._collection('newGroups');
 const usersInGroupsColl = db._collection('usersInGroups');
-const usersInNewGroupsColl = db._collection('usersInNewGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
 const sponsorshipsColl = db._collection('sponsorships');
@@ -106,60 +104,35 @@ function removeConnection(flagger, flagged, reason, timestamp){
 
 function userConnections(user){
   user = "users/" + user;
-  return query`
-      LET userConnections1 = (
-        FOR c in ${connectionsColl}
-          FILTER c._from == ${user}
-          RETURN c._to
-      )
-      LET userConnections2 = (
-        FOR c in ${connectionsColl}
-          FILTER c._to == ${user}
-          RETURN c._from
-      )
-      RETURN UNION_DISTINCT(userConnections1, userConnections2)
-  `.toArray()[0].map(u => u.replace("users/", ""))
+  const users1 = connectionsColl.byExample({
+    _from: user
+  }).toArray().map(u => u._to.replace("users/", ""));
+  const users2 = connectionsColl.byExample({
+    _to: user
+  }).toArray().map(u => u._from.replace("users/", ""));
+  return users1.concat(users2);
 }
 
 function loadUsers(users){
-  return query`
-      FOR u in ${usersColl}
-        FILTER u._key in ${users}
-          RETURN {
-            id: u._key,
-            score: u.score,
-            createdAt: u.createdAt,
-            flaggers: u.flaggers,
-            eligible_groups: u.eligible_groups
-          }
-  `.toArray().map(u => {
+  return usersColl.documents(users).documents.map(u => {
+    u.id = u._key;
     u.hasPrimaryGroup = hasPrimaryGroup(u.id);
     return u;
   });
 }
 
-function groupMembers(groupId, isNew = false){
-  let key, collection;
-  if (isNew) {
-    key = "newGroups/" + groupId;
-    collection = usersInNewGroupsColl;
-  } else {
-    key = "groups/" + groupId;
-    collection = usersInGroupsColl;
-  }
-  return query`
-    for i in ${collection}
-      filter i._to == ${key}
-    return DISTINCT i._from
-  `.toArray().map(m => m.replace("users/", ""));
+function groupMembers(groupId){
+  return usersInGroupsColl.byExample({
+    _to: "groups/" + groupId,
+  }).toArray().map(e => e._from.replace('users/', ''));
 }
 
 function isEligible(groupId, userId){
   const userCons = userConnections(userId);
-  const groupMems = groupMembers(groupId);
-  const count = _.intersection(userCons, groupMems).length;
+  const members = groupMembers(groupId);
+  const count = _.intersection(userCons, members).length;
 
-  return count * 2 > groupMems.length;
+  return count * 2 >= members.length;
 }
 
 function updateEligibleGroups(userId, connections, currentGroups){
@@ -206,26 +179,15 @@ function updateEligibleGroups(userId, connections, currentGroups){
 }
 
 function groupToDic(group){
-  group.members = groupMembers(group._key, group.isNew);
+  group.members = groupMembers(group._key);
   group.id = group._key;
   return group;
 }
 
-function userNewGroups(userId){
-  return query`
-      FOR g in ${newGroupsColl}
-        FILTER ${userId} in g.founders
-      return g
-  `.toArray().map(groupToDic);
-}
-
-function userCurrentGroups(userId){
-  const user = "users/" + userId;
-  return query`
-    FOR ug in ${usersInGroupsColl}
-      FILTER ug._from == ${user}
-      return DISTINCT ug._to
-  `.toArray().map(gId => groupsColl.document(gId)).map(groupToDic);
+function userGroups(userId){
+  return usersInGroupsColl.byExample({
+    _from: 'users/' + userId
+  }).toArray().map(ug => groupsColl.document(ug._to)).map(groupToDic);
 }
 
 function userInvitedGroups(userId){
@@ -234,11 +196,13 @@ function userInvitedGroups(userId){
   }).toArray().map(invite => {
     const group = groupsColl.document(invite._to);
     group.inviter = invite.inviter;
+    group.inviteId = invite._key;
+    group.data = invite.data;
     return groupToDic(group);
   });
 }
 
-function invite(inviter, invitee, groupId, timestamp){
+function invite(inviter, invitee, groupId, data, timestamp){
   if (! groupsColl.exists(groupId)) {
     throw 'invalid group id';
   }
@@ -252,11 +216,14 @@ function invite(inviter, invitee, groupId, timestamp){
   if (group.type == 'primary' && hasPrimaryGroup(invitee)) {
     throw 'user already has a primary group';
   }
-
+  if (group.isNew && ! group.founders.includes(invitee)) {
+    throw 'new members can not be invited before founders join the group'
+  }
   invitationsColl.insert({
     _from: 'users/' + invitee,
     _to: 'groups/' + groupId,
     inviter,
+    data,
     timestamp
   });
 }
@@ -316,16 +283,12 @@ function hasPrimaryGroup(key){
   return groups.filter(group => group.type == 'primary').length > 0;
 }
 
-function createGroup(key1, key2, key3, type, timestamp){
+function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp){
   if (! ['general', 'primary'].includes(type)) {
     throw 'invalid type';
   }
 
-  const founders = [key1, key2, key3].sort()
-  const h = sha256(founders.join(','));
-  const b = Buffer.from(h, 'hex').toString('base64');
-  const groupId = b64ToUrlSafeB64(b);
-  if (newGroupsColl.exists(groupId) || groupsColl.exists(groupId)) {
+  if (groupsColl.exists(groupId)) {
     throw 'duplicate group';
   }
 
@@ -334,22 +297,27 @@ function createGroup(key1, key2, key3, type, timestamp){
     throw "Creator isn't connected to one or both of the co-founders";
   }
 
+  const founders = [key1, key2, key3].sort()
   if (type == 'primary' && founders.some(hasPrimaryGroup)) {
     throw 'some of founders already have primary groups';
   }
 
-  newGroupsColl.save({
+  groupsColl.save({
     _key: groupId,
     score: 0,
     isNew: true,
+    admins: founders,
+    url,
     type,
     timestamp,
     founders
   });
 
-  // Add the creator to the group now. The other two "co-founders" have to join using /membership
-  addUserToGroup(usersInNewGroupsColl, groupId, key1, timestamp, "newGroups");
-  return groupId;
+  // Add the creator and invite other cofounders to the group now.
+  // The other two "co-founders" have to join using /membership
+  addUserToGroup(groupId, key1, timestamp);
+  invite(key1, key2, groupId, inviteData2, timestamp);
+  invite(key1, key3, groupId, inviteData3, timestamp);
 }
 
 function addAdmin(key, admin, groupId){
@@ -370,48 +338,33 @@ function addAdmin(key, admin, groupId){
   groupsColl.update(group, { admins: group.admins });
 }
 
-function addUserToGroup(collection, groupId, key, timestamp, groupCollName){
+function addUserToGroup(groupId, key, timestamp){
   const user = 'users/' + key;
-  const group = groupCollName + '/' + groupId;
+  const group = 'groups/' + groupId;
 
-  // flagged users can't join a group that have 2 or more flaggers in them
-  const flaggers = usersColl.document(key).flaggers;
-  if (flaggers) {
-    const members = collection.byExample({ _to: group }).toArray().map(e => e._from.replace('users/', ''));
-    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
-    if (intersection.length >= 2) {
-      throw 'user is flagged by two or more members of the group';
-    }
-  }
-
-  const edge = collection.firstExample({
+  const edge = usersInGroupsColl.firstExample({
     _from: user,
     _to: group
   });
   if (! edge) {
-    collection.save({
+    usersInGroupsColl.save({
       _from: user,
       _to: group,
       timestamp
     });
   } else {
-    collection.update(edge, { timestamp });
+    usersInGroupsColl.update(edge, { timestamp });
   }
 
 }
 
 function addMembership(groupId, key, timestamp){
-  let group, isNew;
-  if (groupsColl.exists(groupId)) {
-    group = groupsColl.document(groupId);
-    isNew = false;
-  } else if (newGroupsColl.exists(groupId)) {
-    group = newGroupsColl.document(groupId);
-    isNew = true;
-  } else {
+  if (! groupsColl.exists(groupId)) {
     throw 'Group not found';
   }
-  if (isNew && ! group.founders.includes(key)) {
+
+  const group = groupsColl.document(groupId);
+  if (group.isNew && ! group.founders.includes(key)) {
     throw 'Access denied';
   }
 
@@ -419,91 +372,51 @@ function addMembership(groupId, key, timestamp){
     throw 'user already has a primary group';
   }
 
-  if (isNew) {
-    addUserToGroup(usersInNewGroupsColl, groupId, key, timestamp, "newGroups");
-    //move to groups if all founders joined
-    const grp = "newGroups/" + groupId;
-    const groupMembers = query`
-      for i in ${usersInNewGroupsColl}
-        filter i._to == ${grp}
-        return i
-    `.toArray();
-
-    const memberIds = [...new Set(groupMembers.map(x => x._from))];
-    if (memberIds.length == group.founders.length) {
-      groupsColl.save({
-        score: 0,
-        isNew: false,
-        timestamp: group.timestamp,
-        founders: group.founders,
-        admins: group.founders,
-        type: group.type,
-        _key: group._key
-      });
-
-      for (let i = 0; i < groupMembers.length; i++) {
-        let doc = groupMembers[i];
-        usersInGroupsColl.save({
-          _from: doc._from,
-          _to: doc._to.replace('newGroups', 'groups'),
-          timestamp: doc.timestamp
-        });
-        query`remove ${doc._key} in ${usersInNewGroupsColl}`;
-      }
-
-      query`remove ${group._key} in ${newGroupsColl}`;
-    }
-  } else {
-    if (! isEligible(groupId, key)) {
-      throw 'Not eligible to join this group';
-    }
-    if (inviteOnly(group)) {
-      const invitation = invitationsColl.firstExample({
-        _from: 'users/' + key,
-        _to: 'groups/' + groupId
-      });
-      // invitations will expire after 24 hours
-      if (!invitation || timestamp - invitation.timestamp >= 86400000) {
-        throw 'not invited to join this group';
-      }
-      // remove invitation after joining to not allow reusing that
-      invitationsColl.remove(invitation);
-    }
-    addUserToGroup(usersInGroupsColl, groupId, key, timestamp, "groups");
+  if (! isEligible(groupId, key)) {
+    throw 'Not eligible to join this group';
   }
-}
 
-function inviteOnly(group){
-  return true;
+  // flagged users can't join a group that have 2 or more flaggers in them
+  const flaggers = usersColl.document(key).flaggers;
+  if (flaggers) {
+    const members = groupMembers(groupId);
+    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
+    if (intersection.length >= 2) {
+      throw 'user is flagged by two or more members of the group';
+    }
+  }
+
+  const invitation = invitationsColl.firstExample({
+    _from: 'users/' + key,
+    _to: 'groups/' + groupId
+  });
+  // invitations will expire after 24 hours
+  if (!invitation || timestamp - invitation.timestamp >= 86400000) {
+    throw 'not invited to join this group';
+  }
+  // remove invitation after joining to not allow reusing that
+  invitationsColl.remove(invitation);
+
+  addUserToGroup(groupId, key, timestamp);
+
+  if (groupMembers(groupId).length == group.founders.length) {
+    groupsColl.update(group, { isNew: false });
+  }
 }
 
 function deleteGroup(groupId, key, timestamp){
-
-  const groups = query`
-    for i in ${newGroupsColl}
-      filter i._key == ${groupId}
-    return i
-  `.toArray();
-
-  if (! groups || ! groups.length) {
+  if (! groupsColl.exists(groupId)) {
     throw 'Group not found';
   }
-  const group = groups[0];
 
-  if (group.founders.indexOf(key) < 0) {
+  const group = groupsColl.document(groupId);
+  if (group.admins.indexOf(key) < 0) {
     throw 'Access Denied';
   }
-  // Remove members
 
-  const newGroup = "newGroups/" + groupId;
-  query`
-    for i in ${usersInNewGroupsColl}
-      filter i._to == ${newGroup}
-      remove i in ${usersInNewGroupsColl}
-  `;
-
-  // Remove group
-  query`remove ${group._key} in ${newGroupsColl}`;
+  invitationsColl.removeByExample({ _to: 'groups/' + groupId });
+  usersInGroupsColl.removeByExample({ _to: 'groups/' + groupId });
+  groupsColl.remove(group);
 }
 
 function deleteMembership(groupId, key, timestamp){
@@ -654,9 +567,8 @@ module.exports = {
   updateEligibleGroups,
   invite,
   dismiss,
-  userCurrentGroups,
+  userGroups,
   loadUser,
-  userNewGroups,
   userInvitedGroups,
   createUser,
   groupMembers,

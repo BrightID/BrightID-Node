@@ -19,14 +19,12 @@ const {
 } = require('../encoding');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid3', '/apply');
+const applyBaseUrl = baseUrl.replace('/brightid4', '/apply');
 
 let contextIdsColl;
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
-const newGroupsColl = arango._collection('newGroups');
 const usersInGroupsColl = arango._collection('usersInGroups');
-const usersInNewGroupsColl = arango._collection('usersInNewGroups');
 const usersColl = arango._collection('users');
 const operationsColl = arango._collection('operations');
 const contextsColl = arango._collection('contexts');
@@ -72,8 +70,6 @@ describe('operations', function(){
     connectionsColl.truncate();
     groupsColl.truncate();
     usersInGroupsColl.truncate();
-    newGroupsColl.truncate();
-    usersInNewGroupsColl.truncate();
     operationsColl.truncate();
     contextsColl.truncate();
     sponsorshipsColl.truncate();
@@ -102,15 +98,13 @@ describe('operations', function(){
     operationsHashesColl.truncate();
     contextsColl.truncate();
     arango._drop(contextIdsColl);
-    usersColl.truncate();
-    connectionsColl.truncate();
-    groupsColl.truncate();
-    usersInGroupsColl.truncate();
-    newGroupsColl.truncate();
-    usersInNewGroupsColl.truncate();
-    operationsColl.truncate();
-    sponsorshipsColl.truncate();
-    invitationsColl.truncate();
+    // usersColl.truncate();
+    // connectionsColl.truncate();
+    // groupsColl.truncate();
+    // usersInGroupsColl.truncate();
+    // operationsColl.truncate();
+    // sponsorshipsColl.truncate();
+    // invitationsColl.truncate();
   });
   it('should be able to "Add Connection"', function () {
     const connect = (u1, u2) => {
@@ -172,7 +166,9 @@ describe('operations', function(){
   it('should be able to "Add Group"', function () {
     const timestamp = Date.now();
     const type = 'general';
-    const message = 'Add Group' + u1.id + u2.id + u3.id + type + timestamp;
+    const url = 'http://url.com/dummy';
+    const groupId = hash('randomstr');
+    const message = 'Add Group' + groupId + u1.id + u2.id + 'data' + u3.id + 'data' + url + type + timestamp;
     const sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
@@ -180,23 +176,27 @@ describe('operations', function(){
     const op = {
       '_key': hash(message),
       'name': 'Add Group',
+      'group': groupId,
       'id1': u1.id,
       'id2': u2.id,
+      'inviteData2': 'data',
       'id3': u3.id,
+      'inviteData3': 'data',
+      url,
       type,
       timestamp,
       sig1
     }
     apply(op);
-    const groupId = hash([u1.id, u2.id, u3.id].sort().join(','));
-    const members = db.groupMembers(groupId, true);
+
+    const members = db.groupMembers(groupId);
     members.should.include(u1.id);
     members.should.not.include(u2.id);
     members.should.not.include(u3.id);
   });
 
   it('should be able to "Add Membership"', function () {
-    const groupId = db.userNewGroups(u1.id)[0].id;
+    const groupId = db.userGroups(u1.id)[0].id;
     [u2, u3].map((u) => {
       const timestamp = Date.now();
       const message = "Add Membership" + u.id + groupId + timestamp;
@@ -213,14 +213,14 @@ describe('operations', function(){
       }
       apply(op);
     });
-    const members = db.groupMembers(groupId, false);
+    const members = db.groupMembers(groupId);
     members.should.include(u2.id);
     members.should.include(u3.id);
   });
 
   it('should be able to "Remove Membership"', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u1.id)[0].id;
+    const groupId = db.userGroups(u1.id)[0].id;
     const message = "Remove Membership" + u1.id + groupId + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
@@ -242,8 +242,9 @@ describe('operations', function(){
 
   it('admins should be able to "Invite" someone to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u2.id)[0].id;
-    const message = "Invite" + u2.id + u4.id + groupId + timestamp;
+    const groupId = db.userGroups(u2.id)[0].id;
+    const data = 'some data';
+    const message = "Invite" + u2.id + u4.id + groupId + data + timestamp;
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
@@ -253,6 +254,7 @@ describe('operations', function(){
       'inviter': u2.id,
       'invitee': u4.id,
       'group': groupId,
+      data,
       timestamp,
       sig
     }
@@ -265,7 +267,7 @@ describe('operations', function(){
 
   it('admins should be able to "Dismiss" someone from the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u2.id)[0].id;
+    const groupId = db.userGroups(u2.id)[0].id;
     db.addMembership(groupId, u4.id, Date.now());
     db.groupMembers(groupId).should.include(u4.id);
     const message = "Dismiss" + u2.id + u4.id + groupId + timestamp;
@@ -287,8 +289,8 @@ describe('operations', function(){
 
   it('admins should be able to "Add Admin" to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userCurrentGroups(u2.id)[0].id;
-    db.invite(u2.id, u4.id, groupId, Date.now());
+    const groupId = db.userGroups(u2.id)[0].id;
+    db.invite(u2.id, u4.id, groupId, 'data', Date.now());
     db.addMembership(groupId, u4.id, Date.now());
     db.groupMembers(groupId).should.include(u4.id);
     const message = "Add Admin" + u2.id + u4.id + groupId + timestamp;
