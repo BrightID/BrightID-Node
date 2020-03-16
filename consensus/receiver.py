@@ -23,7 +23,9 @@ def process(data):
         op = json.loads(data)
     except ValueError as e:
         return False
-    r = requests.put(config.APPLY_URL.format(hash=op['_key']), json=op)
+    if 'v' not in op:
+        op['v'] = 3
+    r = requests.put(config.APPLY_URL.format(v=op['v'], hash=op['_key']), json=op)
     print(op)
     print(r.json())
     assert r.json().get('success') == True

@@ -50,9 +50,12 @@ const operationsData = {
   'Add Admin': {'attrs': ['id', 'admin', 'group', 'sig']},
 };
 
-const defaultOperationKeys = ['name', 'timestamp', '_key', 'state'];
+const defaultOperationKeys = ['name', 'timestamp', '_key', 'state', 'v'];
 
 function verify(op) {
+  if (op.v != 4) {
+    throw 'invalid operation version';
+  }
   if (op.timestamp > Date.now() + TIME_FUDGE) {
     throw "timestamp can't be in the future";
   }
