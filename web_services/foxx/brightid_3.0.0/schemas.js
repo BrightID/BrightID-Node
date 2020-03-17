@@ -28,6 +28,7 @@ schemas = Object.assign({
     isApp: joi.boolean().default(false),
     appLogo: joi.string().description('app logo (base64 encoded image)'),
     appUrl: joi.string().description('the base url for the web app associated with the context'),
+    hasSponsorships: joi.boolean().description('true if the context has sponsorships'),
   }),
   operation: joi.object().description(`
 All operations have a "name" and "timestamp" attributes.
@@ -36,7 +37,7 @@ Operations have also these operation specific attributes:
 Add Connection: id1, id2, sig1, sig2
 Remove Connection: id1, id2, sig1
 Add Group: id1, id2, id3, sig1
-Remove Group: id1, id2, sig1
+Remove Group: id, group, sig
 Add Membership: id, group, sig
 Remove Membership: id, group, sig
 Set Trusted Connections: id, trusted, sig
@@ -63,7 +64,8 @@ schemas = Object.assign({
       currentGroups: joi.array().items(schemas.group),
       eligibleGroups: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
-      verifications: joi.array().items(joi.string())
+      verifications: joi.array().items(joi.string()),
+      isSponsored: joi.boolean()
     })
   }),
 

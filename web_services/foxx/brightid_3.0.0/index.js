@@ -90,7 +90,8 @@ const handlers = {
         eligibleGroups,
         currentGroups: db.loadGroups(currentGroups, connections, id),
         connections: db.loadUsers(connections),
-        verifications: user.verifications
+        verifications: user.verifications,
+        isSponsored: db.isSponsored(id)
       }
     });
   },
@@ -104,7 +105,7 @@ const handlers = {
     }
 
     const coll = arango._collection(context.collection);
-    const contextIds = db.getLastContextIds(coll);
+    const contextIds = db.getLastContextIds(coll, context.verification);
 
     res.send({
       data: {
@@ -207,7 +208,8 @@ const handlers = {
   },
 
   contexts: function contexts(req, res){
-    const context = db.getContext(req.param('context'));
+    const contextName = req.param('context');
+    let context = db.getContext(contextName);
     if (context == null) {
       res.throw(404, 'Context not found');
     } else {
@@ -217,7 +219,8 @@ const handlers = {
           verificationUrl: context.verificationUrl,
           isApp: context.isApp,
           appLogo: context.appLogo,
-          appUrl: context.appUrl
+          appUrl: context.appUrl,
+          hasSponsorships: db.unusedSponsorship(contextName) > 0
         }
       });
     }
