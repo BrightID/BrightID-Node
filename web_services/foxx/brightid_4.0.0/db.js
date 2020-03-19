@@ -169,7 +169,7 @@ function updateEligibleGroups(userId, connections, currentGroups){
   });
 
   const eligible_groups = candidates
-    .filter(g => g.count * 2 > groupCountsDic[g.group])
+    .filter(g => g.count * 2 >= groupCountsDic[g.group])
     .map(g => g.group.replace('groups/', ''));
   usersColl.update(userId, {
     eligible_groups,
