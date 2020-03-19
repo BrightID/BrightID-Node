@@ -437,6 +437,13 @@ function getContext(context){
   return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
 }
 
+function getAllContexts(){
+  return query`
+    FOR c in ${contextsColl}
+      RETURN c._key
+  `.toArray();
+}
+
 function getUserByContextId(coll, contextId){
   return query`
     FOR l in ${coll}
@@ -578,6 +585,7 @@ module.exports = {
   userScore,
   loadUsers,
   getContext,
+  getAllContexts,
   userHasVerification,
   getUserByContextId,
   getContextIdsByUser,
