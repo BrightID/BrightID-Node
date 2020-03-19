@@ -144,7 +144,6 @@ function updateEligibleGroups(userId, connections, currentGroups){
           FILTER edge._from in ${connections}
           FILTER edge._to NOT IN ${currentGroups}
           COLLECT group=edge._to WITH COUNT INTO count
-          FILTER count >= 2
           SORT count DESC
           RETURN {
               group,
