@@ -493,12 +493,15 @@ function getContextIdsByUser(coll, id){
   `.toArray();
 }
 
-function getLastContextIds(coll){
+function getLastContextIds(coll, verification){
   return query`
-    FOR u IN ${coll}
-      SORT u.timestamp DESC
-      COLLECT user = u.user INTO contextIds = u.contextId
-      RETURN contextIds[0]
+    FOR c IN ${coll}
+      FOR u in ${usersColl}
+        FILTER c.user == u._key
+        FILTER ${verification} in u.verifications
+        SORT c.timestamp DESC
+        COLLECT user = c.user INTO contextIds = c.contextId
+        RETURN contextIds[0]
   `.toArray();
 }
 
@@ -620,5 +623,6 @@ module.exports = {
   upsertOperation,
   setTrusted,
   setSigningKey,
-  getLastContextIds
+  getLastContextIds,
+  unusedSponsorship
 };
