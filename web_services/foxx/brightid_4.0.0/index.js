@@ -212,6 +212,15 @@ const handlers = {
         }
       });
     }
+  },
+
+  allContexts: function allContexts(req, res){
+    let contexts = db.getAllContexts();
+	  res.send({
+	    "data": {
+	      contexts
+	    }
+	  });
   }
 };
 
@@ -255,6 +264,10 @@ router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
+
+router.get('/contexts', handlers.allContexts)
+  .summary("Get all contexts")
+  .response(schemas.allContextsGetResponse);
 
 module.exports = {
   handlers
