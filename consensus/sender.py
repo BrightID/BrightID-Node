@@ -4,10 +4,10 @@ import json
 import binascii
 import copy
 from arango import ArangoClient
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 import config
 
-w3 = Web3(HTTPProvider(config.INFURA_URL))
+w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 db = ArangoClient().db('_system')
 nonce = w3.eth.getTransactionCount(config.ADDRESS)
 

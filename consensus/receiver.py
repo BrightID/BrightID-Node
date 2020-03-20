@@ -7,15 +7,15 @@ import hashlib
 import zipfile
 import requests
 from arango import ArangoClient
-from arango.exceptions import DocumentGetError
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 from web3.middleware import geth_poa_middleware
 import config
 
-w3 = Web3(HTTPProvider(config.INFURA_URL))
+db = ArangoClient().db('_system')
+w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 if config.INFURA_URL.count('rinkeby') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-db = ArangoClient().db('_system')
+voting = w3.eth.contract(address=config.VOTING_ADDRESS, abi=config.VOTING_ABI)
 
 def process(data):
     try:
@@ -29,6 +29,48 @@ def process(data):
     print(op)
     print(r.json())
     assert r.json().get('success') == True
+
+def get_action(vote_id):
+    vote = voting.functions.getVote(vote_id).call()
+    text = voting.events.StartVote.createFilter(
+        fromBlock="0x0",
+        argument_filters={'voteId': vote_id}
+    ).get_all_entries()[0].args.metadata
+    sections = [s.strip() for s in text.split('|')]
+
+    name = sections[0].lower() if len(sections) > 0 else None
+    if name not in ['grant seed status', 'revoke seed status']:
+        print('{} is an invalid action'.format(name))
+        return None
+    if ((name == 'grant seed status' and len(sections) != 4) or
+        (name == 'revoke seed status' and len(sections) != 3)):
+        print('"{}" is invalid action'.format(text))
+        return None
+
+    group = sections[1]
+    if not db.collection('groups').get(group):
+        print('group not found: {}'.format(group))
+        return None
+
+    region = sections[2] if name == 'grant seed status' else None
+    return {'name': name, 'group': group, 'region': region}
+
+def update_seed_groups(from_block, to_block):
+    print('Updating Seed Groups')
+    entries = voting.events.ExecuteVote.createFilter(fromBlock=from_block).get_all_entries()
+    in_range = lambda entry: from_block <= entry.blockNumber < to_block
+    new_votes = [entry.args.voteId for entry in entries if in_range(entry)]
+    print(len(new_votes))
+    actions = [get_action(vote) for vote in new_votes]
+    actions = [action for action in actions if action]
+
+    groups = db.collection('groups')
+    for action in actions:
+        print(action)
+        if action['name'] == 'grant seed status':
+            groups.update({'_key': action['group'], 'seed': True, 'region': action['region']})
+        else:
+            groups.update({'_key': action['group'], 'seed': False})
 
 def save_snapshot(block):
     batch = db.replication.create_dump_batch(ttl=1000)
@@ -72,6 +114,7 @@ def main():
                 if tx['to'] and tx['to'].lower() == config.TO_ADDRESS.lower():
                     process(tx['input'])
             if block % config.SNAPSHOTS_PERIOD == 0:
+                update_seed_groups(block-config.SNAPSHOTS_PERIOD, block)
                 save_snapshot(block)
             last_block = block
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
