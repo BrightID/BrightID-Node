@@ -1,9 +1,13 @@
 from web3 import Web3, HTTPProvider
+from web3.middleware import geth_poa_middleware
 from pyArango.connection import Connection
 import config
 
 db = Connection()['_system']
+
 w3 = Web3(HTTPProvider(config.INFURA_URL))
+if config.INFURA_URL.count('rinkeby') > 0:
+    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
 sp_contract = w3.eth.contract(
     address=config.SP_ADDRESS,
@@ -59,12 +63,12 @@ def get_user_by_context_id(collection, context_id):
     return db.AQLQuery(aql_query, rawResults=True)
 
 
-def get_context(context_name):
+def get_context(eth_context_name):
     aql_query = '''
         FOR r in contexts
-        FILTER r._key == '{0}'
+        FILTER r.ethName == '{0}'
         RETURN r
-    '''.format(context_name)
+    '''.format(eth_context_name)
     return db.AQLQuery(aql_query, rawResults=True)
 
 
@@ -113,15 +117,33 @@ def sponsor(context_name, user):
     edge.save()
 
 
+def get_last_block():
+    try:
+        lb = db['variables']['LAST_BLOCK_LOG']['value']
+    except:
+        db['variables'].createDocument(
+            {'_key': 'LAST_BLOCK_LOG', 'value': 1}).save()
+        lb = 1
+    return lb - 5800 if lb > 5800 else lb  # check past 24 hours log again
+
+
+def set_last_block(lb):
+    doc = db['variables']['LAST_BLOCK_LOG']
+    doc['value'] = lb
+    doc.save()
+
+
 def check_sponsor_requests():
+    lb = get_last_block()
     sponsored_filter = brightid_contract.events.SponsorRequested.createFilter(
-        fromBlock=1, toBlock='latest', argument_filters=None)
+        fromBlock=lb, toBlock='latest', argument_filters=None)
+    lb2 = w3.eth.getBlock('latest').number
     sponsored_logs = w3.eth.getLogs(sponsored_filter.filter_params)
     for sponsored_log in sponsored_logs:
         sponsored = sponsored_filter.format_entry(sponsored_log)
-        context_name = bytes32_to_string(sponsored['args']['context'])
+        eth_context_name = bytes32_to_string(sponsored['args']['context'])
         context_id = bytes32_to_string(sponsored['args']['contextid'])
-        context = get_context(context_name)
+        context = get_context(eth_context_name)
         if not context:
             continue
 
@@ -135,10 +157,12 @@ def check_sponsor_requests():
         if not user_has_verification(context[0]['verification'], user[0]):
             continue
 
-        if not context_has_sponsorship(context_name):
+        if not context_has_sponsorship(context[0]['_key']):
             continue
 
-        sponsor(context_name, user[0])
+        sponsor(context[0]['_key'], user[0])
+
+    set_last_block(lb2)
 
 
 def main():
