@@ -135,7 +135,7 @@ const handlers = {
       let sig, publicKey;
       if (signed == 'nacl') {
         if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-          throw 'Server setting "ethPrivateKey" not set';
+          throw 'Server node key pair not configured';
         }
 
         const message = contextName + ',' + contextIds.join(',');
