@@ -4,7 +4,7 @@ from arango import ArangoClient
 import config
 
 db = ArangoClient().db('_system')
-w3 = Web3(HTTPProvider(config.INFURA_URL))
+w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 if config.INFURA_URL.count('rinkeby') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
@@ -15,19 +15,6 @@ sp_contract = w3.eth.contract(
 brightid_contract = w3.eth.contract(
     address=config.BRIGHTID_ADDRESS,
     abi=config.BRIGHTID_ABI)
-
-
-# FIXME: infura not supports filtering of events.
-# Here we are hacking web3.py filters to use getLogs rpc endpoint instead.
-def dummy(*args, **argsdic):
-    if len(args) > 0 and args[0] == 'eth_newFilter':
-        return 0
-    else:
-        return original_request_blocking(*args, **argsdic)
-
-
-original_request_blocking = w3.manager.request_blocking
-w3.manager.request_blocking = dummy
 
 
 def str2bytes32(s):
@@ -63,12 +50,12 @@ def check_sponsor_requests():
             'value': 1
         })
 
-    sponsored_filter = brightid_contract.events.SponsorRequested.createFilter(
-        fromBlock=lb, toBlock='latest', argument_filters=None)
+    sponsoreds = brightid_contract.events.SponsorRequested.createFilter(
+        fromBlock=lb, argument_filters=None
+    ).get_all_entries()
+
     lb2 = w3.eth.getBlock('latest').number
-    sponsored_logs = w3.eth.getLogs(sponsored_filter.filter_params)
-    for sponsored_log in sponsored_logs:
-        sponsored = sponsored_filter.format_entry(sponsored_log)
+    for sponsored in sponsoreds:
         eth_context_name = bytes32_to_string(sponsored['args']['context'])
         context_id = bytes32_to_string(sponsored['args']['contextid'])
 
