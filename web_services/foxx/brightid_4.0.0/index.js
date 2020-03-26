@@ -135,7 +135,7 @@ const handlers = {
       let sig, publicKey;
       if (signed == 'nacl') {
         if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-          throw 'Server node key pair not configured';
+          throw 'Server setting "ethPrivateKey" not set';
         }
 
         const message = contextName + ',' + contextIds.join(',');
@@ -146,9 +146,14 @@ const handlers = {
         );
       } else if (signed == 'eth') {
         if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
-          throw 'Server node ethereum privateKey not configured';
+          throw 'Server setting "ethPrivateKey" not set';
         }
 
+        if (!context.ethName){
+          throw `"ethName" not set for context "${contextName}"`;
+        }
+
+        contextName = context.ethName
         const message = pad32(contextName) + contextIds.map(pad32).join('');
         let ethPrivateKey = module.context.configuration.ethPrivateKey;
         ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
