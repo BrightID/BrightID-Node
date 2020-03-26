@@ -21,11 +21,12 @@ def process(data):
     try:
         data = bytes.fromhex(data.strip('0x')).decode('utf-8')
         op = json.loads(data)
-    except ValueError as e:
+        if 'v' not in op:
+            op['v'] = 3
+        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=op['_key']), json=op)
+    except Exception as e:
+        print(data.encode('utf-8'), e)
         return False
-    if 'v' not in op:
-        op['v'] = 3
-    r = requests.put(config.APPLY_URL.format(v=op['v'], hash=op['_key']), json=op)
     print(op)
     print(r.json())
     assert r.json().get('success') == True
