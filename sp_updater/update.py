@@ -1,10 +1,9 @@
 from web3 import Web3, HTTPProvider
 from web3.middleware import geth_poa_middleware
-from pyArango.connection import Connection
+from arango import ArangoClient
 import config
 
-db = Connection()['_system']
-
+db = ArangoClient().db('_system')
 w3 = Web3(HTTPProvider(config.INFURA_URL))
 if config.INFURA_URL.count('rinkeby') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -54,87 +53,16 @@ def context_balance(context_name):
     return balance
 
 
-def get_user_by_context_id(collection, context_id):
-    aql_query = '''
-        FOR r in {0}
-        FILTER r.contextId == '{1}'
-        RETURN r.user
-    '''.format(collection, context_id)
-    return db.AQLQuery(aql_query, rawResults=True)
-
-
-def get_context(eth_context_name):
-    aql_query = '''
-        FOR r in contexts
-        FILTER r.ethName == '{0}'
-        RETURN r
-    '''.format(eth_context_name)
-    return db.AQLQuery(aql_query, rawResults=True)
-
-
-def is_sponsored(user):
-    aql_query = '''
-        FOR r in sponsorships
-        FILTER r._from == 'users/{0}'
-        RETURN r
-    '''.format(user)
-    return bool(db.AQLQuery(aql_query, rawResults=True))
-
-
-def user_has_verification(verification, user):
-    aql_query = '''
-        FOR r in users
-        FILTER r._key == '{0}'
-        RETURN r.verifications
-    '''.format(user)
-    verifications = db.AQLQuery(aql_query, rawResults=True)
-    return bool(verifications and verification in verifications[0])
-
-
-def context_has_sponsorship(context_name):
-    aql_query = '''
-        FOR r in contexts
-        FILTER r._key == '{0}'
-        RETURN r.totalSponsorships
-    '''.format(context_name)
-    total_sponsorships = db.AQLQuery(aql_query, rawResults=True)[0]
-
-    aql_query = '''
-        FOR r in sponsorships
-        FILTER r._to == 'contexts/{0}'
-        RETURN r
-    '''.format(context_name)
-    used_sponsorships = len(db.AQLQuery(aql_query, rawResults=True))
-    return total_sponsorships - used_sponsorships > 0
-
-
-def sponsor(context_name, user):
-    edge_attr = {
-        '_from': 'users/' + user,
-        '_to': 'contexts/' + context_name
-    }
-    edge = db['sponsorships'].createDocument(edge_attr)
-    edge.save()
-
-
-def get_last_block():
-    try:
-        lb = db['variables']['LAST_BLOCK_LOG']['value']
-    except:
-        db['variables'].createDocument(
-            {'_key': 'LAST_BLOCK_LOG', 'value': 1}).save()
-        lb = 1
-    return lb - 5800 if lb > 5800 else lb  # check past 24 hours log again
-
-
-def set_last_block(lb):
-    doc = db['variables']['LAST_BLOCK_LOG']
-    doc['value'] = lb
-    doc.save()
-
-
 def check_sponsor_requests():
-    lb = get_last_block()
+    variables = db.collection('variables')
+    if variables.has('LAST_BLOCK'):
+        lb = variables.get('LAST_BLOCK_LOG')['value']
+    else:
+        variables.insert({
+            '_key': 'LAST_BLOCK_LOG',
+            'value': 1
+        })
+
     sponsored_filter = brightid_contract.events.SponsorRequested.createFilter(
         fromBlock=lb, toBlock='latest', argument_filters=None)
     lb2 = w3.eth.getBlock('latest').number
@@ -143,34 +71,50 @@ def check_sponsor_requests():
         sponsored = sponsored_filter.format_entry(sponsored_log)
         eth_context_name = bytes32_to_string(sponsored['args']['context'])
         context_id = bytes32_to_string(sponsored['args']['contextid'])
-        context = get_context(eth_context_name)
-        if not context:
+
+        c = db.collection('contexts').find({'ethName': eth_context_name})
+        if c.empty():
+            continue
+        context = c.batch()[0]
+
+        c = db.collection(context['collection']).find(
+            {'contextId': context_id})
+        if c.empty():
+            continue
+        user = c.batch()[0]['user']
+
+        c = db.collection('sponsorships').find(
+            {'_from': 'users/{0}'.format(user)})
+        if not c.empty():
             continue
 
-        user = get_user_by_context_id(context[0]['collection'], context_id)
-        if not user:
+        verifications = db.collection('users').get(user).get('verifications')
+        if not verifications or context['verification'] not in verifications:
             continue
 
-        if is_sponsored(user[0]):
+        tsponsorships = db.collection('contexts').get(
+            context['_key']).get('totalSponsorships')
+        usponsorships = db.collection('sponsorships').find(
+            {'_to': 'contexts/{0}'.format(context['_key'])}).count()
+        if (tsponsorships - usponsorships < 1):
             continue
 
-        if not user_has_verification(context[0]['verification'], user[0]):
-            continue
-
-        if not context_has_sponsorship(context[0]['_key']):
-            continue
-
-        sponsor(context[0]['_key'], user[0])
-
-    set_last_block(lb2)
+        db.collection('sponsorships').insert({
+            '_from': 'users/{}'.format(user),
+            '_to': 'contexts/{}'.format(context['_key'])
+        })
+    variables.update({
+        '_key': 'LAST_BLOCK_LOG',
+        'value': lb2 - 5800
+    })
 
 
 def main():
-    contexts = db['contexts'].fetchAll()
+    contexts = db.collection('contexts').all().batch()
     for context in contexts:
         context['totalSponsorships'] = context_balance(context['_key'])
         print(context['_key'], context['totalSponsorships'])
-        context.save()
+        db.collection('contexts').update(context)
     check_sponsor_requests()
 
 
