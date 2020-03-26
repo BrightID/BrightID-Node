@@ -102,6 +102,12 @@ schemas = Object.assign({
     data: schemas.context
   }),
 
+  allContextsGetResponse: joi.object({
+    data: joi.object({
+      contexts: joi.array().items(joi.string()).description("an array of contexts' name")
+    })
+  }),
+
 }, schemas);
 
 

@@ -158,8 +158,14 @@ const handlers = {
         );
       } else if (signed == 'eth') {
         if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)) {
-          throw 'Server node ethereum privateKey not configured';
+          throw 'Server setting "ethPrivateKey" not set';
         }
+
+        if (!context.ethName){
+          throw `"ethName" not set for context "${contextName}"`;
+        }
+
+        contextName = context.ethName
 
         const message = pad32(contextName) + contextIds.map(pad32).join('');
         let ethPrivateKey = module.context.configuration.ethPrivateKey;
@@ -224,6 +230,15 @@ const handlers = {
         }
       });
     }
+  },
+
+  allContexts: function allContexts(req, res){
+    let contexts = db.getAllContexts();
+    res.send({
+      "data": {
+        contexts
+      }
+    });
   }
 };
 
@@ -273,6 +288,10 @@ router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
+
+router.get('/contexts', handlers.allContexts)
+  .summary("Get all contexts")
+  .response(schemas.allContextsGetResponse);
 
 module.exports = {
   handlers
