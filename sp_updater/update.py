@@ -32,11 +32,7 @@ def bytes32_to_string(b):
 
 def context_balance(context_name):
     b_context_name = str2bytes32(context_name)
-    func = sp_contract.functions.totalContextBalance(
-        b_context_name)
-    balance = func.call({
-        'from': config.ETH_CALL_SENDER,
-    })
+    balance = sp_contract.functions.totalContextBalance(b_context_name).call()
     return balance
 
 
@@ -58,7 +54,8 @@ def check_sponsor_requests():
     for sponsored in sponsoreds:
         eth_context_name = bytes32_to_string(sponsored['args']['context'])
         context_id = bytes32_to_string(sponsored['args']['contextid'])
-
+        print('checking sponsored\tcontext_name: {0}, context_id: {1}'.format(
+            eth_context_name, context_id))
         c = db.collection('contexts').find({'ethName': eth_context_name})
         if c.empty():
             # context doesn't exist
