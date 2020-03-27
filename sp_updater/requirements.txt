@@ -1,2 +1,2 @@
-pyarango
+python-arango
 web3==5.0.0
