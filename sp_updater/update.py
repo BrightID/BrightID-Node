@@ -61,22 +61,26 @@ def check_sponsor_requests():
 
         c = db.collection('contexts').find({'ethName': eth_context_name})
         if c.empty():
+            # context doesn't exist
             continue
         context = c.batch()[0]
 
         c = db.collection(context['collection']).find(
             {'contextId': context_id})
         if c.empty():
+            # the context id doesn't link to any user under this context
             continue
         user = c.batch()[0]['user']
 
         c = db.collection('sponsorships').find(
             {'_from': 'users/{0}'.format(user)})
         if not c.empty():
+            # the user is sponsored before
             continue
 
         verifications = db.collection('users').get(user).get('verifications')
         if not verifications or context['verification'] not in verifications:
+            # the user can not be verified for this context
             continue
 
         tsponsorships = db.collection('contexts').get(
@@ -84,15 +88,17 @@ def check_sponsor_requests():
         usponsorships = db.collection('sponsorships').find(
             {'_to': 'contexts/{0}'.format(context['_key'])}).count()
         if (tsponsorships - usponsorships < 1):
+            # the context doesn't have enough sponsorships
             continue
 
+        # sponsor
         db.collection('sponsorships').insert({
             '_from': 'users/{}'.format(user),
             '_to': 'contexts/{}'.format(context['_key'])
         })
     variables.update({
         '_key': 'LAST_BLOCK_LOG',
-        'value': lb2 - 5800
+        'value': lb2 - 5800  # to check the past 24 hours requests again
     })
 
 
