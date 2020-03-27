@@ -1,4 +1,4 @@
-from web3 import Web3, HTTPProvider
+from web3 import Web3
 from web3.middleware import geth_poa_middleware
 from arango import ArangoClient
 import config
@@ -38,14 +38,14 @@ def context_balance(context_name):
 
 def check_sponsor_requests():
     variables = db.collection('variables')
-    if variables.has('LAST_BLOCK'):
+    if variables.has('LAST_BLOCK_LOG'):
         lb = variables.get('LAST_BLOCK_LOG')['value']
     else:
         variables.insert({
             '_key': 'LAST_BLOCK_LOG',
             'value': 1
         })
-
+        lb = 1
     sponsoreds = brightid_contract.events.SponsorRequested.createFilter(
         fromBlock=lb, argument_filters=None
     ).get_all_entries()
