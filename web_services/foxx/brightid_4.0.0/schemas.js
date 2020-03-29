@@ -43,7 +43,7 @@ Remove Membership: id, group, sig
 Set Trusted Connections: id, trusted, sig
 Set Signing Key: id, signingKey, id1, id2, sig1, sig2
 Link Context: id, contextId, context, sig
-Sponsor: id, contextId, context, sig
+Sponsor: contextId, context, sig
 Invite: inviter, invitee, group, data, sig
 Dismiss: dismisser, dismissee, group, sig
 Add Admin: id, admin, group, sig
