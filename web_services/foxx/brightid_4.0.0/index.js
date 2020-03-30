@@ -213,14 +213,21 @@ const handlers = {
           isApp: context.isApp,
           appLogo: context.appLogo,
           appUrl: context.appUrl,
-          hasSponsorships: db.unusedSponsorship(contextName) > 0
+          unusedSponsorships: db.unusedSponsorship(contextName)
         }
       });
     }
   },
 
   allContexts: function allContexts(req, res){
-    let contexts = db.getAllContexts();
+    let contextNames = db.getAllContexts();
+    const contexts = []
+    contextNames.forEach(contextName => {
+      contexts.push({
+        name: contextName,
+        unusedSponsorships: db.unusedSponsorship(contextName)
+      })
+    });
 	  res.send({
 	    "data": {
 	      contexts

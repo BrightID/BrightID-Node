@@ -28,7 +28,7 @@ schemas = Object.assign({
     isApp: joi.boolean().default(false),
     appLogo: joi.string().description('app logo (base64 encoded image)'),
     appUrl: joi.string().description('the base url for the web app associated with the context'),
-    hasSponsorships: joi.boolean().description('true if the context has sponsorships'),
+    unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
   }),
   operation: joi.object().description(`
 All operations have "name", "timestamp" and "v" attributes.
@@ -103,7 +103,7 @@ schemas = Object.assign({
 
   allContextsGetResponse: joi.object({
     data: joi.object({
-      contexts: joi.array().items(joi.string()).description("an array of contexts' name")
+      contexts: joi.array().items(joi.object()).description("an array of objects that include context name and number of unused sponsorships")
     })
   }),
 
