@@ -4,7 +4,8 @@ from arango import ArangoClient
 import config
 
 db = ArangoClient().db('_system')
-w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
+w3 = Web3(Web3.WebsocketProvider(
+    config.INFURA_URL, websocket_kwargs={'timeout': 60}))
 if config.INFURA_URL.count('rinkeby') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
@@ -46,11 +47,10 @@ def check_sponsor_requests():
             'value': 1
         })
         lb = 1
+    lb2 = min(w3.eth.getBlock('latest').number, lb + 1000)
     sponsoreds = brightid_contract.events.SponsorRequested.createFilter(
-        fromBlock=lb, argument_filters=None
+        fromBlock=lb, toBlock=lb2, argument_filters=None
     ).get_all_entries()
-
-    lb2 = w3.eth.getBlock('latest').number
     for sponsored in sponsoreds:
         eth_context_name = bytes32_to_string(sponsored['args']['context'])
         context_id = bytes32_to_string(sponsored['args']['contextid'])
