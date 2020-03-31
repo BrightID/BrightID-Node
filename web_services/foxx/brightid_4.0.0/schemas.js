@@ -30,6 +30,11 @@ schemas = Object.assign({
     appUrl: joi.string().description('the base url for the web app associated with the context'),
     unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
   }),
+  briefContext: joi.object({
+    name: joi.string().required().description('name of the context'),
+    assignedSponsorships: joi.number().integer().description('number of assigned sponsorships'),
+    unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
+  }),
   operation: joi.object().description(`
 All operations have "name", "timestamp" and "v" attributes.
 Operations have also these operation specific attributes:
@@ -103,7 +108,7 @@ schemas = Object.assign({
 
   allContextsGetResponse: joi.object({
     data: joi.object({
-      contexts: joi.array().items(joi.object()).description("an array of objects that include context name and number of unused sponsorships")
+      contexts: joi.array().items(schemas.briefContext)
     })
   }),
 

@@ -440,7 +440,7 @@ function getContext(context){
 function getAllContexts(){
   return query`
     FOR c in ${contextsColl}
-      RETURN c._key
+      RETURN c
   `.toArray();
 }
 

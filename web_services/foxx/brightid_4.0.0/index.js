@@ -220,19 +220,20 @@ const handlers = {
   },
 
   allContexts: function allContexts(req, res){
-    let contextNames = db.getAllContexts();
-    const contexts = []
-    contextNames.forEach(contextName => {
-      contexts.push({
-        name: contextName,
-        unusedSponsorships: db.unusedSponsorship(contextName)
+    const contexts = db.getAllContexts();
+    const result = []
+    contexts.forEach(context => {
+      result.push({
+        name: context._key,
+        unusedSponsorships: db.unusedSponsorship(context._key),
+        assignedSponsorships: context.totalSponsorships
       })
     });
-	  res.send({
-	    "data": {
-	      contexts
-	    }
-	  });
+    res.send({
+      "data": {
+        contexts: result
+      }
+    });
   }
 };
 
