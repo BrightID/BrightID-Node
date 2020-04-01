@@ -48,6 +48,7 @@ def check_sponsor_requests():
         })
         lb = 1
     lb2 = min(w3.eth.getBlock('latest').number, lb + 1000)
+    print('checking events from block {} to block {}'.format(lb, lb2))
     sponsoreds = brightid_contract.events.SponsorshipRequested.createFilter(
         fromBlock=lb, toBlock=lb2, argument_filters=None
     ).get_all_entries()
@@ -95,7 +96,7 @@ def check_sponsor_requests():
         })
     variables.update({
         '_key': 'LAST_BLOCK_LOG',
-        'value': lb2 - 5800  # to check the past 24 hours requests again
+        'value': lb2
     })
 
 
