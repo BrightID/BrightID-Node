@@ -534,10 +534,7 @@ function unusedSponsorship(context){
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(contextId, context){
-  const { collection } = getContext(context);
-  const coll = db._collection(collection);
-  const user = getUserByContextId(coll, contextId)
+function sponsor(user, context){
 
   if (unusedSponsorship(context) < 1) {
     throw "context does not have unused sponsorships";

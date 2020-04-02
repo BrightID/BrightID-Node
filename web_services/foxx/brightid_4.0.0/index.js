@@ -39,6 +39,13 @@ const handlers = {
     if (op.name == 'Link ContextId') {
       operations.encrypt(op);
     }
+    else if (op.name == 'Sponsor') {
+	    try {
+	      operations.updateSponsorOp(op);
+	    } catch (e) {
+	      res.throw(400, e);
+	    }
+    }
     op.state = 'init'
     db.upsertOperation(op);
   },
