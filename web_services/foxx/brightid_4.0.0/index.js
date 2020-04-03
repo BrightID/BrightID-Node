@@ -33,21 +33,17 @@ const handlers = {
     }
     try {
       operations.verify(op);
+      if (op.name == 'Link ContextId') {
+        operations.encrypt(op);
+      }
+      else if (op.name == 'Sponsor') {
+        operations.updateSponsorOp(op);
+      }
+      op.state = 'init';
+      db.upsertOperation(op);
     } catch (e) {
       res.throw(400, e);
     }
-    if (op.name == 'Link ContextId') {
-      operations.encrypt(op);
-    }
-    else if (op.name == 'Sponsor') {
-	    try {
-	      operations.updateSponsorOp(op);
-	    } catch (e) {
-	      res.throw(400, e);
-	    }
-    }
-    op.state = 'init'
-    db.upsertOperation(op);
   },
 
   operationGet: function operationGetHandler(req, res){

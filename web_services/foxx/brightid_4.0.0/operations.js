@@ -87,7 +87,7 @@ function verify(op) {
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
   } else if (op['name'] == 'Sponsor') {
-    if (op.state) {
+    if (op.id) {
       message = 'Sponsor' + ',' + op.context + ',' + op.id;
     } else {
       message = 'Sponsor' + ',' + op.context + ',' + op.contextId;
@@ -152,9 +152,9 @@ function apply(op) {
 }
 
 function encrypt(op) {
-  const { linkPrivateKey } = db.getContext(op.context);
+  const { linkAESKey } = db.getContext(op.context);
   const jsonStr = JSON.stringify({ 'id': op.id, 'contextId': op.contextId });
-  op.encrypted = CryptoJS.AES.encrypt(jsonStr, linkPrivateKey).toString();
+  op.encrypted = CryptoJS.AES.encrypt(jsonStr, linkAESKey).toString();
   delete op.id;
   delete op.contextId;
 }
@@ -174,8 +174,8 @@ function updateSponsorOp(op) {
 }
 
 function decrypt(op) {
-  const { linkPrivateKey } = db.getContext(op.context);
-  const decrypted = CryptoJS.AES.decrypt(op.encrypted, linkPrivateKey)
+  const { linkAESKey } = db.getContext(op.context);
+  const decrypted = CryptoJS.AES.decrypt(op.encrypted, linkAESKey)
                       .toString(CryptoJS.enc.Utf8);
   const json = JSON.parse(decrypted);
   delete op.encrypted;

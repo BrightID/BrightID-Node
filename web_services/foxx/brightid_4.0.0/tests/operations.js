@@ -42,7 +42,7 @@ const u3 = nacl.sign.keyPair();
 const u4 = nacl.sign.keyPair();
 
 let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } = nacl.sign.keyPair();
-let { secretKey: linkPrivateKey } = nacl.sign.keyPair();
+let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
 const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
@@ -96,7 +96,7 @@ describe('operations', function(){
         totalSponsorships: 3,
         sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
         sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))},
-        linkPrivateKey: ${uInt8ArrayToB64(Object.values(linkPrivateKey))}
+        linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))}
       } IN ${contextsColl}
     `;
   });
