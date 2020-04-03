@@ -78,6 +78,7 @@ const handlers = {
       data: {
         score: user.score,
         createdAt: user.createdAt,
+        flaggers: user.flaggers,
         invites,
         groups,
         connections: db.loadUsers(connections),

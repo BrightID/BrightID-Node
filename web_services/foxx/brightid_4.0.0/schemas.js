@@ -11,7 +11,8 @@ schemas = Object.assign({
   user: joi.object({
     id: joi.string().required().description('the user id'),
     score: schemas.score,
-    verifications: joi.array().items(joi.string())
+    verifications: joi.array().items(joi.string()),
+    flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
   }),
   group: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
@@ -62,14 +63,12 @@ schemas = Object.assign({
     data: joi.object({
       score: schemas.score,
       creatdAt: schemas.timestamp,
-      eligibleGroupsUpdated: joi.boolean()
-        .description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, ' +
-          '`eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
-      currentGroups: joi.array().items(schemas.group),
-      eligibleGroups: joi.array().items(schemas.group),
+      groups: joi.array().items(schemas.group),
+      invites: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string()),
-      isSponsored: joi.boolean()
+      isSponsored: joi.boolean(),
+      flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
     })
   }),
 
