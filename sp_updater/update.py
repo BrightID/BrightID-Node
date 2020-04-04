@@ -54,31 +54,35 @@ def check_sponsor_requests():
     ).get_all_entries()
     for sponsored in sponsoreds:
         eth_context_name = bytes32_to_string(sponsored['args']['context'])
-        context_id = bytes32_to_string(sponsored['args']['contextid'])
-        print('checking sponsored\tcontext_name: {0}, context_id: {1}'.format(
-            eth_context_name, context_id))
         c = db.collection('contexts').find({'ethName': eth_context_name})
         if c.empty():
-            # context doesn't exist
+            print("context doesn't exist")
             continue
         context = c.batch()[0]
+        if context['idsAsHex']:
+            context_id = '0x' + sponsored['args']['contextid'].hex()[:40]
+        else:
+            context_id = bytes32_to_string(sponsored['args']['contextid'])
+
+        print('checking sponsored\tcontext_name: {0}, context_id: {1}'.format(
+            eth_context_name, context_id))
 
         c = db.collection(context['collection']).find(
             {'contextId': context_id})
         if c.empty():
-            # the context id doesn't link to any user under this context
+            print("the context id doesn't link to any user under this context")
             continue
         user = c.batch()[0]['user']
 
         c = db.collection('sponsorships').find(
             {'_from': 'users/{0}'.format(user)})
         if not c.empty():
-            # the user is sponsored before
+            print("the user is sponsored before")
             continue
 
         verifications = db.collection('users').get(user).get('verifications')
         if not verifications or context['verification'] not in verifications:
-            # the user can not be verified for this context
+            print("the user can not be verified for this context")
             continue
 
         tsponsorships = db.collection('contexts').get(
@@ -86,7 +90,7 @@ def check_sponsor_requests():
         usponsorships = db.collection('sponsorships').find(
             {'_to': 'contexts/{0}'.format(context['_key'])}).count()
         if (tsponsorships - usponsorships < 1):
-            # the context doesn't have enough sponsorships
+            print("the context doesn't have enough sponsorships")
             continue
 
         # sponsor

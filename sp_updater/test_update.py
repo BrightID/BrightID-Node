@@ -15,26 +15,33 @@ class TestUpdate(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestUpdate, self).__init__(*args, **kwargs)
+        self.idsAsHex = True
         self.GAS = 500 * 10**3
         self.GAS_PRICE = 5 * 10**9
         self.PRIVATE_KEY = ''
         self.CONTEXT = ''.join(random.choices(string.ascii_uppercase, k=5))
-        self.CONTEXT_ID = ''.join(random.choices(string.ascii_uppercase, k=15))
+        if self.idsAsHex:
+            self.CONTEXT_ID = update.w3.eth.account.create(
+                'SIFTALFJAFJMOHSEN').address.lower()
+        else:
+            self.CONTEXT_ID = ''.join(
+                random.choices(string.ascii_uppercase, k=15))
         self.USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
 
         self.variables = update.db.collection('variables')
         self.users = update.db.collection('users')
         self.contexts = update.db.collection('contexts')
+        self.sponsorships = update.db.collection('sponsorships')
 
     def setUp(self):
         self.DB_LB = self.variables.get('LAST_BLOCK_LOG')['value']
-
         self.contexts.insert({
             '_key': self.CONTEXT,
             'ethName': self.CONTEXT,
             'collection': self.CONTEXT,
             'verification': self.CONTEXT,
             'totalSponsorships': 2,
+            'idsAsHex': self.idsAsHex
         })
 
         self.users.insert({
@@ -60,6 +67,12 @@ class TestUpdate(unittest.TestCase):
             pass
         try:
             update.db.delete_collection(self.CONTEXT)
+        except:
+            pass
+        try:
+            r = self.sponsorships.find(
+                {'_from': 'users/{}'.format(self.USER)}).batch()[0]
+            self.sponsorships.delete(r['_key'])
         except:
             pass
         self.variables.update({
@@ -102,8 +115,8 @@ class TestUpdate(unittest.TestCase):
     def test_sponsor_requests(self):
         self.add_context(update.str2bytes32(self.CONTEXT))
         lb = update.w3.eth.getBlock('latest').number
-        self.sponsor(update.str2bytes32(self.CONTEXT),
-                     update.str2bytes32(self.CONTEXT_ID))
+        self.sponsor(update.str2bytes32(
+            self.CONTEXT), self.CONTEXT_ID if self.idsAsHex else update.str2bytes32(self.CONTEXT_ID))
 
         time.sleep(60)  # Waiting
         self.variables.update({
@@ -111,7 +124,7 @@ class TestUpdate(unittest.TestCase):
             'value': lb - 1
         })
         update.check_sponsor_requests()
-        self.assertFalse(update.db.collection('sponsorships').find(
+        self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())
 
 
