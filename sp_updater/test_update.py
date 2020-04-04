@@ -10,123 +10,110 @@ import update
 import string
 import time
 
-GAS = 500 * 10**3
-GAS_PRICE = 5 * 10**9
-PRIVATE_KEY = ''
-CONTEXT = ''.join(random.choices(string.ascii_uppercase, k = 5))
-CONTEXT_ID = ''.join(random.choices(string.ascii_uppercase, k = 15))
-USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
-DB_LB = None
-
-context_collection = update.db.collection(CONTEXT)
-context_collection = None
-variables = update.db.collection('variables')
-users = update.db.collection('users')
-contexts = update.db.collection('contexts')
-
-
-def before():
-    global context_collection, DB_LB
-
-    DB_LB = variables.get('LAST_BLOCK_LOG')['value']
-
-    contexts.insert({
-        '_key': CONTEXT,
-        'ethName': CONTEXT,
-        'collection': CONTEXT,
-        'verification': CONTEXT,
-        'totalSponsorships': 2,
-    })
-
-    users.insert({
-        '_key': USER,
-        'verifications': [CONTEXT],
-    })
-
-    context_collection = update.db.create_collection(CONTEXT)
-    context_collection.insert({
-        'user': USER,
-        'contextId': CONTEXT_ID,
-        'timestamp': int(time.time())
-    })
-
-
-def after():
-    try:
-        contexts.delete(CONTEXT)
-    except:
-        pass
-    try:
-        users.delete(USER)
-    except:
-        pass
-    try:
-        update.db.delete_collection(CONTEXT)
-    except:
-        pass
-    variables.update({
-        '_key': 'LAST_BLOCK_LOG',
-        'value': DB_LB
-    })
-
-
-def priv2addr(private_key):
-    pk = keys.PrivateKey(bytes.fromhex(private_key))
-    return pk.public_key.to_checksum_address()
-
-
-def send_transaction(func, value, private_key):
-    transaction = func.buildTransaction({
-        'nonce': update.w3.eth.getTransactionCount(priv2addr(PRIVATE_KEY)),
-        'from': priv2addr(PRIVATE_KEY),
-        'value': value,
-        'gas': GAS,
-        'gasPrice': GAS_PRICE
-    })
-    signed = update.w3.eth.account.sign_transaction(transaction, private_key)
-    raw_transaction = signed.rawTransaction.hex()
-    tx_hash = update.w3.eth.sendRawTransaction(raw_transaction).hex()
-    rec = update.w3.eth.waitForTransactionReceipt(tx_hash)
-    return {'status': rec['status'], 'tx_hash': tx_hash}
-
-
-def add_context(context):
-    func = update.brightid_contract.functions.addContext(context)
-    res = send_transaction(func, 0, PRIVATE_KEY)
-    print(res)
-
-
-def sponsor(context, context_id):
-    func = update.brightid_contract.functions.sponsor(context, context_id)
-    res = send_transaction(func, 0, PRIVATE_KEY)
-    print(res)
-
 
 class TestUpdate(unittest.TestCase):
+
+    def __init__(self, *args, **kwargs):
+        super(TestUpdate, self).__init__(*args, **kwargs)
+        self.GAS = 500 * 10**3
+        self.GAS_PRICE = 5 * 10**9
+        self.PRIVATE_KEY = ''
+        self.CONTEXT = ''.join(random.choices(string.ascii_uppercase, k=5))
+        self.CONTEXT_ID = ''.join(random.choices(string.ascii_uppercase, k=15))
+        self.USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
+
+        self.variables = update.db.collection('variables')
+        self.users = update.db.collection('users')
+        self.contexts = update.db.collection('contexts')
+
+    def setUp(self):
+        self.DB_LB = self.variables.get('LAST_BLOCK_LOG')['value']
+
+        self.contexts.insert({
+            '_key': self.CONTEXT,
+            'ethName': self.CONTEXT,
+            'collection': self.CONTEXT,
+            'verification': self.CONTEXT,
+            'totalSponsorships': 2,
+        })
+
+        self.users.insert({
+            '_key': self.USER,
+            'verifications': [self.CONTEXT],
+        })
+
+        context_collection = update.db.create_collection(self.CONTEXT)
+        context_collection.insert({
+            'user': self.USER,
+            'contextId': self.CONTEXT_ID,
+            'timestamp': int(time.time())
+        })
+
+    def tearDown(self):
+        try:
+            self.contexts.delete(self.CONTEXT)
+        except:
+            pass
+        try:
+            self.users.delete(self.USER)
+        except:
+            pass
+        try:
+            update.db.delete_collection(self.CONTEXT)
+        except:
+            pass
+        self.variables.update({
+            '_key': 'LAST_BLOCK_LOG',
+            'value': self.DB_LB
+        })
+
+    def priv2addr(self, private_key):
+        pk = keys.PrivateKey(bytes.fromhex(private_key))
+        return pk.public_key.to_checksum_address()
+
+    def send_transaction(self, func):
+        transaction = func.buildTransaction({
+            'nonce': update.w3.eth.getTransactionCount(
+                self.priv2addr(self.PRIVATE_KEY)),
+            'from': self.priv2addr(self.PRIVATE_KEY),
+            'value': 0,
+            'gas': self.GAS,
+            'gasPrice': self.GAS_PRICE
+        })
+        signed = update.w3.eth.account.sign_transaction(
+            transaction, self.PRIVATE_KEY)
+        raw_transaction = signed.rawTransaction.hex()
+        tx_hash = update.w3.eth.sendRawTransaction(raw_transaction).hex()
+        rec = update.w3.eth.waitForTransactionReceipt(tx_hash)
+        return {'status': rec['status'], 'tx_hash': tx_hash}
+
+    def add_context(self, context):
+        func = update.brightid_contract.functions.addContext(context)
+        self.send_transaction(func)
+
+    def sponsor(self, context, context_id):
+        func = update.brightid_contract.functions.sponsor(context, context_id)
+        self.send_transaction(func)
 
     def test_context_balance(self):
         self.assertNotEqual(update.context_balance('ethereum'), 0)
         self.assertEqual(update.context_balance('Siftal'), 0)
 
     def test_sponsor_requests(self):
-        before()
-        add_context(update.str2bytes32(CONTEXT))
-        sponsor(update.str2bytes32(CONTEXT), update.str2bytes32(CONTEXT_ID))
+        self.add_context(update.str2bytes32(self.CONTEXT))
+        self.sponsor(update.str2bytes32(self.CONTEXT),
+                     update.str2bytes32(self.CONTEXT_ID))
 
         time.sleep(60)  # Waiting
         lb = update.w3.eth.getBlock('latest').number
-        variables.update({
+        self.variables.update({
             '_key': 'LAST_BLOCK_LOG',
             'value': lb - 100
         })
         update.check_sponsor_requests()
         self.assertFalse(update.db.collection('sponsorships').find(
-            {'_from': 'users/{}'.format(USER)}).empty())
-        after()
+            {'_from': 'users/{}'.format(self.USER)}).empty())
 
 
 if __name__ == '__main__':
-    try:
-        unittest.main()
-    except:
-        after()
+    unittest.main()

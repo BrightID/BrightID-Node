@@ -48,7 +48,7 @@ def check_sponsor_requests():
         })
         lb = 1
     lb2 = min(w3.eth.getBlock('latest').number, lb + 1000)
-    print('checking events from block {} to block {}'.format(lb, lb2))
+    print('\nchecking events from block {} to block {}'.format(lb, lb2))
     sponsoreds = brightid_contract.events.SponsorshipRequested.createFilter(
         fromBlock=lb, toBlock=lb2, argument_filters=None
     ).get_all_entries()
