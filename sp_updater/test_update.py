@@ -101,14 +101,14 @@ class TestUpdate(unittest.TestCase):
 
     def test_sponsor_requests(self):
         self.add_context(update.str2bytes32(self.CONTEXT))
+        lb = update.w3.eth.getBlock('latest').number
         self.sponsor(update.str2bytes32(self.CONTEXT),
                      update.str2bytes32(self.CONTEXT_ID))
 
         time.sleep(60)  # Waiting
-        lb = update.w3.eth.getBlock('latest').number
         self.variables.update({
             '_key': 'LAST_BLOCK_LOG',
-            'value': lb - 100
+            'value': lb - 1
         })
         update.check_sponsor_requests()
         self.assertFalse(update.db.collection('sponsorships').find(
