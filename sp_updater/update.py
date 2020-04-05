@@ -59,7 +59,7 @@ def check_sponsor_requests():
             print("context doesn't exist")
             continue
         context = c.batch()[0]
-        if context['idsAsHex']:
+        if context.get('idsAsHex'):
             context_id = '0x' + sponsored['args']['contextid'].hex()[:40]
         else:
             context_id = bytes32_to_string(sponsored['args']['contextid'])

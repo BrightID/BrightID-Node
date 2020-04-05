@@ -14,7 +14,8 @@ const {
   b64ToUint8Array,
   uInt8ArrayToB64,
   hash,
-  pad32
+  pad32,
+  addressToBytes32
 } = require('./encoding');
 
 const router = createRouter();
@@ -158,7 +159,12 @@ const handlers = {
         }
 
         contextName = context.ethName
-        const message = pad32(contextName) + contextIds.map(pad32).join('');
+        let message
+        if (context.idsAsHex){
+          message = pad32(contextName) + contextIds.map(addressToBytes32).join('');
+        } else {
+          message = pad32(contextName) + contextIds.map(pad32).join('');
+        }
         let ethPrivateKey = module.context.configuration.ethPrivateKey;
         ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
         const h = new Uint8Array(createKeccakHash('keccak256').update(message).digest());

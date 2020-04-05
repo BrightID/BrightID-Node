@@ -46,7 +46,12 @@ function hash(data) {
 
 function pad32(data) {
   return data + String.fromCharCode(0).repeat(32 - data.length);
-};
+}
+
+function addressToBytes32(address) {
+  const b = Buffer.from(address.substring(2), 'hex').toString("binary");
+  return b + String.fromCharCode(0).repeat(12);
+}
 
 module.exports = {
   uInt8ArrayToB64,
@@ -55,5 +60,6 @@ module.exports = {
   b64ToUrlSafeB64,
   urlSafeB64ToB64,
   hash,
-  pad32
+  pad32,
+  addressToBytes32
 };
