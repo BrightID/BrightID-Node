@@ -158,16 +158,18 @@ const handlers = {
           throw `"ethName" not set for context "${contextName}"`;
         }
 
-        contextName = context.ethName
-        let message
+        contextName = context.ethName;
+        let message, h;
         if (context.idsAsHex){
           message = pad32(contextName) + contextIds.map(addressToBytes32).join('');
+          message = Buffer.from(message, 'binary').toString('hex');
+          h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
         } else {
           message = pad32(contextName) + contextIds.map(pad32).join('');
+          h = new Uint8Array(createKeccakHash('keccak256').update(message).digest());
         }
         let ethPrivateKey = module.context.configuration.ethPrivateKey;
         ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
-        const h = new Uint8Array(createKeccakHash('keccak256').update(message).digest());
         publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
         const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
         sig = {
