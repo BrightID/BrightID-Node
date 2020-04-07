@@ -180,6 +180,9 @@ function updateEligibleGroups(userId, connections, currentGroups){
 function groupToDic(group){
   group.members = groupMembers(group._key);
   group.id = group._key;
+  group.type = group.type || 'general';
+  group.founders = group.founders.map(founder => founder.replace('users/', ''));
+  group.admins = group.admins || group.founders;
   return group;
 }
 
