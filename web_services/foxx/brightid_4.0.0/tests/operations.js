@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
+const operations = require('../operations.js');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
 const request = require("@arangodb/request");
@@ -19,7 +20,7 @@ const {
 } = require('../encoding');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid4', '/apply');
+const applyBaseUrl = baseUrl.replace('/brightid4', '/apply4');
 
 let contextIdsColl;
 const connectionsColl = arango._collection('connections');
@@ -40,8 +41,8 @@ const u2 = nacl.sign.keyPair();
 const u3 = nacl.sign.keyPair();
 const u4 = nacl.sign.keyPair();
 
-const contextPublicKey = 'izrhiE6QK+4trDqZ4SKFBRll800teGWOLzFbFvfxvlQ=';
-const contextSecretKey = 'blyEVelon1mwqKLbjK8ZK1o4GEkIrUJeaNpXTi+YtP6LOuGITpAr7i2sOpnhIoUFGWXzTS14ZY4vMVsW9/G+VA==';
+let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } = nacl.sign.keyPair();
+let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
 const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
@@ -52,6 +53,11 @@ function apply(op) {
     json: true
   });
   resp1.status.should.equal(204);
+  if (op.name == 'Sponsor') {
+    op.id = db.getUserByContextId(contextIdsColl, op.contextId);
+    let message = 'Sponsor' + ',' + op.context + ',' + op.id;
+    op._key = hash(message);
+  }
   op = operationsColl.document(op._key);
   delete op._rev;
   delete op._id;
@@ -88,8 +94,9 @@ describe('operations', function(){
         collection: ${contextName},
         verification: ${contextName},
         totalSponsorships: 3,
-        signingKey: ${contextPublicKey},
-        secretKey: ${contextSecretKey}
+        sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
+        sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))},
+        linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))}
       } IN ${contextsColl}
     `;
   });
@@ -98,13 +105,13 @@ describe('operations', function(){
     operationsHashesColl.truncate();
     contextsColl.truncate();
     arango._drop(contextIdsColl);
-    // usersColl.truncate();
-    // connectionsColl.truncate();
-    // groupsColl.truncate();
-    // usersInGroupsColl.truncate();
-    // operationsColl.truncate();
-    // sponsorshipsColl.truncate();
-    // invitationsColl.truncate();
+    usersColl.truncate();
+    connectionsColl.truncate();
+    groupsColl.truncate();
+    usersInGroupsColl.truncate();
+    operationsColl.truncate();
+    sponsorshipsColl.truncate();
+    invitationsColl.truncate();
   });
   it('should be able to "Add Connection"', function () {
     const connect = (u1, u2) => {
@@ -118,6 +125,7 @@ describe('operations', function(){
       );
 
       let op = {
+        'v': 4,
         '_key': hash(message),
         'name': 'Add Connection',
         'id1': u1.id,
@@ -147,6 +155,7 @@ describe('operations', function(){
     );
 
     let op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Remove Connection',
       'id1': u2.id,
@@ -174,6 +183,7 @@ describe('operations', function(){
     );
 
     const op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Add Group',
       'group': groupId,
@@ -204,6 +214,7 @@ describe('operations', function(){
         Object.values(nacl.sign.detached(strToUint8Array(message), u.secretKey))
       );
       const op = {
+        'v': 4,
         '_key': hash(message),
         'name': 'Add Membership',
         'id': u.id,
@@ -226,6 +237,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     const op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Remove Membership',
       'id': u1.id,
@@ -249,6 +261,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     const op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Invite',
       'inviter': u2.id,
@@ -275,6 +288,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     const op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Dismiss',
       'dismisser': u2.id,
@@ -298,6 +312,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     const op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Add Admin',
       'id': u2.id,
@@ -317,6 +332,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     const op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Set Trusted Connections',
       'id': u1.id,
@@ -338,6 +354,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
     );
     const op = {
+      'v': 4,
       '_key': hash(message),
       'name': 'Set Signing Key',
       'id': u1.id,
@@ -359,6 +376,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
     );
     const op = {
+      'v': 4,
       'name': 'Link ContextId',
       'context': contextName,
       timestamp,
@@ -375,9 +393,10 @@ describe('operations', function(){
   it('should be able to "Sponsor"', function () {
     const message = 'Sponsor' + ',' + contextName + ',' + contextId;
     const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(contextSecretKey)))
+      Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
     );
     const op = {
+      'v': 4,
       'name': 'Sponsor',
       'context': contextName,
       contextId,

@@ -14,7 +14,8 @@ const {
   b64ToUint8Array,
   uInt8ArrayToB64,
   hash,
-  pad32
+  pad32,
+  addressToBytes32
 } = require('./encoding');
 
 const router = createRouter();
@@ -33,14 +34,17 @@ const handlers = {
     }
     try {
       operations.verify(op);
+      if (op.name == 'Link ContextId') {
+        operations.encrypt(op);
+      }
+      else if (op.name == 'Sponsor') {
+        operations.updateSponsorOp(op);
+      }
+      op.state = 'init';
+      db.upsertOperation(op);
     } catch (e) {
       res.throw(400, e);
     }
-    if (op.name == 'Link ContextId') {
-      operations.encrypt(op);
-    }
-    op.state = 'init'
-    db.upsertOperation(op);
   },
 
   operationGet: function operationGetHandler(req, res){
@@ -75,6 +79,7 @@ const handlers = {
       data: {
         score: user.score,
         createdAt: user.createdAt,
+        flaggers: user.flaggers,
         invites,
         groups,
         connections: db.loadUsers(connections),
@@ -146,13 +151,24 @@ const handlers = {
         );
       } else if (signed == 'eth') {
         if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
-          throw 'Server node ethereum privateKey not configured';
+          throw 'Server setting "ethPrivateKey" not set';
         }
 
-        const message = pad32(contextName) + contextIds.map(pad32).join('');
+        if (!context.ethName){
+          throw `"ethName" not set for context "${contextName}"`;
+        }
+
+        contextName = context.ethName;
+        let message, h;
+        if (context.idsAsHex){
+          message = pad32(contextName) + contextIds.map(addressToBytes32).join('');
+        } else {
+          message = pad32(contextName) + contextIds.map(pad32).join('');
+        }
+        message = Buffer.from(message, 'binary').toString('hex');
+        h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
         let ethPrivateKey = module.context.configuration.ethPrivateKey;
         ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
-        const h = new Uint8Array(createKeccakHash('keccak256').update(message).digest());
         publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
         const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
         sig = {
@@ -208,10 +224,27 @@ const handlers = {
           isApp: context.isApp,
           appLogo: context.appLogo,
           appUrl: context.appUrl,
-          hasSponsorships: db.unusedSponsorship(contextName) > 0
+          unusedSponsorships: db.unusedSponsorship(contextName)
         }
       });
     }
+  },
+
+  allContexts: function allContexts(req, res){
+    const contexts = db.getAllContexts();
+    const result = []
+    contexts.forEach(context => {
+      result.push({
+        name: context._key,
+        unusedSponsorships: db.unusedSponsorship(context._key),
+        assignedSponsorships: context.totalSponsorships
+      })
+    });
+    res.send({
+      "data": {
+        contexts: result
+      }
+    });
   }
 };
 
@@ -255,6 +288,10 @@ router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
   .response(schemas.contextsGetResponse);
+
+router.get('/contexts', handlers.allContexts)
+  .summary("Get all contexts")
+  .response(schemas.allContextsGetResponse);
 
 module.exports = {
   handlers

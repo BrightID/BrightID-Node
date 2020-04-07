@@ -43,7 +43,7 @@ Remove Membership: id, group, sig
 Set Trusted Connections: id, trusted, sig
 Set Signing Key: id, signingKey, id1, id2, sig1, sig2
 Link Context: id, contextId, context, sig
-Sponsor: id, contextId, context, sig`)
+Sponsor: contextId, context, sig`)
 }, schemas);
 
 // extend lower-level schemas with higher-level schemas
@@ -100,6 +100,12 @@ schemas = Object.assign({
 
   contextsGetResponse: joi.object({
     data: schemas.context
+  }),
+
+  allContextsGetResponse: joi.object({
+    data: joi.object({
+      contexts: joi.array().items(joi.string()).description("an array of contexts' name")
+    })
   }),
 
 }, schemas);

@@ -29,7 +29,7 @@ const verifyContextSig = function(message, context, sig) {
   if (!context) {
     throw 'invalid context';
   }
-  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(context.signingKey))) {
+  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(context.sponsorPublicKey))) {
     throw 'invalid signature';
   }
 }
@@ -43,7 +43,7 @@ const operationsData = {
   'Remove Membership': {'attrs': ['id', 'group', 'sig']},
   'Set Trusted Connections': {'attrs': ['id', 'trusted', 'sig']},
   'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
-  'Sponsor': {'attrs': ['contextId', 'context', 'sig']},
+  'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
   'Invite': {'attrs': ['inviter', 'invitee', 'group', 'data', 'sig']},
   'Dismiss': {'attrs': ['dismisser', 'dismissee', 'group', 'sig']},
@@ -87,7 +87,11 @@ function verify(op) {
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
   } else if (op['name'] == 'Sponsor') {
-    message = 'Sponsor' + ',' + op.context + ',' + op.contextId;
+    if (op.id) {
+      message = 'Sponsor' + ',' + op.context + ',' + op.id;
+    } else {
+      message = 'Sponsor' + ',' + op.context + ',' + op.contextId;
+    }
     verifyContextSig(message, op.context, op.sig);
   } else if (op['name'] == 'Link ContextId') {
     message = op.name + ',' + op.context + ',' + op.contextId + ',' + op.timestamp;
@@ -132,7 +136,7 @@ function apply(op) {
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
   } else if (op['name'] == 'Sponsor') {
-    return db.sponsor(op.contextId, op.context);
+    return db.sponsor(op.id, op.context);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
   } else if (op['name'] == 'Invite') {
@@ -148,16 +152,30 @@ function apply(op) {
 }
 
 function encrypt(op) {
-  const { secretKey } = db.getContext(op.context);
+  const { linkAESKey } = db.getContext(op.context);
   const jsonStr = JSON.stringify({ 'id': op.id, 'contextId': op.contextId });
-  op.encrypted = CryptoJS.AES.encrypt(jsonStr, secretKey).toString();
+  op.encrypted = CryptoJS.AES.encrypt(jsonStr, linkAESKey).toString();
   delete op.id;
   delete op.contextId;
 }
 
+function updateSponsorOp(op) {
+  const { sponsorPrivateKey, collection } = db.getContext(op.context);
+  const coll = arango._collection(collection);
+  op.id = db.getUserByContextId(coll, op.contextId)
+  if (!op.id) {
+    throw 'unlinked context id';
+  }
+
+  let message = 'Sponsor' + ',' + op.context + ',' + op.id;
+  op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
+  op._key = hash(message);
+  delete op.contextId;
+}
+
 function decrypt(op) {
-  const { secretKey } = db.getContext(op.context);
-  const decrypted = CryptoJS.AES.decrypt(op.encrypted, secretKey)
+  const { linkAESKey } = db.getContext(op.context);
+  const decrypted = CryptoJS.AES.decrypt(op.encrypted, linkAESKey)
                       .toString(CryptoJS.enc.Utf8);
   const json = JSON.parse(decrypted);
   delete op.encrypted;
@@ -170,5 +188,6 @@ module.exports = {
   apply,
   encrypt,
   decrypt,
-  verifyUserSig
+  verifyUserSig,
+  updateSponsorOp
 };

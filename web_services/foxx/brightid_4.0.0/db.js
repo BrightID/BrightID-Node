@@ -144,7 +144,6 @@ function updateEligibleGroups(userId, connections, currentGroups){
           FILTER edge._from in ${connections}
           FILTER edge._to NOT IN ${currentGroups}
           COLLECT group=edge._to WITH COUNT INTO count
-          FILTER count >= 2
           SORT count DESC
           RETURN {
               group,
@@ -169,7 +168,7 @@ function updateEligibleGroups(userId, connections, currentGroups){
   });
 
   const eligible_groups = candidates
-    .filter(g => g.count * 2 > groupCountsDic[g.group])
+    .filter(g => g.count * 2 >= groupCountsDic[g.group])
     .map(g => g.group.replace('groups/', ''));
   usersColl.update(userId, {
     eligible_groups,
@@ -193,7 +192,9 @@ function userGroups(userId){
 function userInvitedGroups(userId){
   return invitationsColl.byExample({
     _from: 'users/' + userId
-  }).toArray().map(invite => {
+  }).toArray().filter(invite => {
+    return Date.now() - invite.timestamp < 86400000
+  }).map(invite => {
     const group = groupsColl.document(invite._to);
     group.inviter = invite.inviter;
     group.inviteId = invite._key;
@@ -219,13 +220,25 @@ function invite(inviter, invitee, groupId, data, timestamp){
   if (group.isNew && ! group.founders.includes(invitee)) {
     throw 'new members can not be invited before founders join the group'
   }
-  invitationsColl.insert({
+  const invite = invitationsColl.firstExample({
     _from: 'users/' + invitee,
-    _to: 'groups/' + groupId,
-    inviter,
-    data,
-    timestamp
+    _to: 'groups/' + groupId
   });
+  if (invite) {
+    invitationsColl.update(invite, {
+      inviter,
+      data,
+      timestamp
+    });
+  } else {
+    invitationsColl.insert({
+      _from: 'users/' + invitee,
+      _to: 'groups/' + groupId,
+      inviter,
+      data,
+      timestamp
+    });
+  }
 }
 
 function dismiss(dismisser, dismissee, groupId, timestamp){
@@ -386,16 +399,16 @@ function addMembership(groupId, key, timestamp){
     }
   }
 
-  const invitation = invitationsColl.firstExample({
+  const invite = invitationsColl.firstExample({
     _from: 'users/' + key,
     _to: 'groups/' + groupId
   });
-  // invitations will expire after 24 hours
-  if (!invitation || timestamp - invitation.timestamp >= 86400000) {
+  // invites will expire after 24 hours
+  if (!invite || timestamp - invite.timestamp >= 86400000) {
     throw 'not invited to join this group';
   }
-  // remove invitation after joining to not allow reusing that
-  invitationsColl.remove(invitation);
+  // remove invite after joining to not allow reusing that
+  invitationsColl.remove(invite);
 
   addUserToGroup(groupId, key, timestamp);
 
@@ -436,6 +449,13 @@ function deleteMembership(groupId, key, timestamp){
 
 function getContext(context){
   return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
+}
+
+function getAllContexts(){
+  return query`
+    FOR c in ${contextsColl}
+      RETURN c
+  `.toArray();
 }
 
 function getUserByContextId(coll, contextId){
@@ -528,10 +548,7 @@ function unusedSponsorship(context){
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(contextId, context){
-  const { collection } = getContext(context);
-  const coll = db._collection(collection);
-  const user = getUserByContextId(coll, contextId)
+function sponsor(user, context){
 
   if (unusedSponsorship(context) < 1) {
     throw "context does not have unused sponsorships";
@@ -579,6 +596,7 @@ module.exports = {
   userScore,
   loadUsers,
   getContext,
+  getAllContexts,
   userHasVerification,
   getUserByContextId,
   getContextIdsByUser,

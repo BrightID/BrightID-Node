@@ -11,7 +11,8 @@ schemas = Object.assign({
   user: joi.object({
     id: joi.string().required().description('the user id'),
     score: schemas.score,
-    verifications: joi.array().items(joi.string())
+    verifications: joi.array().items(joi.string()),
+    flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
   }),
   group: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
@@ -28,7 +29,12 @@ schemas = Object.assign({
     isApp: joi.boolean().default(false),
     appLogo: joi.string().description('app logo (base64 encoded image)'),
     appUrl: joi.string().description('the base url for the web app associated with the context'),
-    hasSponsorships: joi.boolean().description('true if the context has sponsorships'),
+    unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
+  }),
+  briefContext: joi.object({
+    name: joi.string().required().description('name of the context'),
+    assignedSponsorships: joi.number().integer().description('number of assigned sponsorships'),
+    unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
   }),
   operation: joi.object().description(`
 All operations have "name", "timestamp" and "v" attributes.
@@ -43,7 +49,7 @@ Remove Membership: id, group, sig
 Set Trusted Connections: id, trusted, sig
 Set Signing Key: id, signingKey, id1, id2, sig1, sig2
 Link Context: id, contextId, context, sig
-Sponsor: id, contextId, context, sig
+Sponsor: contextId, context, sig
 Invite: inviter, invitee, group, data, sig
 Dismiss: dismisser, dismissee, group, sig
 Add Admin: id, admin, group, sig
@@ -57,14 +63,12 @@ schemas = Object.assign({
     data: joi.object({
       score: schemas.score,
       creatdAt: schemas.timestamp,
-      eligibleGroupsUpdated: joi.boolean()
-        .description('boolean indicating whether the `eligibleGroups` array returned is up-to-date. If `true`, ' +
-          '`eligibleGroups` will contain all eligible groups. If `false`, `eligibleGroups` will only contain eligible groups in the founding stage.'),
-      currentGroups: joi.array().items(schemas.group),
-      eligibleGroups: joi.array().items(schemas.group),
+      groups: joi.array().items(schemas.group),
+      invites: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string()),
-      isSponsored: joi.boolean()
+      isSponsored: joi.boolean(),
+      flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
     })
   }),
 
@@ -99,6 +103,12 @@ schemas = Object.assign({
 
   contextsGetResponse: joi.object({
     data: schemas.context
+  }),
+
+  allContextsGetResponse: joi.object({
+    data: joi.object({
+      contexts: joi.array().items(schemas.briefContext)
+    })
   }),
 
 }, schemas);
