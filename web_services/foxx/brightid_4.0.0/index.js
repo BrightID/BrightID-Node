@@ -192,7 +192,7 @@ const handlers = {
           unique: false,
           context: req.param('context'),
           contextIds: [],
-          erroeMessage: e
+          errorMessage: e
         }
       });
     }
