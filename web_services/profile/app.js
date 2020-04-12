@@ -26,9 +26,15 @@ app.get('/', function(req, res,next){
 
 app.post('/upload', function(req, res, next){
     var data = req.body.data;
-    // save data in cache
     var id = req.body.uuid;
 
+    // support multiple upload to the same channel if `multiple` is set to true
+    if (req.body.multiple === 'true') {
+        var current_data = dataCache.get(id) || [];
+        data = current_data.concat([data]);
+    }
+
+    // save data in cache
     dataCache.set(id, data, function(err, success){
         if(err){
             console.log(err);
