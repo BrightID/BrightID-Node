@@ -223,25 +223,17 @@ function invite(inviter, invitee, groupId, data, timestamp){
   if (group.isNew && ! group.founders.includes(invitee)) {
     throw 'new members can not be invited before founders join the group'
   }
-  const invite = invitationsColl.firstExample({
+  invitationsColl.removeByExample({
     _from: 'users/' + invitee,
     _to: 'groups/' + groupId
   });
-  if (invite) {
-    invitationsColl.update(invite, {
-      inviter,
-      data,
-      timestamp
-    });
-  } else {
-    invitationsColl.insert({
-      _from: 'users/' + invitee,
-      _to: 'groups/' + groupId,
-      inviter,
-      data,
-      timestamp
-    });
-  }
+  invitationsColl.insert({
+    _from: 'users/' + invitee,
+    _to: 'groups/' + groupId,
+    inviter,
+    data,
+    timestamp
+  });
 }
 
 function dismiss(dismisser, dismissee, groupId, timestamp){
