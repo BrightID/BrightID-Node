@@ -6,4 +6,4 @@ ADD . /code
 WORKDIR /code/
 RUN pip install -r requirements.txt
 
-CMD python -u runner.py >> /var/log/runner.log
+CMD python -u runner.py
