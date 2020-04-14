@@ -476,9 +476,11 @@ function getLastContextIds(coll, verification){
       FOR u in ${usersColl}
         FILTER c.user == u._key
         FILTER ${verification} in u.verifications
-        SORT c.timestamp DESC
-        COLLECT user = c.user INTO contextIds = c.contextId
-        RETURN contextIds[0]
+        FOR s IN ${sponsorshipsColl}
+          FILTER s._from == u._id
+          SORT c.timestamp DESC
+          COLLECT user = c.user INTO contextIds = c.contextId
+          RETURN contextIds[0]
   `.toArray();
 }
 
