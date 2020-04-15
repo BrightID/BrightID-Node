@@ -80,11 +80,6 @@ def check_sponsor_requests():
             print("the user is sponsored before")
             continue
 
-        verifications = db.collection('users').get(user).get('verifications')
-        if not verifications or context['verification'] not in verifications:
-            print("the user can not be verified for this context")
-            continue
-
         tsponsorships = db.collection('contexts').get(
             context['_key']).get('totalSponsorships')
         usponsorships = db.collection('sponsorships').find(
