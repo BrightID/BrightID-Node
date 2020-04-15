@@ -60,7 +60,7 @@ def check_sponsor_requests():
             continue
         context = c.batch()[0]
         if context.get('idsAsHex'):
-            context_id = '0x' + sponsored['args']['contextid'].hex()[:40]
+            context_id = '0x' + sponsored['args']['contextid'].hex()[24:]
         else:
             context_id = bytes32_to_string(sponsored['args']['contextid'])
 
