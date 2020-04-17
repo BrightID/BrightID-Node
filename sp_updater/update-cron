@@ -1,1 +1,1 @@
-*/5 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u update.py >> /var/log/cron.log 2>&1"
+* * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u update.py >> /var/log/cron.log 2>&1"
