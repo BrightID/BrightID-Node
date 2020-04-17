@@ -48,8 +48,8 @@ def check_sponsor_requests():
             'value': fb
         })
     cb = w3.eth.getBlock('latest').number
-    fb = fb - config.RECHECK_CHUNK if cb - fb > config.CHUNK else cb - config.CHUNK
-    tb = fb + config.CHUNK
+    fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
+    tb = min(cb, fb + config.CHUNK)
     print('\nchecking events from block {} to block {}'.format(fb, tb))
     sponsoreds = brightid_contract.events.SponsorshipRequested.createFilter(
         fromBlock=fb, toBlock=tb, argument_filters=None

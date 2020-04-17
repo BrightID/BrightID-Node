@@ -11,4 +11,4 @@ BRIGHTID_ABI = '[{"stateMutability": "nonpayable", "inputs": [], "type": "constr
 INFURA_URL = os.environ['BN_SP_UPDATER_INFURA_URL']
 
 CHUNK = 10000
-RECHECK_CHUNK = 7000
+RECHECK_CHUNK = 300
