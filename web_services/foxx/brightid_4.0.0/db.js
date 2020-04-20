@@ -189,7 +189,13 @@ function groupToDic(group){
 function userGroups(userId){
   return usersInGroupsColl.byExample({
     _from: 'users/' + userId
-  }).toArray().map(ug => groupsColl.document(ug._to)).map(groupToDic);
+  }).toArray().map(
+    ug => {
+      const group = groupsColl.document(ug._to);
+      group.joined = ug.timestamp;
+      return groupToDic(group);
+    }
+  );
 }
 
 function userInvitedGroups(userId){
@@ -202,6 +208,7 @@ function userInvitedGroups(userId){
     group.inviter = invite.inviter;
     group.inviteId = invite._key;
     group.data = invite.data;
+    group.inviteDate = invite.timestamp;
     return groupToDic(group);
   });
 }
