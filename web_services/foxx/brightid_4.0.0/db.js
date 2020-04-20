@@ -208,7 +208,7 @@ function userInvitedGroups(userId){
     group.inviter = invite.inviter;
     group.inviteId = invite._key;
     group.data = invite.data;
-    group.inviteDate = invite.timestamp;
+    group.invited = invite.timestamp;
     return groupToDic(group);
   });
 }
