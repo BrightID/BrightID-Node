@@ -178,12 +178,17 @@ function updateEligibleGroups(userId, connections, currentGroups){
 }
 
 function groupToDic(group){
-  group.members = groupMembers(group._key);
-  group.id = group._key;
-  group.type = group.type || 'general';
-  group.founders = group.founders.map(founder => founder.replace('users/', ''));
-  group.admins = group.admins || group.founders;
-  return group;
+  return {
+    id: group._key,
+    members: groupMembers(group._key),
+    type: group.type || 'general',
+    founders: group.founders.map(founder => founder.replace('users/', '')),
+    admins: group.admins || group.founders,
+    isNew: group.isNew,
+    score: group.score,
+    url: group.url,
+    timestamp: group.timestamp,
+  }
 }
 
 function userGroups(userId){
@@ -191,9 +196,10 @@ function userGroups(userId){
     _from: 'users/' + userId
   }).toArray().map(
     ug => {
-      const group = groupsColl.document(ug._to);
+      let group = groupsColl.document(ug._to);
+      group = groupToDic(group);
       group.joined = ug.timestamp;
-      return groupToDic(group);
+      return group;
     }
   );
 }
@@ -204,12 +210,13 @@ function userInvitedGroups(userId){
   }).toArray().filter(invite => {
     return Date.now() - invite.timestamp < 86400000
   }).map(invite => {
-    const group = groupsColl.document(invite._to);
+    let group = groupsColl.document(invite._to);
+    group = groupToDic(group);
     group.inviter = invite.inviter;
     group.inviteId = invite._key;
     group.data = invite.data;
     group.invited = invite.timestamp;
-    return groupToDic(group);
+    return group;
   });
 }
 

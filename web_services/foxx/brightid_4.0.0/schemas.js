@@ -14,16 +14,16 @@ schemas = Object.assign({
     verifications: joi.array().items(joi.string()),
     flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
   }),
-  group: joi.object({
+  groupBase: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
+    members: joi.array().items(joi.string()).required().description('brightids of group members'),
+    type: joi.string().required().description('type of group which is "primary" or "general"'),
+    founders: joi.array().items(joi.string()).required().description('brightids of group founders'),
+    admins: joi.array().items(joi.string()).required().description('brightids of group admins'),
+    isNew: joi.boolean().required().description('true if some of founders did not join the group yet and group is still in founding stage'),
     score: schemas.score,
-    verifications: joi.array().items(joi.string()),
-    isNew: joi.boolean().default(true),
-    knownMembers: joi.array().items(joi.string()).description('ids of two or three current' +
-      ' members connected to the reference user, or if the group is being founded, the co-founders that have joined'),
-    founders: joi.array().items(joi.string()).description('ids of the three founders of the group'),
-    joined: schemas.timestamp.description('timestamp when the user joined'),
-    invited: schemas.timestamp.description('timestamp when the user was invited'),
+    url: joi.string().required().description('url of encrypted group data (name and photo)'),
+    timestamp: schemas.score.required().description('group creation timestamp'),
   }),
   context: joi.object({
     verification: joi.string().required().description('verification used by the context'),
@@ -58,6 +58,21 @@ Add Admin: id, admin, group, sig
 `)
 }, schemas);
 
+schemas = Object.assign({
+
+  group: schemas.groupBase.keys({
+    joined: schemas.timestamp.required().description('timestamp when the user joined'),
+  }),
+
+  invite: schemas.groupBase.keys({
+    inviteId: joi.string().required().description('unique identifier of invite'),
+    invited: schemas.timestamp.required().description('timestamp when the user was invited'),
+    inviter: joi.string().required().description('brightid of inviter'),
+    data: joi.string().required().description('encrypted version of the AES key that group name and photo uploaded to `url` encrypted with' + 
+      'invitee should first decrypt this data with his/her signingKey and then fetch data in `url` and decrypt that using the AES key'),
+  }),
+}, schemas);
+
 // extend lower-level schemas with higher-level schemas
 schemas = Object.assign({
 
@@ -66,7 +81,7 @@ schemas = Object.assign({
       score: schemas.score,
       createdAt: schemas.timestamp.required(),
       groups: joi.array().items(schemas.group),
-      invites: joi.array().items(schemas.group),
+      invites: joi.array().items(schemas.invite),
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string()),
       isSponsored: joi.boolean(),
