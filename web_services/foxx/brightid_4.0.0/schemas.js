@@ -3,7 +3,7 @@ const joi = require('joi');
 // lowest-level schemas
 var schemas = {
   score: joi.number().min(0).max(100).default(0),
-  timestamp: joi.number().integer().required()
+  timestamp: joi.number().integer(),
 };
 
 // extend lower-level schemas with higher-level schemas
@@ -21,7 +21,9 @@ schemas = Object.assign({
     isNew: joi.boolean().default(true),
     knownMembers: joi.array().items(joi.string()).description('ids of two or three current' +
       ' members connected to the reference user, or if the group is being founded, the co-founders that have joined'),
-    founders: joi.array().items(joi.string()).description('ids of the three founders of the group')
+    founders: joi.array().items(joi.string()).description('ids of the three founders of the group'),
+    joined: schemas.timestamp.description('timestamp when the user joined'),
+    invited: schemas.timestamp.description('timestamp when the user was invited'),
   }),
   context: joi.object({
     verification: joi.string().required().description('verification used by the context'),
@@ -62,7 +64,7 @@ schemas = Object.assign({
   userGetResponse: joi.object({
     data: joi.object({
       score: schemas.score,
-      creatdAt: schemas.timestamp,
+      createdAt: schemas.timestamp.required(),
       groups: joi.array().items(schemas.group),
       invites: joi.array().items(schemas.group),
       connections: joi.array().items(schemas.user),

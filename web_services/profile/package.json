@@ -1,8 +1,8 @@
 {
   "name": "brightid-profile",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "description": "BrightID profile service for exchanging profiles or other secure messages.",
-  "main": "index.js",
+  "main": "app.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,9 +10,8 @@
   "license": "ISC",
   "dependencies": {
     "express": "^4.16.3",
-    "jquery": "^3.3.1",
+    "jquery": "^3.5.0",
     "node-cache": "^4.2.0",
-    "socket.io": "^2.1.1",
     "uuid": "^3.3.2"
   }
 }

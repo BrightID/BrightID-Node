@@ -2,7 +2,6 @@
 var express = require('express');
 var app = express();
 var server = require('http').createServer(app);
-var io = require('socket.io')(server);
 var config = require("./config/config");
 var bodyParser = require('body-parser');
 const NodeCache = require( "node-cache" );
@@ -26,9 +25,15 @@ app.get('/', function(req, res,next){
 
 app.post('/upload', function(req, res, next){
     var data = req.body.data;
-    // save data in cache
     var id = req.body.uuid;
 
+    // support multiple upload to the same channel if `multiple` is set to true
+    if (req.body.multiple === 'true') {
+        var current_data = dataCache.get(id) || [];
+        data = current_data.concat([data]);
+    }
+
+    // save data in cache
     dataCache.set(id, data, function(err, success){
         if(err){
             console.log(err);
@@ -37,7 +42,6 @@ app.post('/upload', function(req, res, next){
             signal: 'new_upload',
             uuid: id
         });
-        io.to(id).emit("signals", signal);
         res.send({success:1});
     });
 });
@@ -46,14 +50,6 @@ app.get("/download/:uuid", function(req, res, next){
     var data = dataCache.get(req.params.uuid);
     res.send({
         data: data || null
-    });
-});
-
-io.on('connection', function(client){
-    console.log('Client connected...');
-
-    client.on('join', function(uuid){
-        client.join(uuid);
     });
 });
 

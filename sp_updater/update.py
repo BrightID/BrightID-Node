@@ -40,17 +40,19 @@ def context_balance(context_name):
 def check_sponsor_requests():
     variables = db.collection('variables')
     if variables.has('LAST_BLOCK_LOG'):
-        lb = variables.get('LAST_BLOCK_LOG')['value']
+        fb = variables.get('LAST_BLOCK_LOG')['value']
     else:
+        fb = w3.eth.getBlock('latest').number
         variables.insert({
             '_key': 'LAST_BLOCK_LOG',
-            'value': 1
+            'value': fb
         })
-        lb = 1
-    lb2 = min(w3.eth.getBlock('latest').number, lb + 1000)
-    print('\nchecking events from block {} to block {}'.format(lb, lb2))
+    cb = w3.eth.getBlock('latest').number
+    fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
+    tb = min(cb, fb + config.CHUNK)
+    print('\nchecking events from block {} to block {}'.format(fb, tb))
     sponsoreds = brightid_contract.events.SponsorshipRequested.createFilter(
-        fromBlock=lb, toBlock=lb2, argument_filters=None
+        fromBlock=fb, toBlock=tb, argument_filters=None
     ).get_all_entries()
     for sponsored in sponsoreds:
         eth_context_name = bytes32_to_string(sponsored['args']['context'])
@@ -60,7 +62,7 @@ def check_sponsor_requests():
             continue
         context = c.batch()[0]
         if context.get('idsAsHex'):
-            context_id = '0x' + sponsored['args']['contextid'].hex()[:40]
+            context_id = '0x' + sponsored['args']['contextid'].hex()[24:]
         else:
             context_id = bytes32_to_string(sponsored['args']['contextid'])
 
@@ -80,11 +82,6 @@ def check_sponsor_requests():
             print("the user is sponsored before")
             continue
 
-        verifications = db.collection('users').get(user).get('verifications')
-        if not verifications or context['verification'] not in verifications:
-            print("the user can not be verified for this context")
-            continue
-
         tsponsorships = db.collection('contexts').get(
             context['_key']).get('totalSponsorships')
         usponsorships = db.collection('sponsorships').find(
@@ -100,7 +97,7 @@ def check_sponsor_requests():
         })
     variables.update({
         '_key': 'LAST_BLOCK_LOG',
-        'value': lb2
+        'value': tb
     })
 
 

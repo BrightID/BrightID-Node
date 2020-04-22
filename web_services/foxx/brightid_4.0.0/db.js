@@ -189,7 +189,13 @@ function groupToDic(group){
 function userGroups(userId){
   return usersInGroupsColl.byExample({
     _from: 'users/' + userId
-  }).toArray().map(ug => groupsColl.document(ug._to)).map(groupToDic);
+  }).toArray().map(
+    ug => {
+      const group = groupsColl.document(ug._to);
+      group.joined = ug.timestamp;
+      return groupToDic(group);
+    }
+  );
 }
 
 function userInvitedGroups(userId){
@@ -202,6 +208,7 @@ function userInvitedGroups(userId){
     group.inviter = invite.inviter;
     group.inviteId = invite._key;
     group.data = invite.data;
+    group.invited = invite.timestamp;
     return groupToDic(group);
   });
 }
@@ -223,25 +230,17 @@ function invite(inviter, invitee, groupId, data, timestamp){
   if (group.isNew && ! group.founders.includes(invitee)) {
     throw 'new members can not be invited before founders join the group'
   }
-  const invite = invitationsColl.firstExample({
+  invitationsColl.removeByExample({
     _from: 'users/' + invitee,
     _to: 'groups/' + groupId
   });
-  if (invite) {
-    invitationsColl.update(invite, {
-      inviter,
-      data,
-      timestamp
-    });
-  } else {
-    invitationsColl.insert({
-      _from: 'users/' + invitee,
-      _to: 'groups/' + groupId,
-      inviter,
-      data,
-      timestamp
-    });
-  }
+  invitationsColl.insert({
+    _from: 'users/' + invitee,
+    _to: 'groups/' + groupId,
+    inviter,
+    data,
+    timestamp
+  });
 }
 
 function dismiss(dismisser, dismissee, groupId, timestamp){
@@ -484,9 +483,11 @@ function getLastContextIds(coll, verification){
       FOR u in ${usersColl}
         FILTER c.user == u._key
         FILTER ${verification} in u.verifications
-        SORT c.timestamp DESC
-        COLLECT user = c.user INTO contextIds = c.contextId
-        RETURN contextIds[0]
+        FOR s IN ${sponsorshipsColl}
+          FILTER s._from == u._id
+          SORT c.timestamp DESC
+          COLLECT user = c.user INTO contextIds = c.contextId
+          RETURN contextIds[0]
   `.toArray();
 }
 

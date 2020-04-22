@@ -80,6 +80,9 @@ class TestUpdate(unittest.TestCase):
             'value': self.DB_LB
         })
 
+    def pad_left_address(self, address):
+        return '0x' + 24 * '0' + address[2:]
+
     def priv2addr(self, private_key):
         pk = keys.PrivateKey(bytes.fromhex(private_key))
         return pk.public_key.to_checksum_address()
@@ -116,7 +119,7 @@ class TestUpdate(unittest.TestCase):
         self.add_context(update.str2bytes32(self.CONTEXT))
         lb = update.w3.eth.getBlock('latest').number
         self.sponsor(update.str2bytes32(
-            self.CONTEXT), self.CONTEXT_ID if self.idsAsHex else update.str2bytes32(self.CONTEXT_ID))
+            self.CONTEXT), self.pad_left_address(self.CONTEXT_ID) if self.idsAsHex else update.str2bytes32(self.CONTEXT_ID))
 
         time.sleep(60)  # Waiting
         self.variables.update({
