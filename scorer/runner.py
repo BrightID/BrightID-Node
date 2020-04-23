@@ -64,7 +64,7 @@ def stupid_sybil_border(graph):
 
 
 def process(fname):
-    json_graph = from_dump(f)
+    json_graph = from_dump(fname)
     graph = from_json(json_graph)
     border = stupid_sybil_border(graph)
     raw_ranks = [node.raw_rank for node in graph.nodes]
