@@ -13,7 +13,7 @@ import config
 
 db = ArangoClient().db('_system')
 w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
-if config.INFURA_URL.count('rinkeby') > 0:
+if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 voting = w3.eth.contract(address=config.VOTING_ADDRESS, abi=config.VOTING_ABI)
 
