@@ -121,6 +121,7 @@ const handlers = {
   },
 
   verificationGet: function(req, res){
+    let unique = true;
     const contextId = req.param('contextId');
     let contextName = req.param('context');
     const signed = req.param('signed');
@@ -145,7 +146,7 @@ const handlers = {
 
     let contextIds = db.getContextIdsByUser(coll, user);
     if (contextId != contextIds[0]) {
-      res.throw(404, 'user is not using this account anymore', {errorNum: OLD_ACCOUNT});
+      unique = false;
     }
 
     // sign and return the verification
@@ -191,7 +192,7 @@ const handlers = {
     }
     res.send({
       data: {
-        unique: true,
+        unique,
         context: contextName,
         contextIds: contextIds,
         sig,
