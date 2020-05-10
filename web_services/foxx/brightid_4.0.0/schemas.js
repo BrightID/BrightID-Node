@@ -209,8 +209,8 @@ schemas = Object.assign({
 
   operationGetResponse: joi.object({
     data: joi.object({
-      state: joi.string(),
-      result: joi.string()
+      state: joi.string().valid("init", "sent", "applied", "failed").description("state of operation"),
+      result: joi.string().description("result of operation after being applied. If operation is failed this field contain the reason.")
     })
   }),
 
