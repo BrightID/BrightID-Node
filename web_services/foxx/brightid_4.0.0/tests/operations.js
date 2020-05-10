@@ -61,6 +61,7 @@ function apply(op) {
   op = operationsColl.document(op._key);
   delete op._rev;
   delete op._id;
+  delete op.state;
   const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
     body: op,
     json: true
