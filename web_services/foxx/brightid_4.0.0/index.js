@@ -137,7 +137,7 @@ const handlers = {
     }
 
     if (! db.isSponsored(user)) {
-      res.throw(404, 'user is not sponsored', {errorNum: NOT_SPONSORED});
+      res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     }
 
     if (! db.userHasVerification(context.verification, user)) {
@@ -168,7 +168,7 @@ const handlers = {
       }
 
       if (!context.ethName) {
-        res.throw(404, `"ethName" not set for context "${contextName}"`, {errorNum: ETHNAME_NOT_SET});
+        res.throw(500, `"ethName" not set for context "${contextName}"`, {errorNum: ETHNAME_NOT_SET});
       }
 
       contextName = context.ethName;
@@ -256,18 +256,21 @@ router.put('/operations/:hash', handlers.operationsPut)
   .body(schemas.operation)
   .summary('Add an operation to be applied after consensus')
   .description('Add an operation be applied after consensus.')
-  .response(null);
+  .response(null)
+  .error(400, 'Failed to add the operation');
 
 router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
   .description("Gets a user's score, verifications, joining date, lists of , current groups, eligible groups, and current connections.")
-  .response(schemas.userGetResponse);
+  .response(schemas.userGetResponse)
+  .error(404, 'User not found');
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
   .summary('Get state and result of an operation')
-  .response(schemas.operationGetResponse);
+  .response(schemas.operationGetResponse)
+  .error(404, 'Operation not found');
 
 router.get('/verifications/:context/:contextId', handlers.verificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
@@ -275,13 +278,16 @@ router.get('/verifications/:context/:contextId', handlers.verificationGet)
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .summary('Gets a signed verification')
   .description("Gets a signed verification for the user that is signed by the node")
-  .response(schemas.verificationGetResponse);
+  .response(schemas.verificationGetResponse)
+  .error(403, 'user is not sponsored')
+  .error(404, 'context, contextId or verification not found');
 
 router.get('/verifications/:context', handlers.contextVerificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
   .summary('Gets list of all of contextIds')
   .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
-  .response(schemas.contextVerificationGetResponse);
+  .response(schemas.contextVerificationGetResponse)
+  .error(404, 'context not found');
 
 router.get('/ip', handlers.ip)
   .summary("Get this server's IPv4 address")
@@ -290,7 +296,8 @@ router.get('/ip', handlers.ip)
 router.get('/contexts/:context', handlers.contexts)
   .pathParam('context', joi.string().required().description("Unique name of the context"))
   .summary("Get information about a context")
-  .response(schemas.contextsGetResponse);
+  .response(schemas.contextsGetResponse)
+  .error(404, 'context not found');
 
 router.get('/contexts', handlers.allContexts)
   .summary("Get all contexts")

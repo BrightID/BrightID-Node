@@ -17,7 +17,7 @@ const {
 const db = require('../db.js');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid4', '/apply');
+const applyBaseUrl = baseUrl.replace('/brightid4', '/apply4');
 
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
@@ -66,13 +66,14 @@ describe('replay attack on operations', function () {
     );
     
     let op = {
-      '_key': hash(message),
-      'name': 'Add Connection',
-      'id1': u1.id,
-      'id2': u2.id,
+      _key: hash(message),
+      name: 'Add Connection',
+      id1: u1.id,
+      id2: u2.id,
       timestamp,
       sig1,
-      sig2
+      sig2,
+      v: 4
     }
 
     const resp1 = request.put(`${baseUrl}/operations/${op._key}`, {
@@ -84,6 +85,7 @@ describe('replay attack on operations', function () {
     op = operationsColl.document(op._key);
     delete op._rev;
     delete op._id;
+    delete op.state;
     const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
       body: op,
       json: true

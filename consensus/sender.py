@@ -32,6 +32,7 @@ def main():
         d = copy.deepcopy(op)
         del d['_id']
         del d['_rev']
+        del d['state']
         print(d)
         data = '0x'+binascii.hexlify(json.dumps(d).encode('utf-8')).decode('utf-8')
         sendTransaction(data)

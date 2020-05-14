@@ -38,24 +38,142 @@ schemas = Object.assign({
     assignedSponsorships: joi.number().integer().description('number of assigned sponsorships'),
     unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
   }),
-  operation: joi.object().description(`
-All operations have "name", "timestamp" and "v" attributes.
-Operations have also these operation specific attributes:
-
-Add Connection: id1, id2, sig1, sig2
-Remove Connection: id1, id2, reason, sig1
-Add Group: group, id1, id2, inviteData2, id3, inviteData3, url, type, sig1
-Remove Group: id, group, sig
-Add Membership: id, group, sig
-Remove Membership: id, group, sig
-Set Trusted Connections: id, trusted, sig
-Set Signing Key: id, signingKey, id1, id2, sig1, sig2
-Link Context: id, contextId, context, sig
-Sponsor: contextId, context, sig
-Invite: inviter, invitee, group, data, sig
-Dismiss: dismisser, dismissee, group, sig
-Add Admin: id, admin, group, sig
-`)
+  operation: joi.alternatives().try([
+    joi.object({
+      name: joi.string().valid('Add Connection').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id1: joi.string().required().description('brightid of the first user making the connection'),
+      id2: joi.string().required().description('brightid of the second user making the connection'),
+      sig1: joi.string().required().description('message ("Add Connection" + id1 + id2 + timestamp) signed by the user represented by id1'),
+      sig2: joi.string().required().description('message ("Add Connection" + id1 + id2 + timestamp) signed by the user represented by id2'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Add Connection'),
+    joi.object({
+      name: joi.string().valid('Remove Connection').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id1: joi.string().required().description('brightid of the user removing the connection'),
+      id2: joi.string().required().description('brightid of the second user that the connection with is being removed'),
+      reason: joi.string().valid('fake', 'duplicate', 'deceased').required().description('the reason for removing connection specificed by the user represented by id1'),
+      sig1: joi.string().required().description('message ("Remove Connection" + id1 + id2 + reason + timestamp) signed by the user represented by id1'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Remove Connection'),
+    joi.object({
+      name: joi.string().valid('Add Group').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      group: joi.string().required().description('the unique id of the group'),
+      id1: joi.string().required().description('brightid of the first founder'),
+      id2: joi.string().required().description('brightid of the second founder'),
+      id3: joi.string().required().description('brightid of the third founder'),
+      inviteData2: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id2'),
+      inviteData3: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id3'),
+      url: joi.string().required().description('the url that group data (profile image and name) encrypted by group AES key can be fetched from'),
+      type: joi.string().valid('general', 'primary').required().description('type of the group'),
+      sig1: joi.string().required().description('message ("Add Group" + group + id1 + id2 + inviteData2 + id3 + inviteData3 + url + type + timestamp) signed by the creator of group represented by id1'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Add Group'),
+    joi.object({
+      name: joi.string().valid('Remove Group').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id: joi.string().required().description('brightid of the group admin who want to remove the group'),
+      group: joi.string().required().description('the unique id of the group'),
+      sig: joi.string().required().description('message ("Remove Group" + id + group + timestamp) signed by the user represented by id1'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Remove Group'),
+    joi.object({
+      name: joi.string().valid('Add Membership').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id: joi.string().required().description('brightid of the user wants to join the group'),
+      group: joi.string().required().description('the unique id of the group that the user represented by id wants to join'),
+      sig: joi.string().required().description('message ("Add Membership" + id + group + timestamp) signed by the user represented by id'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Add Membership'),
+    joi.object({
+      name: joi.string().valid('Remove Membership').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id: joi.string().required().description('brightid of the user wants to leave the group'),
+      group: joi.string().required().description('the unique id of the group that the user represented by id wants to leave'),
+      sig: joi.string().required().description('message ("Remove Membership" + id + group + timestamp) signed by the user represented by id'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Remove Membership'),
+    joi.object({
+      name: joi.string().valid('Set Trusted Connections').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id: joi.string().required().description('brightid of the user who is setting his/her trusted connections'),
+      trusted: joi.array().items(joi.string()).required().description('brightid list of trusted connections'),
+      sig: joi.string().required().description('message ("Set Trusted Connections" + id + trusted1 [ + "," + trusted2 ...] + timestamp) signed by the user represented by id'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Set Trusted Connections'),
+    joi.object({
+      name: joi.string().valid('Set Signing Key').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id: joi.string().required().description('brightid of the user who is trying to recover his/her account by setting new signing key on his/her brightid'),
+      signingKey: joi.string().required().description('the public key of the new key pair that user will use to sign operations with'),
+      id1: joi.string().required().description('brightid of a trusted connection of the user represented by id'),
+      id2: joi.string().required().description('brightid of another trusted connection of the user represented by id'),
+      sig1: joi.string().required().description('message ("Set Signing Key" + id + signingKey + timestamp) signed by the trusted connection represented by id1'),
+      sig2: joi.string().required().description('message ("Set Signing Key" + id + signingKey + timestamp) signed by the trusted connection represented by id2'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Set Signing Key'),
+    joi.object({
+      name: joi.string().valid('Link ContextId').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id: joi.string().description('brightid of the user who is linking his/her brightid to a context id'),
+      contextId: joi.string().description('the unique id of the user represented by brightid in the specific context'),
+      encrypted: joi.string().description('the json representation of `{id: id, contextId: contextId}` encrypted using an AES key shared between all nodes manage linking brightids to contextIds for a specific context. This field is not sent by clients and will be replaced by `id` and `contextId` fields before sending operation to blockchain to keep the relation of brightids to contextIds private.'),
+      context: joi.string().required().description('the context name in which the user represented by brightid is linking context id with his/her brightid'),
+      sig: joi.string().required().description('message ("Link ContextId" + id + trusted + timestamp) signed by the user represented by id'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Link ContextId'),
+    joi.object({
+      name: joi.string().valid('Sponsor').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      contextId: joi.string().description('the contextId for the user that is being sponsored by context'),
+      id: joi.string().description('brightid of the user that is being sponsored by context. This field is not provided by context owners who sponsor the user as they do not have users brightids. BrightID nodes that are trusted by context owners and have the private key that is used to spend sponsorships assigned to the context, will replace `contextId` by this field before sending this operation to blockchain'),
+      context: joi.string().required().description('the name of the context that user is being sponsored by'),
+      sig: joi.string().required().description('message ("Sponsor" + "," + context + "," + contextId/id) signed by the private key shared between context owners and trusted node operators which enable them to spend sponsorships assigned to the context'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Sponsor'),
+    joi.object({
+      name: joi.string().valid('Invite').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      inviter: joi.string().required().description('brightid of the user who has admin rights in the group and can invite others to the group'),
+      invitee: joi.string().required().description('brightid of the user whom is invited to the group'),
+      group: joi.string().required().description('the unique id of the group that invitee is being invited to'),
+      data: joi.string().required().description('the group AES key encrypted for signingKey of the invitee'),
+      sig: joi.string().required().description('message ("Invite" + inviter + invitee + group + data + timestamp) signed by the inviter'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Invite'),
+    joi.object({
+      name: joi.string().valid('Dismiss').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      dismisser: joi.string().required().description('brightid of the user who has admin rights in the group and can dismiss others from the group'),
+      dismissee: joi.string().required().description('brightid of the user whom is dismissed from the group'),
+      group: joi.string().required().description('the unique id of the group that dismissee is being dismissed from'),
+      sig: joi.string().required().description('message ("Dismiss" + dismisser + dismissee + group + timestamp) signed by the dismisser'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Dismiss'),
+    joi.object({
+      name: joi.string().valid('Add Admin').required().description('operation name'),
+      _key: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
+      id: joi.string().required().description('brightid of the user who has admin rights in the group and can grant administratorship to other members'),
+      admin: joi.string().required().description('brightid of the member whom is being granted administratorship of the group'),
+      group: joi.string().required().description('the unique id of the group that new admin is being added to'),
+      sig: joi.string().required().description('message ("Add Admin" + id + admin + group + timestamp) signed by the user represented by id'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(4).description('version of API')
+    }).label('Add Admin'),
+  ]).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus')
 }, schemas);
 
 schemas = Object.assign({
@@ -91,8 +209,8 @@ schemas = Object.assign({
 
   operationGetResponse: joi.object({
     data: joi.object({
-      state: joi.string(),
-      result: joi.string()
+      state: joi.string().valid("init", "sent", "applied", "failed").description("state of operation"),
+      result: joi.string().description("result of operation after being applied. If operation is failed this field contain the reason.")
     })
   }),
 
