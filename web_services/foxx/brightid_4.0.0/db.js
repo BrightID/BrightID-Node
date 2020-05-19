@@ -521,13 +521,8 @@ function linkContextId(id, context, contextId, timestamp){
 }
 
 function setTrusted(trusted, key, timestamp){
-  const user = loadUser(key);
-  if (user.trusted) {
-    // TODO: users should be able to update their trusted connections
-    // by providing sigs of 2 trusted connections approving that
-    throw "trusted connections can't be overwritten";
-  }
-
+  // TODO: in the future users should update their trusted connections
+  // by providing the sig of one of the existing trusted connections approving that.
   query`
     UPDATE ${key} WITH {trusted: ${trusted}, updateTime: ${timestamp}} in users
   `;
