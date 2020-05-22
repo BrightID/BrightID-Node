@@ -1,58 +1,70 @@
 // app.js
-var express = require('express');
-var app = express();
-var server = require('http').createServer(app);
-var config = require("./config/config");
-var bodyParser = require('body-parser');
-const NodeCache = require( "node-cache" );
+const express = require("express");
+const app = express();
+const axios = require("axios");
+const NodeCache = require("node-cache");
+const config = require("./config");
+
 const dataCache = new NodeCache(config.node_cache);
 
 // BodyParser Middleware
-app.use(bodyParser.json({limit: "100kb"}));
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(express.json({ limit: "100kb" }));
+app.use(express.urlencoded({ extended: false }));
 
-if(config.is_dev){
-    app.use(express.static(__dirname + '/node_modules'));
-    app.get('/test', function(req, res,next){
-        res.sendFile(__dirname + '/index.html');
-    });
+if (config.is_dev) {
+  app.use(express.static(__dirname + "/node_modules"));
+  app.get("/test", function (req, res, next) {
+    res.sendFile(__dirname + "/index.html");
+  });
 }
 
-app.get('/', function(req, res,next){
-    console.log("test");
-    res.send("BrightID socket server");
+app.get("/", function (req, res, next) {
+  res.send("BrightID socket server");
 });
 
-app.post('/upload', function(req, res, next){
-    var data = req.body.data;
-    var id = req.body.uuid;
+app.post("/upload", function (req, res, next) {
+  const { data, uuid, multiple } = req.body;
 
-    // support multiple upload to the same channel if `multiple` is set to true
-    if (req.body.multiple === 'true') {
-        var current_data = dataCache.get(id) || [];
-        data = current_data.concat([data]);
-    }
+  if (!uuid) {
+    res.status(404).json({ error: "missing uuid" });
+    return;
+  }
+  // support multiple upload to the same channel if `multiple` is set to true
+  if (multiple === "true") {
+    const current_data = dataCache.get(uuid) || [];
+    data = current_data.concat([data]);
+  }
 
-    // save data in cache
-    dataCache.set(id, data, function(err, success){
-        if(err){
-            console.log(err);
-        }
-        var signal = JSON.stringify({
-            signal: 'new_upload',
-            uuid: id
-        });
-        res.send({success:1});
+  // save data in cache
+  if (data) {
+    dataCache.set(uuid, data, async function (err, success) {
+      if (err) {
+        console.log(err);
+        res.status(500).json({ error: "unable to store profile data" });
+        return;
+      }
+      res.json({ success: true });
     });
+  } else {
+    res.status(404).json({ error: "missing data" });
+  }
 });
 
-app.get("/download/:uuid", function(req, res, next){
-    var data = dataCache.get(req.params.uuid);
-    res.send({
-        data: data || null
-    });
+app.get("/download/:uuid", function (req, res, next) {
+  const { uuid } = req.params;
+
+  if (!uuid) {
+    res.status(404).json({ error: "missing uuid" });
+    return;
+  }
+
+  const data = dataCache.get(uuid) || null;
+
+  res.json({
+    data,
+  });
 });
 
-var port = config.port || 3000;
-console.log("Listening on port: ", port);
-server.listen(port, "localhost");
+app.listen(config.port, () => {
+  console.log("Listening on port: ", config.port);
+});
