@@ -111,8 +111,8 @@ const handlers = {
     }
 
     const coll = arango._collection(context.collection);
-    const contextIds = db.getLastContextIds(coll, context.verification);
-
+    let contextIds = db.getLastContextIds(coll, context.verification);
+    contextIds = contextIds.filter(Boolean);
     res.send({
       data: {
         contextIds: contextIds
@@ -122,12 +122,16 @@ const handlers = {
 
   verificationGet: function(req, res){
     let unique = true;
-    const contextId = req.param('contextId');
+    let contextId = req.param('contextId');
     let contextName = req.param('context');
     const signed = req.param('signed');
     const context = db.getContext(contextName);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
+    }
+
+    if (context.idsAsHex) {
+      contextId = contextId.toLowerCase();
     }
 
     const coll = arango._collection(context.collection);

@@ -160,8 +160,13 @@ function encrypt(op) {
 }
 
 function updateSponsorOp(op) {
-  const { sponsorPrivateKey, collection } = db.getContext(op.context);
+  const { sponsorPrivateKey, collection, idsAsHex } = db.getContext(op.context);
   const coll = arango._collection(collection);
+
+  if (idsAsHex) {
+    op.contextId = op.contextId.toLowerCase();
+  }
+
   op.id = db.getUserByContextId(coll, op.contextId)
   if (!op.id) {
     throw 'unlinked context id';

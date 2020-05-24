@@ -46,6 +46,7 @@ let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
 const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
+const idsAsHex = true;
 
 function apply(op) {
   const resp1 = request.put(`${baseUrl}/operations/${op._key}`, {
@@ -54,6 +55,9 @@ function apply(op) {
   });
   resp1.status.should.equal(204);
   if (op.name == 'Sponsor') {
+    if (idsAsHex) {
+      op.contextId = op.contextId.toLowerCase();
+    }
     op.id = db.getUserByContextId(contextIdsColl, op.contextId);
     let message = 'Sponsor' + ',' + op.context + ',' + op.id;
     op._key = hash(message);
@@ -84,7 +88,7 @@ describe('operations', function(){
     [u1, u2, u3, u4].map((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
-      db.createUser(u.id, u.signingKey);
+      db.createUser(u.id, Date.now());
     });
     query`
       UPDATE ${u1.id} WITH {verifications: [${contextName}]} in ${usersColl}
@@ -97,7 +101,8 @@ describe('operations', function(){
         totalSponsorships: 3,
         sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
         sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))},
-        linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))}
+        linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))},
+        idsAsHex: ${idsAsHex}
       } IN ${contextsColl}
     `;
   });
@@ -387,8 +392,13 @@ describe('operations', function(){
       sig
     }
     apply(op);
-    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
-
+    let cId;
+    if (idsAsHex) {
+    	cId = contextId.toLowerCase();
+    } else {
+    	cId = contextId;
+    }
+    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(cId);
   });
 
   it('should be able to "Sponsor"', function () {
