@@ -183,6 +183,9 @@ const handlers = {
         message = pad32(contextName) + contextIds.map(pad32).join('');
       }
       message = Buffer.from(message, 'binary').toString('hex');
+      if (!Buffer.prototype.alloc) {
+        Buffer.prototype.alloc = function(size) { return new Buffer(size); }
+      }
       h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
       let ethPrivateKey = module.context.configuration.ethPrivateKey;
       ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
