@@ -183,6 +183,7 @@ const handlers = {
         message = pad32(contextName) + contextIds.map(pad32).join('');
       }
       message = Buffer.from(message, 'binary').toString('hex');
+      // fix an issue with keccak256 using alloc on old arango
       if (!Buffer.prototype.alloc) {
         Buffer.prototype.alloc = function(size) { return new Buffer(size); }
       }
