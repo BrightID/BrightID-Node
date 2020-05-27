@@ -112,7 +112,12 @@ const handlers = {
 
     const coll = arango._collection(context.collection);
     let contextIds = db.getLastContextIds(coll, context.verification);
-    contextIds = contextIds.filter(Boolean);
+
+    // We can remove this filter when we upgrade to arango 3.6
+    if (contextIds.length == 1 && contextIds[0] === null) {
+      contextIds = []
+    }
+
     res.send({
       data: {
         contextIds: contextIds
