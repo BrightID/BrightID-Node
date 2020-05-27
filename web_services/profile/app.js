@@ -65,6 +65,4 @@ app.get("/download/:uuid", function (req, res, next) {
   });
 });
 
-app.listen(config.port, () => {
-  console.log("Listening on port: ", config.port);
-});
+module.exports = app;
