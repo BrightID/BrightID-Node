@@ -33,7 +33,7 @@ def context_balance(context_name):
     return balance
 
 
-def check_sponsor_requests(context):
+def check_sponsor_requests():
     variables = db.collection('variables')
     if variables.has('LAST_BLOCK_LOG'):
         fb = variables.get('LAST_BLOCK_LOG')['value']
@@ -103,7 +103,7 @@ def main():
         context['totalSponsorships'] = context_balance(context['_key'])
         print(context['_key'], context['totalSponsorships'])
         db.collection('contexts').update(context)
-    check_sponsor_requests(context)
+    check_sponsor_requests()
 
 
 if __name__ == '__main__':

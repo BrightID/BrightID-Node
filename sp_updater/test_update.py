@@ -123,7 +123,7 @@ class TestUpdate(unittest.TestCase):
             '_key': 'LAST_BLOCK_LOG',
             'value': lb - 1
         })
-        update.check_sponsor_requests(self.context)
+        update.check_sponsor_requests()
         self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())
 
