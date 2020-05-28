@@ -45,11 +45,11 @@ def update(nodes_graph, groups_graph):
 
 def stupid_sybil_border(graph):
     border = 0
+    reset_ranks(graph)
+    ranker = algorithms.GroupSybilRank(graph)
+    ranker.rank()
     attackers = sorted(graph.nodes, key=lambda n: n.rank, reverse=True)
     for attacker in attackers:
-        reset_ranks(graph)
-        ranker = algorithms.GroupSybilRank(graph)
-        ranker.rank()
         attacker.groups.add('stupid_sybil')
         sybil1 = Node('stupid_sybil_1', 'Sybil', set(['stupid_sybil']))
         sybil2 = Node('stupid_sybil_2', 'Sybil', set(['stupid_sybil']))
