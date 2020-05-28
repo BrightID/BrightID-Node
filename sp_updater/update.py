@@ -13,10 +13,6 @@ sp_contract = w3.eth.contract(
     address=config.SP_ADDRESS,
     abi=config.SP_ABI)
 
-brightid_contract = w3.eth.contract(
-    address=config.BRIGHTID_ADDRESS,
-    abi=config.BRIGHTID_ABI)
-
 
 def str2bytes32(s):
     assert len(s) <= 32
@@ -37,7 +33,7 @@ def context_balance(context_name):
     return balance
 
 
-def check_sponsor_requests():
+def check_sponsor_requests(context):
     variables = db.collection('variables')
     if variables.has('LAST_BLOCK_LOG'):
         fb = variables.get('LAST_BLOCK_LOG')['value']
@@ -50,51 +46,51 @@ def check_sponsor_requests():
     cb = w3.eth.getBlock('latest').number
     fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
     tb = min(cb, fb + config.CHUNK)
-    print('\nchecking events from block {} to block {}'.format(fb, tb))
-    sponsoreds = brightid_contract.events.SponsorshipRequested.createFilter(
-        fromBlock=fb, toBlock=tb, argument_filters=None
-    ).get_all_entries()
-    for sponsored in sponsoreds:
-        eth_context_name = bytes32_to_string(sponsored['args']['context'])
-        c = db.collection('contexts').find({'ethName': eth_context_name})
-        if c.empty():
-            print("context doesn't exist")
+    contexts = db.collection('contexts').all().batch()
+    for context in contexts:
+        if 'contractAddress' not in context or not context.get('idsAsHex'):
             continue
-        context = c.batch()[0]
-        if context.get('idsAsHex'):
-            context_id = '0x' + sponsored['args']['contextid'].hex()[24:]
-        else:
-            context_id = bytes32_to_string(sponsored['args']['contextid'])
+        print('\ncontext: {}'.format(context['_key']))
+        print('checking events from block {} to block {}'.format(fb, tb))
+        context_contract = w3.eth.contract(
+            address=context['contractAddress'],
+            abi=config.CONTEXT_CONTRACT_ABI)
+        sponsoreds = context_contract.events.Sponsor.createFilter(
+            fromBlock=fb, toBlock=tb, argument_filters=None
+        ).get_all_entries()
+        for sponsored in sponsoreds:
+            context_id = sponsored['args']['addr'].lower()
 
-        print('checking sponsored\tcontext_name: {0}, context_id: {1}'.format(
-            eth_context_name, context_id))
+            print('checking sponsored\tcontext_name: {0}, context_id: {1}'.format(
+                context['_key'], context_id))
 
-        c = db.collection(context['collection']).find(
-            {'contextId': context_id})
-        if c.empty():
-            print("the context id doesn't link to any user under this context")
-            continue
-        user = c.batch()[0]['user']
+            c = db.collection(context['collection']).find(
+                {'contextId': context_id})
+            if c.empty():
+                print("the context id doesn't link to any user under this context")
+                continue
+            user = c.batch()[0]['user']
 
-        c = db.collection('sponsorships').find(
-            {'_from': 'users/{0}'.format(user)})
-        if not c.empty():
-            print("the user is sponsored before")
-            continue
+            c = db.collection('sponsorships').find(
+                {'_from': 'users/{0}'.format(user)})
+            if not c.empty():
+                print("the user is sponsored before")
+                continue
 
-        tsponsorships = db.collection('contexts').get(
-            context['_key']).get('totalSponsorships')
-        usponsorships = db.collection('sponsorships').find(
-            {'_to': 'contexts/{0}'.format(context['_key'])}).count()
-        if (tsponsorships - usponsorships < 1):
-            print("the context doesn't have enough sponsorships")
-            continue
+            tsponsorships = db.collection('contexts').get(
+                context['_key']).get('totalSponsorships')
+            usponsorships = db.collection('sponsorships').find(
+                {'_to': 'contexts/{0}'.format(context['_key'])}).count()
+            if (tsponsorships - usponsorships < 1):
+                print("the context doesn't have enough sponsorships")
+                continue
 
-        # sponsor
-        db.collection('sponsorships').insert({
-            '_from': 'users/{}'.format(user),
-            '_to': 'contexts/{}'.format(context['_key'])
-        })
+            # sponsor
+            db.collection('sponsorships').insert({
+                '_from': 'users/{}'.format(user),
+                '_to': 'contexts/{}'.format(context['_key'])
+            })
+            print('Sponsored')
     variables.update({
         '_key': 'LAST_BLOCK_LOG',
         'value': tb
@@ -107,7 +103,7 @@ def main():
         context['totalSponsorships'] = context_balance(context['_key'])
         print(context['_key'], context['totalSponsorships'])
         db.collection('contexts').update(context)
-    check_sponsor_requests()
+    check_sponsor_requests(context)
 
 
 if __name__ == '__main__':

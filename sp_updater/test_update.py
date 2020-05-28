@@ -1,5 +1,4 @@
 import os
-os.environ['BN_SP_UPDATER_BRIGHTID_ADDRESS'] = '0x9A3c23329a02478AAD82383ca5DF419c6c2Ac623'
 os.environ['BN_SP_UPDATER_SP_ADDRESS'] = '0xFB32926d0A1e2082D12426B2854cb0c945AAF7c6'
 os.environ['BN_SP_UPDATER_INFURA_URL'] = 'wss://rinkeby.infura.io/ws/v3/6a6d1dfc4c414b22ae569334e21ceb76'
 
@@ -15,34 +14,39 @@ class TestUpdate(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super(TestUpdate, self).__init__(*args, **kwargs)
-        self.idsAsHex = True
+        self.IDS_AS_HEX = True
         self.GAS = 500 * 10**3
         self.GAS_PRICE = 5 * 10**9
-        self.PRIVATE_KEY = ''
+        self.CONTRACT_ADDRESS = '0xeFD4887faf909a5B0E5CA9FAA29aA4b9a0eC3046'
+        self.CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "previousOwner","type": "address"},{"indexed": true,"internalType": "address","name": "newOwner","type": "address"}],"name": "OwnershipTransferred","type": "event"},{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"},{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Verified","type": "event"},{"anonymous": false,"inputs": [{"indexed": false,"internalType": "contract IERC20","name": "verifierToken","type": "address"}],"name": "VerifierTokenSet","type": "event"},{"inputs": [{"internalType": "address","name": "","type": "address"}],"name": "history","outputs": [{"internalType": "address","name": "","type": "address"}],"stateMutability": "view","type": "function"},{"inputs": [{"internalType": "address","name": "","type": "address"}],"name": "isRevoked","outputs": [{"internalType": "bool","name": "","type": "bool"}],"stateMutability": "view","type": "function"},{"inputs": [],"name": "owner","outputs": [{"internalType": "address","name": "","type": "address"}],"stateMutability": "view","type": "function"},{"inputs": [],"name": "renounceOwnership","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "contract IERC20","name": "_verifierToken","type": "address"}],"name": "setVerifierToken","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "address","name": "newOwner","type": "address"}],"name": "transferOwnership","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "address","name": "","type": "address"}],"name": "verifications","outputs": [{"internalType": "uint256","name": "","type": "uint256"}],"stateMutability": "view","type": "function"},{"inputs": [],"name": "verifierToken","outputs": [{"internalType": "contract IERC20","name": "","type": "address"}],"stateMutability": "view","type": "function"},{"inputs": [{"internalType": "bytes32","name": "context","type": "bytes32"},{"internalType": "address[]","name": "addrs","type": "address[]"},{"internalType": "uint8","name": "v","type": "uint8"},{"internalType": "bytes32","name": "r","type": "bytes32"},{"internalType": "bytes32","name": "s","type": "bytes32"}],"name": "verify","outputs": [],"stateMutability": "nonpayable","type": "function"}]'
+        self.VERIFIER_TOKEN = '0xF6b23cD9187C991f3768410329b767E9D53e17Ce'
+        # this account should have a verification token of the deployed BrightID contract at CONTRACT_ADDRESS
+        self.PRIVATE_KEY = 'EEBED6AE74B73BE44F4706222344E1D90363F64DA2C31B58B29F7A39EB6BFB43'
         self.CONTEXT = ''.join(random.choices(string.ascii_uppercase, k=5))
-        if self.idsAsHex:
-            self.CONTEXT_ID = update.w3.eth.account.create(
-                'SIFTALFJAFJMOHSEN').address.lower()
-        else:
-            self.CONTEXT_ID = ''.join(
-                random.choices(string.ascii_uppercase, k=15))
+        self.CONTEXT_ID = update.w3.eth.account.create(
+            'SIFTALFJAFJMOHSEN').address.lower()
         self.USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
 
         self.variables = update.db.collection('variables')
         self.users = update.db.collection('users')
         self.contexts = update.db.collection('contexts')
         self.sponsorships = update.db.collection('sponsorships')
-
-    def setUp(self):
-        self.DB_LB = self.variables.get('LAST_BLOCK_LOG')['value']
-        self.contexts.insert({
+        self.contract = update.w3.eth.contract(
+            address=self.CONTRACT_ADDRESS,
+            abi=self.CONTRACT_ABI)
+        self.context = {
             '_key': self.CONTEXT,
             'ethName': self.CONTEXT,
             'collection': self.CONTEXT,
             'verification': self.CONTEXT,
+            'contractAddress': self.CONTRACT_ADDRESS,
             'totalSponsorships': 2,
-            'idsAsHex': self.idsAsHex
-        })
+            'idsAsHex': self.IDS_AS_HEX
+        }
+
+    def setUp(self):
+        self.DB_LB = self.variables.get('LAST_BLOCK_LOG')['value']
+        self.contexts.insert(self.context)
 
         self.users.insert({
             '_key': self.USER,
@@ -80,9 +84,6 @@ class TestUpdate(unittest.TestCase):
             'value': self.DB_LB
         })
 
-    def pad_left_address(self, address):
-        return '0x' + 24 * '0' + address[2:]
-
     def priv2addr(self, private_key):
         pk = keys.PrivateKey(bytes.fromhex(private_key))
         return pk.public_key.to_checksum_address()
@@ -103,30 +104,26 @@ class TestUpdate(unittest.TestCase):
         rec = update.w3.eth.waitForTransactionReceipt(tx_hash)
         return {'status': rec['status'], 'tx_hash': tx_hash}
 
-    def add_context(self, context):
-        func = update.brightid_contract.functions.addContext(context)
+    def sponsor(self, context_id):
+        func = self.contract.functions.sponsor(context_id)
         self.send_transaction(func)
 
-    def sponsor(self, context, context_id):
-        func = update.brightid_contract.functions.sponsor(context, context_id)
-        self.send_transaction(func)
-
-    def test_context_balance(self):
+    def test_sp_updater(self):
+        # test the context_balance
         self.assertNotEqual(update.context_balance('ethereum'), 0)
         self.assertEqual(update.context_balance('Siftal'), 0)
 
-    def test_sponsor_requests(self):
-        self.add_context(update.str2bytes32(self.CONTEXT))
+        # test the sponsor
         lb = update.w3.eth.getBlock('latest').number
-        self.sponsor(update.str2bytes32(
-            self.CONTEXT), self.pad_left_address(self.CONTEXT_ID) if self.idsAsHex else update.str2bytes32(self.CONTEXT_ID))
+        self.sponsor(update.w3.toChecksumAddress(self.CONTEXT_ID))
 
-        time.sleep(60)  # Waiting
+        # Waiting
+        time.sleep(60)
         self.variables.update({
             '_key': 'LAST_BLOCK_LOG',
             'value': lb - 1
         })
-        update.check_sponsor_requests()
+        update.check_sponsor_requests(self.context)
         self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())
 
