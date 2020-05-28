@@ -20,7 +20,7 @@
     "express": "^4.17.1",
     "jquery": "^3.5.0",
     "node-cache": "^4.2.0",
-    "uuid": "^3.3.2"
+    "uuid": "^3.4.0"
   },
   "devDependencies": {
     "jest": "^26.0.1",
