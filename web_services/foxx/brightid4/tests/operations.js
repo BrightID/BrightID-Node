@@ -75,7 +75,12 @@ function apply(op) {
 
 describe('operations', function(){
   before(function () {
-    contextIdsColl = arango._create(contextName);
+    contextIdsColl = arango._collection(contextName);
+    if(contextIdsColl){
+      contextIdsColl.truncate();
+    } else {
+      contextIdsColl = arango._create(contextName);
+    }
     operationsHashesColl.truncate();
     usersColl.truncate();
     connectionsColl.truncate();
