@@ -2,7 +2,7 @@
   "main": "index.js",
   "name": "brightid",
   "description": "Allows BrightID clients (typically mobile) to update the social graph.",
-  "version": "1.0.0",
+  "version": "4.3.0",
   "tests": [
     "tests/*.js"
   ],
@@ -11,23 +11,18 @@
       "description": "IPv4 address of the server hosting this service",
       "type": "string"
     },
-    "groupCheckInterval": {
-      "description": "How often (in milliseconds) a user is allowed to check for eligible groups",
-      "type": "integer",
-      "default": 0
-    },
     "publicKey": {
-      "description": "Public key of this server node",
+      "description": "Public key of this server node (base64 encoded)",
       "type": "string",
       "required": false
     },
     "privateKey": {
-      "description": "Private key of this server node; used for signing verifications",
+      "description": "Private key of this server node; used for signing verifications (base64 encoded)",
       "type": "string",
       "required": false
     },
     "ethPrivateKey": {
-      "description": "Ethereum private key of this server node; used for signing verifications",
+      "description": "Ethereum private key of this server node; used for signing verifications (hex representation without 0x)",
       "type": "string",
       "required": false
     }
