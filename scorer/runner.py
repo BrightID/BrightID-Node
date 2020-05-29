@@ -44,28 +44,31 @@ def update(nodes_graph, groups_graph):
 
 
 def stupid_sybil_border(graph):
+    border = 0
     reset_ranks(graph)
-    ranker = algorithms.SybilGroupRank(graph)
+    ranker = algorithms.GroupSybilRank(graph)
     ranker.rank()
-    attacker = max(graph.nodes, key=lambda node: node.rank)
-    attacker.groups.add('stupid_sybil')
-    sybil1 = graphs.node.Node('stupid_sybil_1', 'Sybil', set(['stupid_sybil']))
-    sybil2 = graphs.node.Node('stupid_sybil_2', 'Sybil', set(['stupid_sybil']))
-    graph.add_edge(attacker, sybil1)
-    graph.add_edge(attacker, sybil2)
-    reset_ranks(graph)
-    ranker = algorithms.SybilGroupRank(graph)
-    ranker.rank()
-    border = max(sybil1.raw_rank, sybil2.raw_rank)
-    graph.remove_nodes_from([sybil1, sybil2])
-    attacker.groups.remove('stupid_sybil')
-    reset_ranks(graph)
-    return border
+    attackers = sorted(graph.nodes, key=lambda n: n.rank, reverse=True)
+    for attacker in attackers:
+        attacker.groups.add('stupid_sybil')
+        sybil1 = Node('stupid_sybil_1', 'Sybil', set(['stupid_sybil']))
+        sybil2 = Node('stupid_sybil_2', 'Sybil', set(['stupid_sybil']))
+        graph.add_edge(attacker, sybil1)
+        graph.add_edge(attacker, sybil2)
+        reset_ranks(graph)
+        ranker = algorithms.GroupSybilRank(graph)
+        ranker.rank()
+        border = max(sybil1.raw_rank, sybil2.raw_rank)
+        graph.remove_nodes_from([sybil1, sybil2])
+        attacker.groups.remove('stupid_sybil')
+        reset_ranks(graph)
+        print('attacker: {}\t border: {}'.format(attacker, border))
+        if border:
+            return border
 
 
 def process(fname):
-    with open(fname) as f:
-        json_graph = from_dump(f)
+    json_graph = from_dump(fname)
     graph = from_json(json_graph)
     border = stupid_sybil_border(graph)
     raw_ranks = [node.raw_rank for node in graph.nodes]
@@ -74,7 +77,7 @@ max: {}
 min: {}
 avg: {}'''.format(border, max(raw_ranks), min(raw_ranks), sum(raw_ranks) / len(raw_ranks)))
     reset_ranks(graph)
-    ranker = algorithms.SybilGroupRank(graph, {
+    ranker = algorithms.GroupSybilRank(graph, {
         'stupid_sybil_border': border
     })
     ranker.rank()
