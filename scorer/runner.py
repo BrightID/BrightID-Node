@@ -62,6 +62,7 @@ def stupid_sybil_border(graph):
         graph.remove_nodes_from([sybil1, sybil2])
         attacker.groups.remove('stupid_sybil')
         reset_ranks(graph)
+        print('attacker: {}\t border: {}'.format(attacker, border))
         if border:
             return border
 
