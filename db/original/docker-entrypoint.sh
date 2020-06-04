@@ -1,15 +1,6 @@
 #!/bin/sh
 set -e
 
-if [ "$INIT_BRIGHTID_DB" == "1" ]; then
-    wget https://storage.googleapis.com/brightid-backups/brightid.tar.gz
-    tar xvzf brightid.tar.gz
-    rm brightid.tar.gz
-    mkdir -p /docker-entrypoint-initdb.d/dumps/_system/
-    cp dump/* /docker-entrypoint-initdb.d/dumps/_system/
-    rm dump -r
-fi
-
 if [ -z "$ARANGO_INIT_PORT" ] ; then
     ARANGO_INIT_PORT=8999
 fi
@@ -66,14 +57,14 @@ if [ "$1" = 'arangod' ]; then
     else
         echo "automatically choosing storage engine"
     fi
-    if [ "$INIT_BRIGHTID_DB" == "1" ] || ([ ! -f /var/lib/arangodb3/SERVER ] && [ "$SKIP_DATABASE_INIT" != "1" ]); then
+    if [ ! -f /var/lib/arangodb3/SERVER ] && [ "$SKIP_DATABASE_INIT" != "1" ]; then
         if [ ! -z "$ARANGO_ROOT_PASSWORD_FILE" ]; then
             if [ -f "$ARANGO_ROOT_PASSWORD_FILE" ]; then
                 ARANGO_ROOT_PASSWORD="$(cat $ARANGO_ROOT_PASSWORD_FILE)"
             else
                 echo "WARNING: password file '$ARANGO_ROOT_PASSWORD_FILE' does not exist"
             fi
-        fi
+	fi
         # Please note that the +x in the following line is for the case
         # that ARANGO_ROOT_PASSWORD is set but to an empty value, please
         # do not remove!
@@ -107,8 +98,8 @@ if [ "$1" = 'arangod' ]; then
         $NUMACTL arangod --config /tmp/arangod.conf \
                 --server.endpoint tcp://127.0.0.1:$ARANGO_INIT_PORT \
                 --server.authentication false \
-        --log.file /tmp/init-log \
-        --log.foreground-tty false &
+		--log.file /tmp/init-log \
+		--log.foreground-tty false &
         pid="$!"
 
         counter=0
@@ -189,7 +180,7 @@ if [ "$1" = 'arangod' ]; then
     shift
 
     if [ ! -z "$ARANGO_NO_AUTH" ]; then
-        AUTHENTICATION="false"
+	    AUTHENTICATION="false"
     fi
 
     set -- arangod "$@" --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf

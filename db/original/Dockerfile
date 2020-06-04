@@ -2,7 +2,6 @@ FROM alpine:3.10
 MAINTAINER Frank Celler <info@arangodb.com>
 
 ENV ARANGO_VERSION 3.6.4
-ENV ARANGO_NO_AUTH true
 ENV ARANGO_URL https://download.arangodb.com/arangodb36/DEBIAN/amd64
 ENV ARANGO_PACKAGE arangodb3_${ARANGO_VERSION}-1_amd64.deb
 ENV ARANGO_PACKAGE_URL ${ARANGO_URL}/${ARANGO_PACKAGE}
@@ -36,11 +35,11 @@ RUN apk add --no-cache gnupg pwgen nodejs npm binutils numactl numactl-tools && 
 # Note that Openshift runs containers by default with a random UID and GID 0.
 # We need that the database and apps directory are writable for this config.
 
+# retain the database directory and the Foxx Application directory
+VOLUME ["/var/lib/arangodb3", "/var/lib/arangodb3-apps"]
+
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY docker-foxx.sh /usr/bin/foxx
-
-RUN ["chmod", "+x", "/entrypoint.sh"]
-RUN ["chmod", "+x", "/usr/bin/foxx"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 
