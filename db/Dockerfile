@@ -1,3 +1,4 @@
+# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.6.4/Dockerfile
 FROM alpine:3.10
 MAINTAINER Frank Celler <info@arangodb.com>
 

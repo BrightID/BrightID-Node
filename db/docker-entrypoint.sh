@@ -1,4 +1,5 @@
 #!/bin/sh
+# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.6.4/docker-entrypoint.sh
 set -e
 
 if [ "$INIT_BRIGHTID_DB" == "1" ]; then
