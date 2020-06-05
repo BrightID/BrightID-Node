@@ -9,6 +9,7 @@ const nacl = require('tweetnacl');
 const db = require('./db');
 const schemas = require('./schemas').schemas;
 const operations = require('./operations');
+const initdb = require('./initdb').initdb;
 const {
   strToUint8Array,
   b64ToUint8Array,
@@ -18,6 +19,7 @@ const {
   addressToBytes32
 } = require('./encoding');
 
+initdb();
 const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
