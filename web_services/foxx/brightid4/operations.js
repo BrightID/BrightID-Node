@@ -34,24 +34,6 @@ const verifyContextSig = function(message, context, sig) {
   }
 }
 
-const operationsData = {
-  'Add Connection': {'attrs': ['id1', 'id2', 'sig1', 'sig2']},
-  'Remove Connection': {'attrs': ['id1', 'id2', 'reason', 'sig1']},
-  'Add Group': {'attrs': ['group', 'id1', 'id2', 'inviteData2', 'id3', 'inviteData3', 'url', 'type', 'sig1']},
-  'Remove Group': {'attrs': ['id', 'group', 'sig']},
-  'Add Membership': {'attrs': ['id', 'group', 'sig']},
-  'Remove Membership': {'attrs': ['id', 'group', 'sig']},
-  'Set Trusted Connections': {'attrs': ['id', 'trusted', 'sig']},
-  'Set Signing Key': {'attrs': ['id', 'signingKey', 'id1', 'id2', 'sig1', 'sig2']},
-  'Sponsor': {'attrs': ['id', 'contextId', 'context', 'sig']},
-  'Link ContextId': {'attrs': ['id', 'contextId', 'context', 'sig']},
-  'Invite': {'attrs': ['inviter', 'invitee', 'group', 'data', 'sig']},
-  'Dismiss': {'attrs': ['dismisser', 'dismissee', 'group', 'sig']},
-  'Add Admin': {'attrs': ['id', 'admin', 'group', 'sig']},
-};
-
-const defaultOperationKeys = ['name', 'timestamp', '_key', 'state', 'v'];
-
 function verify(op) {
   if (op.v != 4) {
     throw 'invalid operation version';
@@ -110,11 +92,6 @@ function verify(op) {
   }
   if (hash(message) != op._key) {
     throw 'invalid hash';
-  }
-  for (let k of Object.keys(op)) {
-    if (defaultOperationKeys.indexOf(k)<0 && operationsData[op.name].attrs.indexOf(k)<0) {
-      throw k + ' is not a valid attribute';
-    }
   }
 }
 
