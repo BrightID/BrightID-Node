@@ -34,6 +34,47 @@ const verifyContextSig = function(message, context, sig) {
   }
 }
 
+const senderAttrs = {
+  'Add Connection': ['id1', 'id2'],
+  'Remove Connection': ['id1'],
+  'Add Group': ['id1'],
+  'Remove Group': ['id'],
+  'Add Membership': ['id'],
+  'Remove Membership': ['id'],
+  'Set Trusted Connections': ['id'],
+  'Set Signing Key': ['id'],
+  'Sponsor': ['context'],
+  'Link ContextId': ['id'],
+  'Invite': ['inviter'],
+  'Dismiss': ['dismisser'],
+  'Add Admin': ['id'],
+};
+let operationsCount = {};
+let resetTime = 0;
+function checkLimits(op, timeWindow, limit) {
+  if (Date.now() > resetTime) {
+    operationsCount = {};
+    resetTime =  Date.now() + timeWindow;
+  }
+  const senders = senderAttrs[op.name].map(attr => op[attr]);
+  const usersColl = arango._collection('users');
+  for (let sender of senders) {
+    const verified = usersColl.exists(sender) &&
+                     usersColl.document(sender).verifications;
+    if (! verified) {
+      sender = 'unverified';
+    }
+    if (! operationsCount[sender]) {
+      operationsCount[sender] = 0;
+    }
+    operationsCount[sender] += 1;
+    if (operationsCount[sender] <= limit) {
+      return;
+    }
+  }
+  throw 'Too Many Requests';
+}
+
 function verify(op) {
   if (op.v != 4) {
     throw 'invalid operation version';
@@ -171,5 +212,6 @@ module.exports = {
   encrypt,
   decrypt,
   verifyUserSig,
-  updateSponsorOp
+  updateSponsorOp,
+  checkLimits
 };

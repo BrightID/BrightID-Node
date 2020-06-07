@@ -25,7 +25,6 @@ module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
-
 // error numbers
 const CONTEXT_NOT_FOUND = 1;
 const CONTEXTID_NOT_FOUND = 2;
@@ -49,6 +48,10 @@ const handlers = {
     }
     try {
       operations.verify(op);
+      // allow 60 operations in 15 minutes window by default
+      const timeWindow = module.context.configuration.operationsTimeWindow || 15 * 60 * 1000;
+      const limit = module.context.configuration.operationsLimit || 60;
+      operations.checkLimits(op, timeWindow, limit);
       if (op.name == 'Link ContextId') {
         operations.encrypt(op);
       }
@@ -58,7 +61,8 @@ const handlers = {
       op.state = 'init';
       db.upsertOperation(op);
     } catch (e) {
-      res.throw(400, e);
+      const code = (e == 'Too Many Requests') ? 429 : 400;
+      res.throw(code, e);
     }
   },
 
