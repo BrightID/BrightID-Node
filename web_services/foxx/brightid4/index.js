@@ -49,7 +49,7 @@ const handlers = {
     try {
       operations.verify(op);
       // allow 60 operations in 15 minutes window by default
-      const timeWindow = module.context.configuration.operationsTimeWindow || 15 * 60 * 1000;
+      const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
       const limit = module.context.configuration.operationsLimit || 60;
       operations.checkLimits(op, timeWindow, limit);
       if (op.name == 'Link ContextId') {
