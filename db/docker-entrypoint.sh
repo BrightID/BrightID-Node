@@ -3,7 +3,7 @@
 set -e
 
 if [ "$INIT_BRIGHTID_DB" == "1" ]; then
-    wget https://storage.googleapis.com/brightid-backups/brightid.tar.gz
+    wget https://explorer.brightid.org/backups/brightid.tar.gz
     tar xvzf brightid.tar.gz
     rm brightid.tar.gz
     mkdir -p /docker-entrypoint-initdb.d/dumps/_system/
