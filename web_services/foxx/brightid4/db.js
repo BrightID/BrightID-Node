@@ -504,7 +504,7 @@ function userHasVerification(verification, user){
 }
 
 function linkContextId(id, context, contextId, timestamp){
-  const { collection, idsAsHex } = getContext(context);
+  const { collection, idsAsHex, verification } = getContext(context);
   const coll = db._collection(collection);
   if (idsAsHex) {
     contextId = contextId.toLowerCase();
@@ -512,6 +512,18 @@ function linkContextId(id, context, contextId, timestamp){
 
   if (getUserByContextId(coll, contextId)) {
     throw 'contextId is duplicate';
+  }
+
+  if (!userHasVerification(verification, id)) {
+    throw 'user is not verified for this context';
+  }
+
+  const links = coll.byExample({user: id}).toArray();
+  const recentLinks = links.filter(
+    link => timestamp - link.timestamp < 3*24*3600*1000
+  );
+  if (recentLinks.length > 0) {
+    throw 'one contextId can be linked each 3 days';
   }
 
   query`

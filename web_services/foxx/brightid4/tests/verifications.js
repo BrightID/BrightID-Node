@@ -38,6 +38,12 @@ describe('verifications', function () {
     `;
     query`
       INSERT {
+        _key: "1",
+        verifications: []
+      } IN ${usersColl}
+    `;
+    query`
+      INSERT {
         _key: "2",
         verifications: ["testVerification"]
       } IN ${usersColl}
@@ -61,26 +67,35 @@ describe('verifications', function () {
     contextsColl.truncate();
     sponsorshipsColl.truncate();
   });
-  it('should be able to map only a single contextId to each user', function() {
-    db.linkContextId('1', 'testContext', 'used', 5);
-    db.linkContextId('2', 'testContext', 'old', 15);
-    db.linkContextId('2', 'testContext', 'new', 25);
-  });
-  context('linkContextId()', function(){
-    it('should throw "contextId is duplicate" for not duplicate contextId', function(){
+  context('linkContextId()', function() {
+    it('should not be able to link contextId to not verified user', function() {
       (() => {
-        db.linkContextId('3', 'testContext', 'used', 30);
+        db.linkContextId('1', 'testContext', 'used', 5);
+      }).should.throw('user is not verified for this context');
+    });
+    it('should throw "contextId is duplicate" for used contextId', function(){
+      db.linkContextId('2', 'testContext', 'used', 5);
+      (() => {
+        db.linkContextId('3', 'testContext', 'used', 10);
       }).should.throw('contextId is duplicate');
     });
     it('should return add link if contextId and timestamp are OK', function(){
-      db.linkContextId('3', 'testContext', 'testContextId', 30);
+      db.linkContextId('3', 'testContext', 'testContextId', 10);
       db.getUserByContextId(contextIdsColl, 'testContextId').should.equal('3');
     });
+    it('should not be able to link new contextId before 3 days', function(){
+      (() => {
+        db.linkContextId('3', 'testContext', 'testContextId2', 15);
+      }).should.throw('one contextId can be linked each 3 days');
+    });
+    it('should be able to link new contextId after 3 days', function(){
+      db.linkContextId('3', 'testContext', 'testContextId2', 3*24*3600*1000 + 15);
+    });
   });
-  it('should be able to sponsor a user if context has unused sponsorships and user did not sponsor before', function() {
-    db.sponsor('2', 'testContext');
-  });
-  context('sponsor()', function(){
+  context('sponsor()', function() {
+    it('should be able to sponsor a user if context has unused sponsorships and user did not sponsor before', function() {
+      db.sponsor('2', 'testContext');
+    });
     it('should throw "context does not have unused sponsorships" if context has no unused sponsorship', function(){
       (() => {
         db.sponsor('4', 'testContext');
