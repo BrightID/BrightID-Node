@@ -21,7 +21,7 @@ const deprecated = [
 ];
 
 function createCollections() {
-  console.log("creating collections if they not exists ...");
+  console.log("creating collections if they don't exist ...");
   for (let collection in collections) {
     const coll = db._collection(collection);
     if (coll) {
