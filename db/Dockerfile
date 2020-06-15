@@ -27,7 +27,6 @@ RUN apk add --no-cache gnupg pwgen nodejs npm binutils numactl numactl-tools && 
     ar x ${ARANGO_PACKAGE} data.tar.gz     && \
     tar -C / -x -z -f data.tar.gz          && \
     sed -ri \
-        -e 's!127\.0\.0\.1!0.0.0.0!g' \
         -e 's!^(file\s*=\s*).*!\1 -!' \
         -e 's!^\s*uid\s*=.*!!' \
         /etc/arangodb3/arangod.conf        && \
