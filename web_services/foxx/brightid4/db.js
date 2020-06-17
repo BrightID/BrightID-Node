@@ -258,9 +258,6 @@ function dismiss(dismisser, dismissee, groupId, timestamp){
   if (! group.admins || ! group.admins.includes(dismisser)) {
     throw 'dismisser is not admin of group';
   }
-  if (group.admins.includes(dismissee)) {
-    throw 'admins can not be dismissed from group';
-  }
   if (! groupMembers(groupId).includes(dismissee)) {
     throw 'dismissee is not member of group';
   }
