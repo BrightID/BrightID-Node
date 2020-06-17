@@ -445,15 +445,18 @@ function deleteMembership(groupId, key, timestamp){
   if (! groupsColl.exists(groupId)) {
     throw 'group not found';
   }
+  const group = groupsColl.document(groupId);
+  if (group.admins && group.admins.includes(key)) {
+    const admins = group.admins.filter(admin => key != admin);
+    if (admins.length == 0) {
+      throw 'last admin can not leave the group';
+    }
+    groupsColl.update(group, { admins });
+  }
   usersInGroupsColl.removeByExample({
     _from: "users/" + key,
     _to: "groups/" + groupId,
   });
-  const group = groupsColl.document(groupId);
-  if (group.admins && group.admins.includes(key)) {
-    const admins = group.admins.filter(admin => key != admin);
-    groupsColl.update(group, { admins });
-  }
 }
 
 function getContext(context){
