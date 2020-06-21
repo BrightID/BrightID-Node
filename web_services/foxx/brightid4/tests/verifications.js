@@ -38,12 +38,6 @@ describe('verifications', function () {
     `;
     query`
       INSERT {
-        _key: "1",
-        verifications: []
-      } IN ${usersColl}
-    `;
-    query`
-      INSERT {
         _key: "2",
         verifications: ["testVerification"]
       } IN ${usersColl}
@@ -68,11 +62,6 @@ describe('verifications', function () {
     sponsorshipsColl.truncate();
   });
   context('linkContextId()', function() {
-    it('should not be able to link contextId to not verified user', function() {
-      (() => {
-        db.linkContextId('1', 'testContext', 'used', 5);
-      }).should.throw('user is not verified for this context');
-    });
     it('should throw "contextId is duplicate" for used contextId', function(){
       db.linkContextId('2', 'testContext', 'used', 5);
       (() => {

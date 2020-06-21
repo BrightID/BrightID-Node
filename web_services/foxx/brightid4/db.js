@@ -522,10 +522,6 @@ function linkContextId(id, context, contextId, timestamp){
     throw 'contextId is duplicate';
   }
 
-  if (!userHasVerification(verification, id)) {
-    throw 'user is not verified for this context';
-  }
-
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 8*3600*1000
