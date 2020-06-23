@@ -47,7 +47,7 @@ function addConnection(key1, key2, timestamp){
     createUser(key2, timestamp);
   }
 
-  // set the first verified user that make connection with a user as its parent
+  // set the first verified user that makes a connection with a user as its parent
   if (!u1.parent && u2.verifications && u2.verifications.includes('BrightID')) {
     usersColl.update(u1, { parent: key2 });
   }
