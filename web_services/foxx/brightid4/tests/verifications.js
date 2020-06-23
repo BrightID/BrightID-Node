@@ -72,13 +72,15 @@ describe('verifications', function () {
       db.linkContextId('3', 'testContext', 'testContextId', 10);
       db.getUserByContextId(contextIdsColl, 'testContextId').should.equal('3');
     });
-    it('should not be able to link new contextId before 8 hours', function(){
+    it('should not be able to link more than 3 contextIds in a single day', function(){
+      db.linkContextId('3', 'testContext', 'testContextId2', 15);
+      db.linkContextId('3', 'testContext', 'testContextId3', 20);
       (() => {
-        db.linkContextId('3', 'testContext', 'testContextId2', 15);
-      }).should.throw('one contextId can be linked each 8 hours');
+        db.linkContextId('3', 'testContext', 'testContextId4', 25);
+      }).should.throw('only three contextIds can be linked every 24 hours');
     });
-    it('should be able to link new contextId after 8 hours', function(){
-      db.linkContextId('3', 'testContext', 'testContextId2', 8*3600*1000 + 15);
+    it('should be able to link new contextId after 24 hours', function(){
+      db.linkContextId('3', 'testContext', 'testContextId4', 24*3600*1000 + 25);
     });
   });
   context('sponsor()', function() {
