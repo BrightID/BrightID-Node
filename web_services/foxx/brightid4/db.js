@@ -38,13 +38,13 @@ function getConnection(key1, key2) {
 function addConnection(key1, key2, timestamp){
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
-  const u1 = loadUser(key1);
-  const u2 = loadUser(key2);
+  let u1 = loadUser(key1);
+  let u2 = loadUser(key2);
   if (!u1) {
-    createUser(key1, timestamp);
+    u1 = createUser(key1, timestamp);
   }
   if (!u2) {
-    createUser(key2, timestamp);
+    u2 = createUser(key2, timestamp);
   }
 
   // set the first verified user that makes a connection with a user as its parent
@@ -293,12 +293,14 @@ function createUser(key, timestamp){
   const user = loadUser(key);
 
   if (!user) {
-    usersColl.save({
+    return usersColl.save({
       score: 0,
       signingKey: urlSafeB64ToB64(key),
       createdAt: timestamp,
       _key: key
     });
+  } else {
+    return user;
   }
 }
 
