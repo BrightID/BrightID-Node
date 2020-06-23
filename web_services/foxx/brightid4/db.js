@@ -266,14 +266,7 @@ function dismiss(dismisser, dismissee, groupId, timestamp){
   if (! group.admins || ! group.admins.includes(dismisser)) {
     throw 'dismisser is not admin of group';
   }
-  if (! groupMembers(groupId).includes(dismissee)) {
-    throw 'dismissee is not member of group';
-  }
-
-  usersInGroupsColl.removeByExample({
-    _from: 'users/' + dismissee,
-    _to: 'groups/' + groupId,
-  });
+  deleteMembership(groupId, dismissee, timestamp);
 }
 
 function loadUser(id){
