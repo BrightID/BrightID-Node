@@ -512,7 +512,7 @@ function userHasVerification(verification, user){
 }
 
 function linkContextId(id, context, contextId, timestamp){
-  const { collection, idsAsHex, verification } = getContext(context);
+  const { collection, idsAsHex } = getContext(context);
   const coll = db._collection(collection);
   if (idsAsHex) {
     contextId = contextId.toLowerCase();
