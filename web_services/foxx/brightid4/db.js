@@ -524,10 +524,10 @@ function linkContextId(id, context, contextId, timestamp){
 
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
-    link => timestamp - link.timestamp < 8*3600*1000
+    link => timestamp - link.timestamp < 24*3600*1000
   );
-  if (recentLinks.length > 0) {
-    throw 'one contextId can be linked each 8 hours';
+  if (recentLinks.length >=3) {
+    throw 'only three contextIds can be linked every 24 hours';
   }
 
   query`
