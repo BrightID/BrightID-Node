@@ -200,11 +200,6 @@ describe('groups', function () {
       db.dismiss('b', 'd', 'g3', Date.now());
       db.groupMembers('g3').should.not.include('d');
     });
-    it('admins should not be able to dismiss each other from the group', function (){
-      (() => {
-        db.dismiss('b', 'c', 'g3', Date.now());
-      }).should.throw('admins can not be dismissed from group');
-    });
   });
 
   describe('adding new admins', function() {

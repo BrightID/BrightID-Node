@@ -2,7 +2,7 @@
   "main": "index.js",
   "name": "brightid",
   "description": "Allows BrightID clients (typically mobile) to update the social graph.",
-  "version": "4.3.0",
+  "version": "4.4.0",
   "tests": [
     "tests/*.js"
   ],
@@ -24,6 +24,16 @@
     "ethPrivateKey": {
       "description": "Ethereum private key of this server node; used for signing verifications (hex representation without 0x)",
       "type": "string",
+      "required": false
+    },
+    "operationsTimeWindow": {
+      "description": "The time in seconds after which the limits for sending operations will reset",
+      "type": "int",
+      "required": false
+    },
+    "operationsLimit": {
+      "description": "Maximum number of operations each verified user can send in configured time window",
+      "type": "int",
       "required": false
     }
   }
