@@ -39,10 +39,9 @@ const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
 
 const handlers = {
-  operationsPut: function(req, res){
+  operationsPost: function(req, res){
     const op = req.body;
-    const hash = req.param('hash');
-    op._key = hash;
+    op._key = hash(operations.getMessage(op));
     if (operationsHashesColl.exists(op._key)) {
       res.throw(400, 'operation is applied before');
     }
@@ -64,6 +63,12 @@ const handlers = {
       const code = (e == 'Too Many Requests') ? 429 : 400;
       res.throw(code, e);
     }
+    res.send({
+      data: {
+        _key: op._key
+      }
+    });
+
   },
 
   operationGet: function operationGetHandler(req, res){
@@ -270,12 +275,11 @@ const handlers = {
   }
 };
 
-router.put('/operations/:hash', handlers.operationsPut)
-  .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
+router.post('/operations', handlers.operationsPost)
   .body(schemas.operation)
   .summary('Add an operation to be applied after consensus')
   .description('Add an operation be applied after consensus.')
-  .response(null)
+  .response(schemas.operationPostResponse)
   .error(400, 'Failed to add the operation');
 
 router.get('/users/:id', handlers.userGet)

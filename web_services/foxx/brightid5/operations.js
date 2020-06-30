@@ -1,3 +1,4 @@
+const stringify = require('fast-json-stable-stringify');
 const db = require('./db');
 const arango = require('@arangodb').db;
 var CryptoJS = require("crypto-js");
@@ -92,61 +93,35 @@ function checkLimits(op, timeWindow, limit) {
 }
 
 function verify(op) {
-  if (op.v != 4) {
+  if (op.v != 5) {
     throw 'invalid operation version';
   }
   if (op.timestamp > Date.now() + TIME_FUDGE) {
     throw "timestamp can't be in the future";
   }
-  let message, validAttributes;
-  if (op['name'] == 'Add Connection') {
-    message = op.name + op.id1 + op.id2 + op.timestamp;
-    verifyUserSig(message, op.id1, op.sig1);
-    verifyUserSig(message, op.id2, op.sig2);
-  } else if (op['name'] == 'Remove Connection') {
-    message = op.name + op.id1 + op.id2 + op.reason + op.timestamp;
-    verifyUserSig(message, op.id1, op.sig1);
-  } else if (op['name'] == 'Add Group') {
-    message = op.name + op.group + op.id1 + op.id2 + op.inviteData2 + op.id3 + op.inviteData3 + op.url + op.type + op.timestamp;
-    verifyUserSig(message, op.id1, op.sig1);
-  } else if (op['name'] == 'Remove Group') {
-    message = op.name + op.id + op.group + op.timestamp;
-    verifyUserSig(message, op.id, op.sig);
-  } else if (op['name'] == 'Add Membership') {
-    message = op.name + op.id + op.group + op.timestamp;
-    verifyUserSig(message, op.id, op.sig);
-  } else if (op['name'] == 'Remove Membership') {
-    message = op.name + op.id + op.group + op.timestamp;
-    verifyUserSig(message, op.id, op.sig);
-  } else if (op['name'] == 'Set Trusted Connections') {
-    message = op.name + op.id + op.trusted.join(',') + op.timestamp;
-    verifyUserSig(message, op.id, op.sig);
-  } else if (op['name'] == 'Set Signing Key') {
-    message = op.name + op.id + op.signingKey + op.timestamp;
-    verifyUserSig(message, op.id1, op.sig1);
-    verifyUserSig(message, op.id2, op.sig2);
-  } else if (op['name'] == 'Sponsor') {
-    if (op.id) {
-      message = 'Sponsor' + ',' + op.context + ',' + op.id;
-    } else {
-      message = 'Sponsor' + ',' + op.context + ',' + op.contextId;
-    }
-    verifyContextSig(message, op.context, op.sig);
-  } else if (op['name'] == 'Link ContextId') {
-    message = op.name + ',' + op.context + ',' + op.contextId + ',' + op.timestamp;
-    verifyUserSig(message, op.id, op.sig);
-  } else if (op['name'] == 'Invite') {
-    message = op.name + op.inviter + op.invitee + op.group + op.data + op.timestamp;
-    verifyUserSig(message, op.inviter, op.sig);
-  } else if (op['name'] == 'Dismiss') {
-    message = op.name + op.dismisser + op.dismissee + op.group + op.timestamp;
-    verifyUserSig(message, op.dismisser, op.sig);
-  } else if (op['name'] == 'Add Admin') {
-    message = op.name + op.id + op.admin + op.group + op.timestamp;
-    verifyUserSig(message, op.id, op.sig);
-  } else {
-    throw "invalid operation";
+  const requiredSigs = {
+    'Add Connection': [['id1', 'sig1'], ['id2', 'sig2']],
+    'Remove Connection': [['id1', 'sig1']],
+    'Add Group': [['id1', 'sig1']],
+    'Remove Group': [['id', 'sig']],
+    'Add Membership': [['id', 'sig']],
+    'Remove Membership': [['id', 'sig']],
+    'Set Trusted Connections': [['id', 'sig']],
+    'Set Signing Key': [['id1', 'sig1'], ['id2', 'sig2']],
+    'Sponsor': [['context', 'sig']],
+    'Link ContextId': [['id', 'sig']],
+    'Invite': [['inviter', 'sig']],
+    'Dismiss': [['dismisser', 'sig']],
+    'Add Admin': [['id', 'sig']],
   }
+  let message = getMessage(op);
+  requiredSigs[op.name].forEach(attrs => {
+    if (op.name != 'Sponsor') {
+      verifyUserSig(message, op[attrs[0]], op[attrs[1]]);
+    } else {
+      verifyContextSig(message, op[attrs[0]], op[attrs[1]]);
+    }
+  })
   if (hash(message) != op._key) {
     throw 'invalid hash';
   }
@@ -187,10 +162,20 @@ function apply(op) {
 
 function encrypt(op) {
   const { linkAESKey } = db.getContext(op.context);
-  const jsonStr = JSON.stringify({ 'id': op.id, 'contextId': op.contextId });
+  const jsonStr = stringify({ 'id': op.id, 'contextId': op.contextId });
   op.encrypted = CryptoJS.AES.encrypt(jsonStr, linkAESKey).toString();
   delete op.id;
   delete op.contextId;
+}
+
+function getMessage(op) {
+  const signedOp = {};
+  for (let k in op) {
+    if (!['sig', 'sig1', 'sig2', '_key'].includes(k)) {
+      signedOp[k] = op[k];
+    }
+  }
+  return stringify(signedOp);
 }
 
 function updateSponsorOp(op) {
@@ -206,10 +191,10 @@ function updateSponsorOp(op) {
     throw 'unlinked context id';
   }
 
-  let message = 'Sponsor' + ',' + op.context + ',' + op.id;
+  delete op.contextId;
+  let message = getMessage(op);
   op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
   op._key = hash(message);
-  delete op.contextId;
 }
 
 function decrypt(op) {
@@ -229,5 +214,6 @@ module.exports = {
   decrypt,
   verifyUserSig,
   updateSponsorOp,
-  checkLimits
+  checkLimits,
+  getMessage
 };

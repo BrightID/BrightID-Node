@@ -1,5 +1,6 @@
 "use strict";
 
+const stringify = require('fast-json-stable-stringify');
 const arango = require('@arangodb').db;
 const request = require("@arangodb/request");
 const nacl = require('tweetnacl');
@@ -17,7 +18,7 @@ const {
 const db = require('../db.js');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid4', '/apply4');
+const applyBaseUrl = baseUrl.replace('/brightid5', '/apply5');
 
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
@@ -35,6 +36,16 @@ const u3 = nacl.sign.keyPair();
   u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
   u.id = b64ToUrlSafeB64(u.signingKey);
 });
+
+function getMessage(op) {
+  const signedOp = {};
+  for (let k in op) {
+    if (!['sig', 'sig1', 'sig2', '_key'].includes(k)) {
+      signedOp[k] = op[k];
+    }
+  }
+  return stringify(signedOp);
+}
 
 describe('replay attack on operations', function () {
   before(function(){
@@ -57,30 +68,28 @@ describe('replay attack on operations', function () {
 
   it('should not be able to add an operation twice', function () {
     const timestamp = Date.now();
-    const message = 'Add Connection' + u1.id + u2.id + timestamp;
-    const sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
-    const sig2 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
     
     let op = {
-      _key: hash(message),
       name: 'Add Connection',
       id1: u1.id,
       id2: u2.id,
       timestamp,
-      sig1,
-      sig2,
-      v: 4
+      v: 5
     }
-
-    const resp1 = request.put(`${baseUrl}/operations/${op._key}`, {
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    op.sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    op._key = hash(message);
+    const resp1 = request.post(`${baseUrl}/operations`, {
       body: op,
       json: true
     });
-    resp1.status.should.equal(204);
+    resp1.status.should.equal(200);
+    resp1.json.data._key.should.equal(op._key);
 
     op = operationsColl.document(op._key);
     delete op._rev;
@@ -93,7 +102,7 @@ describe('replay attack on operations', function () {
     resp2.json.success.should.equal(true);
     resp2.json.state.should.equal('applied');
 
-    const resp3 = request.put(`${baseUrl}/operations/${op._key}`, {
+    const resp3 = request.post(`${baseUrl}/operations`, {
       body: op,
       json: true
     });
