@@ -5,6 +5,7 @@ const collections = {
   'usersInGroups': 'edge',
   'users': 'document',
   'contexts': 'document',
+  'apps': 'document',
   'sponsorships': 'edge',
   'operations': 'document',
   'operationsHashes': 'document',
@@ -48,9 +49,57 @@ function removeDeprecatedCollections() {
   }
 }
 
+function v5() {
+  const contextsColl = db._collection('contexts');
+  const appsColl = db._collection('apps');
+  const contexts = contextsColl.all().toArray();
+  for (let context of contexts) {
+    appsColl.insert({
+      _key: context['_key'],
+      context: context['_key'],
+      url: context['appUrl'],
+      logo: context['appLogo'],
+      totalSponsorships: context['totalSponsorships'],
+      sponsorPublicKey: context['sponsorPublicKey'],
+      sponsorPrivateKey: context['sponsorPrivateKey'],
+      contractAddress: context['sponsorPrivateKey'],
+    });
+    contextsColl.replace(context, {
+      collection: context['collection'],
+      verification: context['verification'],
+      linkAESKey: context['linkAESKey'],
+      idsAsHex: context['idsAsHex'],
+      ethName: context['ethName']
+    });
+  }
+  const sponsorshipsColl = db._collection('sponsorships');
+  const sponsorships = sponsorshipsColl.all().toArray();
+  for (let sponsorship of sponsorships) {
+    sponsorshipsColl.update(sponsorship, {
+      _to: sponsorship['_to'].replace('contexts/', 'apps/')
+    });
+  }
+}
+
+const upgrades = ['v5'];
+
 function initdb() {
   createCollections();
   removeDeprecatedCollections();
+  variablesColl = db._collection('variables');
+  let index;
+  if (variablesColl.exists('LAST_DB_UPGRADE')) {
+    upgrade = variablesColl.document('LAST_DB_UPGRADE').value;
+    index = upgrades.indexOf(upgrade) + 1;
+  } else {
+    variablesColl.insert({ _key: 'LAST_DB_UPGRADE', value: -1 });
+    index = 0;
+  }
+  while (upgrades[index]) {
+    eval(upgrades[index])();
+    variablesColl.update('LAST_DB_UPGRADE', { value: upgrades[index] });
+    index += 1;
+  }
 }
 
 module.exports = {

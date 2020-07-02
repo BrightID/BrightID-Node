@@ -25,12 +25,12 @@ const verifyUserSig = function(message, id, sig) {
   }
 }
 
-const verifyContextSig = function(message, context, sig) {
-  context = db.getContext(context);
-  if (!context) {
-    throw 'invalid context';
+const verifyAppSig = function(message, app, sig) {
+  app = db.getApp(app);
+  if (!app) {
+    throw 'invalid app';
   }
-  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(context.sponsorPublicKey))) {
+  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(app.sponsorPublicKey))) {
     throw 'invalid signature';
   }
 }
@@ -44,7 +44,7 @@ const senderAttrs = {
   'Remove Membership': ['id'],
   'Set Trusted Connections': ['id'],
   'Set Signing Key': ['id'],
-  'Sponsor': ['context'],
+  'Sponsor': ['app'],
   'Link ContextId': ['id'],
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
@@ -108,7 +108,7 @@ function verify(op) {
     'Remove Membership': [['id', 'sig']],
     'Set Trusted Connections': [['id', 'sig']],
     'Set Signing Key': [['id1', 'sig1'], ['id2', 'sig2']],
-    'Sponsor': [['context', 'sig']],
+    'Sponsor': [['app', 'sig']],
     'Link ContextId': [['id', 'sig']],
     'Invite': [['inviter', 'sig']],
     'Dismiss': [['dismisser', 'sig']],
@@ -119,7 +119,7 @@ function verify(op) {
     if (op.name != 'Sponsor') {
       verifyUserSig(message, op[attrs[0]], op[attrs[1]]);
     } else {
-      verifyContextSig(message, op[attrs[0]], op[attrs[1]]);
+      verifyAppSig(message, op[attrs[0]], op[attrs[1]]);
     }
   })
   if (hash(message) != op._key) {
@@ -145,7 +145,7 @@ function apply(op) {
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
   } else if (op['name'] == 'Sponsor') {
-    return db.sponsor(op.id, op.context);
+    return db.sponsor(op.id, op.app);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
   } else if (op['name'] == 'Invite') {
@@ -179,7 +179,8 @@ function getMessage(op) {
 }
 
 function updateSponsorOp(op) {
-  const { sponsorPrivateKey, collection, idsAsHex } = db.getContext(op.context);
+  const { sponsorPrivateKey, context } = db.getApp(op.app);
+  const { collection, idsAsHex } = db.getContext(context);
   const coll = arango._collection(collection);
 
   if (idsAsHex) {

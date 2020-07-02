@@ -37,6 +37,7 @@ const ETHNAME_NOT_SET = 8;
 const OPERATION_NOT_FOUND = 9;
 const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
+const APP_NOT_FOUND = 12;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -71,7 +72,7 @@ const handlers = {
 
   },
 
-  operationGet: function operationGetHandler(req, res){
+  operationGet: function(req, res){
     const hash = req.param('hash');
     const op = db.loadOperation(hash);
     if (op) {
@@ -86,7 +87,7 @@ const handlers = {
     }
   },
 
-  userGet: function userGetHandler(req, res){
+  userGet: function(req, res){
     const id = req.param('id');
 
     const user = db.loadUser(id);
@@ -113,7 +114,7 @@ const handlers = {
     });
   },
 
-  contextVerificationGet: function(req, res){
+  allVerificationsGet: function(req, res){
     const contextName = req.param('context');
 
     const context = db.getContext(contextName);
@@ -225,7 +226,7 @@ const handlers = {
     });
   },
 
-  ip: function ip(req, res){
+  ipGet: function(req, res){
     let ip = module.context && module.context.configuration && module.context.configuration.ip;
     if (ip) {
       res.send({
@@ -238,38 +239,22 @@ const handlers = {
     }
   },
 
-  contexts: function contexts(req, res){
-    const contextName = req.param('context');
-    let context = db.getContext(contextName);
-    if (! context) {
-      res.throw(404, 'Context not found', {errorNum: CONTEXT_NOT_FOUND} );
+  appGet: function(req, res){
+    const appName = req.param('app');
+    let app = db.getApp(appName);
+    if (! app) {
+      res.throw(404, 'App not found', {errorNum: APP_NOT_FOUND} );
     } else {
       res.send({
-        "data": {
-          verification: context.verification,
-          verificationUrl: context.verificationUrl,
-          isApp: context.isApp,
-          appLogo: context.appLogo,
-          appUrl: context.appUrl,
-          unusedSponsorships: db.unusedSponsorship(contextName)
-        }
+        "data": db.appToDic(app)
       });
     }
   },
 
-  allContexts: function allContexts(req, res){
-    const contexts = db.getAllContexts();
-    const result = []
-    contexts.forEach(context => {
-      result.push({
-        name: context._key,
-        unusedSponsorships: db.unusedSponsorship(context._key),
-        assignedSponsorships: context.totalSponsorships
-      })
-    });
+  allAppsGet: function(req, res){
     res.send({
       "data": {
-        contexts: result
+        apps: db.getApps().map(app => db.appToDic(app))
       }
     });
   }
@@ -305,26 +290,26 @@ router.get('/verifications/:context/:contextId', handlers.verificationGet)
   .error(403, 'user is not sponsored')
   .error(404, 'context, contextId or verification not found');
 
-router.get('/verifications/:context', handlers.contextVerificationGet)
+router.get('/verifications/:context', handlers.allVerificationsGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
   .summary('Gets list of all of contextIds')
   .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
-  .response(schemas.contextVerificationGetResponse)
+  .response(schemas.allVerificationsGetResponse)
   .error(404, 'context not found');
 
-router.get('/ip', handlers.ip)
+router.get('/ip', handlers.ipGet)
   .summary("Get this server's IPv4 address")
   .response(schemas.ipGetResponse);
 
-router.get('/contexts/:context', handlers.contexts)
-  .pathParam('context', joi.string().required().description("Unique name of the context"))
-  .summary("Get information about a context")
-  .response(schemas.contextsGetResponse)
-  .error(404, 'context not found');
+router.get('/apps/:app', handlers.appGet)
+  .pathParam('app', joi.string().required().description("Unique name of the app"))
+  .summary("Get information about an app")
+  .response(schemas.appGetResponse)
+  .error(404, 'app not found');
 
-router.get('/contexts', handlers.allContexts)
-  .summary("Get all contexts")
-  .response(schemas.allContextsGetResponse);
+router.get('/apps', handlers.allAppsGet)
+  .summary("Get all apps")
+  .response(schemas.allAppsGetResponse);
 
 module.exports = {
   handlers

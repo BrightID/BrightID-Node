@@ -30,6 +30,7 @@ const usersInGroupsColl = arango._collection('usersInGroups');
 const usersColl = arango._collection('users');
 const operationsColl = arango._collection('operations');
 const contextsColl = arango._collection('contexts');
+const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
 const operationsHashesColl = arango._collection('operationsHashes');
 const invitationsColl = arango._collection('invitations');
@@ -47,6 +48,7 @@ let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
 const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
+const appName = "ethereum";
 const idsAsHex = true;
 
 function getMessage(op) {
@@ -101,6 +103,7 @@ describe('operations', function(){
     usersInGroupsColl.truncate();
     operationsColl.truncate();
     contextsColl.truncate();
+    appsColl.truncate();
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     [u1, u2, u3, u4].map((u) => {
@@ -116,18 +119,25 @@ describe('operations', function(){
         _key: ${contextName},
         collection: ${contextName},
         verification: ${contextName},
-        totalSponsorships: 3,
-        sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
-        sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))},
         linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))},
         idsAsHex: ${idsAsHex}
       } IN ${contextsColl}
+    `;
+    query`
+      INSERT {
+        _key: ${appName},
+        context: "ethereum",
+        totalSponsorships: 3,
+        sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
+        sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))}
+      } IN ${appsColl}
     `;
   });
 
   after(function () {
     operationsHashesColl.truncate();
     contextsColl.truncate();
+    appsColl.truncate();
     arango._drop(contextIdsColl);
     usersColl.truncate();
     connectionsColl.truncate();
@@ -408,7 +418,7 @@ describe('operations', function(){
     const op = {
       'v': 5,
       'name': 'Sponsor',
-      'context': contextName,
+      'app': appName,
       contextId,
     }
     const message = getMessage(op);
