@@ -11,6 +11,7 @@ const groupsColl = db._collection('groups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersColl = db._collection('users');
 const contextsColl = db._collection('contexts');
+const appsColl = db._collection('apps');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
@@ -460,14 +461,22 @@ function deleteMembership(groupId, key, timestamp){
 }
 
 function getContext(context){
-  return query`RETURN DOCUMENT(${contextsColl}, ${context})`.toArray()[0];
+  if (!contextsColl.exists(context)) {
+    return null;
+  }
+  const app = appsColl.firstExample('context', context);
+  context = contextsColl.document(context);
+  context.appLogo = app.logo;
+  context.appUrl = app.url;
+  context.totalSponsorships = app.totalSponsorships;
+  context.sponsorPublicKey = app.sponsorPublicKey;
+  context.sponsorPrivateKey = app.sponsorPrivateKey;
+  context.isApp = true;
+  return context;
 }
 
 function getAllContexts(){
-  return query`
-    FOR c in ${contextsColl}
-      RETURN c
-  `.toArray();
+  return contextsColl.all().toArray().map(c => getContext(c._key));
 }
 
 function getUserByContextId(coll, contextId){
@@ -559,13 +568,13 @@ function isSponsored(key){
 }
 
 function unusedSponsorship(context){
+  const app = appsColl.firstExample('context', context);
   const usedSponsorships = query`
     FOR s in ${sponsorshipsColl}
-      FILTER s._to == ${'contexts/' + context}
+      FILTER s._to == ${'apps/' + app._key}
       RETURN s
   `.count();
-  const { totalSponsorships } = getContext(context);
-  return totalSponsorships - usedSponsorships;
+  return app.totalSponsorships - usedSponsorships;
 }
 
 function sponsor(user, context){
@@ -578,9 +587,10 @@ function sponsor(user, context){
     throw "sponsored before";
   }
 
+  const app = appsColl.firstExample('context', context);
   sponsorshipsColl.save({
     _from: 'users/' + user,
-    _to: 'contexts/' + context
+    _to: 'apps/' + app._key
   });
 }
 
