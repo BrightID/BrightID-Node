@@ -2,6 +2,7 @@
 
 const stringify = require('fast-json-stable-stringify');
 const arango = require('@arangodb').db;
+const { getMessage } = require('../operations');
 const request = require("@arangodb/request");
 const nacl = require('tweetnacl');
 nacl.setPRNG(function(x, n) {
@@ -36,16 +37,6 @@ const u3 = nacl.sign.keyPair();
   u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
   u.id = b64ToUrlSafeB64(u.signingKey);
 });
-
-function getMessage(op) {
-  const signedOp = {};
-  for (let k in op) {
-    if (!['sig', 'sig1', 'sig2', '_key'].includes(k)) {
-      signedOp[k] = op[k];
-    }
-  }
-  return stringify(signedOp);
-}
 
 describe('replay attack on operations', function () {
   before(function(){

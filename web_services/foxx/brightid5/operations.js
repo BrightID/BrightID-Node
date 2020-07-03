@@ -171,9 +171,12 @@ function encrypt(op) {
 function getMessage(op) {
   const signedOp = {};
   for (let k in op) {
-    if (!['sig', 'sig1', 'sig2', '_key'].includes(k)) {
-      signedOp[k] = op[k];
+    if (['sig', 'sig1', 'sig2', '_key'].includes(k)) {
+      continue;
+    } else if (op.name == 'Set Signing Key' && ['id1', 'id2'].includes(k)) {
+      continue;
     }
+    signedOp[k] = op[k];
   }
   return stringify(signedOp);
 }

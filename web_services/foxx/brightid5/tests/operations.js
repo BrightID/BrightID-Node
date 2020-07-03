@@ -2,7 +2,7 @@
 
 const stringify = require('fast-json-stable-stringify');
 const db = require('../db.js');
-const operations = require('../operations.js');
+const { getMessage } = require('../operations');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
 const request = require("@arangodb/request");
@@ -50,16 +50,6 @@ const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
 const appName = "ethereum";
 const idsAsHex = true;
-
-function getMessage(op) {
-  const signedOp = {};
-  for (let k in op) {
-    if (!['sig', 'sig1', 'sig2', '_key'].includes(k)) {
-      signedOp[k] = op[k];
-    }
-  }
-  return stringify(signedOp);
-}
 
 function apply(op) {
   const resp1 = request.post(`${baseUrl}/operations`, {
