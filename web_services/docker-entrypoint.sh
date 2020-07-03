@@ -22,8 +22,8 @@ foxx config /brightid4 publicKey=$BN_WS_PUBLIC_KEY
 foxx config /brightid4 privateKey=$BN_WS_PRIVATE_KEY
 foxx config /brightid4 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
 
-foxx upgrade /apply4 /code/foxx/apply5.zip ||
-foxx install /apply4 /code/foxx/apply5.zip
+foxx upgrade /apply5 /code/foxx/apply5.zip ||
+foxx install /apply5 /code/foxx/apply5.zip
 
 foxx upgrade /apply4 /code/foxx/apply4.zip ||
 foxx install /apply4 /code/foxx/apply4.zip
