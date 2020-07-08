@@ -522,6 +522,10 @@ function linkContextId(id, context, contextId, timestamp){
     contextId = contextId.toLowerCase();
   }
 
+  // accept link if the contextId is the last linked contextId
+  if (getContextIdsByUser(coll, id)[0] === contextId) {
+    return;
+  }
   if (getUserByContextId(coll, contextId)) {
     throw 'contextId is duplicate';
   }
