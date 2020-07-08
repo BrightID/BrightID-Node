@@ -1,3 +1,4 @@
+const stringify = require('fast-json-stable-stringify');
 const db = require('./db');
 const arango = require('@arangodb').db;
 var CryptoJS = require("crypto-js");
@@ -101,8 +102,18 @@ function verify(op) {
   let message, validAttributes;
   if (op['name'] == 'Add Connection') {
     message = op.name + op.id1 + op.id2 + op.timestamp;
-    verifyUserSig(message, op.id1, op.sig1);
-    verifyUserSig(message, op.id2, op.sig2);
+    try {
+      verifyUserSig(message, op.id1, op.sig1);
+    } catch(e) {
+      // allow adding connections by clients using v5 api
+      verifyUserSig(getV5Message(op), op.id1, op.sig1);
+    }
+    try {
+      verifyUserSig(message, op.id2, op.sig2);
+    } catch(e) {
+      // allow adding connections by clients using v5 api
+      verifyUserSig(getV5Message(op), op.id2, op.sig2);
+    }
   } else if (op['name'] == 'Remove Connection') {
     message = op.name + op.id1 + op.id2 + op.reason + op.timestamp;
     verifyUserSig(message, op.id1, op.sig1);
@@ -193,6 +204,18 @@ function encrypt(op) {
   delete op.contextId;
 }
 
+function getV5Message(op) {
+  const signedOp = {};
+  for (let k in op) {
+    if (['sig', 'sig1', 'sig2', '_key'].includes(k)) {
+      continue;
+    }
+    signedOp[k] = op[k];
+  }
+  signedOp.v = 5;
+  return stringify(signedOp);
+}
+
 function updateSponsorOp(op) {
   const { sponsorPrivateKey, collection, idsAsHex } = db.getContext(op.context);
   const coll = arango._collection(collection);
@@ -229,5 +252,6 @@ module.exports = {
   decrypt,
   verifyUserSig,
   updateSponsorOp,
-  checkLimits
+  checkLimits,
+  getV5Message
 };

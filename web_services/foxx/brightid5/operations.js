@@ -117,7 +117,22 @@ function verify(op) {
   let message = getMessage(op);
   requiredSigs[op.name].forEach(attrs => {
     if (op.name != 'Sponsor') {
-      verifyUserSig(message, op[attrs[0]], op[attrs[1]]);
+      try {
+        verifyUserSig(message, op[attrs[0]], op[attrs[1]]);
+      } catch(e) {
+        // allow adding connections by clients using v4 api
+        // or getting their help to recover
+        // this try and catch should be removed after v4 support dropped
+        if (op.name == 'Add Connection') {
+          const v4message = op.name + op.id1 + op.id2 + op.timestamp;
+          verifyUserSig(v4message, op[attrs[0]], op[attrs[1]]);
+        } else if (op.name == 'Set Signing Key') {
+          const v4message = op.name + op.id + op.signingKey + op.timestamp;
+          verifyUserSig(v4message, op[attrs[0]], op[attrs[1]]);
+        } else {
+          throw e;
+        }
+      }
     } else {
       verifyAppSig(message, op[attrs[0]], op[attrs[1]]);
     }

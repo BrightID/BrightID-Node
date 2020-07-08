@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
+const { getV5Message } = require('../operations');
 const operations = require('../operations.js');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
@@ -29,6 +30,7 @@ const usersInGroupsColl = arango._collection('usersInGroups');
 const usersColl = arango._collection('users');
 const operationsColl = arango._collection('operations');
 const contextsColl = arango._collection('contexts');
+const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
 const operationsHashesColl = arango._collection('operationsHashes');
 const invitationsColl = arango._collection('invitations');
@@ -46,6 +48,7 @@ let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
 const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
 const contextName = "ethereum";
+const appName = "ethereum";
 const idsAsHex = true;
 
 function apply(op) {
@@ -88,6 +91,7 @@ describe('operations', function(){
     usersInGroupsColl.truncate();
     operationsColl.truncate();
     contextsColl.truncate();
+    appsColl.truncate();
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     [u1, u2, u3, u4].map((u) => {
@@ -103,18 +107,25 @@ describe('operations', function(){
         _key: ${contextName},
         collection: ${contextName},
         verification: ${contextName},
-        totalSponsorships: 3,
-        sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
-        sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))},
         linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))},
         idsAsHex: ${idsAsHex}
       } IN ${contextsColl}
+    `;
+    query`
+      INSERT {
+        _key: ${appName},
+        context: ${contextName},
+        totalSponsorships: 3,
+        sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
+        sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))}
+      } IN ${appsColl}
     `;
   });
 
   after(function () {
     operationsHashesColl.truncate();
     contextsColl.truncate();
+    appsColl.truncate();
     arango._drop(contextIdsColl);
     usersColl.truncate();
     connectionsColl.truncate();
@@ -124,17 +135,10 @@ describe('operations', function(){
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
   });
-  it('should be able to "Add Connection"', function () {
-    const connect = (u1, u2) => {
+  it('should be able to "Add Connection" with v4 and v5 clients', function () {
+    const connect = (u1, u2, v5signing) => {
       const timestamp = Date.now();
       const message = 'Add Connection' + u1.id + u2.id + timestamp;
-      const sig1 = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-      );
-      const sig2 = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-      );
-
       let op = {
         'v': 4,
         '_key': hash(message),
@@ -142,8 +146,18 @@ describe('operations', function(){
         'id1': u1.id,
         'id2': u2.id,
         timestamp,
-        sig1,
-        sig2
+      };
+      op.sig1 = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+      );
+      if (!v5signing) {
+        op.sig2 = uInt8ArrayToB64(
+          Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+        );
+      } else {
+        op.sig2 = uInt8ArrayToB64(
+          Object.values(nacl.sign.detached(strToUint8Array(getV5Message(op)), u2.secretKey))
+        );
       }
       apply(op);
     }
@@ -151,7 +165,7 @@ describe('operations', function(){
     connect(u1, u3);
     connect(u2, u3);
     connect(u2, u4);
-    connect(u3, u4);
+    connect(u3, u4, true);
     db.userConnections(u1.id).length.should.equal(2);
     db.userConnections(u2.id).length.should.equal(3);
     db.userConnections(u3.id).length.should.equal(3);

@@ -15,6 +15,7 @@ nacl.setPRNG(function(x, n) {
 let contextIdsColl;
 const usersColl = arango._collection('users');
 const contextsColl = arango._collection('contexts');
+const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
 
 const chai = require('chai');
@@ -27,14 +28,21 @@ describe('verifications', function () {
     contextIdsColl = arango._create('testIds');
     usersColl.truncate();
     contextsColl.truncate();
+    appsColl.truncate();
     sponsorshipsColl.truncate();
     query`
       INSERT {
         _key: "testContext",
         collection: "testIds",
-        verification: "testVerification",
-        totalSponsorships: 1
+        verification: "testVerification"
       } IN ${contextsColl}
+    `;
+    query`
+      INSERT {
+        _key: "testApp",
+        context: "testContext",
+        totalSponsorships: 1
+      } IN ${appsColl}
     `;
     query`
       INSERT {
@@ -59,6 +67,7 @@ describe('verifications', function () {
     arango._drop(contextIdsColl);
     usersColl.truncate();
     contextsColl.truncate();
+    appsColl.truncate();
     sponsorshipsColl.truncate();
   });
   context('linkContextId()', function() {

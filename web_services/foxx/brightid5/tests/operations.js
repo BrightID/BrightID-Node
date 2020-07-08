@@ -1,6 +1,5 @@
 "use strict";
 
-const stringify = require('fast-json-stable-stringify');
 const db = require('../db.js');
 const { getMessage } = require('../operations');
 const arango = require('@arangodb').db;
@@ -116,7 +115,7 @@ describe('operations', function(){
     query`
       INSERT {
         _key: ${appName},
-        context: "ethereum",
+        context: ${contextName},
         totalSponsorships: 3,
         sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
         sponsorPrivateKey: ${uInt8ArrayToB64(Object.values(sponsorPrivateKey))}
@@ -137,8 +136,8 @@ describe('operations', function(){
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
   });
-  it('should be able to "Add Connection"', function () {
-    const connect = (u1, u2) => {
+  it('should be able to "Add Connection" with v5 and v4 clients', function () {
+    const connect = (u1, u2, v4signing) => {
       const timestamp = Date.now();
       let op = {
         'v': 5,
@@ -151,9 +150,17 @@ describe('operations', function(){
       op.sig1 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
       );
-      op.sig2 = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-      );
+      if (!v4signing) {
+        op.sig2 = uInt8ArrayToB64(
+          Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+        );
+      } else {
+        const v4message = op.name + op.id1 + op.id2 + op.timestamp;
+        op.sig2 = uInt8ArrayToB64(
+          Object.values(nacl.sign.detached(strToUint8Array(v4message), u2.secretKey))
+        );
+      }
+
       op._key = hash(message);
       apply(op);
     }
@@ -161,7 +168,7 @@ describe('operations', function(){
     connect(u1, u3);
     connect(u2, u3);
     connect(u2, u4);
-    connect(u3, u4);
+    connect(u3, u4, true);
     db.userConnections(u1.id).length.should.equal(2);
     db.userConnections(u2.id).length.should.equal(3);
     db.userConnections(u3.id).length.should.equal(3);
@@ -356,7 +363,7 @@ describe('operations', function(){
     db.loadUser(u1.id).trusted.should.deep.equal([u2.id, u3.id]);
   });
 
-  it('should be able to "Set Signing Key"', function () {
+  it('should be able to "Set Signing Key" with sigs provided by clients v5 and v4', function () {
     const timestamp = Date.now();
     const op = {
       'v': 5,
@@ -371,8 +378,9 @@ describe('operations', function(){
     op.sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
+    const v4message = op.name + op.id + op.signingKey + op.timestamp;
     op.sig2 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
+      Object.values(nacl.sign.detached(strToUint8Array(v4message), u3.secretKey))
     );
     op._key = hash(message);
     apply(op);
