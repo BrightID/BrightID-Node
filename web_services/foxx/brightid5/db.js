@@ -477,6 +477,7 @@ function appToDic(app) {
     id: app._key,
     name: app.name,
     context: app.context,
+    verification: getContext(app.context).verification,
     verificationUrl: app.verificationUrl,
     logo: app.logo,
     url: app.url,

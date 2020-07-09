@@ -29,6 +29,7 @@ schemas = Object.assign({
     id: joi.string().required().description('unique app id'),
     name: joi.string().required().description('app name'),
     context: joi.string().required().description('app context'),
+    verification: joi.string().required().description('verification required for using the app'),
     verificationUrl: joi.string().required().description('the url to PUT a verification with /:id'),
     logo: joi.string().description('app logo (base64 encoded image)'),
     url: joi.string().description('the base url for the app'),
