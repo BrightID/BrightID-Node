@@ -56,6 +56,7 @@ function v5() {
   for (let context of contexts) {
     appsColl.insert({
       _key: context['_key'],
+      name: context['_key'],
       context: context['_key'],
       url: context['appUrl'],
       logo: context['appLogo'],

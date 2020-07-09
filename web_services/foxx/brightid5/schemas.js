@@ -26,6 +26,7 @@ schemas = Object.assign({
     timestamp: schemas.score.required().description('group creation timestamp'),
   }),
   app: joi.object({
+    id: joi.string().required().description('unique app id'),
     name: joi.string().required().description('app name'),
     context: joi.string().required().description('app context'),
     verificationUrl: joi.string().required().description('the url to PUT a verification with /:id'),

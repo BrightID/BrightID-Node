@@ -474,6 +474,7 @@ function getApps() {
 
 function appToDic(app) {
   return {
+    id: app._key,
     name: app.name,
     context: app.context,
     verificationUrl: app.verificationUrl,
