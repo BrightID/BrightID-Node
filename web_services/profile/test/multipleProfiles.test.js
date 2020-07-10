@@ -34,7 +34,7 @@ describe('Multiple profile responses', () => {
         const res = await request(app)
         .get(`/list/${channel}`)
         .expect(200)
-        const expectedResult = JSON.stringify({profiles: [ profileA.uuid ]})
+        const expectedResult = JSON.stringify({profileIds: [ profileA.uuid ]})
         expect(res.text).toEqual(expectedResult)
     })
 
@@ -57,7 +57,7 @@ describe('Multiple profile responses', () => {
     it('should return list of channel profile UUIDs containing profile A, B and C', async () => {
         const res = await request(app).get(`/list/${channel}`)
         expect(res.statusCode).toEqual(200)
-        const expectedResult = JSON.stringify({profiles: [ profileA.uuid, profileB.uuid, profileC.uuid ]})
+        const expectedResult = JSON.stringify({profileIds: [ profileA.uuid, profileB.uuid, profileC.uuid ]})
         expect(res.text).toEqual(expectedResult)
     })
 

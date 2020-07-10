@@ -149,10 +149,10 @@ app.get("/list/:channel", function(req, res, next) {
   }
 
   const channelProfiles = dataCache.get(channel) || [];
-  let profileUUIDs = channelProfiles.map(entry => (entry.uuid))
+  let profileIds = channelProfiles.map(entry => (entry.uuid))
 
   res.json({
-    profiles: profileUUIDs,
+    profileIds
   })
 })
 

@@ -29,7 +29,7 @@ describe('duplicate profiles', () => {
         expect(res.body).toHaveProperty('success', true)
 
         // Profile service should be idempotent, so there should still only be one "profile A" on the server
-        const expectedResult = JSON.stringify({profiles: [ profileA.uuid ]})
+        const expectedResult = JSON.stringify({profileIds: [ profileA.uuid ]})
         res = await request(app)
         .get(`/list/${channel}`)
         .expect(200, expectedResult)
@@ -45,7 +45,7 @@ describe('duplicate profiles', () => {
         expect(res.body).toHaveProperty('success', true)
 
         // profileA should now be available in both channels
-        const expectedResult = JSON.stringify({profiles: [ profileA.uuid ]})
+        const expectedResult = JSON.stringify({profileIds: [ profileA.uuid ]})
         res = await request(app).get(`/list/${channel}`)
         .expect(200, expectedResult)
         res = await request(app).get(`/list/${otherChannel}`)
