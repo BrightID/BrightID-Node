@@ -9,6 +9,6 @@ RUN apt-get update && apt-get install -y netcat
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY wait-for.sh /wait-for.sh
 
-CMD /entrypoint.sh && nodejs app.js
+CMD /entrypoint.sh && nodejs server.js
 EXPOSE 3000
 
