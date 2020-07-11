@@ -253,7 +253,13 @@ const handlers = {
 
   allAppsGet: function(req, res){
     const apps = db.getApps().map(app => db.appToDic(app));
-    apps.sort((a, b) => b.unusedSponsorships - a.unusedSponsorships);
+    apps.sort((app1, app2) => {
+      const used1 = app1.assignedSponsorships - app1.unusedSponsorships;
+      const unused1 = app1.unusedSponsorships;
+      const used2 = app2.assignedSponsorships - app2.unusedSponsorships;
+      const unused2 = app2.unusedSponsorships;
+      return (unused2 * used2) - (unused1 * used1)
+    });
     res.send({
       "data": {
         apps
