@@ -4,14 +4,6 @@ from arango import ArangoClient
 import config
 
 db = ArangoClient().db('_system')
-w3 = Web3(Web3.WebsocketProvider(
-    config.INFURA_URL, websocket_kwargs={'timeout': 60}))
-if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
-    w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-sp_contract = w3.eth.contract(
-    address=config.SP_ADDRESS,
-    abi=config.SP_ABI)
 
 
 def str2bytes32(s):
@@ -20,34 +12,53 @@ def str2bytes32(s):
     return (bytes(s, 'utf-8')).hex() + padding
 
 
-def app_balance(app):
-    app = str2bytes32(app)
-    return sp_contract.functions.totalContextBalance(app).call()
+def update_apps_balance():
+    w3 = Web3(Web3.WebsocketProvider(
+        config.INFURA_URL, websocket_kwargs={'timeout': 60}))
+    if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    sp_contract = w3.eth.contract(
+        address=config.SP_ADDRESS,
+        abi=config.SP_ABI)
+
+    for app in db['apps']:
+        app_bytes = str2bytes32(app['_key'])
+        app['totalSponsorships'] = sp_contract.functions.totalContextBalance(
+            app_bytes).call()
+        print(app['_key'], app['totalSponsorships'])
+        db['apps'].update(app)
 
 
 def check_sponsor_requests():
     variables = db['variables']
-    if variables.has('LAST_BLOCK_LOG'):
-        fb = variables['LAST_BLOCK_LOG']['value']
-    else:
-        fb = w3.eth.getBlock('latest').number
-        variables.insert({
-            '_key': 'LAST_BLOCK_LOG',
-            'value': fb
-        })
-    cb = w3.eth.getBlock('latest').number
-    fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
-    tb = min(cb, fb + config.CHUNK)
     contexts = db['contexts']
     sponsorships = db['sponsorships']
     for app in db['apps']:
-        if 'contractAddress' not in app:
+        if 'contractAddress' not in app or 'wsProvider' not in app:
             continue
+        w3 = Web3(Web3.WebsocketProvider(
+            app['wsProvider'], websocket_kwargs={'timeout': 60}))
+        if app['wsProvider'].count('rinkeby') > 0 or app['wsProvider'].count('idchain') > 0:
+            w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+        if variables.has('LAST_BLOCK_LOG_{}'.format(app['_key'])):
+            fb = variables['LAST_BLOCK_LOG_{}'.format(app['_key'])]['value']
+        else:
+            fb = w3.eth.getBlock('latest').number
+            variables.insert({
+                '_key': 'LAST_BLOCK_LOG_{}'.format(app['_key']),
+                'value': fb
+            })
+        cb = w3.eth.getBlock('latest').number
+        fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
+        tb = min(cb, fb + config.CHUNK)
+
         print('\napp: {}'.format(app['_key']))
         print('checking events from block {} to block {}'.format(fb, tb))
         app_contract = w3.eth.contract(
             address=app['contractAddress'],
             abi=config.APP_CONTRACT_ABI)
+
         sponsoreds = app_contract.events.Sponsor.createFilter(
             fromBlock=fb, toBlock=tb, argument_filters=None
         ).get_all_entries()
@@ -84,17 +95,14 @@ def check_sponsor_requests():
                 '_to': 'apps/{}'.format(app['_key'])
             })
             print('Sponsored')
-    variables.update({
-        '_key': 'LAST_BLOCK_LOG',
-        'value': tb
-    })
+        variables.update({
+            '_key': 'LAST_BLOCK_LOG_{}'.format(app['_key']),
+            'value': tb
+        })
 
 
 def main():
-    for app in db['apps']:
-        app['totalSponsorships'] = app_balance(app['_key'])
-        print(app['_key'], app['totalSponsorships'])
-        db['apps'].update(app)
+    update_apps_balance()
     check_sponsor_requests()
 
 
