@@ -63,14 +63,15 @@ function apply(op) {
     op.id = db.getUserByContextId(contextIdsColl, op.contextId);
     delete op.contextId;
     let message = getMessage(op);
-    op._key = hash(message);
+    op.hash = hash(message);
   }
-  resp1.json.data._key.should.equal(op._key);
-  op = operationsColl.document(op._key);
+  resp1.json.data.hash.should.equal(op.hash);
+  op = operationsColl.document(op.hash);
   delete op._rev;
   delete op._id;
+  delete op._key;
   delete op.state;
-  const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
+  const resp2 = request.put(`${applyBaseUrl}/operations/${op.hash}`, {
     body: op,
     json: true
   });
@@ -161,7 +162,7 @@ describe('operations', function(){
         );
       }
 
-      op._key = hash(message);
+      op.hash = hash(message);
       apply(op);
     }
     connect(u1, u2);
@@ -190,7 +191,7 @@ describe('operations', function(){
     op.sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     db.userConnections(u1.id).length.should.equal(2);
     db.userConnections(u2.id).length.should.equal(2);
@@ -220,7 +221,7 @@ describe('operations', function(){
     op.sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
 
     const members = db.groupMembers(groupId);
@@ -244,7 +245,7 @@ describe('operations', function(){
       op.sig = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u.secretKey))
       );
-      op._key = hash(message);
+      op.hash = hash(message);
       apply(op);
     });
     const members = db.groupMembers(groupId);
@@ -266,7 +267,7 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
 
     const members = db.groupMembers(groupId, false);
@@ -292,7 +293,7 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     invitationsColl.byExample({
       '_from': 'users/' + u4.id,
@@ -317,7 +318,7 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     db.groupMembers(groupId).should.not.include(u4.id);
   });
@@ -340,7 +341,7 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     groupsColl.document(groupId).admins.should.include(u4.id);
   });
@@ -358,7 +359,7 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     db.loadUser(u1.id).trusted.should.deep.equal([u2.id, u3.id]);
   });
@@ -382,7 +383,7 @@ describe('operations', function(){
     op.sig2 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(v4message), u3.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
   });
@@ -401,7 +402,7 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     let cId;
     if (idsAsHex) {
@@ -423,7 +424,7 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     apply(op);
     db.isSponsored(u1.id).should.equal(true);
   });

@@ -21,7 +21,11 @@ def process(data):
     try:
         data = bytes.fromhex(data.strip('0x')).decode('utf-8')
         op = json.loads(data)
-        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=op['_key']), json=op)
+        if op['v'] == 4:
+            h = op['_key']
+        else:
+            h = op['hash']
+        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=h), json=op)
     except Exception as e:
         print(data.encode('utf-8'), e)
         return False

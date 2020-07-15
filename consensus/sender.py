@@ -33,6 +33,10 @@ def main():
         del d['_id']
         del d['_rev']
         del d['state']
+        if op['v'] == 4:
+            del d['hash']
+        else:
+            del d['_key']
         print(d)
         data = '0x'+binascii.hexlify(json.dumps(d).encode('utf-8')).decode('utf-8')
         sendTransaction(data)

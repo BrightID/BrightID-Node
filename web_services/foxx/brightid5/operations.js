@@ -140,7 +140,7 @@ function verify(op) {
       }
     }
   });
-  if (hash(message) != op._key) {
+  if (hash(message) != op.hash) {
     throw 'invalid hash';
   }
 }
@@ -189,7 +189,7 @@ function encrypt(op) {
 function getMessage(op) {
   const signedOp = {};
   for (let k in op) {
-    if (['sig', 'sig1', 'sig2', '_key'].includes(k)) {
+    if (['sig', 'sig1', 'sig2', 'hash'].includes(k)) {
       continue;
     } else if (op.name == 'Set Signing Key' && ['id1', 'id2'].includes(k)) {
       continue;
@@ -216,7 +216,7 @@ function updateSponsorOp(op) {
   delete op.contextId;
   let message = getMessage(op);
   op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
-  op._key = hash(message);
+  op.hash = hash(message);
 }
 
 function decrypt(op) {

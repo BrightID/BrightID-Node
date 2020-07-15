@@ -605,10 +605,11 @@ function loadOperation(key) {
 }
 
 function upsertOperation(op) {
-  if (!operationsColl.exists(op)) {
+  if (!operationsColl.exists(op.hash)) {
+    op._key = op.hash;
     operationsColl.insert(op);
   } else {
-    operationsColl.replace(op['_key'], op);
+    operationsColl.replace(op.hash, op);
   }
 }
 

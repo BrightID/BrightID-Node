@@ -42,8 +42,8 @@ const APP_NOT_FOUND = 12;
 const handlers = {
   operationsPost: function(req, res){
     const op = req.body;
-    op._key = hash(operations.getMessage(op));
-    if (operationsHashesColl.exists(op._key)) {
+    op.hash = hash(operations.getMessage(op));
+    if (operationsHashesColl.exists(op.hash)) {
       res.throw(400, 'operation is applied before');
     }
     try {
@@ -66,7 +66,7 @@ const handlers = {
     }
     res.send({
       data: {
-        _key: op._key
+        hash: op.hash
       }
     });
 

@@ -74,19 +74,20 @@ describe('replay attack on operations', function () {
     op.sig2 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
-    op._key = hash(message);
+    op.hash = hash(message);
     const resp1 = request.post(`${baseUrl}/operations`, {
       body: op,
       json: true
     });
     resp1.status.should.equal(200);
-    resp1.json.data._key.should.equal(op._key);
+    resp1.json.data.hash.should.equal(op.hash);
 
-    op = operationsColl.document(op._key);
+    op = operationsColl.document(op.hash);
     delete op._rev;
     delete op._id;
+    delete op._key;
     delete op.state;
-    const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
+    const resp2 = request.put(`${applyBaseUrl}/operations/${op.hash}`, {
       body: op,
       json: true
     });
@@ -100,7 +101,7 @@ describe('replay attack on operations', function () {
     resp3.status.should.equal(400);
     resp3.json.errorMessage.should.equal('operation is applied before');
     
-    const resp4 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
+    const resp4 = request.put(`${applyBaseUrl}/operations/${op.hash}`, {
       body: op,
       json: true
     });
