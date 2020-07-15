@@ -34,7 +34,7 @@ def check_sponsor_requests():
     contexts = db['contexts']
     sponsorships = db['sponsorships']
     for app in db['apps']:
-        if 'contractAddress' not in app or 'wsProvider' not in app:
+        if 'sponsorEventContract' not in app or 'wsProvider' not in app:
             continue
         w3 = Web3(Web3.WebsocketProvider(
             app['wsProvider'], websocket_kwargs={'timeout': 60}))
@@ -55,11 +55,11 @@ def check_sponsor_requests():
 
         print('\napp: {}'.format(app['_key']))
         print('checking events from block {} to block {}'.format(fb, tb))
-        app_contract = w3.eth.contract(
-            address=app['contractAddress'],
-            abi=config.APP_CONTRACT_ABI)
+        sponsor_event_contract = w3.eth.contract(
+            address=app['sponsorEventContract'],
+            abi=config.SPONSOR_EVENT_CONTRACT_ABI)
 
-        sponsoreds = app_contract.events.Sponsor.createFilter(
+        sponsoreds = sponsor_event_contract.events.Sponsor.createFilter(
             fromBlock=fb, toBlock=tb, argument_filters=None
         ).get_all_entries()
         for sponsored in sponsoreds:

@@ -19,7 +19,7 @@ class TestUpdate(unittest.TestCase):
         self.IDS_AS_HEX = True
         self.GAS = 500 * 10**3
         self.GAS_PRICE = 5 * 10**9
-        self.CONTRACT_ADDRESS = '0x100fE6F8Fe086f2bD722CcD27e9baf38D76eB187'
+        self.SPONSOR_EVENT_CONTRACT = '0x100fE6F8Fe086f2bD722CcD27e9baf38D76eB187'
         self.CONTRACT_ABI = '[{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"},{"anonymous": false,"inputs": [{"indexed": false,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"}]'
         self.PRIVATE_KEY = 'EEBED6AE74B73BE44F4706222344E1D90363F64DA2C31B58B29F7A39EB6BFB43'
         self.APP = ''.join(random.choices(string.ascii_uppercase, k=5))
@@ -36,7 +36,7 @@ class TestUpdate(unittest.TestCase):
         self.contexts = update.db.collection('contexts')
         self.sponsorships = update.db.collection('sponsorships')
         self.contract = self.w3.eth.contract(
-            address=self.CONTRACT_ADDRESS,
+            address=self.SPONSOR_EVENT_CONTRACT,
             abi=self.CONTRACT_ABI)
         self.app = {
             '_key': self.APP,
@@ -45,7 +45,7 @@ class TestUpdate(unittest.TestCase):
             'context': self.APP,
             'verification': self.APP,
             'wsProvider': self.WS_PROVIDER,
-            'contractAddress': self.CONTRACT_ADDRESS,
+            'sponsorEventContract': self.SPONSOR_EVENT_CONTRACT,
             'totalSponsorships': 2,
             'idsAsHex': self.IDS_AS_HEX
         }

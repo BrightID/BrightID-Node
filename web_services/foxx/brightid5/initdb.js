@@ -63,7 +63,7 @@ function v5() {
       totalSponsorships: context['totalSponsorships'],
       sponsorPublicKey: context['sponsorPublicKey'],
       sponsorPrivateKey: context['sponsorPrivateKey'],
-      contractAddress: context['sponsorPrivateKey'],
+      sponsorEventContract: context['contractAddress'],
     });
     contextsColl.replace(context, {
       collection: context['collection'],
