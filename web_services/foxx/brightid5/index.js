@@ -125,11 +125,6 @@ const handlers = {
     const coll = arango._collection(context.collection);
     let contextIds = db.getLastContextIds(coll, context.verification);
 
-    // We can remove this filter when we upgrade to arango 3.6
-    if (contextIds.length == 1 && contextIds[0] === null) {
-      contextIds = []
-    }
-
     res.send({
       data: {
         contextIds: contextIds
@@ -258,7 +253,7 @@ const handlers = {
       const unused1 = app1.unusedSponsorships;
       const used2 = app2.assignedSponsorships - app2.unusedSponsorships;
       const unused2 = app2.unusedSponsorships;
-      return (unused2 * used2) - (unused1 * used1)
+      return (unused2 * used2) - (unused1 * used1);
     });
     res.send({
       "data": {
