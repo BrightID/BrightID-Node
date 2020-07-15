@@ -92,27 +92,28 @@ function checkLimits(op, timeWindow, limit) {
   throw 'Too Many Requests';
 }
 
+const requiredSigs = {
+  'Add Connection': [['id1', 'sig1'], ['id2', 'sig2']],
+  'Remove Connection': [['id1', 'sig1']],
+  'Add Group': [['id1', 'sig1']],
+  'Remove Group': [['id', 'sig']],
+  'Add Membership': [['id', 'sig']],
+  'Remove Membership': [['id', 'sig']],
+  'Set Trusted Connections': [['id', 'sig']],
+  'Set Signing Key': [['id1', 'sig1'], ['id2', 'sig2']],
+  'Sponsor': [['app', 'sig']],
+  'Link ContextId': [['id', 'sig']],
+  'Invite': [['inviter', 'sig']],
+  'Dismiss': [['dismisser', 'sig']],
+  'Add Admin': [['id', 'sig']],
+}
+
 function verify(op) {
   if (op.v != 5) {
     throw 'invalid operation version';
   }
   if (op.timestamp > Date.now() + TIME_FUDGE) {
     throw "timestamp can't be in the future";
-  }
-  const requiredSigs = {
-    'Add Connection': [['id1', 'sig1'], ['id2', 'sig2']],
-    'Remove Connection': [['id1', 'sig1']],
-    'Add Group': [['id1', 'sig1']],
-    'Remove Group': [['id', 'sig']],
-    'Add Membership': [['id', 'sig']],
-    'Remove Membership': [['id', 'sig']],
-    'Set Trusted Connections': [['id', 'sig']],
-    'Set Signing Key': [['id1', 'sig1'], ['id2', 'sig2']],
-    'Sponsor': [['app', 'sig']],
-    'Link ContextId': [['id', 'sig']],
-    'Invite': [['inviter', 'sig']],
-    'Dismiss': [['dismisser', 'sig']],
-    'Add Admin': [['id', 'sig']],
   }
   let message = getMessage(op);
   requiredSigs[op.name].forEach(idAndSig => {
