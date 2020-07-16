@@ -33,10 +33,9 @@ def main():
         del d['_id']
         del d['_rev']
         del d['state']
-        if op['v'] == 4:
-            del d['hash']
-        else:
+        if op['v'] == 5:
             del d['_key']
+
         print(d)
         data = '0x'+binascii.hexlify(json.dumps(d).encode('utf-8')).decode('utf-8')
         sendTransaction(data)
@@ -48,4 +47,3 @@ if __name__ == '__main__':
     while True:
         main()
         time.sleep(1)
-    
