@@ -57,6 +57,10 @@ const handlers = {
       }
       else if (op.name == 'Sponsor') {
         operations.updateSponsorOp(op);
+        // Sponsor operation hash will be chaned by above update
+        if (operationsHashesColl.exists(op.hash)) {
+          res.throw(400, 'operation is applied before');
+        }
       }
       op.state = 'init';
       db.upsertOperation(op);
