@@ -64,6 +64,7 @@ function v5() {
       sponsorPublicKey: context['sponsorPublicKey'],
       sponsorPrivateKey: context['sponsorPrivateKey'],
       sponsorEventContract: context['contractAddress'],
+      wsProvider: context['wsProvider'] || 'wss://mainnet.infura.io/ws/v3/36e48f8228ad42a297049cabc1101324',
     });
     contextsColl.replace(context, {
       collection: context['collection'],
