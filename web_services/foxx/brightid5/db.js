@@ -584,7 +584,7 @@ function unusedSponsorship(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, app) {
+function sponsor(user, app, timestamp) {
 
   if (unusedSponsorship(app) < 1) {
     throw "app does not have unused sponsorships";

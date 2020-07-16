@@ -414,10 +414,12 @@ describe('operations', function(){
   });
 
   it('should be able to "Sponsor"', function () {
+    const timestamp = Date.now();
     const op = {
       'v': 5,
       'name': 'Sponsor',
       'app': appName,
+      timestamp,
       contextId,
     }
     const message = getMessage(op);
