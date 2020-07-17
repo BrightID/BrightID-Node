@@ -39,7 +39,6 @@ schemas = Object.assign({
   operation: joi.alternatives().try([
     joi.object({
       name: joi.string().valid('Add Connection').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id1: joi.string().required().description('brightid of the first user making the connection'),
       id2: joi.string().required().description('brightid of the second user making the connection'),
       sig1: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
@@ -49,7 +48,6 @@ schemas = Object.assign({
     }).label('Add Connection'),
     joi.object({
       name: joi.string().valid('Remove Connection').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id1: joi.string().required().description('brightid of the user removing the connection'),
       id2: joi.string().required().description('brightid of the second user that the connection with is being removed'),
       reason: joi.string().valid('fake', 'duplicate', 'deceased').required().description('the reason for removing connection specificed by the user represented by id1'),
@@ -59,7 +57,6 @@ schemas = Object.assign({
     }).label('Remove Connection'),
     joi.object({
       name: joi.string().valid('Add Group').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       group: joi.string().required().description('the unique id of the group'),
       id1: joi.string().required().description('brightid of the first founder'),
       id2: joi.string().required().description('brightid of the second founder'),
@@ -74,7 +71,6 @@ schemas = Object.assign({
     }).label('Add Group'),
     joi.object({
       name: joi.string().valid('Remove Group').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id: joi.string().required().description('brightid of the group admin who want to remove the group'),
       group: joi.string().required().description('the unique id of the group'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
@@ -83,7 +79,6 @@ schemas = Object.assign({
     }).label('Remove Group'),
     joi.object({
       name: joi.string().valid('Add Membership').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id: joi.string().required().description('brightid of the user wants to join the group'),
       group: joi.string().required().description('the unique id of the group that the user represented by id wants to join'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
@@ -92,7 +87,6 @@ schemas = Object.assign({
     }).label('Add Membership'),
     joi.object({
       name: joi.string().valid('Remove Membership').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id: joi.string().required().description('brightid of the user wants to leave the group'),
       group: joi.string().required().description('the unique id of the group that the user represented by id wants to leave'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
@@ -101,7 +95,6 @@ schemas = Object.assign({
     }).label('Remove Membership'),
     joi.object({
       name: joi.string().valid('Set Trusted Connections').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id: joi.string().required().description('brightid of the user who is setting his/her trusted connections'),
       trusted: joi.array().items(joi.string()).required().description('brightid list of trusted connections'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
@@ -110,7 +103,6 @@ schemas = Object.assign({
     }).label('Set Trusted Connections'),
     joi.object({
       name: joi.string().valid('Set Signing Key').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id: joi.string().required().description('brightid of the user who is trying to recover his/her account by setting new signing key on his/her brightid'),
       signingKey: joi.string().required().description('the public key of the new key pair that user will use to sign operations with'),
       id1: joi.string().required().description('brightid of a trusted connection of the user represented by id'),
@@ -122,7 +114,6 @@ schemas = Object.assign({
     }).label('Set Signing Key'),
     joi.object({
       name: joi.string().valid('Link ContextId').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id: joi.string().description('brightid of the user who is linking his/her brightid to a context id'),
       contextId: joi.string().description('the unique id of the user represented by brightid in the specific context'),
       encrypted: joi.string().description('the json representation of `{id: id, contextId: contextId}` encrypted using an AES key shared between all nodes manage linking brightids to contextIds for a specific context. This field is not sent by clients and will be replaced by `id` and `contextId` fields before sending operation to blockchain to keep the relation of brightids to contextIds private.'),
@@ -133,7 +124,6 @@ schemas = Object.assign({
     }).label('Link ContextId'),
     joi.object({
       name: joi.string().valid('Sponsor').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       contextId: joi.string().description('the contextId for the user that is being sponsored by context'),
       id: joi.string().description('brightid of the user that is being sponsored by context. This field is not provided by context owners who sponsor the user as they do not have users brightids. BrightID nodes that are trusted by context owners and have the private key that is used to spend sponsorships assigned to the context, will replace `contextId` by this field before sending this operation to blockchain'),
       app: joi.string().required().description('the app name that user is being sponsored by'),
@@ -143,7 +133,6 @@ schemas = Object.assign({
     }).label('Sponsor'),
     joi.object({
       name: joi.string().valid('Invite').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       inviter: joi.string().required().description('brightid of the user who has admin rights in the group and can invite others to the group'),
       invitee: joi.string().required().description('brightid of the user whom is invited to the group'),
       group: joi.string().required().description('the unique id of the group that invitee is being invited to'),
@@ -154,7 +143,6 @@ schemas = Object.assign({
     }).label('Invite'),
     joi.object({
       name: joi.string().valid('Dismiss').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       dismisser: joi.string().required().description('brightid of the user who has admin rights in the group and can dismiss others from the group'),
       dismissee: joi.string().required().description('brightid of the user whom is dismissed from the group'),
       group: joi.string().required().description('the unique id of the group that dismissee is being dismissed from'),
@@ -164,7 +152,6 @@ schemas = Object.assign({
     }).label('Dismiss'),
     joi.object({
       name: joi.string().valid('Add Admin').required().description('operation name'),
-      hash: joi.string().description('sha256 hash of the operation message used for generating signature'),
       id: joi.string().required().description('brightid of the user who has admin rights in the group and can grant administratorship to other members'),
       admin: joi.string().required().description('brightid of the member whom is being granted administratorship of the group'),
       group: joi.string().required().description('the unique id of the group that new admin is being added to'),

@@ -35,6 +35,7 @@ def main():
         del d['state']
         if op['v'] == 5:
             del d['_key']
+            del d['hash']
 
         print(d)
         data = '0x'+binascii.hexlify(json.dumps(d).encode('utf-8')).decode('utf-8')
