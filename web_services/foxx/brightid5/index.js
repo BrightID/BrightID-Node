@@ -45,7 +45,7 @@ const handlers = {
     const message = operations.getMessage(op);
     op.hash = hash(message);
     if (operationsHashesColl.exists(op.hash)) {
-      res.throw(400, 'operation is applied before');
+      res.throw(400, 'operation was applied before');
     }
     try {
       operations.verify(op);
