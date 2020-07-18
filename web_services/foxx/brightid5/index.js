@@ -60,7 +60,7 @@ const handlers = {
         operations.updateSponsorOp(op);
         // Sponsor operation hash will be chaned by above update
         if (operationsHashesColl.exists(op.hash)) {
-          res.throw(400, 'operation is applied before');
+          res.throw(400, 'operation was applied before');
         }
       }
       op.state = 'init';
