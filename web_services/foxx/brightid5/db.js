@@ -36,7 +36,7 @@ function getConnection(key1, key2) {
   return conn;
 }
 
-function addConnection(key1, key2, timestamp){
+function addConnection(key1, key2, timestamp) {
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
   let u1 = loadUser(key1);
@@ -78,7 +78,7 @@ function addConnection(key1, key2, timestamp){
   }
 }
 
-function removeConnection(flagger, flagged, reason, timestamp){
+function removeConnection(flagger, flagged, reason, timestamp) {
   if (! ['fake', 'duplicate', 'deceased'].includes(reason)) {
     throw 'invalid reason';
   }
@@ -111,7 +111,7 @@ function removeConnection(flagger, flagged, reason, timestamp){
   });
 }
 
-function userConnections(user){
+function userConnections(user) {
   user = "users/" + user;
   const users1 = connectionsColl.byExample({
     _from: user
@@ -122,7 +122,7 @@ function userConnections(user){
   return users1.concat(users2);
 }
 
-function loadUsers(users){
+function loadUsers(users) {
   return usersColl.documents(users).documents.map(u => {
     u.id = u._key;
     u.hasPrimaryGroup = hasPrimaryGroup(u.id);
@@ -130,13 +130,13 @@ function loadUsers(users){
   });
 }
 
-function groupMembers(groupId){
+function groupMembers(groupId) {
   return usersInGroupsColl.byExample({
     _to: "groups/" + groupId,
   }).toArray().map(e => e._from.replace('users/', ''));
 }
 
-function isEligible(groupId, userId){
+function isEligible(groupId, userId) {
   const userCons = userConnections(userId);
   const members = groupMembers(groupId);
   const count = _.intersection(userCons, members).length;
@@ -144,7 +144,7 @@ function isEligible(groupId, userId){
   return count * 2 >= members.length;
 }
 
-function updateEligibleGroups(userId, connections, currentGroups){
+function updateEligibleGroups(userId, connections, currentGroups) {
   connections = connections.map(uId => 'users/' + uId);
   currentGroups = currentGroups.map(gId => 'groups/' + gId);
   const user = "users/" + userId;
@@ -172,7 +172,7 @@ function updateEligibleGroups(userId, connections, currentGroups){
 
   const groupCountsDic = {};
 
-  groupCounts.map(function(row){
+  groupCounts.map(function(row) {
     groupCountsDic[row.id] = row.count;
   });
 
@@ -186,7 +186,7 @@ function updateEligibleGroups(userId, connections, currentGroups){
   return eligible_groups;
 }
 
-function groupToDic(group){
+function groupToDic(group) {
   return {
     id: group._key,
     members: groupMembers(group._key),
@@ -200,7 +200,7 @@ function groupToDic(group){
   }
 }
 
-function userGroups(userId){
+function userGroups(userId) {
   return usersInGroupsColl.byExample({
     _from: 'users/' + userId
   }).toArray().map(
@@ -213,7 +213,7 @@ function userGroups(userId){
   );
 }
 
-function userInvitedGroups(userId){
+function userInvitedGroups(userId) {
   return invitationsColl.byExample({
     _from: 'users/' + userId
   }).toArray().filter(invite => {
@@ -229,7 +229,7 @@ function userInvitedGroups(userId){
   });
 }
 
-function invite(inviter, invitee, groupId, data, timestamp){
+function invite(inviter, invitee, groupId, data, timestamp) {
   if (! groupsColl.exists(groupId)) {
     throw 'invalid group id';
   }
@@ -259,7 +259,7 @@ function invite(inviter, invitee, groupId, data, timestamp){
   });
 }
 
-function dismiss(dismisser, dismissee, groupId, timestamp){
+function dismiss(dismisser, dismissee, groupId, timestamp) {
   if (! groupsColl.exists(groupId)) {
     throw 'invalid group id';
   }
@@ -270,11 +270,11 @@ function dismiss(dismisser, dismissee, groupId, timestamp){
   deleteMembership(groupId, dismissee, timestamp);
 }
 
-function loadUser(id){
+function loadUser(id) {
   return query`RETURN DOCUMENT(${usersColl}, ${id})`.toArray()[0];
 }
 
-function userScore(key){
+function userScore(key) {
   return query`
     FOR u in ${usersColl}
       FILTER u._key  == ${key}
@@ -282,7 +282,7 @@ function userScore(key){
   `.toArray()[0];
 }
 
-function createUser(key, timestamp){
+function createUser(key, timestamp) {
   // already exists?
   const user = loadUser(key);
 
@@ -298,7 +298,7 @@ function createUser(key, timestamp){
   }
 }
 
-function hasPrimaryGroup(key){
+function hasPrimaryGroup(key) {
   const groupIds = usersInGroupsColl.byExample({
     _from: 'users/' + key
   }).toArray().map(ug => ug._to.replace('groups/', ''));
@@ -306,7 +306,7 @@ function hasPrimaryGroup(key){
   return groups.filter(group => group.type == 'primary').length > 0;
 }
 
-function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp){
+function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp) {
   if (! ['general', 'primary'].includes(type)) {
     throw 'invalid type';
   }
@@ -343,7 +343,7 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
   invite(key1, key3, groupId, inviteData3, timestamp);
 }
 
-function addAdmin(key, admin, groupId){
+function addAdmin(key, admin, groupId) {
   if (! groupsColl.exists(groupId)) {
     throw 'group not found';
   }
@@ -361,7 +361,7 @@ function addAdmin(key, admin, groupId){
   groupsColl.update(group, { admins: group.admins });
 }
 
-function addUserToGroup(groupId, key, timestamp){
+function addUserToGroup(groupId, key, timestamp) {
   const user = 'users/' + key;
   const group = 'groups/' + groupId;
 
@@ -381,7 +381,7 @@ function addUserToGroup(groupId, key, timestamp){
 
 }
 
-function addMembership(groupId, key, timestamp){
+function addMembership(groupId, key, timestamp) {
   if (! groupsColl.exists(groupId)) {
     throw 'Group not found';
   }
@@ -427,7 +427,7 @@ function addMembership(groupId, key, timestamp){
   }
 }
 
-function deleteGroup(groupId, key, timestamp){
+function deleteGroup(groupId, key, timestamp) {
   if (! groupsColl.exists(groupId)) {
     throw 'Group not found';
   }
@@ -442,7 +442,7 @@ function deleteGroup(groupId, key, timestamp){
   groupsColl.remove(group);
 }
 
-function deleteMembership(groupId, key, timestamp){
+function deleteMembership(groupId, key, timestamp) {
   if (! groupsColl.exists(groupId)) {
     throw 'group not found';
   }
@@ -460,26 +460,33 @@ function deleteMembership(groupId, key, timestamp){
   });
 }
 
-function getContext(context){
-  if (!contextsColl.exists(context)) {
-    return null;
-  }
-  const app = appsColl.firstExample('context', context);
-  context = contextsColl.document(context);
-  context.appLogo = app.logo;
-  context.appUrl = app.url;
-  context.totalSponsorships = app.totalSponsorships;
-  context.sponsorPublicKey = app.sponsorPublicKey;
-  context.sponsorPrivateKey = app.sponsorPrivateKey;
-  context.isApp = true;
-  return context;
+function getContext(context) {
+  return contextsColl.exists(context) ? contextsColl.document(context) : null;
 }
 
-function getAllContexts(){
-  return contextsColl.all().toArray().map(c => getContext(c._key));
+function getApp(app) {
+  return appsColl.exists(app) ? appsColl.document(app) : null;
 }
 
-function getUserByContextId(coll, contextId){
+function getApps() {
+  return appsColl.all().toArray();
+}
+
+function appToDic(app) {
+  return {
+    id: app._key,
+    name: app.name,
+    context: app.context,
+    verification: getContext(app.context).verification,
+    verificationUrl: app.verificationUrl,
+    logo: app.logo,
+    url: app.url,
+    unusedSponsorships: unusedSponsorship(app._key),
+    assignedSponsorships: app.totalSponsorships,
+  };
+}
+
+function getUserByContextId(coll, contextId) {
   return query`
     FOR l in ${coll}
       FILTER l.contextId == ${contextId}
@@ -487,7 +494,7 @@ function getUserByContextId(coll, contextId){
   `.toArray()[0];
 }
 
-function getContextIdsByUser(coll, id){
+function getContextIdsByUser(coll, id) {
   return query`
     FOR u in ${coll}
       FILTER u.user == ${id}
@@ -496,7 +503,7 @@ function getContextIdsByUser(coll, id){
   `.toArray();
 }
 
-function getLastContextIds(coll, verification){
+function getLastContextIds(coll, verification) {
   return query`
     FOR c IN ${coll}
       FOR u in ${usersColl}
@@ -510,12 +517,12 @@ function getLastContextIds(coll, verification){
   `.toArray();
 }
 
-function userHasVerification(verification, user){
+function userHasVerification(verification, user) {
   const u = loadUser(user);
   return u && u.verifications && u.verifications.indexOf(verification) > -1;
 }
 
-function linkContextId(id, context, contextId, timestamp){
+function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex } = getContext(context);
   const coll = db._collection(collection);
   if (idsAsHex) {
@@ -538,16 +545,14 @@ function linkContextId(id, context, contextId, timestamp){
     throw 'only three contextIds can be linked every 24 hours';
   }
 
-  query`
-    insert {
-      user: ${id},
-      contextId: ${contextId},
-      timestamp: ${timestamp}
-    } in ${coll}
-  `;
+  coll.insert({
+    user: id,
+    contextId,
+    timestamp
+  });
 }
 
-function setTrusted(trusted, key, timestamp){
+function setTrusted(trusted, key, timestamp) {
   // TODO: in the future users should update their trusted connections
   // by providing the sig of one of the existing trusted connections approving that.
   query`
@@ -555,7 +560,7 @@ function setTrusted(trusted, key, timestamp){
   `;
 }
 
-function setSigningKey(signingKey, key, signers, timestamp){
+function setSigningKey(signingKey, key, signers, timestamp) {
   const user = loadUser(key);
   if (signers[0] == signers[1] ||
       !user.trusted.includes(signers[0]) ||
@@ -567,34 +572,31 @@ function setSigningKey(signingKey, key, signers, timestamp){
   `;
 }
 
-function isSponsored(key){
+function isSponsored(key) {
   return sponsorshipsColl.firstExample({ '_from': 'users/' + key }) != null;
 }
 
-function unusedSponsorship(context){
-  const app = appsColl.firstExample('context', context);
-  const usedSponsorships = query`
-    FOR s in ${sponsorshipsColl}
-      FILTER s._to == ${'apps/' + app._key}
-      RETURN s
-  `.count();
-  return app.totalSponsorships - usedSponsorships;
+function unusedSponsorship(app) {
+  const usedSponsorships = sponsorshipsColl.byExample({
+    _to: 'apps/' + app
+  }).count();
+  const { totalSponsorships } = appsColl.document(app);
+  return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, context){
+function sponsor(user, app, timestamp) {
 
-  if (unusedSponsorship(context) < 1) {
-    throw "context does not have unused sponsorships";
+  if (unusedSponsorship(app) < 1) {
+    throw "app does not have unused sponsorships";
   }
 
   if (isSponsored(user)) {
     throw "sponsored before";
   }
 
-  const app = appsColl.firstExample('context', context);
   sponsorshipsColl.save({
     _from: 'users/' + user,
-    _to: 'apps/' + app._key
+    _to: 'apps/' + app
   });
 }
 
@@ -603,10 +605,11 @@ function loadOperation(key) {
 }
 
 function upsertOperation(op) {
-  if (!operationsColl.exists(op)) {
+  if (!operationsColl.exists(op.hash)) {
+    op._key = op.hash;
     operationsColl.insert(op);
   } else {
-    operationsColl.replace(op['_key'], op);
+    operationsColl.replace(op.hash, op);
   }
 }
 
@@ -630,7 +633,9 @@ module.exports = {
   userScore,
   loadUsers,
   getContext,
-  getAllContexts,
+  getApp,
+  getApps,
+  appToDic,
   userHasVerification,
   getUserByContextId,
   getContextIdsByUser,

@@ -2,5 +2,5 @@
   "main": "apply.js",
   "name": "apply",
   "description": "Allows BrightID consensus module to apply operations to the database.",
-  "version": "1.0.0"
+  "version": "5.0.0"
 }

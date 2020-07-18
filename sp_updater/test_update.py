@@ -8,6 +8,8 @@ import random
 import update
 import string
 import time
+from web3 import Web3
+from web3.middleware import geth_poa_middleware
 
 
 class TestUpdate(unittest.TestCase):
@@ -17,43 +19,50 @@ class TestUpdate(unittest.TestCase):
         self.IDS_AS_HEX = True
         self.GAS = 500 * 10**3
         self.GAS_PRICE = 5 * 10**9
-        self.CONTRACT_ADDRESS = '0xeFD4887faf909a5B0E5CA9FAA29aA4b9a0eC3046'
-        self.CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "previousOwner","type": "address"},{"indexed": true,"internalType": "address","name": "newOwner","type": "address"}],"name": "OwnershipTransferred","type": "event"},{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"},{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Verified","type": "event"},{"anonymous": false,"inputs": [{"indexed": false,"internalType": "contract IERC20","name": "verifierToken","type": "address"}],"name": "VerifierTokenSet","type": "event"},{"inputs": [{"internalType": "address","name": "","type": "address"}],"name": "history","outputs": [{"internalType": "address","name": "","type": "address"}],"stateMutability": "view","type": "function"},{"inputs": [{"internalType": "address","name": "","type": "address"}],"name": "isRevoked","outputs": [{"internalType": "bool","name": "","type": "bool"}],"stateMutability": "view","type": "function"},{"inputs": [],"name": "owner","outputs": [{"internalType": "address","name": "","type": "address"}],"stateMutability": "view","type": "function"},{"inputs": [],"name": "renounceOwnership","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "contract IERC20","name": "_verifierToken","type": "address"}],"name": "setVerifierToken","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "address","name": "newOwner","type": "address"}],"name": "transferOwnership","outputs": [],"stateMutability": "nonpayable","type": "function"},{"inputs": [{"internalType": "address","name": "","type": "address"}],"name": "verifications","outputs": [{"internalType": "uint256","name": "","type": "uint256"}],"stateMutability": "view","type": "function"},{"inputs": [],"name": "verifierToken","outputs": [{"internalType": "contract IERC20","name": "","type": "address"}],"stateMutability": "view","type": "function"},{"inputs": [{"internalType": "bytes32","name": "context","type": "bytes32"},{"internalType": "address[]","name": "addrs","type": "address[]"},{"internalType": "uint8","name": "v","type": "uint8"},{"internalType": "bytes32","name": "r","type": "bytes32"},{"internalType": "bytes32","name": "s","type": "bytes32"}],"name": "verify","outputs": [],"stateMutability": "nonpayable","type": "function"}]'
-        self.VERIFIER_TOKEN = '0xF6b23cD9187C991f3768410329b767E9D53e17Ce'
-        # this account should have a verification token of the deployed BrightID contract at CONTRACT_ADDRESS
+        self.SPONSOR_EVENT_CONTRACT = '0x100fE6F8Fe086f2bD722CcD27e9baf38D76eB187'
+        self.CONTRACT_ABI = '[{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"},{"anonymous": false,"inputs": [{"indexed": false,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"}]'
         self.PRIVATE_KEY = 'EEBED6AE74B73BE44F4706222344E1D90363F64DA2C31B58B29F7A39EB6BFB43'
-        self.CONTEXT = ''.join(random.choices(string.ascii_uppercase, k=5))
-        self.CONTEXT_ID = update.w3.eth.account.create(
-            'SIFTALFJAFJMOHSEN').address.lower()
+        self.APP = ''.join(random.choices(string.ascii_uppercase, k=5))
         self.USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
-
+        self.WS_PROVIDER = 'wss://rinkeby.infura.io/ws/v3/588bb93634084be69f62f302a279d76f'
+        self.w3 = Web3(Web3.WebsocketProvider(
+            self.WS_PROVIDER, websocket_kwargs={'timeout': 60}))
+        self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+        self.CONTEXT_ID = self.w3.eth.account.create(
+            'SIFTALFJAFJMOHSEN').address.lower()
         self.variables = update.db.collection('variables')
         self.users = update.db.collection('users')
+        self.apps = update.db.collection('apps')
         self.contexts = update.db.collection('contexts')
         self.sponsorships = update.db.collection('sponsorships')
-        self.contract = update.w3.eth.contract(
-            address=self.CONTRACT_ADDRESS,
+        self.contract = self.w3.eth.contract(
+            address=self.SPONSOR_EVENT_CONTRACT,
             abi=self.CONTRACT_ABI)
-        self.context = {
-            '_key': self.CONTEXT,
-            'ethName': self.CONTEXT,
-            'collection': self.CONTEXT,
-            'verification': self.CONTEXT,
-            'contractAddress': self.CONTRACT_ADDRESS,
+        self.app = {
+            '_key': self.APP,
+            'ethName': self.APP,
+            'collection': self.APP,
+            'context': self.APP,
+            'verification': self.APP,
+            'wsProvider': self.WS_PROVIDER,
+            'sponsorEventContract': self.SPONSOR_EVENT_CONTRACT,
             'totalSponsorships': 2,
             'idsAsHex': self.IDS_AS_HEX
         }
+        self.context = {
+            '_key': self.APP,
+            'collection': self.APP,
+            'verification': self.APP,
+        }
 
     def setUp(self):
-        self.DB_LB = self.variables.get('LAST_BLOCK_LOG')['value']
+        self.apps.insert(self.app)
         self.contexts.insert(self.context)
-
         self.users.insert({
             '_key': self.USER,
-            'verifications': [self.CONTEXT],
+            'verifications': [self.APP],
         })
-
-        context_collection = update.db.create_collection(self.CONTEXT)
+        context_collection = update.db.create_collection(self.APP)
         context_collection.insert({
             'user': self.USER,
             'contextId': self.CONTEXT_ID,
@@ -62,7 +71,11 @@ class TestUpdate(unittest.TestCase):
 
     def tearDown(self):
         try:
-            self.contexts.delete(self.CONTEXT)
+            self.contexts.delete(self.APP)
+        except:
+            pass
+        try:
+            self.apps.delete(self.APP)
         except:
             pass
         try:
@@ -70,7 +83,7 @@ class TestUpdate(unittest.TestCase):
         except:
             pass
         try:
-            update.db.delete_collection(self.CONTEXT)
+            update.db.delete_collection(self.APP)
         except:
             pass
         try:
@@ -79,10 +92,10 @@ class TestUpdate(unittest.TestCase):
             self.sponsorships.delete(r['_key'])
         except:
             pass
-        self.variables.update({
-            '_key': 'LAST_BLOCK_LOG',
-            'value': self.DB_LB
-        })
+        try:
+            self.variables.delete('LAST_BLOCK_LOG_{}'.format(self.APP))
+        except:
+            pass
 
     def priv2addr(self, private_key):
         pk = keys.PrivateKey(bytes.fromhex(private_key))
@@ -90,18 +103,18 @@ class TestUpdate(unittest.TestCase):
 
     def send_transaction(self, func):
         transaction = func.buildTransaction({
-            'nonce': update.w3.eth.getTransactionCount(
+            'nonce': self.w3.eth.getTransactionCount(
                 self.priv2addr(self.PRIVATE_KEY)),
             'from': self.priv2addr(self.PRIVATE_KEY),
             'value': 0,
             'gas': self.GAS,
             'gasPrice': self.GAS_PRICE
         })
-        signed = update.w3.eth.account.sign_transaction(
+        signed = self.w3.eth.account.sign_transaction(
             transaction, self.PRIVATE_KEY)
         raw_transaction = signed.rawTransaction.hex()
-        tx_hash = update.w3.eth.sendRawTransaction(raw_transaction).hex()
-        rec = update.w3.eth.waitForTransactionReceipt(tx_hash)
+        tx_hash = self.w3.eth.sendRawTransaction(raw_transaction).hex()
+        rec = self.w3.eth.waitForTransactionReceipt(tx_hash)
         return {'status': rec['status'], 'tx_hash': tx_hash}
 
     def sponsor(self, context_id):
@@ -110,19 +123,20 @@ class TestUpdate(unittest.TestCase):
 
     def test_sp_updater(self):
         # test the context_balance
-        self.assertNotEqual(update.context_balance('ethereum'), 0)
-        self.assertEqual(update.context_balance('Siftal'), 0)
+        # update.update_apps_balance()
+        # self.assertNotEqual(self.apps['ethereum']['totalSponsorships'], 0)
 
         # test the sponsor
-        lb = update.w3.eth.getBlock('latest').number
-        self.sponsor(update.w3.toChecksumAddress(self.CONTEXT_ID))
+        lb = self.w3.eth.getBlock('latest').number
+        self.sponsor(self.w3.toChecksumAddress(self.CONTEXT_ID))
 
         # Waiting
         time.sleep(60)
-        self.variables.update({
-            '_key': 'LAST_BLOCK_LOG',
+        self.variables.insert({
+            '_key': 'LAST_BLOCK_LOG_{}'.format(self.APP),
             'value': lb - 1
         })
+
         update.check_sponsor_requests()
         self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())

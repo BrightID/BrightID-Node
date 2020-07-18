@@ -1,6 +1,8 @@
 "use strict";
 
+const stringify = require('fast-json-stable-stringify');
 const arango = require('@arangodb').db;
+const { getMessage } = require('../operations');
 const request = require("@arangodb/request");
 const nacl = require('tweetnacl');
 nacl.setPRNG(function(x, n) {
@@ -17,7 +19,7 @@ const {
 const db = require('../db.js');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid', '/apply');
+const applyBaseUrl = baseUrl.replace('/brightid5', '/apply5');
 
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
@@ -57,48 +59,50 @@ describe('replay attack on operations', function () {
 
   it('should not be able to add an operation twice', function () {
     const timestamp = Date.now();
-    const message = 'Add Connection' + u1.id + u2.id + timestamp;
-    const sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
-    const sig2 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
     
     let op = {
-      '_key': hash(message),
-      'name': 'Add Connection',
-      'id1': u1.id,
-      'id2': u2.id,
+      name: 'Add Connection',
+      id1: u1.id,
+      id2: u2.id,
       timestamp,
-      sig1,
-      sig2
+      v: 5
     }
-
-    const resp1 = request.put(`${baseUrl}/operations/${op._key}`, {
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    op.sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const resp1 = request.post(`${baseUrl}/operations`, {
       body: op,
       json: true
     });
-    resp1.status.should.equal(204);
+    resp1.status.should.equal(200);
+    const h = hash(message);
+    resp1.json.data.hash.should.equal(h);
 
-    op = operationsColl.document(op._key);
+    op = operationsColl.document(h);
     delete op._rev;
     delete op._id;
-    const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
+    delete op._key;
+    delete op.hash;
+    delete op.state;
+    const resp2 = request.put(`${applyBaseUrl}/operations/${h}`, {
       body: op,
       json: true
     });
     resp2.json.success.should.equal(true);
     resp2.json.state.should.equal('applied');
 
-    const resp3 = request.put(`${baseUrl}/operations/${op._key}`, {
+    const resp3 = request.post(`${baseUrl}/operations`, {
       body: op,
       json: true
     });
     resp3.status.should.equal(400);
     resp3.json.errorMessage.should.equal('operation is applied before');
     
-    const resp4 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
+    const resp4 = request.put(`${applyBaseUrl}/operations/${h}`, {
       body: op,
       json: true
     });

@@ -4,9 +4,7 @@ const db = require('../db.js');
 const arango = require('@arangodb').db;
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
-const newGroupsColl = arango._collection('newGroups');
 const usersInGroupsColl = arango._collection('usersInGroups');
-const usersInNewGroupsColl = arango._collection('usersInNewGroups');
 const usersColl = arango._collection('users');
 
 const chai = require('chai');

@@ -40,7 +40,6 @@ describe('verifications', function () {
     query`
       INSERT {
         _key: "testApp",
-        context: "testContext",
         totalSponsorships: 1
       } IN ${appsColl}
     `;
@@ -77,6 +76,13 @@ describe('verifications', function () {
         db.linkContextId('3', 'testContext', 'used', 10);
       }).should.throw('contextId is duplicate');
     });
+    it('should accept linking again with last contextId for the same user but not with old contextIds', function(){
+      db.linkContextId('2', 'testContext', 'used', 10);
+      db.linkContextId('2', 'testContext', 'second', 11);
+      (() => {
+        db.linkContextId('2', 'testContext', 'used', 12);
+      }).should.throw('contextId is duplicate');
+    });
     it('should return add link if contextId and timestamp are OK', function(){
       db.linkContextId('3', 'testContext', 'testContextId', 10);
       db.getUserByContextId(contextIdsColl, 'testContextId').should.equal('3');
@@ -93,13 +99,13 @@ describe('verifications', function () {
     });
   });
   context('sponsor()', function() {
-    it('should be able to sponsor a user if context has unused sponsorships and user did not sponsor before', function() {
-      db.sponsor('2', 'testContext');
+    it('should be able to sponsor a user if app has unused sponsorships and user is not sponsored before', function() {
+      db.sponsor('2', 'testApp', 0);
     });
-    it('should throw "context does not have unused sponsorships" if context has no unused sponsorship', function(){
+    it('should throw "app does not have unused sponsorships" if app has no unused sponsorship', function(){
       (() => {
-        db.sponsor('4', 'testContext');
-      }).should.throw('context does not have unused sponsorships');
+        db.sponsor('4', 'testApp', 0);
+      }).should.throw('app does not have unused sponsorships');
     });
   });
 });

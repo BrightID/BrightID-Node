@@ -8,12 +8,12 @@ set -e
 
 ## foxx config allows empty values, e.g. foxx config /brightid privateKey=
 
-foxx upgrade /brightid3 /code/foxx/brightid_3.0.0.zip ||
-foxx install /brightid3 /code/foxx/brightid_3.0.0.zip
-foxx config /brightid3 ip=$BN_WS_IP
-foxx config /brightid3 publicKey=$BN_WS_PUBLIC_KEY
-foxx config /brightid3 privateKey=$BN_WS_PRIVATE_KEY
-foxx config /brightid3 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
+foxx upgrade /brightid5 /code/foxx/brightid5.zip ||
+foxx install /brightid5 /code/foxx/brightid5.zip
+foxx config /brightid5 ip=$BN_WS_IP
+foxx config /brightid5 publicKey=$BN_WS_PUBLIC_KEY
+foxx config /brightid5 privateKey=$BN_WS_PRIVATE_KEY
+foxx config /brightid5 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
 
 foxx upgrade /brightid4 /code/foxx/brightid4.zip ||
 foxx install /brightid4 /code/foxx/brightid4.zip
@@ -22,8 +22,8 @@ foxx config /brightid4 publicKey=$BN_WS_PUBLIC_KEY
 foxx config /brightid4 privateKey=$BN_WS_PRIVATE_KEY
 foxx config /brightid4 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
 
+foxx upgrade /apply5 /code/foxx/apply5.zip ||
+foxx install /apply5 /code/foxx/apply5.zip
+
 foxx upgrade /apply4 /code/foxx/apply4.zip ||
 foxx install /apply4 /code/foxx/apply4.zip
-
-foxx upgrade /apply3 /code/foxx/apply_3.0.0.zip ||
-foxx install /apply3 /code/foxx/apply_3.0.0.zip

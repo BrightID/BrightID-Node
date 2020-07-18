@@ -1,8 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
-const { getV5Message } = require('../operations');
-const operations = require('../operations.js');
+const { getMessage } = require('../operations');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
 const request = require("@arangodb/request");
@@ -21,7 +20,7 @@ const {
 } = require('../encoding');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid4', '/apply4');
+const applyBaseUrl = baseUrl.replace('/brightid5', '/apply5');
 
 let contextIdsColl;
 const connectionsColl = arango._collection('connections');
@@ -52,24 +51,27 @@ const appName = "ethereum";
 const idsAsHex = true;
 
 function apply(op) {
-  const resp1 = request.put(`${baseUrl}/operations/${op._key}`, {
+  const resp1 = request.post(`${baseUrl}/operations`, {
     body: op,
     json: true
   });
-  resp1.status.should.equal(204);
+  resp1.status.should.equal(200);
   if (op.name == 'Sponsor') {
     if (idsAsHex) {
       op.contextId = op.contextId.toLowerCase();
     }
     op.id = db.getUserByContextId(contextIdsColl, op.contextId);
-    let message = 'Sponsor' + ',' + op.context + ',' + op.id;
-    op._key = hash(message);
+    delete op.contextId;
   }
-  op = operationsColl.document(op._key);
+  const h = hash(getMessage(op));
+  resp1.json.data.hash.should.equal(h);
+  op = operationsColl.document(h);
   delete op._rev;
   delete op._id;
+  delete op._key;
+  delete op.hash;
   delete op.state;
-  const resp2 = request.put(`${applyBaseUrl}/operations/${op._key}`, {
+  const resp2 = request.put(`${applyBaseUrl}/operations/${h}`, {
     body: op,
     json: true
   });
@@ -135,30 +137,31 @@ describe('operations', function(){
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
   });
-  it('should be able to "Add Connection" with v4 and v5 clients', function () {
-    const connect = (u1, u2, v5signing) => {
+  it('should be able to "Add Connection" with v5 and v4 clients', function () {
+    const connect = (u1, u2, v4signing) => {
       const timestamp = Date.now();
-      const message = 'Add Connection' + u1.id + u2.id + timestamp;
       let op = {
-        'v': 4,
-        '_key': hash(message),
+        'v': 5,
         'name': 'Add Connection',
         'id1': u1.id,
         'id2': u2.id,
-        timestamp,
-      };
+        timestamp
+      }
+      const message = getMessage(op);
       op.sig1 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
       );
-      if (!v5signing) {
+      if (!v4signing) {
         op.sig2 = uInt8ArrayToB64(
           Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
         );
       } else {
+        const v4message = op.name + op.id1 + op.id2 + op.timestamp;
         op.sig2 = uInt8ArrayToB64(
-          Object.values(nacl.sign.detached(strToUint8Array(getV5Message(op)), u2.secretKey))
+          Object.values(nacl.sign.detached(strToUint8Array(v4message), u2.secretKey))
         );
       }
+
       apply(op);
     }
     connect(u1, u2);
@@ -174,24 +177,20 @@ describe('operations', function(){
   it('should be able to "Remove Connection"', function () {
     const timestamp = Date.now();
     const reason = "duplicate";
-    const message = 'Remove Connection' + u2.id + u3.id + reason + timestamp;
-    const sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
 
     let op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Remove Connection',
       'id1': u2.id,
       'id2': u3.id,
       reason,
       timestamp,
-      sig1
     }
-
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
     apply(op);
-
     db.userConnections(u1.id).length.should.equal(2);
     db.userConnections(u2.id).length.should.equal(2);
     db.userConnections(u3.id).length.should.equal(2);
@@ -202,14 +201,9 @@ describe('operations', function(){
     const type = 'general';
     const url = 'http://url.com/dummy';
     const groupId = hash('randomstr');
-    const message = 'Add Group' + groupId + u1.id + u2.id + 'data' + u3.id + 'data' + url + type + timestamp;
-    const sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
 
     const op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Add Group',
       'group': groupId,
       'id1': u1.id,
@@ -220,8 +214,11 @@ describe('operations', function(){
       url,
       type,
       timestamp,
-      sig1
     }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
     apply(op);
 
     const members = db.groupMembers(groupId);
@@ -234,19 +231,17 @@ describe('operations', function(){
     const groupId = db.userGroups(u1.id)[0].id;
     [u2, u3].map((u) => {
       const timestamp = Date.now();
-      const message = "Add Membership" + u.id + groupId + timestamp;
-      const sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u.secretKey))
-      );
       const op = {
-        'v': 4,
-        '_key': hash(message),
+        'v': 5,
         'name': 'Add Membership',
         'id': u.id,
         'group': groupId,
         timestamp,
-        sig
       }
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u.secretKey))
+      );
       apply(op);
     });
     const members = db.groupMembers(groupId);
@@ -257,20 +252,19 @@ describe('operations', function(){
   it('should be able to "Remove Membership"', function () {
     const timestamp = Date.now();
     const groupId = db.userGroups(u1.id)[0].id;
-    const message = "Remove Membership" + u1.id + groupId + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
     const op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Remove Membership',
       'id': u1.id,
       'group': groupId,
       timestamp,
-      sig
     }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
     apply(op);
+
     const members = db.groupMembers(groupId, false);
     members.should.not.include(u1.id);
     members.should.include(u2.id);
@@ -281,21 +275,19 @@ describe('operations', function(){
     const timestamp = Date.now();
     const groupId = db.userGroups(u2.id)[0].id;
     const data = 'some data';
-    const message = "Invite" + u2.id + u4.id + groupId + data + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
     const op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Invite',
       'inviter': u2.id,
       'invitee': u4.id,
       'group': groupId,
       data,
       timestamp,
-      sig
     }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
     apply(op);
     invitationsColl.byExample({
       '_from': 'users/' + u4.id,
@@ -308,20 +300,18 @@ describe('operations', function(){
     const groupId = db.userGroups(u2.id)[0].id;
     db.addMembership(groupId, u4.id, Date.now());
     db.groupMembers(groupId).should.include(u4.id);
-    const message = "Dismiss" + u2.id + u4.id + groupId + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
     const op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Dismiss',
       'dismisser': u2.id,
       'dismissee': u4.id,
       'group': groupId,
       timestamp,
-      sig
     }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
     apply(op);
     db.groupMembers(groupId).should.not.include(u4.id);
   });
@@ -332,107 +322,99 @@ describe('operations', function(){
     db.invite(u2.id, u4.id, groupId, 'data', Date.now());
     db.addMembership(groupId, u4.id, Date.now());
     db.groupMembers(groupId).should.include(u4.id);
-    const message = "Add Admin" + u2.id + u4.id + groupId + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
     const op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Add Admin',
       'id': u2.id,
       'admin': u4.id,
       'group': groupId,
       timestamp,
-      sig
     }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
     apply(op);
     groupsColl.document(groupId).admins.should.include(u4.id);
   });
 
   it('should be able to "Set Trusted Connections"', function () {
     const timestamp = Date.now();
-    const message = "Set Trusted Connections" + u1.id + [u2.id, u3.id].join(',') + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
     const op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Set Trusted Connections',
       'id': u1.id,
       'trusted': [u2.id, u3.id],
       timestamp,
-      sig
     }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
     apply(op);
     db.loadUser(u1.id).trusted.should.deep.equal([u2.id, u3.id]);
   });
 
-  it('should be able to "Set Signing Key"', function () {
+  it('should be able to "Set Signing Key" with sigs provided by clients v5 and v4', function () {
     const timestamp = Date.now();
-    const message = "Set Signing Key" + u1.id + u4.signingKey + timestamp;
-    const sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    const sig2 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
-    );
     const op = {
-      'v': 4,
-      '_key': hash(message),
+      'v': 5,
       'name': 'Set Signing Key',
       'id': u1.id,
       'id1': u2.id,
       'id2': u3.id,
       'signingKey': u4.signingKey,
       timestamp,
-      sig1,
-      sig2
     }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const v4message = op.name + op.id + op.signingKey + op.timestamp;
+    op.sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(v4message), u3.secretKey))
+    );
     apply(op);
     db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
   });
 
   it('should be able to "Link ContextId"', function () {
     const timestamp = Date.now();
-    const message = 'Link ContextId' + ',' + contextName + ',' + contextId + ',' + timestamp;
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
-    );
     const op = {
-      'v': 4,
+      'v': 5,
       'name': 'Link ContextId',
       'context': contextName,
       timestamp,
       'id': u1.id,
       contextId,
-      '_key': hash(message),
-      sig
     }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
+    );
     apply(op);
     let cId;
     if (idsAsHex) {
-    	cId = contextId.toLowerCase();
+      cId = contextId.toLowerCase();
     } else {
-    	cId = contextId;
+      cId = contextId;
     }
     db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(cId);
   });
 
   it('should be able to "Sponsor"', function () {
-    const message = 'Sponsor' + ',' + contextName + ',' + contextId;
-    const sig = uInt8ArrayToB64(
+    const timestamp = Date.now();
+    const op = {
+      'v': 5,
+      'name': 'Sponsor',
+      'app': appName,
+      timestamp,
+      contextId,
+    }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
     );
-    const op = {
-      'v': 4,
-      'name': 'Sponsor',
-      'context': contextName,
-      contextId,
-      '_key': hash(message),
-      sig
-    }
     apply(op);
     db.isSponsored(u1.id).should.equal(true);
   });

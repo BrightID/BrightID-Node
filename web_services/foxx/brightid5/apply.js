@@ -15,12 +15,12 @@ const handlers = {
   operationsPut: function(req, res){
     const op = req.body;
     const hash = req.param('hash');
-    op._key = hash;
+    op.hash = hash;
     
-    if (operationsHashesColl.exists(op._key)) {
+    if (operationsHashesColl.exists(op.hash)) {
       return res.send({'success': true, 'state': 'duplicate'});
     }
-    operationsHashesColl.insert({ _key: op._key });
+    operationsHashesColl.insert({ _key: op.hash });
 
     if (op.name == 'Link ContextId') {
       operations.decrypt(op);

@@ -17,12 +17,26 @@ if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') 
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 voting = w3.eth.contract(address=config.VOTING_ADDRESS, abi=config.VOTING_ABI)
 
+def hash(op):
+    op = {k: op[k] for k in op if not k.startswith('sig')}
+    if op['name'] == 'Set Signing Key':
+        del op['id1']
+        del op['id2']
+    message = json.dumps(op, sort_keys=True, separators=(',', ':'))
+    m = hashlib.sha256()
+    m.update(message.encode('ascii'))
+    h = base64.b64encode(m.digest()).decode('ascii')
+    return h.replace('+', '-').replace('/', '_').replace('=', '')
+
 def process(data):
     try:
         data = bytes.fromhex(data.strip('0x')).decode('utf-8')
         op = json.loads(data)
-        v = op.get('v', 3)
-        r = requests.put(config.APPLY_URL.format(v=v, hash=op['_key']), json=op)
+        if op['v'] == 4:
+            h = op['_key']
+        else:
+            h = hash(op)
+        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=h), json=op)
     except Exception as e:
         print(data.encode('utf-8'), e)
         return False
