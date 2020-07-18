@@ -227,6 +227,7 @@ function decrypt(op) {
   delete op.encrypted;
   op.id = json.id;
   op.contextId = json.contextId;
+  op.hash = hash(getMessage(op));
 }
 
 module.exports = {
