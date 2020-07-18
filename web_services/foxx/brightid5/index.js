@@ -42,7 +42,8 @@ const APP_NOT_FOUND = 12;
 const handlers = {
   operationsPost: function(req, res){
     const op = req.body;
-    op.hash = hash(operations.getMessage(op));
+    const message = operations.getMessage(op);
+    op.hash = hash(message);
     if (operationsHashesColl.exists(op.hash)) {
       res.throw(400, 'operation is applied before');
     }
@@ -70,7 +71,9 @@ const handlers = {
     }
     res.send({
       data: {
-        hash: op.hash
+        // use hash(message) not op.hash to return original operation hash
+        // for Sponsor instead of updated one that have id instead of contextId
+        hash: hash(message)
       }
     });
 
