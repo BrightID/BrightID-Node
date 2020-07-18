@@ -16,15 +16,16 @@ const handlers = {
     const op = req.body;
     const hash = req.param('hash');
     op.hash = hash;
-    
+    // decrypt first to fix the hash
+    if (op.name == 'Link ContextId') {
+      operations.decrypt(op);
+    }
+
     if (operationsHashesColl.exists(op.hash)) {
       return res.send({'success': true, 'state': 'duplicate'});
     }
     operationsHashesColl.insert({ _key: op.hash });
 
-    if (op.name == 'Link ContextId') {
-      operations.decrypt(op);
-    }
     try {
       operations.verify(op);
       op.result = operations.apply(op);
