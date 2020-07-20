@@ -52,8 +52,17 @@ services:
       dockerfile: Dockerfile
     network_mode: host
     image: brightid/db
+    volumes:
+      - type: volume
+        source: data
+        target: /var/lib/arangodb3
+      - type: volume
+        source: apps
+        target: /var/lib/arangodb3-apps
     env_file:
       - config.env
+    environment:
+      - INIT_BRIGHTID_DB
 
   web:
     image: nginx
@@ -65,3 +74,5 @@ services:
 
 volumes:
   snapshots:
+  data:
+  apps:
