@@ -144,6 +144,7 @@ const handlers = {
     let contextId = req.param('contextId');
     let contextName = req.param('context');
     const signed = req.param('signed');
+    let timestamp = req.param('timestamp');
     const context = db.getContext(contextName);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
@@ -172,6 +173,14 @@ const handlers = {
       unique = false;
     }
 
+    if (timestamp == 'seconds') {
+      timestamp = parseInt(Date.now() / 1000);
+    } else if (timestamp == 'milliseconds') {
+      timestamp = Date.now();
+    } else {
+      timestamp = undefined;
+    }
+
     // sign and return the verification
     let sig, publicKey;
     if (signed == 'nacl') {
@@ -179,7 +188,10 @@ const handlers = {
         res.throw(500, 'Server setting key pair not set', {errorNum: KEYPAIR_NOT_SET});
       }
 
-      const message = contextName + ',' + contextIds.join(',');
+      let message = contextName + ',' + contextIds.join(',');
+      if (timestamp) {
+        message = message + ',' + timestamp;
+      }
       const privateKey = module.context.configuration.privateKey;
       publicKey = module.context.configuration.publicKey;
       sig = uInt8ArrayToB64(
@@ -202,10 +214,11 @@ const handlers = {
         message = pad32(contextName) + contextIds.map(pad32).join('');
       }
       message = Buffer.from(message, 'binary').toString('hex');
-      // fix an issue with keccak256 using alloc on old arango
-      if (!Buffer.prototype.alloc) {
-        Buffer.prototype.alloc = function(size) { return new Buffer(size); }
+      if (timestamp) {
+        const t = timestamp.toString(16);
+        message += ('0'.repeat(64 - t.length) + t);
       }
+
       h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
       let ethPrivateKey = module.context.configuration.ethPrivateKey;
       ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
@@ -223,6 +236,7 @@ const handlers = {
         context: contextName,
         contextIds: contextIds,
         sig,
+        timestamp,
         publicKey
       }
     });
@@ -294,6 +308,7 @@ router.get('/verifications/:context/:contextId', handlers.verificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
+  .queryParam('timestamp', joi.string().description('the value will be seconds or milliseconds to indicate if timestamp should be added to response and signature'))
   .summary('Gets a signed verification')
   .description("Gets a signed verification for the user that is signed by the node")
   .response(schemas.verificationGetResponse)
