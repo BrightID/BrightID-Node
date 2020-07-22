@@ -100,7 +100,7 @@ describe('replay attack on operations', function () {
       json: true
     });
     resp3.status.should.equal(400);
-    resp3.json.errorMessage.should.equal('operation is applied before');
+    resp3.json.errorMessage.should.equal('operation was applied before');
     
     const resp4 = request.put(`${applyBaseUrl}/operations/${h}`, {
       body: op,
