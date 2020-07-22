@@ -336,6 +336,17 @@ router.get('/apps', handlers.allAppsGet)
   .summary("Get all apps")
   .response(schemas.allAppsGetResponse);
 
+module.context.use(function (req, res, next) {
+  try {
+    next();
+  } catch (e) {
+    console.error('Error in ', req._raw.requestType, req._raw.url);
+    console.error(e);
+    console.error('body:', req.body);
+    throw e;
+  }
+});
+
 module.exports = {
   handlers
 };

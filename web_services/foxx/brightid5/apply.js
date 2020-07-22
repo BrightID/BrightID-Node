@@ -48,3 +48,14 @@ router.put('/operations/:hash', handlers.operationsPut)
   .summary('Apply operation after consensus')
   .description("Apply operation after consensus.")
   .response(null);
+
+module.context.use(function (req, res, next) {
+  try {
+    next();
+  } catch (e) {
+    console.error('Error in ', req._raw.requestType, req._raw.url);
+    console.error(e);
+    console.error('body:', req.body);
+    throw e;
+  }
+});
