@@ -322,6 +322,17 @@ router.get('/contexts', handlers.allContexts)
   .summary("Get all contexts")
   .response(schemas.allContextsGetResponse);
 
+module.context.use(function (req, res, next) {
+  try {
+    next();
+  } catch (e) {
+    console.error('Error in ', req._raw.requestType, req._raw.url);
+    console.error(e);
+    console.error('body:', req.body);
+    throw e;
+  }
+});
+
 module.exports = {
   handlers
 };

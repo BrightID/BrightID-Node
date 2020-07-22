@@ -209,8 +209,9 @@ schemas = Object.assign({
     data: joi.object({
       unique: joi.string().description("true if user is unique under given context"),
       context: joi.string().description("the context name"),
-      contextIds: joi.array().items(joi.string()).description('list of all contextIds this user linked from most recent to oldest including current active contextId as first member'),
-      sig: joi.string().description('verification message ( context + "," + contextIds ) signed by the node'),
+      contextIds: joi.array().items(joi.string()).description("list of all contextIds this user linked from most recent to oldest including current active contextId as first member"),
+      timestamp: schemas.timestamp.description("timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter"),
+      sig: joi.string().description("verification message signed by the node"),
       publicKey: joi.string().description("the node's public key")
     })
   }),

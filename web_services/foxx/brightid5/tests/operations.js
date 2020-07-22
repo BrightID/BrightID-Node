@@ -56,15 +56,16 @@ function apply(op) {
     json: true
   });
   resp1.status.should.equal(200);
+  let h = hash(getMessage(op));
+  resp1.json.data.hash.should.equal(h);
   if (op.name == 'Sponsor') {
     if (idsAsHex) {
       op.contextId = op.contextId.toLowerCase();
     }
     op.id = db.getUserByContextId(contextIdsColl, op.contextId);
     delete op.contextId;
+    h = hash(getMessage(op));
   }
-  const h = hash(getMessage(op));
-  resp1.json.data.hash.should.equal(h);
   op = operationsColl.document(h);
   delete op._rev;
   delete op._id;
