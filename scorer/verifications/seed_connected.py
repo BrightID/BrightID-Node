@@ -24,7 +24,7 @@ def verify():
         quota = INITIAL_QUOTA + months * MONTHLY_QUOTA
         members = seed_groups_members[seed_group]
         used = db['verifications'].find(
-            {'name': 'seedConnected', 'seedGroup': seed_group}).count()
+            {'name': 'SeedConnected', 'seedGroup': seed_group}).count()
         unused = quota - used
         if unused < 1:
             continue
@@ -48,18 +48,18 @@ def verify():
 
         for neighbor in seed_neighbors:
             verifications = set([v['name'] for v in db['verifications'].find({'user': neighbor})])
-            if 'seedConnected' not in verifications:
+            if 'SeedConnected' not in verifications:
                 db['verifications'].insert({
-                    'name': 'seedConnected',
+                    'name': 'SeedConnected',
                     'user': neighbor,
                     'seedGroup': seed_group,
                     'timestamp': int(time.time() * 1000)
                 })
-                print('user: {}\tverification: seedConnected'.format(neighbor))
+                print('user: {}\tverification: SeedConnected'.format(neighbor))
                 unused -= 1
                 if unused < 1:
                     break
-    verifiedCount = db['verifications'].find({'name': 'seedConnected'}).count()
+    verifiedCount = db['verifications'].find({'name': 'SeedConnected'}).count()
     print('verifieds: {}\n'.format(verifiedCount))
 
 

@@ -7,8 +7,8 @@ def verify():
     db = ArangoClient().db('_system')
     for u in db['users']:
         verifications = set([v['name'] for v in db['verifications'].find({'user': u['_id']})])
-        callJoined = 'callJoined' in verifications
-        seedConnected = 'seedConnected' in verifications
+        callJoined = 'CallJoined' in verifications
+        seedConnected = 'SeedConnected' in verifications
         if not (u['score'] >= 3 or (callJoined and seedConnected)):
             continue
         if 'BrightID' not in verifications:

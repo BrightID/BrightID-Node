@@ -27,15 +27,15 @@ def verify():
 
         for neighbor in neighbors:
             verifications = set([v['name'] for v in db['verifications'].find({'user': neighbor})])
-            if 'callJoined' not in verifications:
+            if 'CallJoined' not in verifications:
                 db['verifications'].insert({
-                    'name': 'callJoined',
+                    'name': 'CallJoined',
                     'user': neighbor,
                     'timestamp': int(time.time() * 1000)
                 })
-                print('user: {}\tverification: callJoined'.format(neighbor))
+                print('user: {}\tverification: CallJoined'.format(neighbor))
 
-    verifiedCount = db['verifications'].find({'name': 'callJoined'}).count()
+    verifiedCount = db['verifications'].find({'name': 'CallJoined'}).count()
     print('verifieds: {}\n'.format(verifiedCount))
 
 
