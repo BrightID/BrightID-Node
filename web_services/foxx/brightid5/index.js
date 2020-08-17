@@ -96,7 +96,6 @@ const handlers = {
 
   userGet: function(req, res){
     const id = req.param('id');
-
     const user = db.loadUser(id);
     if (! user) {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
@@ -106,16 +105,18 @@ const handlers = {
     const groups = db.userGroups(id);
     const invites = db.userInvitedGroups(id);
     db.updateEligibleGroups(id, connections, groups);
+    const verifications = db.userVerifications(user._key);
 
     res.send({
       data: {
         score: user.score,
         createdAt: user.createdAt,
         flaggers: user.flaggers,
+        trusted: user.trusted,
         invites,
         groups,
         connections: db.loadUsers(connections),
-        verifications: user.verifications,
+        verifications,
         isSponsored: db.isSponsored(id)
       }
     });
@@ -123,7 +124,6 @@ const handlers = {
 
   allVerificationsGet: function(req, res){
     const contextName = req.param('context');
-
     const context = db.getContext(contextName);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
@@ -164,7 +164,7 @@ const handlers = {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     }
 
-    if (! db.userHasVerification(context.verification, user)) {
+    if (! db.userVerifications(user).includes(context.verification)) {
       res.throw(404, 'user can not be verified for this context', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 

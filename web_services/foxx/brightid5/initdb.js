@@ -11,6 +11,7 @@ const collections = {
   'operationsHashes': 'document',
   'invitations': 'edge',
   'variables': 'document',
+  'verifications': 'document',
 };
 
 // deprecated collections should be added to this array after releasing
