@@ -30,6 +30,9 @@ describe('groups', function () {
     db.createUser('f');
     db.addConnection('b', 'c', 0);
     db.addConnection('b', 'd', 0);
+    db.addConnection('a', 'b', 0);
+    db.addConnection('a', 'c', 0);
+    db.addConnection('a', 'd', 0);
   });
   after(function(){
     usersColl.truncate();
@@ -64,17 +67,11 @@ describe('groups', function () {
   });
 
   describe('a user connected to all three members of a group', function() {
-    before(function() {
-      db.addConnection('a', 'b', 0);
-      db.addConnection('a', 'c', 0);
-      db.addConnection('a', 'd', 0);
-    });
-
     it('should have three connections', function(){
       db.userConnections('a').length.should.equal(3);
     });
     it('should be eligible to join the group', function (){
-      const eligibleGroups = db.updateEligibleGroups('a', db.userConnections('a'), []);
+      const eligibleGroups = usersColl.document('a').eligible_groups;
       eligibleGroups.should.not.be.empty;
       eligibleGroups[0].should.equal('g2');
     });

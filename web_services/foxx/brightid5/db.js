@@ -141,7 +141,7 @@ function isEligible(groupId, userId) {
   const members = groupMembers(groupId);
   const count = _.intersection(userCons, members).length;
 
-  return count * 2 >= members.length;
+  return count >= members.length / 2;
 }
 
 function updateEligibleGroups(userId, connections, currentGroups) {
@@ -184,6 +184,30 @@ function updateEligibleGroups(userId, connections, currentGroups) {
     eligible_timestamp: Date.now()
   });
   return eligible_groups;
+}
+
+function updateEligibles(groupId) {
+  const members = groupMembers(groupId);
+  const neighbors = [];
+  members.forEach(member => {
+    const conns = userConnections(member);
+    neighbors.push(...conns);
+  });
+  const counts = {};
+  for (let i = 0; i < neighbors.length; i++) {
+    counts[neighbors[i]] = (counts[neighbors[i]] || 0) + 1;
+  }
+  Object.keys(counts).forEach(neighbor => {
+    if (counts[neighbor] >= members.length / 2) {
+      const eligible_groups = usersColl.document(neighbor).eligible_groups || [];
+      if (eligible_groups.indexOf(groupId) == -1) {
+        eligible_groups.push(groupId);
+        usersColl.update(neighbor, {
+          eligible_groups
+        });
+      }
+    }
+  });
 }
 
 function groupToDic(group) {
@@ -425,6 +449,7 @@ function addMembership(groupId, key, timestamp) {
   if (groupMembers(groupId).length == group.founders.length) {
     groupsColl.update(group, { isNew: false });
   }
+  updateEligibles(groupId);
 }
 
 function deleteGroup(groupId, key, timestamp) {
