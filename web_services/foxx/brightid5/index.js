@@ -101,11 +101,11 @@ const handlers = {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
     }
 
+    const verifications = db.userVerifications(id);
     const connections = db.userConnections(id);
     const groups = db.userGroups(id);
     const invites = db.userInvitedGroups(id);
     db.updateEligibleGroups(id, connections, groups);
-    const verifications = db.userVerifications(user._key);
 
     res.send({
       data: {
