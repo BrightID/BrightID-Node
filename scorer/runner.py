@@ -1,3 +1,5 @@
+import time
+from datetime import datetime
 import anti_sybil.algorithms as algorithms
 from anti_sybil.utils import *
 from arango import ArangoClient
@@ -17,6 +19,8 @@ def process(fname):
     ranker = algorithms.Yekta(graph, {})
     ranker.rank()
     draw_graph(ranker.graph, 'nodes.html')
+    query = 'FOR u IN users UPDATE { _key: u._key, score: 0 } IN users'
+    db.aql.execute(query)
 
     for node in ranker.graph:
         db['users'].update({'_key': node.name, 'score': node.rank})
