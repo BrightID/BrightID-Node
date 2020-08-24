@@ -12,7 +12,9 @@ schemas = Object.assign({
     id: joi.string().required().description('the user id'),
     score: schemas.score,
     verifications: joi.array().items(joi.string()),
-    flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
+    hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
+    trusted: joi.array().items(joi.string()).description('list of trusted connections of the user'),
+    flaggers: joi.object().description('an object containing ids of flaggers as key and reason as value'),
   }),
   groupBase: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
@@ -194,6 +196,7 @@ schemas = Object.assign({
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string()),
       isSponsored: joi.boolean(),
+      trusted: joi.array().items(joi.string()),
       flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
     })
   }),
