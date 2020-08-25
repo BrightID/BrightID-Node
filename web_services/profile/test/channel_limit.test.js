@@ -35,6 +35,7 @@ describe('Channel limit', () => {
             data: `Another profile data`,
             uuid: uuidv4(),
         })
-        .expect(config.channel_limit_error_code)
+        .expect(config.channel_limit_response_code)
+        expect(res.body).toHaveProperty('error', config.channel_limit_message)
     })
 })

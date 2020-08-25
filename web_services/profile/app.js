@@ -44,7 +44,7 @@ app.post("/upload/:channel", function (req, res) {
 
     // Bail out if channel is full
     if (current_data.length >= config.channel_entry_limit) {
-      res.status(config.channel_limit_error_code).json({error: `Channel full`});
+      res.status(config.channel_limit_response_code).json({error: config.channel_limit_message});
       return;
     }
 
