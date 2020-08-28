@@ -2,7 +2,7 @@ const joi = require('joi');
 
 // lowest-level schemas
 var schemas = {
-  score: joi.number().min(0).max(100).default(0),
+  score: joi.number().min(0).max(5).default(0),
   timestamp: joi.number().integer(),
 };
 
@@ -23,9 +23,10 @@ schemas = Object.assign({
     founders: joi.array().items(joi.string()).required().description('brightids of group founders'),
     admins: joi.array().items(joi.string()).required().description('brightids of group admins'),
     isNew: joi.boolean().required().description('true if some of founders did not join the group yet and group is still in founding stage'),
+    // score on group is deprecated and will be removed on v6
     score: schemas.score,
     url: joi.string().required().description('url of encrypted group data (name and photo)'),
-    timestamp: schemas.score.required().description('group creation timestamp'),
+    timestamp: schemas.timestamp.required().description('group creation timestamp'),
   }),
   app: joi.object({
     id: joi.string().required().description('unique app id'),

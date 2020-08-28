@@ -227,7 +227,8 @@ function groupToDic(group) {
     founders: group.founders.map(founder => founder.replace('users/', '')),
     admins: group.admins || group.founders,
     isNew: group.isNew,
-    score: group.score,
+    // score on group is deprecated and will removed on v6
+    score: 0,
     url: group.url,
     timestamp: group.timestamp,
   }
