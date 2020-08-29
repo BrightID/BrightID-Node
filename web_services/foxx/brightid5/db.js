@@ -568,20 +568,26 @@ function linkContextId(id, context, contextId, timestamp) {
     contextId = contextId.toLowerCase();
   }
 
-  // accept link if the contextId is the last linked contextId
-  if (getContextIdsByUser(coll, id)[0] === contextId) {
-    return;
-  }
-  if (getUserByContextId(coll, contextId)) {
-    throw 'contextId is duplicate';
-  }
-
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
   );
   if (recentLinks.length >=3) {
     throw 'only three contextIds can be linked every 24 hours';
+  }
+
+  // accept link if the contextId is used by the same user before
+  links.forEach(link => {
+    if (link.contextId === contextId) {
+      if (timestamp > link.timestamp) {
+        coll.update(link, { timestamp });
+      }
+      return;
+    }
+  })
+
+  if (getUserByContextId(coll, contextId)) {
+    throw 'contextId is duplicate';
   }
 
   coll.insert({
