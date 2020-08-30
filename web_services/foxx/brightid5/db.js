@@ -577,14 +577,15 @@ function linkContextId(id, context, contextId, timestamp) {
   }
 
   // accept link if the contextId is used by the same user before
-  links.forEach(link => {
+  let link;
+  for (link of links) {
     if (link.contextId === contextId) {
       if (timestamp > link.timestamp) {
         coll.update(link, { timestamp });
       }
       return;
     }
-  })
+  }
 
   if (getUserByContextId(coll, contextId)) {
     throw 'contextId is duplicate';
