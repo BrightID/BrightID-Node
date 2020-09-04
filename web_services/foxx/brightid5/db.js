@@ -661,7 +661,7 @@ function upsertOperation(op) {
 }
 
 function getState() {
-  const lastProcessedBlock = variablesColl.document('LAST_BLOCK_LOG').value;
+  const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
   return {
     lastProcessedBlock,
