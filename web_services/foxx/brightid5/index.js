@@ -281,7 +281,14 @@ const handlers = {
         apps
       }
     });
+  },
+
+  stateGet: function(req, res){
+    res.send({
+      "data": db.getState()
+    });
   }
+
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -335,6 +342,10 @@ router.get('/apps/:app', handlers.appGet)
 router.get('/apps', handlers.allAppsGet)
   .summary("Get all apps")
   .response(schemas.allAppsGetResponse);
+
+router.get('/state', handlers.stateGet)
+  .summary("Get state of this node")
+  .response(schemas.stateGetResponse);
 
 module.context.use(function (req, res, next) {
   try {

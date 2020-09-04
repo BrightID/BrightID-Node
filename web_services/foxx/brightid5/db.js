@@ -16,6 +16,7 @@ const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
+const variablesColl = db._collection('variables');
 
 const {
   uInt8ArrayToB64,
@@ -659,6 +660,15 @@ function upsertOperation(op) {
   }
 }
 
+function getState() {
+  const lastProcessedBlock = variablesColl.document('LAST_BLOCK_LOG').value;
+  const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
+  return {
+    lastProcessedBlock,
+    verificationsBlock
+  }
+}
+
 module.exports = {
   addConnection,
   removeConnection,
@@ -693,5 +703,6 @@ module.exports = {
   setTrusted,
   setSigningKey,
   getLastContextIds,
-  unusedSponsorship
+  unusedSponsorship,
+  getState
 };

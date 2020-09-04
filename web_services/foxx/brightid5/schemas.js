@@ -242,6 +242,13 @@ schemas = Object.assign({
     })
   }),
 
+  stateGetResponse: joi.object({
+    data: joi.object({
+      lastProcessedBlock: joi.number().integer().required().description('last block that consensus receiver service processed'),
+      verificationsBlock: joi.number().integer().required().description('the block that scorer service updated verifications based on operations got applied before that block'),
+    })
+  }),
+
 }, schemas);
 
 
