@@ -10,6 +10,7 @@ var schemas = {
 schemas = Object.assign({
   user: joi.object({
     id: joi.string().required().description('the user id'),
+    signingKey: joi.string().required().description('the user signingKey'),
     score: schemas.score,
     verifications: joi.array().items(joi.string()),
     hasPrimaryGroup: joi.boolean().description('true if user has primary group'),

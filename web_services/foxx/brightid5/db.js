@@ -130,6 +130,7 @@ function loadUsers(users) {
   return usersColl.documents(users).documents.map(u => {
     const res = {
       id: u._key,
+      signingKey: u.signingKey,
       score: u.score,
       verifications: userVerifications(u._key),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
