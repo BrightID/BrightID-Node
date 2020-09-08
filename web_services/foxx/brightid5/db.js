@@ -136,6 +136,7 @@ function loadUsers(users) {
       hasPrimaryGroup: hasPrimaryGroup(u._key),
       trusted: u.trusted,
       flaggers: u.flaggers,
+      createdAt: u.createdAt,
     }
     return res;
   });

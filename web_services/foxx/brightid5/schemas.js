@@ -16,6 +16,7 @@ schemas = Object.assign({
     hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
     trusted: joi.array().items(joi.string()).description('list of trusted connections of the user'),
     flaggers: joi.object().description('an object containing ids of flaggers as key and reason as value'),
+    createdAt: schemas.timestamp.required().description('the user creation timestamp',
   }),
   groupBase: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
