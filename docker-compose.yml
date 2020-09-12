@@ -23,7 +23,7 @@ services:
     env_file:
       - config.env
 
-  consensus:
+  consensus_receiver:
     build: consensus
     depends_on:
       - ws
@@ -36,6 +36,18 @@ services:
         target: /snapshots
     env_file:
       - config.env
+    entrypoint: python3 -u receiver.py
+
+  consensus_sender:
+    build: consensus
+    depends_on:
+      - ws
+      - db
+    network_mode: host
+    image: brightid/consensus
+    env_file:
+      - config.env
+    entrypoint: python3 -u sender.py
 
   sp_updater:
     build: sp_updater
