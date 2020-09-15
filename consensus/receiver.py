@@ -133,6 +133,12 @@ def main():
             last_block = block
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
 
+
 if __name__ == '__main__':
-    print('receiver started ...')
-    main()
+    while True:
+        try:
+            print('receiver started ...')
+            main()
+        except Exception as e:
+            print(f'Error: {e}')
+            time.sleep(10)
