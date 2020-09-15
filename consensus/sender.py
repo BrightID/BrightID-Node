@@ -45,11 +45,12 @@ def main():
 
 
 if __name__ == '__main__':
+    print('sender started ...')
     while True:
         try:
-            print('sender started ...')
             main()
             time.sleep(1)
         except Exception as e:
             print(f'Error: {e}')
             time.sleep(10)
+            print('sender started ...')
