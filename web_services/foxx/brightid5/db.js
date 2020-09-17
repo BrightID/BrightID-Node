@@ -127,6 +127,7 @@ function userConnections(user) {
 }
 
 function loadUsers(users) {
+  // score is deprecated and will removed on v6
   return usersColl.documents(users).documents.map(u => {
     const res = {
       id: u._key,
@@ -547,7 +548,7 @@ function getLastContextIds(coll, verification) {
       FOR u in ${usersColl}
         FILTER c.user == u._key
         FOR v in verifications
-          FILTER v.user == u._id
+          FILTER v.user == u._key
           FILTER ${verification} == v.name
           FOR s IN ${sponsorshipsColl}
             FILTER s._from == u._id
@@ -558,7 +559,6 @@ function getLastContextIds(coll, verification) {
 }
 
 function userVerifications(user) {
-  user = "users/" + user;
   return verificationsColl.byExample({
     user
   }).toArray().map(v => v.name);
