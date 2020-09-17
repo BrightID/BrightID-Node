@@ -6,7 +6,7 @@ def verify(graph):
     print('BrightID')
     db = ArangoClient().db('_system')
     for u in db['users']:
-        verifications = set([v['name'] for v in db['verifications'].find({'user': u['_id']})])
+        verifications = set([v['name'] for v in db['verifications'].find({'user': u['_key']})])
         callJoined = 'CallJoined' in verifications
         seedConnected = 'SeedConnected' in verifications
         if not (callJoined and seedConnected):
@@ -14,7 +14,7 @@ def verify(graph):
         if 'BrightID' not in verifications:
             db['verifications'].insert({
                 'name': 'BrightID',
-                'user': u['_id'],
+                'user': u['_key'],
                 'timestamp': int(time.time() * 1000)
             })
             print('user: {}\tverification: BrightID'.format(u['_key']))

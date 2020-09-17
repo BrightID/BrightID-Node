@@ -31,7 +31,7 @@ def verify(graph):
             }
             IN verifications
         ''', bind_vars={
-            'user': f'users/{node.name}',
+            'user': node.name,
             'rank': node.rank,
             'timestamp': int(time.time() * 1000)
         })

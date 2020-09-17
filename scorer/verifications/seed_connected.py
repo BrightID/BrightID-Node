@@ -47,6 +47,7 @@ def verify(graph):
             m for m in seed_neighbors if m not in all_seeds or m in members]
 
         for neighbor in seed_neighbors:
+            neighbor = neighbor.replace('users/', '')
             verifications = set([v['name'] for v in db['verifications'].find({'user': neighbor})])
             if 'SeedConnected' not in verifications:
                 db['verifications'].insert({

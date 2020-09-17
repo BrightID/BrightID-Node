@@ -26,6 +26,7 @@ def verify(graph):
             neighbors.update([conn['_from'], conn['_to']])
 
         for neighbor in neighbors:
+            neighbor = neighbor.replace('users/', '')
             verifications = set([v['name'] for v in db['verifications'].find({'user': neighbor})])
             if 'CallJoined' not in verifications:
                 db['verifications'].insert({
