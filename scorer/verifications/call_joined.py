@@ -5,7 +5,7 @@ BRIGHTID_CALLS = {'BrightID East': 'w4dNg2yUSuuMN_SfPBmqTbdNhk_nsFgwoO36ZUcDt88'
                   'BrightID West': '-z6lbLFK4yxj1YmrUz7dYttceEg1XWZRoD_V8xE8qC0'}
 
 
-def verify():
+def verify(graph):
     print('CALL JOINED')
     db = ArangoClient().db('_system')
 
@@ -37,7 +37,3 @@ def verify():
 
     verifiedCount = db['verifications'].find({'name': 'CallJoined'}).count()
     print('verifieds: {}\n'.format(verifiedCount))
-
-
-if __name__ == '__main__':
-    verify()

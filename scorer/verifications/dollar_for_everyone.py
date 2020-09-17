@@ -2,7 +2,7 @@ import time
 from arango import ArangoClient
 
 
-def verify():
+def verify(graph):
     print('DOLLAR FOR EVERYONE')
     db = ArangoClient().db('_system')
     for admin in db['users'].find({'dfeAdmin': True}):
@@ -19,7 +19,3 @@ def verify():
                 print('user: {}\tverification: DollarForEveryone'.format(u))
     verifiedCount = db['verifications'].find({'name': 'DollarForEveryone'}).count()
     print('verifieds: {}\n'.format(verifiedCount))
-
-
-if __name__ == '__main__':
-    verify()

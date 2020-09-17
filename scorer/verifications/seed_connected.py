@@ -5,7 +5,7 @@ MONTHLY_QUOTA = 10
 INITIAL_QUOTA = 50
 
 
-def verify():
+def verify(graph):
     print('SEED CONNECTED')
     db = ArangoClient().db('_system')
     seed_groups = list(db['groups'].find({'seed': True}))
@@ -61,7 +61,3 @@ def verify():
                     break
     verifiedCount = db['verifications'].find({'name': 'SeedConnected'}).count()
     print('verifieds: {}\n'.format(verifiedCount))
-
-
-if __name__ == '__main__':
-    verify()
