@@ -15,6 +15,7 @@ const appsColl = db._collection('apps');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
+const verificationsColl = db._collection('verifications');
 
 const {
   uInt8ArrayToB64,
@@ -48,11 +49,13 @@ function addConnection(key1, key2, timestamp){
     u2 = createUser(key2, timestamp);
   }
 
+  const u1_verifications = userVerifications(key1);
+  const u2_verifications = userVerifications(key2);
   // set the first verified user that makes a connection with a user as its parent
-  if (!u1.parent && u2.verifications && u2.verifications.includes('BrightID')) {
+  if (!u1.parent && u2_verifications && u2_verifications.includes('BrightID')) {
     usersColl.update(u1, { parent: key2 });
   }
-  if (!u2.parent && u1.verifications && u1.verifications.includes('BrightID')) {
+  if (!u2.parent && u1_verifications && u1_verifications.includes('BrightID')) {
     usersColl.update(u2, { parent: key1 });
   }
 
@@ -123,9 +126,11 @@ function userConnections(user){
 }
 
 function loadUsers(users){
+  // score is deprecated and will removed on v6
   return usersColl.documents(users).documents.map(u => {
     u.id = u._key;
     u.hasPrimaryGroup = hasPrimaryGroup(u.id);
+    u.verifications = userVerifications(u._key);
     return u;
   });
 }
@@ -194,6 +199,7 @@ function groupToDic(group){
     founders: group.founders.map(founder => founder.replace('users/', '')),
     admins: group.admins || group.founders,
     isNew: group.isNew,
+    // score on group is deprecated and will removed on v6
     score: group.score,
     url: group.url,
     timestamp: group.timestamp,
@@ -501,18 +507,21 @@ function getLastContextIds(coll, verification){
     FOR c IN ${coll}
       FOR u in ${usersColl}
         FILTER c.user == u._key
-        FILTER ${verification} in u.verifications
-        FOR s IN ${sponsorshipsColl}
-          FILTER s._from == u._id
-          SORT c.timestamp DESC
-          COLLECT user = c.user INTO contextIds = c.contextId
-          RETURN contextIds[0]
+        FOR v in verifications
+          FILTER v.user == u._key
+          FILTER ${verification} == v.name
+          FOR s IN ${sponsorshipsColl}
+            FILTER s._from == u._id
+            SORT c.timestamp DESC
+            COLLECT user = c.user INTO contextIds = c.contextId
+            RETURN contextIds[0]
   `.toArray();
 }
 
-function userHasVerification(verification, user){
-  const u = loadUser(user);
-  return u && u.verifications && u.verifications.indexOf(verification) > -1;
+function userVerifications(user) {
+  return verificationsColl.byExample({
+    user
+  }).toArray().map(v => v.name);
 }
 
 function linkContextId(id, context, contextId, timestamp){
@@ -631,7 +640,7 @@ module.exports = {
   loadUsers,
   getContext,
   getAllContexts,
-  userHasVerification,
+  userVerifications,
   getUserByContextId,
   getContextIdsByUser,
   sponsor,
