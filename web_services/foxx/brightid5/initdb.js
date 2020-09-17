@@ -23,7 +23,8 @@ const deprecated = [
 ];
 
 const indexes = [
-  {'collection': 'verifications',  'fields': ['name']}
+  {'collection': 'verifications',  'fields': ['name']},
+  {'collection': 'verifications',  'fields': ['user']}
 ]
 
 function createCollections() {
