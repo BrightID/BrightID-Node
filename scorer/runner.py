@@ -39,7 +39,11 @@ if __name__ == '__main__':
         fname = os.path.join(SNAPSHOTS_PATH, snapshots[0])
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
-        process(fname)
+        try:
+            process(fname)
+        except Exception as e:
+            print(f'Error: {e}')
+            time.sleep(10)
         block = int(snapshots[0].strip('dump_').strip('.zip'))
         variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
         os.remove(fname)
