@@ -46,6 +46,9 @@ if __name__ == '__main__':
             time.sleep(10)
         block = int(snapshots[0].strip('dump_').strip('.zip'))
         variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
-        os.remove(fname)
+        if os.path.exists(fname):
+            os.remove(fname)
+        else:
+            print(f'{fname} does not exist')
         print(
             '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
