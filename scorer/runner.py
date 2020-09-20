@@ -41,14 +41,14 @@ if __name__ == '__main__':
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
         try:
             process(fname)
+            block = int(snapshots[0].strip('dump_').strip('.zip'))
+            variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
+            if os.path.exists(fname):
+                os.remove(fname)
+            else:
+                print(f'{fname} does not exist')
+            print(
+                '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
         except Exception as e:
             print(f'Error: {e}')
             time.sleep(10)
-        block = int(snapshots[0].strip('dump_').strip('.zip'))
-        variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
-        if os.path.exists(fname):
-            os.remove(fname)
-        else:
-            print(f'{fname} does not exist')
-        print(
-            '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
