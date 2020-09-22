@@ -83,6 +83,7 @@ const handlers = {
 
   userGet: function userGetHandler(req, res){
     const id = req.param('id');
+    const verifications = db.userVerifications(id);
 
     const user = db.loadUser(id);
     if (! user) {
@@ -102,7 +103,7 @@ const handlers = {
         invites,
         groups,
         connections: db.loadUsers(connections),
-        verifications: user.verifications,
+        verifications,
         isSponsored: db.isSponsored(id)
       }
     });
@@ -155,7 +156,7 @@ const handlers = {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     }
 
-    if (! db.userHasVerification(context.verification, user)) {
+    if (! db.userVerifications(user).includes(context.verification)) {
       res.throw(404, 'user can not be verified for this context', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 

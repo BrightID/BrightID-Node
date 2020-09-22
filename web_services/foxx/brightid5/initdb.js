@@ -11,6 +11,7 @@ const collections = {
   'operationsHashes': 'document',
   'invitations': 'edge',
   'variables': 'document',
+  'verifications': 'document',
 };
 
 // deprecated collections should be added to this array after releasing
@@ -20,6 +21,11 @@ const deprecated = [
   'newGroups',
   'usersInNewGroups',
 ];
+
+const indexes = [
+  {'collection': 'verifications',  'fields': ['name']},
+  {'collection': 'verifications',  'fields': ['user']}
+]
 
 function createCollections() {
   console.log("creating collections if they don't exist ...");
@@ -32,6 +38,15 @@ function createCollections() {
       db._create(collection, {}, type);
       console.log(`${collection} created with type ${type}`);
     }
+  };
+}
+
+function createIndexes() {
+  console.log("creating indexes ...");
+  for (let index of indexes) {
+    const coll = db._collection(index.collection);
+    coll.ensureIndex({type: 'persistent', fields: index.fields})
+    console.log(`${index.fields} indexed in ${index.collection} collection`);
   };
 }
 
@@ -87,6 +102,7 @@ const upgrades = ['v5'];
 
 function initdb() {
   createCollections();
+  createIndexes();
   removeDeprecatedCollections();
   variablesColl = db._collection('variables');
   let index;

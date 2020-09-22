@@ -2,7 +2,7 @@ const joi = require('joi');
 
 // lowest-level schemas
 var schemas = {
-  score: joi.number().min(0).max(100).default(0),
+  score: joi.number().min(0).max(5).default(0),
   timestamp: joi.number().integer(),
 };
 
@@ -10,9 +10,13 @@ var schemas = {
 schemas = Object.assign({
   user: joi.object({
     id: joi.string().required().description('the user id'),
+    signingKey: joi.string().required().description('the user signingKey'),
     score: schemas.score,
     verifications: joi.array().items(joi.string()),
-    flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
+    hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
+    trusted: joi.array().items(joi.string()).description('list of trusted connections of the user'),
+    flaggers: joi.object().description('an object containing ids of flaggers as key and reason as value'),
+    createdAt: schemas.timestamp.required().description('the user creation timestamp'),
   }),
   groupBase: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
@@ -21,9 +25,10 @@ schemas = Object.assign({
     founders: joi.array().items(joi.string()).required().description('brightids of group founders'),
     admins: joi.array().items(joi.string()).required().description('brightids of group admins'),
     isNew: joi.boolean().required().description('true if some of founders did not join the group yet and group is still in founding stage'),
+    // score on group is deprecated and will be removed on v6
     score: schemas.score,
     url: joi.string().required().description('url of encrypted group data (name and photo)'),
-    timestamp: schemas.score.required().description('group creation timestamp'),
+    timestamp: schemas.timestamp.required().description('group creation timestamp'),
   }),
   app: joi.object({
     id: joi.string().required().description('unique app id'),
@@ -194,6 +199,7 @@ schemas = Object.assign({
       connections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string()),
       isSponsored: joi.boolean(),
+      trusted: joi.array().items(joi.string()),
       flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
     })
   }),
@@ -235,6 +241,13 @@ schemas = Object.assign({
   allAppsGetResponse: joi.object({
     data: joi.object({
       apps: joi.array().items(schemas.app)
+    })
+  }),
+
+  stateGetResponse: joi.object({
+    data: joi.object({
+      lastProcessedBlock: joi.number().integer().required().description('last block that consensus receiver service processed'),
+      verificationsBlock: joi.number().integer().required().description('the block that scorer service updated verifications based on operations got applied before that block'),
     })
   }),
 

@@ -11,9 +11,16 @@ const notification_service = is_dev
   ? process.env.NOTIFICATION_SERVICE_DEV
   : process.env.NOTIFICATION_SERVICE_RELEASE;
 
+const channel_entry_limit = 30;
+const channel_limit_response_code = 400;
+const channel_limit_message = "Channel full"
+
 module.exports = {
   is_dev,
   port,
   node_cache,
   notification_service,
+  channel_entry_limit,
+  channel_limit_response_code,
+  channel_limit_message
 };

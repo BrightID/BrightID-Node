@@ -41,6 +41,13 @@ app.post("/upload/:channel", function (req, res) {
   const current_data = dataCache.get(channel)
   if (current_data) {
     // provided data is a responder profile. Add to existing channel.
+
+    // Bail out if channel is full
+    if (current_data.length >= config.channel_entry_limit) {
+      res.status(config.channel_limit_response_code).json({error: config.channel_limit_message});
+      return;
+    }
+
     // Check if there is already a profile with the provided uuid to prevent duplicates
     const existingProfile = current_data.find(entry => (entry.uuid === uuid))
     if (existingProfile) {

@@ -96,12 +96,12 @@ const handlers = {
 
   userGet: function(req, res){
     const id = req.param('id');
-
     const user = db.loadUser(id);
     if (! user) {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
     }
 
+    const verifications = db.userVerifications(id);
     const connections = db.userConnections(id);
     const groups = db.userGroups(id);
     const invites = db.userInvitedGroups(id);
@@ -112,10 +112,11 @@ const handlers = {
         score: user.score,
         createdAt: user.createdAt,
         flaggers: user.flaggers,
+        trusted: user.trusted,
         invites,
         groups,
         connections: db.loadUsers(connections),
-        verifications: user.verifications,
+        verifications,
         isSponsored: db.isSponsored(id)
       }
     });
@@ -123,7 +124,6 @@ const handlers = {
 
   allVerificationsGet: function(req, res){
     const contextName = req.param('context');
-
     const context = db.getContext(contextName);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
@@ -164,7 +164,7 @@ const handlers = {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     }
 
-    if (! db.userHasVerification(context.verification, user)) {
+    if (! db.userVerifications(user).includes(context.verification)) {
       res.throw(404, 'user can not be verified for this context', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
@@ -281,7 +281,14 @@ const handlers = {
         apps
       }
     });
+  },
+
+  stateGet: function(req, res){
+    res.send({
+      "data": db.getState()
+    });
   }
+
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -335,6 +342,10 @@ router.get('/apps/:app', handlers.appGet)
 router.get('/apps', handlers.allAppsGet)
   .summary("Get all apps")
   .response(schemas.allAppsGetResponse);
+
+router.get('/state', handlers.stateGet)
+  .summary("Get state of this node")
+  .response(schemas.stateGetResponse);
 
 module.context.use(function (req, res, next) {
   try {

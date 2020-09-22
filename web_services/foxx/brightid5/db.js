@@ -15,6 +15,8 @@ const appsColl = db._collection('apps');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
+const verificationsColl = db._collection('verifications');
+const variablesColl = db._collection('variables');
 
 const {
   uInt8ArrayToB64,
@@ -48,11 +50,13 @@ function addConnection(key1, key2, timestamp) {
     u2 = createUser(key2, timestamp);
   }
 
+  const u1_verifications = userVerifications(key1);
+  const u2_verifications = userVerifications(key2);
   // set the first verified user that makes a connection with a user as its parent
-  if (!u1.parent && u2.verifications && u2.verifications.includes('BrightID')) {
+  if (!u1.parent && u2_verifications && u2_verifications.includes('BrightID')) {
     usersColl.update(u1, { parent: key2 });
   }
-  if (!u2.parent && u1.verifications && u1.verifications.includes('BrightID')) {
+  if (!u2.parent && u1_verifications && u1_verifications.includes('BrightID')) {
     usersColl.update(u2, { parent: key1 });
   }
 
@@ -123,10 +127,19 @@ function userConnections(user) {
 }
 
 function loadUsers(users) {
+  // score is deprecated and will removed on v6
   return usersColl.documents(users).documents.map(u => {
-    u.id = u._key;
-    u.hasPrimaryGroup = hasPrimaryGroup(u.id);
-    return u;
+    const res = {
+      id: u._key,
+      signingKey: u.signingKey,
+      score: u.score,
+      verifications: userVerifications(u._key),
+      hasPrimaryGroup: hasPrimaryGroup(u._key),
+      trusted: u.trusted,
+      flaggers: u.flaggers,
+      createdAt: u.createdAt,
+    }
+    return res;
   });
 }
 
@@ -141,7 +154,7 @@ function isEligible(groupId, userId) {
   const members = groupMembers(groupId);
   const count = _.intersection(userCons, members).length;
 
-  return count * 2 >= members.length;
+  return count >= members.length / 2;
 }
 
 function updateEligibleGroups(userId, connections, currentGroups) {
@@ -186,6 +199,30 @@ function updateEligibleGroups(userId, connections, currentGroups) {
   return eligible_groups;
 }
 
+function updateEligibles(groupId) {
+  const members = groupMembers(groupId);
+  const neighbors = [];
+  members.forEach(member => {
+    const conns = userConnections(member);
+    neighbors.push(...conns);
+  });
+  const counts = {};
+  for (let i = 0; i < neighbors.length; i++) {
+    counts[neighbors[i]] = (counts[neighbors[i]] || 0) + 1;
+  }
+  Object.keys(counts).forEach(neighbor => {
+    if (counts[neighbor] >= members.length / 2) {
+      const eligible_groups = usersColl.document(neighbor).eligible_groups || [];
+      if (eligible_groups.indexOf(groupId) == -1) {
+        eligible_groups.push(groupId);
+        usersColl.update(neighbor, {
+          eligible_groups
+        });
+      }
+    }
+  });
+}
+
 function groupToDic(group) {
   return {
     id: group._key,
@@ -194,7 +231,8 @@ function groupToDic(group) {
     founders: group.founders.map(founder => founder.replace('users/', '')),
     admins: group.admins || group.founders,
     isNew: group.isNew,
-    score: group.score,
+    // score on group is deprecated and will removed on v6
+    score: 0,
     url: group.url,
     timestamp: group.timestamp,
   }
@@ -425,6 +463,7 @@ function addMembership(groupId, key, timestamp) {
   if (groupMembers(groupId).length == group.founders.length) {
     groupsColl.update(group, { isNew: false });
   }
+  updateEligibles(groupId);
 }
 
 function deleteGroup(groupId, key, timestamp) {
@@ -508,18 +547,21 @@ function getLastContextIds(coll, verification) {
     FOR c IN ${coll}
       FOR u in ${usersColl}
         FILTER c.user == u._key
-        FILTER ${verification} in u.verifications
-        FOR s IN ${sponsorshipsColl}
-          FILTER s._from == u._id
-          SORT c.timestamp DESC
-          COLLECT user = c.user INTO contextIds = c.contextId
-          RETURN contextIds[0]
+        FOR v in verifications
+          FILTER v.user == u._key
+          FILTER ${verification} == v.name
+          FOR s IN ${sponsorshipsColl}
+            FILTER s._from == u._id
+            SORT c.timestamp DESC
+            COLLECT user = c.user INTO contextIds = c.contextId
+            RETURN contextIds[0]
   `.toArray();
 }
 
-function userHasVerification(verification, user) {
-  const u = loadUser(user);
-  return u && u.verifications && u.verifications.indexOf(verification) > -1;
+function userVerifications(user) {
+  return verificationsColl.byExample({
+    user
+  }).toArray().map(v => v.name);
 }
 
 function linkContextId(id, context, contextId, timestamp) {
@@ -529,20 +571,27 @@ function linkContextId(id, context, contextId, timestamp) {
     contextId = contextId.toLowerCase();
   }
 
-  // accept link if the contextId is the last linked contextId
-  if (getContextIdsByUser(coll, id)[0] === contextId) {
-    return;
-  }
-  if (getUserByContextId(coll, contextId)) {
-    throw 'contextId is duplicate';
-  }
-
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
   );
   if (recentLinks.length >=3) {
     throw 'only three contextIds can be linked every 24 hours';
+  }
+
+  // accept link if the contextId is used by the same user before
+  let link;
+  for (link of links) {
+    if (link.contextId === contextId) {
+      if (timestamp > link.timestamp) {
+        coll.update(link, { timestamp });
+      }
+      return;
+    }
+  }
+
+  if (getUserByContextId(coll, contextId)) {
+    throw 'contextId is duplicate';
   }
 
   coll.insert({
@@ -613,6 +662,15 @@ function upsertOperation(op) {
   }
 }
 
+function getState() {
+  const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
+  const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
+  return {
+    lastProcessedBlock,
+    verificationsBlock
+  }
+}
+
 module.exports = {
   addConnection,
   removeConnection,
@@ -636,7 +694,7 @@ module.exports = {
   getApp,
   getApps,
   appToDic,
-  userHasVerification,
+  userVerifications,
   getUserByContextId,
   getContextIdsByUser,
   sponsor,
@@ -647,5 +705,6 @@ module.exports = {
   setTrusted,
   setSigningKey,
   getLastContextIds,
-  unusedSponsorship
+  unusedSponsorship,
+  getState
 };

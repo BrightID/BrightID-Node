@@ -43,8 +43,14 @@ def main():
         op['state'] = 'sent'
         db.update_document(op)
 
+
 if __name__ == '__main__':
     print('sender started ...')
     while True:
-        main()
-        time.sleep(1)
+        try:
+            main()
+            time.sleep(1)
+        except Exception as e:
+            print(f'Error: {e}')
+            time.sleep(10)
+            print('sender started ...')
