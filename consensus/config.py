@@ -9,6 +9,7 @@ ADDRESS = keys.PrivateKey(decode_hex(PRIVATE_KEY)).public_key.to_checksum_addres
 GAS = int(os.environ['BN_CONSENSUS_GAS'])
 GAS_PRICE = int(os.environ['BN_CONSENSUS_GAS_PRICE'])
 TO_ADDRESS = os.environ['BN_CONSENSUS_TO_ADDRESS']
+DEPRECATED_TO_ADDRESS = '0x0000000000000000000000000000000000000007'
 
 SNAPSHOTS_PERIOD = int(os.environ['BN_CONSENSUS_SNAPSHOTS_PERIOD'])
 SNAPSHOTS_PATH = "/snapshots/dump_{}.zip"

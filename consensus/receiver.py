@@ -125,7 +125,7 @@ def main():
         for block in range(last_block+1, current_block+1):
             print('processing block {}'.format(block))
             for i, tx in enumerate(w3.eth.getBlock(block, True)['transactions']):
-                if tx['to'] and tx['to'].lower() == config.TO_ADDRESS.lower():
+                if tx['to'] and tx['to'].lower() in (config.TO_ADDRESS.lower(), config.DEPRECATED_TO_ADDRESS.lower()):
                     process(tx['input'])
             if block % config.SNAPSHOTS_PERIOD == 0:
                 update_seed_groups(block-config.SNAPSHOTS_PERIOD, block)
