@@ -18,7 +18,7 @@ if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') 
 voting = w3.eth.contract(address=config.VOTING_ADDRESS, abi=config.VOTING_ABI)
 
 def hash(op):
-    op = {k: op[k] for k in op if not k.startswith('sig')}
+    op = {k: op[k] for k in op if k not in ('sig', 'sig1', 'sig2', 'hash')}
     if op['name'] == 'Set Signing Key':
         del op['id1']
         del op['id2']
@@ -125,7 +125,7 @@ def main():
         for block in range(last_block+1, current_block+1):
             print('processing block {}'.format(block))
             for i, tx in enumerate(w3.eth.getBlock(block, True)['transactions']):
-                if tx['to'] and tx['to'].lower() == config.TO_ADDRESS.lower():
+                if tx['to'] and tx['to'].lower() in (config.TO_ADDRESS.lower(), config.DEPRECATED_TO_ADDRESS.lower()):
                     process(tx['input'])
             if block % config.SNAPSHOTS_PERIOD == 0:
                 update_seed_groups(block-config.SNAPSHOTS_PERIOD, block)
