@@ -124,6 +124,7 @@ const handlers = {
 
   allVerificationsGet: function(req, res){
     const contextName = req.param('context');
+    const count_only = 'count_only' in req.queryParams;
     const context = db.getContext(contextName);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
@@ -134,7 +135,8 @@ const handlers = {
 
     res.send({
       data: {
-        contextIds: contextIds
+        contextIds: count_only ? null : contextIds,
+        count: contextIds.length
       }
     });
   },
