@@ -353,6 +353,9 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
+    if (e.message.includes("user can not be verified for this context") || e.message.includes("contextId not found")){
+      throw e;
+    }
     console.group("Error returned");
     console.log('url:', req._raw.requestType, req._raw.url);
     console.log('error:', e);
