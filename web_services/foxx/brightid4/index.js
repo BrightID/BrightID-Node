@@ -59,6 +59,9 @@ const handlers = {
         operations.updateSponsorOp(op);
       }
       op.state = 'init';
+      if (JSON.stringify(op).length > 2000) {
+          res.throw(400, 'Operation is too big');
+      }
       db.upsertOperation(op);
     } catch (e) {
       const code = (e == 'Too Many Requests') ? 429 : 400;
@@ -327,6 +330,9 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
+    if (e.message.includes("user can not be verified for this context") || e.message.includes("contextId not found")){
+      throw e;
+    }
     console.group("Error returned");
     console.log('url:', req._raw.requestType, req._raw.url);
     console.log('error:', e);
