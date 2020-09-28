@@ -9,7 +9,7 @@ def verify(graph):
     print('CALL JOINED')
     db = ArangoClient().db('_system')
 
-    for group in config.BRIGHTID_CALLS:
+    for group in config.CALL_GROUPS:
         userInGroups = db['usersInGroups'].find({'_to': 'groups/' + group})
         members = set([ug['_from'] for ug in userInGroups])
 
