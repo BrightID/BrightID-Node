@@ -356,7 +356,11 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
-    if (e.message.includes("user can not be verified for this context") || e.message.includes("contextId not found")){
+    const notLogMessages = [
+      "user can not be verified for this context",
+      "contextId not found"
+    ];
+    if (notLogMessages.includes(e.message)){
       throw e;
     }
     console.group("Error returned");
