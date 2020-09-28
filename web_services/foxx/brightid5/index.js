@@ -62,6 +62,9 @@ const handlers = {
         }
       }
       op.state = 'init';
+      if (JSON.stringify(op).length > 2000) {
+          res.throw(400, 'Operation is too big');
+      }
       db.upsertOperation(op);
     } catch (e) {
       const code = (e == 'Too Many Requests') ? 429 : 400;
