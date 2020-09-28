@@ -130,12 +130,14 @@ const handlers = {
 
     const coll = arango._collection(context.collection);
     let contextIds = db.getLastContextIds(coll, context.verification);
-
+    let data = {
+      count: contextIds.length
+    }
+    if (! count_only){
+      data['contextIds'] = contextIds
+    }
     res.send({
-      data: {
-        contextIds: count_only ? null : contextIds,
-        count: contextIds.length
-      }
+      data
     });
   },
 
