@@ -6,6 +6,9 @@
   "tests": [
     "tests/*.js"
   ],
+  "scripts": {
+    "setup": "initdb.js"
+  },
   "configuration": {
     "ip": {
       "description": "IPv4 address of the server hosting this service",

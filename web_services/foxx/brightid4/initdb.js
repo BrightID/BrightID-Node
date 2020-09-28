@@ -53,6 +53,4 @@ function initdb() {
   removeDeprecatedCollections();
 }
 
-module.exports = {
-  initdb,
-};
+initdb();
