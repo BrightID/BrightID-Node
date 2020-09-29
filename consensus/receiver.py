@@ -80,7 +80,7 @@ def update_seed_groups(from_block, to_block):
 
     groups = db.collection('groups')
     for action in actions:
-        print(action)
+        print({k: str(v).encode("utf-8") for k, v in action.items()})
         if action['name'] == 'grant seed status':
             groups.update({'_key': action['group'], 'seed': True, 'region': action['region']})
         else:
