@@ -138,6 +138,7 @@ function loadUsers(users) {
       trusted: u.trusted,
       flaggers: u.flaggers,
       createdAt: u.createdAt,
+      eligible_groups: u.eligible_groups
     }
     return res;
   });
