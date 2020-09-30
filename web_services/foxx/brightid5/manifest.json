@@ -2,7 +2,7 @@
   "main": "index.js",
   "name": "brightid",
   "description": "Allows BrightID clients (typically mobile) to update the social graph.",
-  "version": "5.1.1",
+  "version": "5.2.0",
   "tests": [
     "tests/*.js"
   ],
