@@ -1,8 +1,8 @@
 from arango import ArangoClient
 import time
-
-MONTHLY_QUOTA = 10
-INITIAL_QUOTA = 50
+import sys
+sys.path.append('..')
+import config
 
 
 def verify(graph):
@@ -21,7 +21,7 @@ def verify(graph):
     for i, seed_group in enumerate(seed_groups_members):
         duration = int(time.time() - seed_groups[i]['timestamp'] / 1000)
         months = int(duration / (30 * 24 * 60 * 60))
-        quota = INITIAL_QUOTA + months * MONTHLY_QUOTA
+        quota = config.INITIAL_QUOTA + months * config.MONTHLY_QUOTA
         members = seed_groups_members[seed_group]
         used = db['verifications'].find(
             {'name': 'SeedConnected', 'seedGroup': seed_group}).count()

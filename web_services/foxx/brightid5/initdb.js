@@ -28,7 +28,7 @@ const indexes = [
 ]
 
 function createCollections() {
-  console.log("creating collections if they don't exist ...");
+  console.log("creating collections if they do not exist ...");
   for (let collection in collections) {
     const coll = db._collection(collection);
     if (coll) {
@@ -120,6 +120,4 @@ function initdb() {
   }
 }
 
-module.exports = {
-  initdb,
-};
+initdb();

@@ -1,3 +1,6 @@
 import os
 
 SNAPSHOTS_PATH = "/snapshots"
+INITIAL_QUOTA = int(os.environ['BN_SCORER_SEED_GROUPS_INITIAL_QUOTA'])
+MONTHLY_QUOTA = int(os.environ['BN_SCORER_SEED_GROUPS_MONTHLY_QUOTA'])
+CALL_GROUPS = os.environ['BN_SCORER_CALL_GROUPS'].split(',')

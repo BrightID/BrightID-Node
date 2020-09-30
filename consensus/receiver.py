@@ -67,7 +67,8 @@ def get_action(vote_id):
         return None
 
     region = sections[2] if name == 'grant seed status' else None
-    return {'name': name, 'group': group, 'region': region}
+    info = sections[3] if name == 'grant seed status' else None
+    return {'name': name, 'group': group, 'region': region, 'info': info}
 
 def update_seed_groups(from_block, to_block):
     print('Updating Seed Groups')
@@ -80,9 +81,9 @@ def update_seed_groups(from_block, to_block):
 
     groups = db.collection('groups')
     for action in actions:
-        print(action)
+        print({k: str(v).encode("utf-8") for k, v in action.items()})
         if action['name'] == 'grant seed status':
-            groups.update({'_key': action['group'], 'seed': True, 'region': action['region']})
+            groups.update({'_key': action['group'], 'seed': True, 'region': action['region'], 'info': action['info']})
         else:
             groups.update({'_key': action['group'], 'seed': False})
 

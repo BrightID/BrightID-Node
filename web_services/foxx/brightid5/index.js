@@ -9,7 +9,6 @@ const nacl = require('tweetnacl');
 const db = require('./db');
 const schemas = require('./schemas').schemas;
 const operations = require('./operations');
-const initdb = require('./initdb').initdb;
 const {
   strToUint8Array,
   b64ToUint8Array,
@@ -19,7 +18,6 @@ const {
   addressToBytes32
 } = require('./encoding');
 
-initdb();
 const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
@@ -64,6 +62,9 @@ const handlers = {
         }
       }
       op.state = 'init';
+      if (JSON.stringify(op).length > 2000) {
+          res.throw(400, 'Operation is too big');
+      }
       db.upsertOperation(op);
     } catch (e) {
       const code = (e == 'Too Many Requests') ? 429 : 400;
@@ -124,6 +125,7 @@ const handlers = {
 
   allVerificationsGet: function(req, res){
     const contextName = req.param('context');
+    const count_only = 'count_only' in req.queryParams;
     const context = db.getContext(contextName);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
@@ -131,11 +133,14 @@ const handlers = {
 
     const coll = arango._collection(context.collection);
     let contextIds = db.getLastContextIds(coll, context.verification);
-
+    let data = {
+      count: contextIds.length
+    }
+    if (! count_only){
+      data['contextIds'] = contextIds
+    }
     res.send({
-      data: {
-        contextIds: contextIds
-      }
+      data
     });
   },
 
@@ -351,6 +356,13 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
+    const notLogMessages = [
+      "user can not be verified for this context",
+      "contextId not found"
+    ];
+    if (notLogMessages.includes(e.message)){
+      throw e;
+    }
     console.group("Error returned");
     console.log('url:', req._raw.requestType, req._raw.url);
     console.log('error:', e);

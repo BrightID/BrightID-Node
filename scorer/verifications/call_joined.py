@@ -1,15 +1,15 @@
 from arango import ArangoClient
 import time
-
-BRIGHTID_CALLS = {'BrightID East': 'w4dNg2yUSuuMN_SfPBmqTbdNhk_nsFgwoO36ZUcDt88',
-                  'BrightID West': '-z6lbLFK4yxj1YmrUz7dYttceEg1XWZRoD_V8xE8qC0'}
+import sys
+sys.path.append('..')
+import config
 
 
 def verify(graph):
     print('CALL JOINED')
     db = ArangoClient().db('_system')
 
-    for group in BRIGHTID_CALLS.values():
+    for group in config.CALL_GROUPS:
         userInGroups = db['usersInGroups'].find({'_to': 'groups/' + group})
         members = set([ug['_from'] for ug in userInGroups])
 

@@ -138,6 +138,7 @@ function loadUsers(users) {
       trusted: u.trusted,
       flaggers: u.flaggers,
       createdAt: u.createdAt,
+      eligible_groups: u.eligible_groups
     }
     return res;
   });
@@ -665,9 +666,13 @@ function upsertOperation(op) {
 function getState() {
   const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
+  const initOp = operationsColl.byExample({'state': 'init'}).toArray().length;
+  const sentOp = operationsColl.byExample({'state': 'sent'}).toArray().length;
   return {
     lastProcessedBlock,
-    verificationsBlock
+    verificationsBlock,
+    initOp,
+    sentOp
   }
 }
 

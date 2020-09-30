@@ -2,10 +2,13 @@
   "main": "index.js",
   "name": "brightid",
   "description": "Allows BrightID clients (typically mobile) to update the social graph.",
-  "version": "4.6.0",
+  "version": "4.6.1",
   "tests": [
     "tests/*.js"
   ],
+  "scripts": {
+    "setup": "initdb.js"
+  },
   "configuration": {
     "ip": {
       "description": "IPv4 address of the server hosting this service",
