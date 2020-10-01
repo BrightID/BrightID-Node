@@ -16,9 +16,16 @@ const handlers = {
     const op = req.body;
     const hash = req.param('hash');
     op.hash = hash;
-    // decrypt first to fix the hash
+
     if (op.name == 'Link ContextId') {
-      operations.decrypt(op);
+      if (!db.getContext(op.context)) {
+        op.state = 'ignored';
+        db.upsertOperation(op);
+        return res.send({'success': true, 'state': op.state, 'result': op.result});
+      } else {
+        // decrypt first to fix the hash
+        operations.decrypt(op);
+      }
     }
 
     if (operationsHashesColl.exists(op.hash)) {

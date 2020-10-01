@@ -23,7 +23,13 @@ const handlers = {
     operationsHashesColl.insert({ _key: op._key });
 
     if (op.name == 'Link ContextId') {
-      operations.decrypt(op);
+      if (!db.getContext(op.context)) {
+        op.state = 'ignored';
+        db.upsertOperation(op);
+        return res.send({'success': true, 'state': op.state, 'result': op.result});
+      } else {
+        operations.decrypt(op);
+      }
     }
     try {
       operations.verify(op);
