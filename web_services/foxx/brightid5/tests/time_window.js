@@ -6,6 +6,7 @@ const arango = require('@arangodb').db;
 
 const usersColl = arango._collection('users');
 const connectionsColl = arango._collection('connections');
+const verificationsColl = arango._collection('verifications');
 const wait = ms => new Promise(resolve => setTimeout(resolve, ms));
 
 const chai = require('chai');
@@ -13,9 +14,10 @@ const should = chai.should();
 
 describe('', function () {
   before(function(){
-    usersColl.insert({'_key': 'a', 'verifications': ['BrightID']});
+    usersColl.insert({'_key': 'a'});
     usersColl.insert({'_key': 'b'});
     usersColl.insert({'_key': 'c'});
+    verificationsColl.insert({'name': 'BrightID', 'user': 'a'})
   });
   after(function(){
     usersColl.truncate();
