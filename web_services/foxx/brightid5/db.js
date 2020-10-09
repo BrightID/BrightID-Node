@@ -576,7 +576,7 @@ function getRecoveryConnections(user) {
   return confidencesColl.byExample({
     _from: 'users/' + user,
     level: 'recovery'
-  }).toArray().map(c => c._to.replace('users/', '');
+  }).toArray().map(c => c._to.replace('users/', ''));
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {
@@ -690,6 +690,7 @@ function setConfidenceLevel(confider, confidee, level, data, timestamp) {
     });
   }
 }
+
 module.exports = {
   addConnection,
   removeConnection,
