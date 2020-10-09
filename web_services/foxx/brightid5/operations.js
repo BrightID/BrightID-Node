@@ -49,6 +49,7 @@ const senderAttrs = {
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
+  'Set Confidence Level': ['confider'],
 };
 let operationsCount = {};
 let resetTime = 0;
@@ -106,6 +107,7 @@ const requiredSigs = {
   'Invite': [['inviter', 'sig']],
   'Dismiss': [['dismisser', 'sig']],
   'Add Admin': [['id', 'sig']],
+  'Set Confidence Level': [['confider', 'sig']],
 }
 
 function verify(op) {
@@ -149,6 +151,8 @@ function apply(op) {
   if (op['name'] == 'Add Connection') {
     return db.addConnection(op.id1, op.id2, op.timestamp);
   } else if (op['name'] == 'Remove Connection') {
+    // this operation is deprecated and will be removed on v6
+    // use "Set Confidence Level" instead
     return db.removeConnection(op.id1, op.id2, op.reason, op.timestamp);
   } else if (op['name'] == 'Add Group') {
     return db.createGroup(op.group, op.id1, op.id2, op.inviteData2, op.id3, op.inviteData3, op.url, op.type, op.timestamp);
@@ -159,7 +163,9 @@ function apply(op) {
   } else if (op['name'] == 'Remove Membership') {
     return db.deleteMembership(op.group, op.id, op.timestamp);
   } else if (op['name'] == 'Set Trusted Connections') {
-    return db.setTrusted(op.trusted, op.id, op.timestamp);
+    // this operation is deprecated and will be removed on v6
+    // use "Set Confidence Level" instead
+    return db.setRecoveryConnections(op.trusted, op.id, op.timestamp);
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
   } else if (op['name'] == 'Sponsor') {
@@ -172,6 +178,8 @@ function apply(op) {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else if (op['name'] == 'Add Admin') {
     return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
+  } else if (op['name'] == 'Set Confidence Level') {
+    return db.setConfidenceLevel(op.confider, op.confidee, op.level, op.data, op.timestamp);
   } else {
     throw "invalid operation";
   }

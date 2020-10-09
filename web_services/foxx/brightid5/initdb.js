@@ -12,6 +12,7 @@ const collections = {
   'invitations': 'edge',
   'variables': 'document',
   'verifications': 'document',
+  'confidences': 'edge',
 };
 
 // deprecated collections should be added to this array after releasing
@@ -60,7 +61,6 @@ function removeDeprecatedCollections() {
     } else {
       console.log(`${collection} dropped before`);
     }
-
   }
 }
 
@@ -98,7 +98,36 @@ function v5() {
   }
 }
 
-const upgrades = ['v5'];
+function v5_3() {
+  const usersColl = db._collection('users');
+  const confidencesColl = db._collection('confidences');
+  const timestamp = Date.now();
+  usersColl.all().toArray().forEach(user => {
+    if (user.trusted) {
+      for (let conn of user.trusted) {
+        confidencesColl.insert({
+          _from: 'users/' + user._key,
+          _to: 'users/' + conn,
+          level: 'recovery',
+          timestamp: user.updateTime
+        });
+      }
+    }
+    if (user.flaggers) {
+      for (let flagger in user.flaggers) {
+        confidencesColl.insert({
+          _from: 'users/' + flagger,
+          _to: 'users/' + user._key,
+          level: 'spam',
+          data: { reason: user.flaggers[flagger] },
+          timestamp
+        });
+      }
+    }
+  });
+}
+
+const upgrades = ['v5', 'v5_3'];
 
 function initdb() {
   createCollections();

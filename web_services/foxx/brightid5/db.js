@@ -17,6 +17,7 @@ const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
+const confidencesColl = db._collection('confidences');
 
 const {
   uInt8ArrayToB64,
@@ -60,16 +61,6 @@ function addConnection(key1, key2, timestamp) {
     usersColl.update(u2, { parent: key1 });
   }
 
-  // remove flag if exists
-  if (u1 && u1.flaggers && key2 in u1.flaggers) {
-    delete u1.flaggers[key2];
-    usersColl.update(u1, { flaggers: u1.flaggers }, { mergeObjects: false });
-  }
-  if (u2 && u2.flaggers && key1 in u2.flaggers) {
-    delete u2.flaggers[key1];
-    usersColl.update(u2, { flaggers: u2.flaggers }, { mergeObjects: false });
-  }
-
   const conn = getConnection(key1, key2);
   if (! conn) {
     connectionsColl.save({
@@ -83,36 +74,7 @@ function addConnection(key1, key2, timestamp) {
 }
 
 function removeConnection(flagger, flagged, reason, timestamp) {
-  if (! ['fake', 'duplicate', 'deceased'].includes(reason)) {
-    throw 'invalid reason';
-  }
-  const conn = getConnection(flagger, flagged);
-  if (! conn) {
-    throw 'no connection found';
-  }
-
-  connectionsColl.remove(conn);
-  
-  // add flagger to the flaggers on the flagged user
-  const flaggedUser = usersColl.document(flagged);
-  let flaggers = flaggedUser.flaggers;
-  if (! flaggers) {
-    flaggers = {}
-  }
-  flaggers[flagger] = reason;
-  usersColl.update(flaggedUser, { flaggers });
-
-  // remove the flaged user from all groups that two or more members of them
-  // flagged that user
-  const edges = usersInGroupsColl.byExample({ _from: 'users/' + flagged }).toArray();
-  edges.map(edge => {
-    const edges2 = usersInGroupsColl.byExample({ _to: edge._to }).toArray();
-    const members = edges2.map(edge2 => edge2._from.replace('users/', ''));
-    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
-    if (intersection.length >= 2) {
-      usersInGroupsColl.remove(edge);
-    }
-  });
+  setConfidenceLevel(flagger, flagged, 'spam', { reason }, timestamp);
 }
 
 function userConnections(user) {
@@ -126,6 +88,17 @@ function userConnections(user) {
   return users1.concat(users2);
 }
 
+function getFlaggers(user) {
+  const flaggers = {};
+  confidencesColl.byExample({
+    _to: 'users/' + user,
+    level: 'spam'
+  }).toArray().forEach(c => {
+    flaggers[c._from.replace('users/', '')] = c.data.reason;
+  });
+  return flaggers;
+}
+
 function loadUsers(users) {
   // score is deprecated and will removed on v6
   return usersColl.documents(users).documents.map(u => {
@@ -135,8 +108,9 @@ function loadUsers(users) {
       score: u.score,
       verifications: userVerifications(u._key),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
-      trusted: u.trusted,
-      flaggers: u.flaggers,
+      // trusted is deprecated and will be replaced by recoveryingConnections on v6
+      trusted: getRecoveryConnections(u._key),
+      flaggers: getFlaggers(u._key),
       createdAt: u.createdAt,
       eligible_groups: u.eligible_groups
     }
@@ -438,16 +412,6 @@ function addMembership(groupId, key, timestamp) {
     throw 'Not eligible to join this group';
   }
 
-  // flagged users can't join a group that have 2 or more flaggers in them
-  const flaggers = usersColl.document(key).flaggers;
-  if (flaggers) {
-    const members = groupMembers(groupId);
-    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
-    if (intersection.length >= 2) {
-      throw 'user is flagged by two or more members of the group';
-    }
-  }
-
   const invite = invitationsColl.firstExample({
     _from: 'users/' + key,
     _to: 'groups/' + groupId
@@ -602,24 +566,30 @@ function linkContextId(id, context, contextId, timestamp) {
   });
 }
 
-function setTrusted(trusted, key, timestamp) {
-  // TODO: in the future users should update their trusted connections
-  // by providing the sig of one of the existing trusted connections approving that.
-  query`
-    UPDATE ${key} WITH {trusted: ${trusted}, updateTime: ${timestamp}} in users
-  `;
+function setRecoveryConnections(conns, key, timestamp) {
+  conns.forEach(conn => {
+    setConfidenceLevel(key, conn, 'recovery', undefined, timestamp);
+  });
+}
+
+function getRecoveryConnections(user) {
+  return confidencesColl.byExample({
+    _from: 'users/' + user,
+    level: 'recovery'
+  }).toArray().map(c => c._to.replace('users/', '');
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {
-  const user = loadUser(key);
+  const recoveryConnections = getRecoveryConnections(key);
   if (signers[0] == signers[1] ||
-      !user.trusted.includes(signers[0]) ||
-      !user.trusted.includes(signers[1])) {
-    throw "request should be signed by 2 different trusted connections";
+      !recoveryConnections.includes(signers[0]) ||
+      !recoveryConnections.includes(signers[1])) {
+    throw "request should be signed by 2 different recovery connections";
   }
-  query`
-    UPDATE ${key} WITH {signingKey: ${signingKey}, updateTime: ${timestamp}} in users
-  `;
+  usersColl.update(key, {
+    signingKey,
+    updateTime: timestamp
+  });
 }
 
 function isSponsored(key) {
@@ -676,6 +646,50 @@ function getState() {
   }
 }
 
+function setConfidenceLevel(confider, confidee, level, data, timestamp) {
+  const conn = getConnection(confider, confidee);
+  if (! conn) {
+    throw 'no connection found';
+  }
+
+  if (data && typeof data == 'string') {
+    data = JSON.parse(data);
+  }
+  confider = 'users/' + confider;
+  confidee = 'users/' + confidee;
+
+  const confidence = confidencesColl.firstExample({
+    _from: confider,
+    _to: confidee
+  });
+  const otherSideConfidence = confidencesColl.firstExample({
+    _from: confidee,
+    _to: confider
+  });
+  if (otherSideConfidence == 'spam') {
+    return;
+  }
+  if (confidence) {
+    if (level == 'recovery' && confidence.level == 'recovery') {
+      // do not update timestamp when resetting recovery confidence
+      // because new recovery connections can not help recovering
+      timestamp = confidence.timestamp;
+    }
+    confidencesColl.update(confidence, {
+      level,
+      data,
+      timestamp
+    });
+  } else {
+    confidencesColl.insert({
+      _from: confider,
+      _to: confidee,
+      level,
+      data,
+      timestamp
+    });
+  }
+}
 module.exports = {
   addConnection,
   removeConnection,
@@ -707,9 +721,12 @@ module.exports = {
   linkContextId,
   loadOperation,
   upsertOperation,
-  setTrusted,
+  setRecoveryConnections,
   setSigningKey,
   getLastContextIds,
   unusedSponsorship,
-  getState
+  getState,
+  setConfidenceLevel,
+  getFlaggers,
+  getRecoveryConnections
 };

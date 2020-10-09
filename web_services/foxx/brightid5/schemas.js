@@ -164,6 +164,16 @@ schemas = Object.assign({
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Add Admin'),
+    joi.object({
+      name: joi.string().valid('Set Confidence Level').required().description('operation name'),
+      confider: joi.string().required().description('brightid of the user who is setting the confidence level'),
+      confidee: joi.string().required().description('brightid of the user who is getting the confidence level'),
+      level: joi.string().valid('spam', 'human', 'known', 'recovery').required().description('level of confidence'),
+      data: joi.string().description('json representation of metadata for specific levels'),
+      sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(5).description('version of API')
+    }).label('Set Confidence Level'),
   ]).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus')
 }, schemas);
 
