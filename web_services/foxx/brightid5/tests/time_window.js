@@ -33,7 +33,7 @@ describe('', function () {
   it('limit should be removed after time window passed', function() {
     // for some reason setTimeout is not working
     const now = Date.now();
-    while (Date.now() - now < 100);
+    while (Date.now() - now <= 100);
     operations.checkLimits({ name: 'Remove Group', id: 'a' }, 100, 2);
   });
   it('unverified users should have shared limit', function() {

@@ -117,29 +117,12 @@ describe('groups', function () {
 
     it('should be able to flag a connection', function(){
       db.removeConnection('b', 'a', 'duplicate', 0);
-      usersColl.document('a').flaggers.should.deep.equal({'b': 'duplicate'});
-      db.userConnections('b').should.not.include('a');
+      db.getFlaggers('a').should.deep.equal({'b': 'duplicate'});
     });
 
-    it('user should be removed from a group after being flagged by 2 members', function(){      
-      db.removeConnection('c', 'a', 'duplicate', 0);
-      usersColl.document('a').flaggers.should.deep.equal({'b': 'duplicate', 'c': 'duplicate'});
-      db.userConnections('a').should.not.include('c');
-      usersInGroupsColl.byExample({'_from': 'users/a'}).count().should.equal(0);
-      usersInGroupsColl.byExample({'_from': 'users/b'}).count().should.equal(1);
-      usersInGroupsColl.byExample({'_from': 'users/c'}).count().should.equal(1);
-    });
-
-    it('flagged user should not be able to join a group that is flagged by 2 members', function(){
-      (() => {
-        db.invite('b', 'a', 'g2', 'data', Date.now());
-        db.addMembership('g2', 'a', Date.now());
-      }).should.throw('user is flagged by two or more members of the group');
-    });
-
-    it('should be able to remove a flag by making connection again', function(){
-      db.addConnection('a', 'b', 0);
-      usersColl.document('a').flaggers.should.deep.equal({'c': 'duplicate'});
+    it('should be able to remove a flag by resetting confidence level', function(){
+      db.setConfidenceLevel('b', 'a', 'human', undefined, 0);
+      db.getFlaggers('a').should.deep.equal({});
     });
   });
 
