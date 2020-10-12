@@ -109,19 +109,13 @@ describe('groups', function () {
       db.addMembership('g2', 'f', Date.now());
     });
 
-    it('should not be able to flag someone without having connection', function(){
-      (() => {
-        db.removeConnection('e', 'f', 'duplicate', 0);
-      }).should.throw('no connection found');
-    });
-
     it('should be able to flag a connection', function(){
       db.removeConnection('b', 'a', 'duplicate', 0);
       db.getFlaggers('a').should.deep.equal({'b': 'duplicate'});
     });
 
-    it('should be able to remove a flag by resetting confidence level', function(){
-      db.setConfidenceLevel('b', 'a', 'human', undefined, 0);
+    it('should be able to remove a flag', function(){
+      db.connect('b', 'a', 'human', null, 0);
       db.getFlaggers('a').should.deep.equal({});
     });
   });

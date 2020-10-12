@@ -33,7 +33,6 @@ const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
 const operationsHashesColl = arango._collection('operationsHashes');
 const invitationsColl = arango._collection('invitations');
-const confidencesColl = arango._collection('confidences');
 
 const chai = require('chai');
 const should = chai.should();
@@ -98,7 +97,6 @@ describe('operations', function(){
     appsColl.truncate();
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
-    confidencesColl.truncate();
     [u1, u2, u3, u4].map((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
@@ -139,7 +137,6 @@ describe('operations', function(){
     operationsColl.truncate();
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
-    confidencesColl.truncate();
   });
   it('should be able to "Add Connection" with v5 and v4 clients', function () {
     const connect = (u1, u2, v4signing) => {
@@ -195,10 +192,10 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     apply(op);
-    confidencesColl.firstExample({
+    connectionsColl.firstExample({
       '_from': 'users/' + u2.id,
       '_to': 'users/' + u3.id,
-    }).data.reason.should.equal(reason);
+    }).flagReason.should.equal(reason);
   });
 
   it('should be able to "Add Group"', function () {
@@ -357,11 +354,11 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
-    confidencesColl.firstExample({
+    connectionsColl.firstExample({
       '_from': 'users/' + u1.id,
       '_to': 'users/' + u2.id,
     }).level.should.equal('recovery');
-    confidencesColl.firstExample({
+    connectionsColl.firstExample({
       '_from': 'users/' + u1.id,
       '_to': 'users/' + u2.id,
     }).level.should.equal('recovery');

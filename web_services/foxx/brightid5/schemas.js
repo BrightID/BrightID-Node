@@ -43,6 +43,16 @@ schemas = Object.assign({
   }),
   operation: joi.alternatives().try([
     joi.object({
+      name: joi.string().valid('Connect').required().description('operation name'),
+      id1: joi.string().required().description('brightid of the user making the directed connection'),
+      id2: joi.string().required().description('brightid of the user taking the directed connection'),
+      sig1: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
+      level: joi.string().valid('spam', 'human', 'known', 'recovery').required().description('level of confidence'),
+      flagReason: joi.string().valid('fake', 'duplicate', 'deceased').description('for spam level, the reason for flagging the user specificed by id2 as spam'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(5).description('version of API')
+    }).label('Connect'),
+    joi.object({
       name: joi.string().valid('Add Connection').required().description('operation name'),
       id1: joi.string().required().description('brightid of the first user making the connection'),
       id2: joi.string().required().description('brightid of the second user making the connection'),
@@ -163,17 +173,7 @@ schemas = Object.assign({
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
       v: joi.number().required().valid(5).description('version of API')
-    }).label('Add Admin'),
-    joi.object({
-      name: joi.string().valid('Set Confidence Level').required().description('operation name'),
-      confider: joi.string().required().description('brightid of the user who is setting the confidence level'),
-      confidee: joi.string().required().description('brightid of the user who is getting the confidence level'),
-      level: joi.string().valid('spam', 'human', 'known', 'recovery').required().description('level of confidence'),
-      data: joi.string().description('json representation of metadata for specific levels'),
-      sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
-      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
-      v: joi.number().required().valid(5).description('version of API')
-    }).label('Set Confidence Level'),
+    }).label('Add Admin')
   ]).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus')
 }, schemas);
 

@@ -116,7 +116,7 @@ const handlers = {
         trusted: db.getRecoveryConnections(id),
         invites,
         groups,
-        connections: db.loadUsers(connections),
+        connections,
         verifications,
         isSponsored: db.isSponsored(id)
       }

@@ -17,27 +17,12 @@ const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
-const confidencesColl = db._collection('confidences');
 
 const {
   uInt8ArrayToB64,
   b64ToUrlSafeB64,
   urlSafeB64ToB64
 } = require('./encoding');
-
-function getConnection(key1, key2) {
-  let conn = connectionsColl.firstExample({
-    _from: 'users/' + key1,
-    _to: 'users/' + key2
-  });
-  if (! conn) {
-    conn = connectionsColl.firstExample({
-      _from: 'users/' + key2,
-      _to: 'users/' + key1
-    });
-  }
-  return conn;
-}
 
 function addConnection(key1, key2, timestamp) {
   // create user by adding connection if it's not created
@@ -51,9 +36,9 @@ function addConnection(key1, key2, timestamp) {
     u2 = createUser(key2, timestamp);
   }
 
+  // set the first verified user that makes a connection with a user as its parent
   const u1_verifications = userVerifications(key1);
   const u2_verifications = userVerifications(key2);
-  // set the first verified user that makes a connection with a user as its parent
   if (!u1.parent && u2_verifications && u2_verifications.includes('BrightID')) {
     usersColl.update(u1, { parent: key2 });
   }
@@ -61,50 +46,47 @@ function addConnection(key1, key2, timestamp) {
     usersColl.update(u2, { parent: key1 });
   }
 
-  const conn = getConnection(key1, key2);
+  connect(key1, key2, 'human', null, timestamp);
+  connect(key2, key1, 'human', null, timestamp);
+}
+
+function connect(key1, key2, level, flagReason, timestamp) {
+  if (level != 'spam' && flagReason) {
+    throw 'flagReason can only be set on spam connections';
+  }
+
+  const _from = 'users/' + key1;
+  const _to = 'users/' + key2;
+  const conn = connectionsColl.firstExample({ _from, _to });
   if (! conn) {
-    connectionsColl.save({
-      _from: 'users/' + key1,
-      _to: 'users/' + key2,
-      timestamp
-    });
+    connectionsColl.insert({ _from, _to, level, flagReason, timestamp });
   } else {
-    connectionsColl.update(conn, { timestamp });
+    if (level == 'recovery' && conn.level == 'recovery') {
+      // do not update timestamp when updating recovery connections because
+      // recovery connections can not help recovering before a cooling time
+      timestamp = conn.timestamp;
+    }
+    connectionsColl.update(conn, { level, flagReason, timestamp });
   }
 }
 
 function removeConnection(flagger, flagged, reason, timestamp) {
-  setConfidenceLevel(flagger, flagged, 'spam', { reason }, timestamp);
+  connect(flagger, flagged, 'spam', reason, timestamp);
 }
 
-function userConnections(user) {
-  user = "users/" + user;
-  const users1 = connectionsColl.byExample({
-    _from: user
+function userConnections(userId) {
+  const outs = connectionsColl.byExample({
+    _from: 'users/' + userId
   }).toArray().map(u => u._to.replace("users/", ""));
-  const users2 = connectionsColl.byExample({
-    _to: user
+  const ins = connectionsColl.byExample({
+    _to: 'users/' + userId
   }).toArray().map(u => u._from.replace("users/", ""));
-  return users1.concat(users2);
-}
-
-function getFlaggers(user) {
-  const flaggers = {};
-  confidencesColl.byExample({
-    _to: 'users/' + user,
-    level: 'spam'
-  }).toArray().forEach(c => {
-    flaggers[c._from.replace('users/', '')] = c.data.reason;
-  });
-  return flaggers;
-}
-
-function loadUsers(users) {
-  // score is deprecated and will removed on v6
+  const users = _.intersection(ins, outs);
   return usersColl.documents(users).documents.map(u => {
     const res = {
       id: u._key,
       signingKey: u.signingKey,
+      // score is deprecated and will removed on v6
       score: u.score,
       verifications: userVerifications(u._key),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
@@ -118,6 +100,17 @@ function loadUsers(users) {
   });
 }
 
+function getFlaggers(user) {
+  const flaggers = {};
+  connectionsColl.byExample({
+    _to: 'users/' + user,
+    level: 'spam'
+  }).toArray().forEach(c => {
+    flaggers[c._from.replace('users/', '')] = c.flagReason;
+  });
+  return flaggers;
+}
+
 function groupMembers(groupId) {
   return usersInGroupsColl.byExample({
     _to: "groups/" + groupId,
@@ -125,10 +118,11 @@ function groupMembers(groupId) {
 }
 
 function isEligible(groupId, userId) {
-  const userCons = userConnections(userId);
+  const conns = connectionsColl.byExample({
+    _to: 'users/' + userId
+  }).toArray().map(u => u._from.replace("users/", ""));
   const members = groupMembers(groupId);
-  const count = _.intersection(userCons, members).length;
-
+  const count = _.intersection(conns, members).length;
   return count >= members.length / 2;
 }
 
@@ -178,7 +172,9 @@ function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
   members.forEach(member => {
-    const conns = userConnections(member);
+    const conns = connectionsColl.byExample({
+      _from: 'users/' + member
+    }).toArray().map(u => u._to.replace("users/", ""));
     neighbors.push(...conns);
   });
   const counts = {};
@@ -300,7 +296,7 @@ function createUser(key, timestamp) {
   const user = loadUser(key);
 
   if (!user) {
-    return usersColl.save({
+    return usersColl.insert({
       score: 0,
       signingKey: urlSafeB64ToB64(key),
       createdAt: timestamp,
@@ -328,9 +324,11 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     throw 'duplicate group';
   }
 
-  const conns = userConnections(key1);
+  const conns = connectionsColl.byExample({
+    _to: 'users/' + key1
+  }).toArray().map(u => u._from.replace("users/", ""));
   if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
-    throw "Creator isn't connected to one or both of the co-founders";
+    throw "One or both of the co-founders are not connected to the foundr!";
   }
 
   const founders = [key1, key2, key3].sort()
@@ -338,7 +336,7 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     throw 'some of founders already have primary groups';
   }
 
-  groupsColl.save({
+  groupsColl.insert({
     _key: groupId,
     score: 0,
     isNew: true,
@@ -383,7 +381,7 @@ function addUserToGroup(groupId, key, timestamp) {
     _to: group
   });
   if (! edge) {
-    usersInGroupsColl.save({
+    usersInGroupsColl.insert({
       _from: user,
       _to: group,
       timestamp
@@ -568,12 +566,12 @@ function linkContextId(id, context, contextId, timestamp) {
 
 function setRecoveryConnections(conns, key, timestamp) {
   conns.forEach(conn => {
-    setConfidenceLevel(key, conn, 'recovery', undefined, timestamp);
+    connect(key, conn, 'recovery', null, timestamp);
   });
 }
 
 function getRecoveryConnections(user) {
-  return confidencesColl.byExample({
+  return connectionsColl.byExample({
     _from: 'users/' + user,
     level: 'recovery'
   }).toArray().map(c => c._to.replace('users/', ''));
@@ -614,7 +612,7 @@ function sponsor(user, app, timestamp) {
     throw "sponsored before";
   }
 
-  sponsorshipsColl.save({
+  sponsorshipsColl.insert({
     _from: 'users/' + user,
     _to: 'apps/' + app
   });
@@ -646,52 +644,8 @@ function getState() {
   }
 }
 
-function setConfidenceLevel(confider, confidee, level, data, timestamp) {
-  const conn = getConnection(confider, confidee);
-  if (! conn) {
-    throw 'no connection found';
-  }
-
-  if (data && typeof data == 'string') {
-    data = JSON.parse(data);
-  }
-  confider = 'users/' + confider;
-  confidee = 'users/' + confidee;
-
-  const confidence = confidencesColl.firstExample({
-    _from: confider,
-    _to: confidee
-  });
-  const otherSideConfidence = confidencesColl.firstExample({
-    _from: confidee,
-    _to: confider
-  });
-  if (otherSideConfidence == 'spam') {
-    return;
-  }
-  if (confidence) {
-    if (level == 'recovery' && confidence.level == 'recovery') {
-      // do not update timestamp when resetting recovery confidence
-      // because new recovery connections can not help recovering
-      timestamp = confidence.timestamp;
-    }
-    confidencesColl.update(confidence, {
-      level,
-      data,
-      timestamp
-    });
-  } else {
-    confidencesColl.insert({
-      _from: confider,
-      _to: confidee,
-      level,
-      data,
-      timestamp
-    });
-  }
-}
-
 module.exports = {
+  connect,
   addConnection,
   removeConnection,
   createGroup,
@@ -702,14 +656,13 @@ module.exports = {
   updateEligibleGroups,
   invite,
   dismiss,
+  userConnections,
   userGroups,
   loadUser,
   userInvitedGroups,
   createUser,
   groupMembers,
-  userConnections,
   userScore,
-  loadUsers,
   getContext,
   getApp,
   getApps,
@@ -727,7 +680,6 @@ module.exports = {
   getLastContextIds,
   unusedSponsorship,
   getState,
-  setConfidenceLevel,
   getFlaggers,
   getRecoveryConnections
 };
