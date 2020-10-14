@@ -46,26 +46,28 @@ function addConnection(key1, key2, timestamp) {
     usersColl.update(u2, { parent: key1 });
   }
 
-  connect(key1, key2, 'human', null, timestamp);
-  connect(key2, key1, 'human', null, timestamp);
+  connect(key1, key2, null, null, timestamp);
+  connect(key2, key1, null, null, timestamp);
 }
 
 function connect(key1, key2, level, flagReason, timestamp) {
-  if (level != 'spam' && flagReason) {
-    throw 'flagReason can only be set on spam connections';
-  }
-
   const _from = 'users/' + key1;
   const _to = 'users/' + key2;
   const conn = connectionsColl.firstExample({ _from, _to });
+
+  if (! level) {
+    // when old addConnection is called
+    level = (conn && conn.level == 'recovery') ? 'recovery' : 'human';
+  }
+  if (level == 'recovery' && conn && conn.level == 'recovery') {
+    // do not update timestamp when updating recovery connections because
+    // recovery connections can not help recovering before a cooling time
+    timestamp = conn.timestamp;
+  }
+
   if (! conn) {
     connectionsColl.insert({ _from, _to, level, flagReason, timestamp });
   } else {
-    if (level == 'recovery' && conn.level == 'recovery') {
-      // do not update timestamp when updating recovery connections because
-      // recovery connections can not help recovering before a cooling time
-      timestamp = conn.timestamp;
-    }
     connectionsColl.update(conn, { level, flagReason, timestamp });
   }
 }
