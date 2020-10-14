@@ -25,6 +25,12 @@ const {
 } = require('./encoding');
 
 function addConnection(key1, key2, timestamp) {
+  // this function is deprecated and will be removed on v6
+  connect(key1, key2, null, null, timestamp);
+  connect(key2, key1, null, null, timestamp);
+}
+
+function connect(key1, key2, level, flagReason, timestamp) {
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
   let u1 = loadUser(key1);
@@ -36,25 +42,21 @@ function addConnection(key1, key2, timestamp) {
     u2 = createUser(key2, timestamp);
   }
 
-  // set the first verified user that makes a connection with a user as its parent
+  // set the first verified user that connect to a user as its parent
   const u1_verifications = userVerifications(key1);
-  const u2_verifications = userVerifications(key2);
-  if (!u1.parent && u2_verifications && u2_verifications.includes('BrightID')) {
-    usersColl.update(u1, { parent: key2 });
-  }
   if (!u2.parent && u1_verifications && u1_verifications.includes('BrightID')) {
     usersColl.update(u2, { parent: key1 });
   }
 
-  connect(key1, key2, null, null, timestamp);
-  connect(key2, key1, null, null, timestamp);
-}
 
-function connect(key1, key2, level, flagReason, timestamp) {
   const _from = 'users/' + key1;
   const _to = 'users/' + key2;
   const conn = connectionsColl.firstExample({ _from, _to });
 
+  if (level != 'spam') {
+    // clear flagReason for levels other than spam
+    flagReason = null;
+  }
   if (! level) {
     // when old addConnection is called
     level = (conn && conn.level == 'recovery') ? 'recovery' : 'human';
@@ -73,6 +75,7 @@ function connect(key1, key2, level, flagReason, timestamp) {
 }
 
 function removeConnection(flagger, flagged, reason, timestamp) {
+  // this function is deprecated and will be removed on v6
   connect(flagger, flagged, 'spam', reason, timestamp);
 }
 
@@ -88,7 +91,7 @@ function userConnections(userId) {
     const res = {
       id: u._key,
       signingKey: u.signingKey,
-      // score is deprecated and will removed on v6
+      // score is deprecated and will be removed on v6
       score: u.score,
       verifications: userVerifications(u._key),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
@@ -204,7 +207,7 @@ function groupToDic(group) {
     founders: group.founders.map(founder => founder.replace('users/', '')),
     admins: group.admins || group.founders,
     isNew: group.isNew,
-    // score on group is deprecated and will removed on v6
+    // score on group is deprecated and will be removed on v6
     score: 0,
     url: group.url,
     timestamp: group.timestamp,
@@ -567,6 +570,7 @@ function linkContextId(id, context, contextId, timestamp) {
 }
 
 function setRecoveryConnections(conns, key, timestamp) {
+  // this function is deprecated and will be removed on v6
   conns.forEach(conn => {
     connect(key, conn, 'recovery', null, timestamp);
   });

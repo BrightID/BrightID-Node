@@ -196,6 +196,10 @@ describe('operations', function(){
       '_from': 'users/' + u2.id,
       '_to': 'users/' + u3.id,
     }).flagReason.should.equal(reason);
+    connectionsColl.firstExample({
+      '_from': 'users/' + u3.id,
+      '_to': 'users/' + u2.id,
+    }).level.should.equal('human');
   });
 
   it('should be able to "Add Group"', function () {
@@ -385,6 +389,7 @@ describe('operations', function(){
     );
     apply(op);
     db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
+    u1.secretKey = u4.secretKey;
   });
 
   it('should be able to "Link ContextId"', function () {
@@ -426,6 +431,28 @@ describe('operations', function(){
     );
     apply(op);
     db.isSponsored(u1.id).should.equal(true);
+  });
+
+  it('should be able to "Connect"', function () {
+    const timestamp = Date.now();
+
+    let op = {
+      'v': 5,
+      'name': 'Connect',
+      'id1': u1.id,
+      'id2': u2.id,
+      'level': 'human',
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    apply(op);
+    connectionsColl.firstExample({
+      '_from': 'users/' + u1.id,
+      '_to': 'users/' + u2.id,
+    }).level.should.equal('human');
   });
 
 });
