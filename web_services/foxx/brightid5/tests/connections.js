@@ -90,4 +90,21 @@ describe('connections', function () {
     usersColl.document('a').signingKey.should.equal('newSigningKey');
   });
 
+  it('should be able to get "userConnections"', function() {
+    db.connect('c', 'a', 'spam', 'duplicate', 0);
+    const conns = db.userConnections('b');
+    conns.length.should.equal(1);
+    const a = conns[0];
+    a.id.should.equal('a');
+    a.flaggers.should.deep.equal({"c": "duplicate"});
+    a.trusted.should.deep.equal(["b", "c"]);
+    a.signingKey.should.equal('newSigningKey');
+    a.createdAt.should.equal(0);
+  });
+
+  it('should not get connnections with one side set "spam" level in "userConnections"', function() {
+    db.userConnections('a').length.should.equal(1);
+    db.userConnections('c').length.should.equal(0);
+  });
+
 });

@@ -17,6 +17,7 @@ const usersColl = arango._collection('users');
 const contextsColl = arango._collection('contexts');
 const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
+const verificationsColl = arango._collection('verifications');
 
 const chai = require('chai');
 const should = chai.should();
@@ -30,6 +31,7 @@ describe('verifications', function () {
     contextsColl.truncate();
     appsColl.truncate();
     sponsorshipsColl.truncate();
+    verificationsColl.truncate();
     query`
       INSERT {
         _key: "testContext",
@@ -68,6 +70,7 @@ describe('verifications', function () {
     contextsColl.truncate();
     appsColl.truncate();
     sponsorshipsColl.truncate();
+    verificationsColl.truncate();
   });
   context('linkContextId()', function() {
     it('should throw "contextId is duplicate" for used contextId', function(){

@@ -14,6 +14,9 @@ const should = chai.should();
 
 describe('', function () {
   before(function(){
+    usersColl.truncate();
+    connectionsColl.truncate();
+    verificationsColl.truncate();
     usersColl.insert({'_key': 'a'});
     usersColl.insert({'_key': 'b'});
     usersColl.insert({'_key': 'c'});
@@ -22,6 +25,7 @@ describe('', function () {
   after(function(){
     usersColl.truncate();
     connectionsColl.truncate();
+    verificationsColl.truncate();
   });
   it('should get error after limit', function() {
     operations.checkLimits({ name: 'Add Group', id1: 'a' }, 100, 2);

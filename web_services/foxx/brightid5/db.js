@@ -80,13 +80,19 @@ function removeConnection(flagger, flagged, reason, timestamp) {
 }
 
 function userConnections(userId) {
-  const outs = connectionsColl.byExample({
+  let outs = connectionsColl.byExample({
     _from: 'users/' + userId
-  }).toArray().map(u => u._to.replace("users/", ""));
-  const ins = connectionsColl.byExample({
+  }).toArray();
+  let ins = connectionsColl.byExample({
     _to: 'users/' + userId
-  }).toArray().map(u => u._from.replace("users/", ""));
+  }).toArray();
+
+  outs = outs.filter(u => u.level != 'spam');
+  outs = outs.map(u => u._to.replace("users/", ""));
+  ins = ins.filter(u => u.level != 'spam');
+  ins = ins.map(u => u._from.replace("users/", ""));
   const users = _.intersection(ins, outs);
+
   return usersColl.documents(users).documents.map(u => {
     const res = {
       id: u._key,
@@ -99,7 +105,8 @@ function userConnections(userId) {
       trusted: getRecoveryConnections(u._key),
       flaggers: getFlaggers(u._key),
       createdAt: u.createdAt,
-      eligible_groups: u.eligible_groups
+      // eligible_groups is deprecated and will be replaced by eligibleGroups on v6
+      eligible_groups: u.eligible_groups || []
     }
     return res;
   });
