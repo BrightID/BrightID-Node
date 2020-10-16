@@ -18,6 +18,11 @@ const handlers = {
     const hash = req.param('hash');
     op._key = hash;
     
+    const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
+    if (lastProcessedBlock >= 2900000) {
+      return res.send({'success': true, 'state': 'failed', 'result': 'v4 is not supported anymore'});
+    }
+
     if (operationsHashesColl.exists(op._key)) {
       return res.send({'success': true, 'state': 'duplicate'});
     }
@@ -56,11 +61,6 @@ router.put('/operations/:hash', handlers.operationsPut)
   .response(null);
 
 module.context.use(function (req, res, next) {
-  const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
-  if (lastProcessedBlock >= 2900000) {
-    return res.throw(404, 'v4 is not supported anymore! Please upgrade your client.');
-  }
-
   try {
     next();
   } catch (e) {
