@@ -105,8 +105,10 @@ function v5_3() {
   const timestamp = Date.now();
 
   connectionsColl.all().toArray().forEach(conn => {
-    db.connect(conn._from, conn._to, 'human', null, conn.timestamp);
-    db.connect(conn._to, conn._from, 'human', null, conn.timestamp);
+    const key1 = conn._from.replace('users/', '');
+    const key2 = conn._to.replace('users/', '');
+    db.connect(key1, key2, 'human', null, conn.timestamp);
+    db.connect(key2, key1, 'human', null, conn.timestamp);
   });
   usersColl.all().toArray().forEach(user => {
     if (user.trusted) {
