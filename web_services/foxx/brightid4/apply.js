@@ -10,6 +10,7 @@ const schemas = require('./schemas').schemas;
 const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
+const variablesColl = arango._collection('variables');
 
 const handlers = {
   operationsPut: function(req, res){
@@ -55,6 +56,11 @@ router.put('/operations/:hash', handlers.operationsPut)
   .response(null);
 
 module.context.use(function (req, res, next) {
+  const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
+  if (lastProcessedBlock >= 2900000) {
+    return res.throw(404, 'v4 is not supported anymore! Please upgrade your client.');
+  }
+
   try {
     next();
   } catch (e) {
