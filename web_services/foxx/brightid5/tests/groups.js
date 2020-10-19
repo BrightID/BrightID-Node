@@ -115,7 +115,7 @@ describe('groups', function () {
     });
 
     it('should be able to remove a flag', function(){
-      db.connect('b', 'a', 'human', null, 0);
+      db.connect('b', 'a', 'just met', null, 0);
       db.getFlaggers('a').should.deep.equal({});
     });
   });

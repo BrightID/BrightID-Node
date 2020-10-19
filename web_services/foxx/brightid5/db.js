@@ -58,8 +58,9 @@ function connect(key1, key2, level, flagReason, timestamp) {
     flagReason = null;
   }
   if (! level) {
-    // when old addConnection is called
-    level = (conn && conn.level == 'recovery') ? 'recovery' : 'human';
+    // Set 'just met' as confidence level when old addConnection is called
+    // and there was no other level set directly using Connect
+    level = conn ? conn.level : 'just met';
   }
   if (level == 'recovery' && conn && conn.level == 'recovery') {
     // do not update timestamp when updating recovery connections because

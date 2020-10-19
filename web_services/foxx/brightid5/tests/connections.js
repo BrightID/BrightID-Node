@@ -17,14 +17,14 @@ describe('connections', function () {
     usersColl.truncate();
     connectionsColl.truncate();
   });
-  it('should be able to use "addConnection" to set "human" as confidence level', function() {
+  it('should be able to use "addConnection" to set "just met" as confidence level', function() {
     db.addConnection('a', 'b', 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
     connectionsColl.firstExample({
       '_from': 'users/b', '_to': 'users/a'
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
   });
   it('should be able to use "removeConnection" to set "spam" as confidence level', function() {
     db.removeConnection('a', 'b', 'duplicate', 0);
@@ -35,14 +35,14 @@ describe('connections', function () {
     conn1.flagReason.should.equal('duplicate');
     connectionsColl.firstExample({
       '_from': 'users/b', '_to': 'users/a'
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
   });
-  it('should be able to use "connect" to reset confidence level to "human"', function() {
-    db.connect('a', 'b', 'human', null, 0);
+  it('should be able to use "connect" to reset confidence level to "just met"', function() {
+    db.connect('a', 'b', 'just met', null, 0);
     const conn1 = connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     });
-    conn1.level.should.equal('human');
+    conn1.level.should.equal('just met');
     (conn1.flagReason === null).should.equal(true);
   });
   it('should be able to use "setRecoveryConnections" to set "recovery" as confidence level', function() {
@@ -51,32 +51,32 @@ describe('connections', function () {
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
   });
-  it('should not reset "recovery" confidence level to "human" when calling "addConnection"', function() {
+  it('should not reset "recovery" confidence level to "just met" when calling "addConnection"', function() {
     db.addConnection('a', 'b', 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
     connectionsColl.firstExample({
       '_from': 'users/b', '_to': 'users/a'
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
   });
   it('should be able to use "connect" to set different as confidence levels', function() {
     db.connect('a', 'b', 'spam', 'duplicate', 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('spam');
-    db.connect('a', 'b', 'human', null, 0);
+    db.connect('a', 'b', 'just met', null, 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
     db.connect('a', 'b', 'recovery', null, 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
-    db.connect('a', 'c', 'human', null, 0);
+    db.connect('a', 'c', 'just met', null, 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/c'
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
   });
   it('should not be able to use "setSigningKey" to reset "signingKey" with not "recovery" connections', function() {
     (() => {

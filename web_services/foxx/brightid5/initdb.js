@@ -107,8 +107,8 @@ function v5_3() {
   connectionsColl.all().toArray().forEach(conn => {
     const key1 = conn._from.replace('users/', '');
     const key2 = conn._to.replace('users/', '');
-    db.connect(key1, key2, 'human', null, conn.timestamp);
-    db.connect(key2, key1, 'human', null, conn.timestamp);
+    db.connect(key1, key2, 'just met', null, conn.timestamp);
+    db.connect(key2, key1, 'just met', null, conn.timestamp);
   });
   usersColl.all().toArray().forEach(user => {
     if (user.trusted) {
