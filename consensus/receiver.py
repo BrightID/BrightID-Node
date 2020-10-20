@@ -91,7 +91,7 @@ def save_snapshot(block):
     batch = db.replication.create_dump_batch(ttl=1000)
     fname = config.SNAPSHOTS_PATH.format(block)
     zf = zipfile.ZipFile(fname+'.tmp', mode='w')
-    for collection in ('users', 'groups', 'usersInGroups', 'connections'):
+    for collection in ('users', 'groups', 'usersInGroups', 'connections', 'verifications'):
         params = {'batchId': batch['id'], 'collection': collection, 'chunkSize': config.MAX_COLLECTION_SIZE}
         r = requests.get(config.DUMP_URL, params=params)
         zf.writestr('dump/{}_{}.data.json'.format(collection, batch['id']), r.text)

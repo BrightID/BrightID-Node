@@ -9,10 +9,9 @@ import config
 
 w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 db = ArangoClient().db('_system')
-nonce = w3.eth.getTransactionCount(config.ADDRESS)
 
 def sendTransaction(data):
-    global nonce
+    nonce = w3.eth.getTransactionCount(config.ADDRESS)
     tx = {
         'to': config.TO_ADDRESS,
         'value': 0,
@@ -24,7 +23,6 @@ def sendTransaction(data):
     }
     signed = w3.eth.account.sign_transaction(tx, config.PRIVATE_KEY)
     tx = w3.eth.sendRawTransaction(signed.rawTransaction).hex()
-    nonce += 1
     return tx
 
 def main():
