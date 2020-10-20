@@ -11,7 +11,7 @@ w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 db = ArangoClient().db('_system')
 
 def sendTransaction(data):
-    nonce = w3.eth.getTransactionCount(config.ADDRESS)
+    nonce = w3.eth.getTransactionCount(config.ADDRESS, 'pending')
     tx = {
         'to': config.TO_ADDRESS,
         'value': 0,
