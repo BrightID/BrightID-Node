@@ -202,7 +202,7 @@ describe('operations', function(){
     connectionsColl.firstExample({
       '_from': 'users/' + u3.id,
       '_to': 'users/' + u2.id,
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
   });
 
   it('should be able to "Add Group"', function () {
@@ -444,7 +444,7 @@ describe('operations', function(){
       'name': 'Connect',
       'id1': u1.id,
       'id2': u2.id,
-      'level': 'human',
+      'level': 'just met',
       timestamp,
     }
     const message = getMessage(op);
@@ -455,7 +455,7 @@ describe('operations', function(){
     connectionsColl.firstExample({
       '_from': 'users/' + u1.id,
       '_to': 'users/' + u2.id,
-    }).level.should.equal('human');
+    }).level.should.equal('just met');
   });
 
 });
