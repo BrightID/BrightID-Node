@@ -10,6 +10,7 @@ const schemas = require('./schemas').schemas;
 const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
+const variablesColl = arango._collection('variables');
 
 const handlers = {
   operationsPut: function(req, res){
@@ -17,13 +18,24 @@ const handlers = {
     const hash = req.param('hash');
     op._key = hash;
     
+    const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
+    if (lastProcessedBlock >= 2960000) {
+      return res.send({'success': true, 'state': 'failed', 'result': 'v4 is not supported anymore'});
+    }
+
     if (operationsHashesColl.exists(op._key)) {
       return res.send({'success': true, 'state': 'duplicate'});
     }
     operationsHashesColl.insert({ _key: op._key });
 
     if (op.name == 'Link ContextId') {
-      operations.decrypt(op);
+      if (!db.getContext(op.context)) {
+        op.state = 'ignored';
+        db.upsertOperation(op);
+        return res.send({'success': true, 'state': op.state, 'result': op.result});
+      } else {
+        operations.decrypt(op);
+      }
     }
     try {
       operations.verify(op);

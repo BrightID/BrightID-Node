@@ -21,6 +21,7 @@ const {
 const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
+const variablesColl = arango._collection('variables');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 // error numbers
@@ -325,6 +326,11 @@ router.get('/contexts', handlers.allContexts)
   .response(schemas.allContextsGetResponse);
 
 module.context.use(function (req, res, next) {
+  const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
+  if (lastProcessedBlock >= 2960000) {
+    return res.throw(404, 'v4 is not supported anymore! Please upgrade your client.');
+  }
+
   try {
     next();
   } catch (e) {
