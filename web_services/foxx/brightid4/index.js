@@ -327,7 +327,7 @@ router.get('/contexts', handlers.allContexts)
 
 module.context.use(function (req, res, next) {
   const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
-  if (lastProcessedBlock >= 2900000) {
+  if (lastProcessedBlock >= 2960000) {
     return res.throw(404, 'v4 is not supported anymore! Please upgrade your client.');
   }
 

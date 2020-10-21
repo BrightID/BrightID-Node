@@ -19,7 +19,7 @@ const handlers = {
     op._key = hash;
     
     const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
-    if (lastProcessedBlock >= 2900000) {
+    if (lastProcessedBlock >= 2960000) {
       return res.send({'success': true, 'state': 'failed', 'result': 'v4 is not supported anymore'});
     }
 
