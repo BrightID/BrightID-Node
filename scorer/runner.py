@@ -4,7 +4,6 @@ from anti_sybil.utils import *
 from arango import ArangoClient
 from config import *
 from verifications import seed_connected
-from verifications import call_joined
 from verifications import brightid
 from verifications import dollar_for_everyone
 from verifications import yekta
@@ -16,7 +15,7 @@ def process(fname):
     json_graph = from_dump(fname)
     graph = from_json(json_graph)
 
-    for verifier in [yekta, seed_connected, call_joined, brightid, dollar_for_everyone]:
+    for verifier in [yekta, seed_connected, brightid, dollar_for_everyone]:
         reset_ranks(graph)
         verifier.verify(graph)
 
