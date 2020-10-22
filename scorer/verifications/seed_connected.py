@@ -1,8 +1,5 @@
 from arango import ArangoClient
 import time
-import sys
-sys.path.append('..')
-import config
 
 
 def verify(graph):
@@ -12,20 +9,19 @@ def verify(graph):
     seed_groups.sort(key=lambda s: s['timestamp'])
     seed_groups_members = {}
     all_seeds = set()
+    seed_group_quota = {}
     for seed_group in seed_groups:
         userInGroups = db['usersInGroups'].find({'_to': seed_group['_id']})
         seeds = set([ug['_from'] for ug in userInGroups])
         all_seeds.update(seeds)
         seed_groups_members[seed_group['_id']] = seeds
+        seed_group_quota[seed_group['_id']] = seed_group['quota']
 
     for i, seed_group in enumerate(seed_groups_members):
-        duration = int(time.time() - seed_groups[i]['timestamp'] / 1000)
-        months = int(duration / (30 * 24 * 60 * 60))
-        quota = config.INITIAL_QUOTA + months * config.MONTHLY_QUOTA
         members = seed_groups_members[seed_group]
         used = db['verifications'].find(
             {'name': 'SeedConnected', 'seedGroup': seed_group}).count()
-        unused = quota - used
+        unused = seed_group_quota[seed_group] - used
         if unused < 1:
             continue
         conns = db.aql.execute(
@@ -48,7 +44,8 @@ def verify(graph):
 
         for neighbor in seed_neighbors:
             neighbor = neighbor.replace('users/', '')
-            verifications = set([v['name'] for v in db['verifications'].find({'user': neighbor})])
+            verifications = set(
+                [v['name'] for v in db['verifications'].find({'user': neighbor})])
             if 'SeedConnected' not in verifications:
                 db['verifications'].insert({
                     'name': 'SeedConnected',
