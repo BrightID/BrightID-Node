@@ -15,7 +15,7 @@ def verify(graph):
         seeds = set([ug['_from'] for ug in userInGroups])
         all_seeds.update(seeds)
         seed_groups_members[seed_group['_id']] = seeds
-        seed_group_quota[seed_group['_id']] = seed_group['quota']
+        seed_group_quota[seed_group['_id']] = seed_group.get('quota', 50)
 
     for i, seed_group in enumerate(seed_groups_members):
         members = seed_groups_members[seed_group]
