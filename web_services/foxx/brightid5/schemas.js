@@ -12,6 +12,7 @@ schemas = Object.assign({
     id: joi.string().required().description('the user id'),
     signingKey: joi.string().required().description('the user signingKey'),
     score: schemas.score,
+    level: joi.string().required().description('the confidence level set on this user'),
     verifications: joi.array().items(joi.string()),
     hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
     trusted: joi.array().items(joi.string()).description('list of trusted connections of the user'),

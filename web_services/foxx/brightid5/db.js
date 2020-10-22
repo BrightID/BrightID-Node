@@ -89,10 +89,10 @@ function userConnections(userId) {
   }).toArray();
 
   outs = outs.filter(u => u.level != 'spam');
-  outs = outs.map(u => u._to.replace("users/", ""));
+  outs = _.keyBy(outs, u => u._to.replace("users/", ""));
   ins = ins.filter(u => u.level != 'spam');
-  ins = ins.map(u => u._from.replace("users/", ""));
-  const users = _.intersection(ins, outs);
+  ins = _.keyBy(ins, u => u._from.replace("users/", ""));
+  const users = _.intersection(Object.keys(ins), Object.keys(outs));
 
   return usersColl.documents(users).documents.map(u => {
     const res = {
@@ -100,6 +100,7 @@ function userConnections(userId) {
       signingKey: u.signingKey,
       // score is deprecated and will be removed on v6
       score: u.score,
+      level: outs[u._key].level,
       verifications: userVerifications(u._key),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
       // trusted is deprecated and will be replaced by recoveryingConnections on v6

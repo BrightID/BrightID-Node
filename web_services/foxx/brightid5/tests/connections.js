@@ -96,6 +96,7 @@ describe('connections', function () {
     conns.length.should.equal(1);
     const a = conns[0];
     a.id.should.equal('a');
+    a.level.should.equal('just met');
     a.flaggers.should.deep.equal({"c": "duplicate"});
     a.trusted.should.deep.equal(["b", "c"]);
     a.signingKey.should.equal('newSigningKey');
