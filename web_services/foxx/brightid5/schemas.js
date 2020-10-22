@@ -12,6 +12,7 @@ schemas = Object.assign({
     id: joi.string().required().description('the user id'),
     signingKey: joi.string().required().description('the user signingKey'),
     score: schemas.score,
+    level: joi.string().required().description('the confidence level set on this user'),
     verifications: joi.array().items(joi.string()),
     hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
     trusted: joi.array().items(joi.string()).description('list of trusted connections of the user'),
@@ -42,6 +43,16 @@ schemas = Object.assign({
     unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
   }),
   operation: joi.alternatives().try([
+    joi.object({
+      name: joi.string().valid('Connect').required().description('operation name'),
+      id1: joi.string().required().description('brightid of the user making the directed connection'),
+      id2: joi.string().required().description('brightid of the user taking the directed connection'),
+      sig1: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
+      level: joi.string().valid('spam', 'suspicious', 'just met', 'already know', 'recovery').required().description('level of confidence'),
+      flagReason: joi.string().valid('fake', 'duplicate', 'deceased').description('for spam level, the reason for flagging the user specificed by id2 as spam'),
+      timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      v: joi.number().required().valid(5).description('version of API')
+    }).label('Connect'),
     joi.object({
       name: joi.string().valid('Add Connection').required().description('operation name'),
       id1: joi.string().required().description('brightid of the first user making the connection'),
@@ -163,7 +174,7 @@ schemas = Object.assign({
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
       v: joi.number().required().valid(5).description('version of API')
-    }).label('Add Admin'),
+    }).label('Add Admin')
   ]).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus')
 }, schemas);
 

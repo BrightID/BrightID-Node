@@ -56,7 +56,7 @@ def get_action(vote_id):
     if name not in ['grant seed status', 'revoke seed status']:
         print('{} is an invalid action'.format(name))
         return None
-    if ((name == 'grant seed status' and len(sections) != 4) or
+    if ((name == 'grant seed status' and len(sections) != 5) or
         (name == 'revoke seed status' and len(sections) != 3)):
         print('"{}" is invalid action'.format(text))
         return None
@@ -67,8 +67,9 @@ def get_action(vote_id):
         return None
 
     region = sections[2] if name == 'grant seed status' else None
-    info = sections[3] if name == 'grant seed status' else None
-    return {'name': name, 'group': group, 'region': region, 'info': info}
+    quota = sections[3] if name == 'grant seed status' else None
+    info = sections[4] if name == 'grant seed status' else None
+    return {'name': name, 'group': group, 'region': region, 'info': info, 'quota': quota}
 
 def update_seed_groups(from_block, to_block):
     print('Updating Seed Groups')
@@ -83,7 +84,7 @@ def update_seed_groups(from_block, to_block):
     for action in actions:
         print({k: str(v).encode("utf-8") for k, v in action.items()})
         if action['name'] == 'grant seed status':
-            groups.update({'_key': action['group'], 'seed': True, 'region': action['region'], 'info': action['info']})
+            groups.update({'_key': action['group'], 'seed': True, 'region': action['region'], 'info': action['info'], 'quota': action['quota']})
         else:
             groups.update({'_key': action['group'], 'seed': False})
 
@@ -129,7 +130,10 @@ def main():
                 if tx['to'] and tx['to'].lower() in (config.TO_ADDRESS.lower(), config.DEPRECATED_TO_ADDRESS.lower()):
                     process(tx['input'])
             if block % config.SNAPSHOTS_PERIOD == 0:
-                update_seed_groups(block-config.SNAPSHOTS_PERIOD, block)
+                try:
+                    update_seed_groups(block - config.SNAPSHOTS_PERIOD, block)
+                except Exception as e:
+                    print(f'Error: {e}')
                 save_snapshot(block)
             last_block = block
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})

@@ -14,6 +14,9 @@ const should = chai.should();
 
 describe('', function () {
   before(function(){
+    usersColl.truncate();
+    connectionsColl.truncate();
+    verificationsColl.truncate();
     usersColl.insert({'_key': 'a'});
     usersColl.insert({'_key': 'b'});
     usersColl.insert({'_key': 'c'});
@@ -22,6 +25,7 @@ describe('', function () {
   after(function(){
     usersColl.truncate();
     connectionsColl.truncate();
+    verificationsColl.truncate();
   });
   it('should get error after limit', function() {
     operations.checkLimits({ name: 'Add Group', id1: 'a' }, 100, 2);
@@ -33,7 +37,7 @@ describe('', function () {
   it('limit should be removed after time window passed', function() {
     // for some reason setTimeout is not working
     const now = Date.now();
-    while (Date.now() - now < 100);
+    while (Date.now() - now <= 100);
     operations.checkLimits({ name: 'Remove Group', id: 'a' }, 100, 2);
   });
   it('unverified users should have shared limit', function() {

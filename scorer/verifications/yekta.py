@@ -23,6 +23,7 @@ def verify(graph):
                 name: 'Yekta',
                 user: @user,
                 rank: @rank,
+                raw_rank: @raw_rank,
                 timestamp: @timestamp
             }
             UPDATE {
@@ -33,6 +34,7 @@ def verify(graph):
         ''', bind_vars={
             'user': node.name,
             'rank': node.rank,
+            'raw_rank': node.raw_rank,
             'timestamp': int(time.time() * 1000)
         })
     print('Yekta verifieds: ', counter)

@@ -36,6 +36,7 @@ const verifyAppSig = function(message, app, sig) {
 }
 
 const senderAttrs = {
+  'Connect': ['id1'],
   'Add Connection': ['id1', 'id2'],
   'Remove Connection': ['id1'],
   'Add Group': ['id1'],
@@ -70,7 +71,8 @@ function checkLimits(op, timeWindow, limit) {
       sender = 'shared';
     } else {
       const user = usersColl.document(sender);
-      verified = user.verifications && user.verifications.includes('BrightID');
+      const verifications = db.userVerifications(user._key);
+      verified = verifications && verifications.includes('BrightID');
       if (!verified && user.parent) {
         // this happens when user is not verified but has a verified connection
         sender = `shared_${user.parent}`;
@@ -93,6 +95,7 @@ function checkLimits(op, timeWindow, limit) {
 }
 
 const requiredSigs = {
+  'Connect': [['id1', 'sig1']],
   'Add Connection': [['id1', 'sig1'], ['id2', 'sig2']],
   'Remove Connection': [['id1', 'sig1']],
   'Add Group': [['id1', 'sig1']],
@@ -146,9 +149,15 @@ function verify(op) {
 }
 
 function apply(op) {
-  if (op['name'] == 'Add Connection') {
+  if (op['name'] == 'Connect') {
+    return db.connect(op.id1, op.id2, op.level, op.flagReason, op.timestamp);
+  } else if (op['name'] == 'Add Connection') {
+    // this operation is deprecated and will be removed on v6
+    // use "Connect" instead
     return db.addConnection(op.id1, op.id2, op.timestamp);
   } else if (op['name'] == 'Remove Connection') {
+    // this operation is deprecated and will be removed on v6
+    // use "Connect" instead
     return db.removeConnection(op.id1, op.id2, op.reason, op.timestamp);
   } else if (op['name'] == 'Add Group') {
     return db.createGroup(op.group, op.id1, op.id2, op.inviteData2, op.id3, op.inviteData3, op.url, op.type, op.timestamp);
@@ -159,7 +168,9 @@ function apply(op) {
   } else if (op['name'] == 'Remove Membership') {
     return db.deleteMembership(op.group, op.id, op.timestamp);
   } else if (op['name'] == 'Set Trusted Connections') {
-    return db.setTrusted(op.trusted, op.id, op.timestamp);
+    // this operation is deprecated and will be removed on v6
+    // use "Connect" instead
+    return db.setRecoveryConnections(op.trusted, op.id, op.timestamp);
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
   } else if (op['name'] == 'Sponsor') {
