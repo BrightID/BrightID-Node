@@ -133,7 +133,7 @@ def main():
                 try:
                     update_seed_groups(block - config.SNAPSHOTS_PERIOD, block)
                 except Exception as e:
-                    print(f'Error: {e}')
+                    print(f'Error in updating seed group: {e}')
                 save_snapshot(block)
             last_block = block
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
