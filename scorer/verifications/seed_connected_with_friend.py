@@ -82,15 +82,11 @@ def check_conditions(pair, seed):
         v['name']: v for v in db['verifications'].find({'user': p0})}
     if 'SeedConnected' not in p0_verifications:
         return
-    if 'SeedConnectedWithFriend' in p0_verifications:
-        return
 
     p1 = pair[1].replace('users/', '')
     p1_verifications = {
         v['name']: v for v in db['verifications'].find({'user': p1})}
     if 'SeedConnected' not in p1_verifications:
-        return
-    if 'SeedConnectedWithFriend' in p1_verifications:
         return
 
     if 'SeedConnectedWithFriend' not in p0_verifications:
@@ -99,7 +95,7 @@ def check_conditions(pair, seed):
             'user': p0,
             'timestamp': int(time.time() * 1000)
         })
-    print(f'user: {p0}\tverification: SeedConnectedWithFriend')
+        print(f'user: {p0}\tverification: SeedConnectedWithFriend')
 
     if 'SeedConnectedWithFriend' not in p1_verifications:
         db['verifications'].insert({
@@ -107,4 +103,4 @@ def check_conditions(pair, seed):
             'user': p1,
             'timestamp': int(time.time() * 1000)
         })
-    print(f'user: {p1}\tverification: SeedConnectedWithFriend')
+        print(f'user: {p1}\tverification: SeedConnectedWithFriend')
