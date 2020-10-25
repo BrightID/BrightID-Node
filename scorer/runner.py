@@ -12,7 +12,7 @@ db = ArangoClient().db('_system')
 
 
 def process(fname):
-    for verifier in [yekta, seed_connected, seed_connected_with_friend, brightid, dollar_for_everyone]:
+    for verifier in [seed_connected, seed_connected_with_friend, yekta, brightid, dollar_for_everyone]:
         verifier.verify(fname)
 
 
