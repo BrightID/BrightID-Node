@@ -2,7 +2,7 @@ from arango import ArangoClient
 import time
 
 
-def verify(graph):
+def verify(fname):
     print('SEED CONNECTED')
     db = ArangoClient().db('_system')
     seed_groups = list(db['groups'].find({'seed': True}))
