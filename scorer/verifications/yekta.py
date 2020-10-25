@@ -9,7 +9,6 @@ def verify(fname):
     print('YEKTA')
     json_graph = from_dump(fname)
     graph = from_json(json_graph)
-    reset_ranks(graph)
     db = ArangoClient().db('_system')
     ranker = algorithms.Yekta(graph, {})
     ranker.rank()
