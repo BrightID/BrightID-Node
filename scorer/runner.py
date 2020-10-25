@@ -1,23 +1,20 @@
 import time
 from datetime import datetime
-from anti_sybil.utils import *
 from arango import ArangoClient
 from config import *
 from verifications import seed_connected
 from verifications import brightid
 from verifications import dollar_for_everyone
 from verifications import yekta
+from verifications import seed_connected_with_friend
 
 db = ArangoClient().db('_system')
 
 
 def process(fname):
-    json_graph = from_dump(fname)
-    graph = from_json(json_graph)
+    for verifier in [yekta, seed_connected, seed_connected_with_friend, brightid, dollar_for_everyone]:
+        verifier.verify(fname)
 
-    for verifier in [yekta, seed_connected, brightid, dollar_for_everyone]:
-        reset_ranks(graph)
-        verifier.verify(graph)
 
 def main():
     variables = db.collection('variables')
@@ -46,6 +43,7 @@ def main():
             print(f'{fname} does not exist')
         print(
             '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
+
 
 if __name__ == '__main__':
     while True:
