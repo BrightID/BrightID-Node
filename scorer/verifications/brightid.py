@@ -8,8 +8,8 @@ def verify(fname):
     for u in db['users']:
         verifications = set([v['name'] for v in db['verifications'].find({'user': u['_key']})])
         seedConnected = 'SeedConnected' in verifications
-        SeedConnectedWithFriend = 'SeedConnectedWithFriend' in verifications
-        if not (seedConnected and SeedConnectedWithFriend):
+        seedConnectedWithFriend = 'SeedConnectedWithFriend' in verifications
+        if not (seedConnected and seedConnectedWithFriend):
             continue
         if 'BrightID' not in verifications:
             db['verifications'].insert({
