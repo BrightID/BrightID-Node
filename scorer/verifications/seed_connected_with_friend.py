@@ -8,7 +8,20 @@ CONN_DIFF_TIME = 60 * 60 * 1000
 GO_BACK_TIME = 10 * 24 * 60 * 60 * 1000
 
 db = ArangoClient().db('_system')
+verifications = {}
 
+def addVerificationTo(user):
+    if 'SeedConnectedWithFriend' in verifications[user]:
+        return
+    db['verifications'].insert({
+        'name': 'SeedConnectedWithFriend',
+        'user': user,
+        'timestamp': int(time.time() * 1000)
+    })
+    print(f"user: {user}\tverification: SeedConnectedWithFriend")
+
+def getVerifications(user):
+    return [v['name'] for v in db['verifications'].find({'user': user})]
 
 def verify(fname):
     print('SEED CONNECTED WITH FRIEND')
@@ -21,22 +34,16 @@ def verify(fname):
         userInGroups = list(db['usersInGroups'].find({'_to': seed_group['_id']}))
         userInGroups.sort(key=lambda ug: ug['timestamp'])
         for ug in userInGroups:
-            if ug in seeds:
-                continue
-            seeds.append(ug['_from'])
+            seed = ug['_from'].replace('users/', '')
+            if seed not in seeds:
+                seeds.append(seed)
 
     for seed in seeds:
         verifications = {}
-        verifications[seed] = get_verifications(seed)
-        seed_connected_with_friend = 'SeedConnectedWithFriend' in verifications[seed]
-        seed_connected = 'SeedConnected' in verifications[seed]
-        if not seed_connected_with_friend and seed_connected:
-            db['verifications'].insert({
-                'name': 'SeedConnectedWithFriend',
-                'user': seed.replace('users/', ''),
-                'timestamp': int(time.time() * 1000)
-            })
-            print(f"user: {seed}\tverification: SeedConnectedWithFriend")
+        verifications[seed] = getVerifications(seed)
+        # seeds get this verification if they have SeedConnected (had quota for themselves)
+        if 'SeedConnected' in verifications[seed]:
+            addVerificationTo(seed)
 
         conns = db.aql.execute('''
             FOR c IN connections
@@ -45,59 +52,45 @@ def verify(fname):
                     AND c.level IN @levels
                     AND c.timestamp > @time_limit
                     RETURN c
-        ''', bind_vars={'seed': seed, 'levels': SEED_CONNECTION_LEVELS, 'time_limit': time_limit}
-        )
-        neighbors = {}
+        ''', bind_vars={
+            'seed': 'users/' + seed,
+            'levels': SEED_CONNECTION_LEVELS,
+            'time_limit': time_limit
+        })
+        seedConnTimes = {}
         for conn in conns:
-            if conn['_to'] in seeds:
+            neighbor = conn['_to'].replace('users/', '')
+            if neighbor in seeds:
                 continue
 
-            verifications[conn['_to']] = get_verifications(conn['_to'])
-            if 'SeedConnected' not in verifications[conn['_to']]:
+            verifications[neighbor] = getVerifications(neighbor)
+            if 'SeedConnected' not in verifications[neighbor]:
                 continue
 
-            neighbors[conn['_to']] = conn['timestamp']
+            seedConnTimes[neighbor] = conn['timestamp']
 
-        pairs = itertools.combinations(neighbors.keys(), 2)
+        pairs = itertools.combinations(seedConnTimes.keys(), 2)
         for pair in pairs:
-            p0_with_friend = 'SeedConnectedWithFriend' in verifications[pair[0]]
-            p1_with_friend = 'SeedConnectedWithFriend' in verifications[pair[1]]
-            if p0_with_friend and p1_with_friend:
+            p0verified = 'SeedConnectedWithFriend' in verifications[pair[0]]
+            p1verified = 'SeedConnectedWithFriend' in verifications[pair[1]]
+            if p0verified and p1verified:
                 continue
 
-            t = abs(neighbors[pair[0]] - neighbors[pair[1]])
-            if t > CONN_DIFF_TIME:
+            gap = abs(seedConnTimes[pair[0]] - seedConnTimes[pair[1]])
+            if gap > CONN_DIFF_TIME:
                 continue
 
-            ft = db['connections'].find({'_from': pair[0], '_to': pair[1]})
-            if ft.empty() or ft.batch()[0]['level'] not in NODE_CONNECTION_LEVELS:
+            ft = db['connections'].find({'_from': 'users/' + pair[0], '_to': 'users/' + pair[1]})
+            if ft.empty() or ft.next()['level'] not in NODE_CONNECTION_LEVELS:
                 continue
 
-            tf = db['connections'].find({'_from': pair[1], '_to': pair[0]})
-            if tf.empty() or tf.batch()[0]['level'] not in NODE_CONNECTION_LEVELS:
+            tf = db['connections'].find({'_from': 'users/' + pair[1], '_to': 'users/' + pair[0]})
+            if tf.empty() or tf.next['level'] not in NODE_CONNECTION_LEVELS:
                 continue
 
-            if 'SeedConnectedWithFriend' not in verifications[pair[0]]:
-                db['verifications'].insert({
-                    'name': 'SeedConnectedWithFriend',
-                    'user': pair[0].replace('users/', ''),
-                    'timestamp': int(time.time() * 1000)
-                })
-                print(f"user: {pair[0]}\tverification: SeedConnectedWithFriend")
-
-            if 'SeedConnectedWithFriend' not in verifications[pair[1]]:
-                db['verifications'].insert({
-                    'name': 'SeedConnectedWithFriend',
-                    'user': pair[1].replace('users/', ''),
-                    'timestamp': int(time.time() * 1000)
-                })
-                print(f"user: {pair[1]}\tverification: SeedConnectedWithFriend")
+            addVerificationTo(pair[0])
+            addVerificationTo(pair[1])
 
     verifiedCount = db['verifications'].find(
         {'name': 'SeedConnectedWithFriend'}).count()
     print(f'verifieds: {verifiedCount}\n')
-
-
-def get_verifications(user):
-    user = user.replace('users/', '')
-    return [v['name'] for v in db['verifications'].find({'user': user})]
