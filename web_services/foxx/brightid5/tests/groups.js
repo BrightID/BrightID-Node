@@ -90,7 +90,7 @@ describe('groups', function () {
       usersInGroupsColl.count().should.equal(3);
     });
   });
-  describe('flagging', function() {
+  describe('reporting', function() {
     before(function() {
       db.addConnection('a', 'd', 0);
       db.addConnection('a', 'e', 0);
@@ -109,14 +109,14 @@ describe('groups', function () {
       db.addMembership('g2', 'f', Date.now());
     });
 
-    it('should be able to flag a connection', function(){
+    it('should be able to report a connection', function(){
       db.removeConnection('b', 'a', 'duplicate', 0);
-      db.getFlaggers('a').should.deep.equal({'b': 'duplicate'});
+      db.getReporters('a').should.deep.equal({'b': 'duplicate'});
     });
 
-    it('should be able to remove a flag', function(){
-      db.connect('b', 'a', 'just met', null, 0);
-      db.getFlaggers('a').should.deep.equal({});
+    it('should be able to remove a report', function(){
+      db.connect('b', 'a', 'just met', null, null, 0);
+      db.getReporters('a').should.deep.equal({});
     });
   });
 

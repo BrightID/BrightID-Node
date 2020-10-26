@@ -198,7 +198,7 @@ describe('operations', function(){
     connectionsColl.firstExample({
       '_from': 'users/' + u2.id,
       '_to': 'users/' + u3.id,
-    }).flagReason.should.equal(reason);
+    }).reportReason.should.equal(reason);
     connectionsColl.firstExample({
       '_from': 'users/' + u3.id,
       '_to': 'users/' + u2.id,

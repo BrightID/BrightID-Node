@@ -150,7 +150,7 @@ function verify(op) {
 
 function apply(op) {
   if (op['name'] == 'Connect') {
-    return db.connect(op.id1, op.id2, op.level, op.flagReason, op.timestamp);
+    return db.connect(op.id1, op.id2, op.level, op.reportReason, op.replacedWith, op.timestamp);
   } else if (op['name'] == 'Add Connection') {
     // this operation is deprecated and will be removed on v6
     // use "Connect" instead

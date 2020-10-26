@@ -26,24 +26,24 @@ describe('connections', function () {
       '_from': 'users/b', '_to': 'users/a'
     }).level.should.equal('just met');
   });
-  it('should be able to use "removeConnection" to set "spam" as confidence level', function() {
+  it('should be able to use "removeConnection" to set "reported" as confidence level', function() {
     db.removeConnection('a', 'b', 'duplicate', 0);
     const conn1 = connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     });
-    conn1.level.should.equal('spam');
-    conn1.flagReason.should.equal('duplicate');
+    conn1.level.should.equal('reported');
+    conn1.reportReason.should.equal('duplicate');
     connectionsColl.firstExample({
       '_from': 'users/b', '_to': 'users/a'
     }).level.should.equal('just met');
   });
   it('should be able to use "connect" to reset confidence level to "just met"', function() {
-    db.connect('a', 'b', 'just met', null, 0);
+    db.connect('a', 'b', 'just met', null, null, 0);
     const conn1 = connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     });
     conn1.level.should.equal('just met');
-    (conn1.flagReason === null).should.equal(true);
+    (conn1.reportReason === null).should.equal(true);
   });
   it('should be able to use "setRecoveryConnections" to set "recovery" as confidence level', function() {
     db.setRecoveryConnections(['b'], 'a', 0);
@@ -60,20 +60,20 @@ describe('connections', function () {
       '_from': 'users/b', '_to': 'users/a'
     }).level.should.equal('just met');
   });
-  it('should be able to use "connect" to set different as confidence levels', function() {
-    db.connect('a', 'b', 'spam', 'duplicate', 0);
+  it('should be able to use "connect" to set different confidence levels', function() {
+    db.connect('a', 'b', 'reported', 'duplicate', null, 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
-    }).level.should.equal('spam');
-    db.connect('a', 'b', 'just met', null, 0);
+    }).level.should.equal('reported');
+    db.connect('a', 'b', 'just met', null, null, 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('just met');
-    db.connect('a', 'b', 'recovery', null, 0);
+    db.connect('a', 'b', 'recovery', null, null, 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
-    db.connect('a', 'c', 'just met', null, 0);
+    db.connect('a', 'c', 'just met', null, null, 0);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/c'
     }).level.should.equal('just met');
@@ -85,13 +85,13 @@ describe('connections', function () {
   });
 
   it('should be able to use "setSigningKey" to reset "signingKey" with "recovery" connections', function() {
-    db.connect('a', 'c', 'recovery', null, 0);
+    db.connect('a', 'c', 'recovery', null, null, 0);
     db.setSigningKey('newSigningKey', 'a', ['b', 'c'], 0);
     usersColl.document('a').signingKey.should.equal('newSigningKey');
   });
 
   it('should be able to get "userConnections"', function() {
-    db.connect('c', 'a', 'spam', 'duplicate', 0);
+    db.connect('c', 'a', 'reported', 'duplicate', null, 0);
     const conns = db.userConnections('b');
     conns.length.should.equal(1);
     const a = conns[0];
@@ -103,9 +103,19 @@ describe('connections', function () {
     a.createdAt.should.equal(0);
   });
 
-  it('should not get connnections with one side set "spam" level in "userConnections"', function() {
+  it('should not get connnections with one side set "reported" level in "userConnections"', function() {
     db.userConnections('a').length.should.equal(1);
     db.userConnections('c').length.should.equal(0);
+  });
+
+  it('should be able to report someone as replaced', function() {
+    db.connect('c', 'a', 'reported', 'replaced', 'b', 0);
+    const conn = connectionsColl.firstExample({
+      '_from': 'users/c', '_to': 'users/a'
+    });
+    conn.level.should.equal('reported');
+    conn.reportReason.should.equal('replaced');
+    conn.replacedWith.should.equal('b');
   });
 
 });

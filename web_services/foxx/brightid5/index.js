@@ -112,7 +112,7 @@ const handlers = {
       data: {
         score: user.score,
         createdAt: user.createdAt,
-        flaggers: db.getFlaggers(id),
+        flaggers: db.getReporters(id),
         trusted: db.getRecoveryConnections(id),
         invites,
         groups,

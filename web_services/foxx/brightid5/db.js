@@ -26,11 +26,11 @@ const {
 
 function addConnection(key1, key2, timestamp) {
   // this function is deprecated and will be removed on v6
-  connect(key1, key2, null, null, timestamp);
-  connect(key2, key1, null, null, timestamp);
+  connect(key1, key2, null, null, null, timestamp);
+  connect(key2, key1, null, null, null, timestamp);
 }
 
-function connect(key1, key2, level, flagReason, timestamp) {
+function connect(key1, key2, level, reportReason, replacedWith, timestamp) {
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
   let u1 = loadUser(key1);
@@ -53,9 +53,17 @@ function connect(key1, key2, level, flagReason, timestamp) {
   const _to = 'users/' + key2;
   const conn = connectionsColl.firstExample({ _from, _to });
 
-  if (level != 'spam') {
-    // clear flagReason for levels other than spam
-    flagReason = null;
+  if (level != 'reported') {
+    // clear reportReason for levels other than reported
+    reportReason = null;
+  }
+  if (level != 'reported' || reportReason != 'replaced') {
+    // clear replacedWith for levels other than reported
+    // and reportReason other than replaced
+    replacedWith = null;
+  }
+  if (replacedWith && ! loadUser(replacedWith)) {
+    throw 'the new brightid replaced with the reported brightid not found';
   }
   if (! level) {
     // Set 'just met' as confidence level when old addConnection is called
@@ -69,15 +77,15 @@ function connect(key1, key2, level, flagReason, timestamp) {
   }
 
   if (! conn) {
-    connectionsColl.insert({ _from, _to, level, flagReason, timestamp });
+    connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, timestamp });
   } else {
-    connectionsColl.update(conn, { level, flagReason, timestamp });
+    connectionsColl.update(conn, { level, reportReason, replacedWith, timestamp });
   }
 }
 
-function removeConnection(flagger, flagged, reason, timestamp) {
+function removeConnection(reporter, reported, reason, timestamp) {
   // this function is deprecated and will be removed on v6
-  connect(flagger, flagged, 'spam', reason, timestamp);
+  connect(reporter, reported, 'reported', reason, null, timestamp);
 }
 
 function userConnections(userId) {
@@ -88,9 +96,9 @@ function userConnections(userId) {
     _to: 'users/' + userId
   }).toArray();
 
-  outs = outs.filter(u => u.level != 'spam');
+  outs = outs.filter(u => u.level != 'reported');
   outs = _.keyBy(outs, u => u._to.replace("users/", ""));
-  ins = ins.filter(u => u.level != 'spam');
+  ins = ins.filter(u => u.level != 'reported');
   ins = _.keyBy(ins, u => u._from.replace("users/", ""));
   const users = _.intersection(Object.keys(ins), Object.keys(outs));
 
@@ -105,7 +113,8 @@ function userConnections(userId) {
       hasPrimaryGroup: hasPrimaryGroup(u._key),
       // trusted is deprecated and will be replaced by recoveryingConnections on v6
       trusted: getRecoveryConnections(u._key),
-      flaggers: getFlaggers(u._key),
+      // flaggers is deprecated and will be replaced by reporters on v6
+      flaggers: getReporters(u._key),
       createdAt: u.createdAt,
       // eligible_groups is deprecated and will be replaced by eligibleGroups on v6
       eligible_groups: u.eligible_groups || []
@@ -114,15 +123,15 @@ function userConnections(userId) {
   });
 }
 
-function getFlaggers(user) {
-  const flaggers = {};
+function getReporters(user) {
+  const reporters = {};
   connectionsColl.byExample({
     _to: 'users/' + user,
-    level: 'spam'
+    level: 'reported'
   }).toArray().forEach(c => {
-    flaggers[c._from.replace('users/', '')] = c.flagReason;
+    reporters[c._from.replace('users/', '')] = c.reportReason;
   });
-  return flaggers;
+  return reporters;
 }
 
 function groupMembers(groupId) {
@@ -581,7 +590,7 @@ function linkContextId(id, context, contextId, timestamp) {
 function setRecoveryConnections(conns, key, timestamp) {
   // this function is deprecated and will be removed on v6
   conns.forEach(conn => {
-    connect(key, conn, 'recovery', null, timestamp);
+    connect(key, conn, 'recovery', null, null, timestamp);
   });
 }
 
@@ -695,6 +704,6 @@ module.exports = {
   getLastContextIds,
   unusedSponsorship,
   getState,
-  getFlaggers,
+  getReporters,
   getRecoveryConnections
 };

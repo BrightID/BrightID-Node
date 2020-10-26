@@ -48,8 +48,9 @@ schemas = Object.assign({
       id1: joi.string().required().description('brightid of the user making the directed connection'),
       id2: joi.string().required().description('brightid of the user taking the directed connection'),
       sig1: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
-      level: joi.string().valid('spam', 'suspicious', 'just met', 'already know', 'recovery').required().description('level of confidence'),
-      flagReason: joi.string().valid('fake', 'duplicate', 'deceased').description('for spam level, the reason for flagging the user specificed by id2 as spam'),
+      level: joi.string().valid('reported', 'suspicious', 'just met', 'already known', 'recovery').required().description('level of confidence'),
+      reportReason: joi.string().valid('spammer', 'fake', 'duplicate', 'deceased', 'replaced').description('for reported level, the reason for reporting the user specificed by id2'),
+      replacedWith: joi.string().description('for reported as replaced, the new brightid of the replaced account'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Connect'),

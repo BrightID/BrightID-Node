@@ -109,23 +109,23 @@ function v5_3() {
     const key2 = conn._to.replace('users/', '');
     if (conn.timestamp < 1597276800000) {
         // 08/13/2020 12:00am (UTC)
-        db.connect(key1, key2, 'already know', null, conn.timestamp);
-        db.connect(key2, key1, 'already know', null, conn.timestamp);
+        db.connect(key1, key2, 'already known', null, null, conn.timestamp);
+        db.connect(key2, key1, 'already known', null, null, conn.timestamp);
     } else {
-        db.connect(key1, key2, 'just met', null, conn.timestamp);
-        db.connect(key2, key1, 'just met', null, conn.timestamp);
+        db.connect(key1, key2, 'just met', null, null, conn.timestamp);
+        db.connect(key2, key1, 'just met', null, null, conn.timestamp);
     }
 
   });
   usersColl.all().toArray().forEach(user => {
     if (user.trusted) {
       for (let conn of user.trusted) {
-        db.connect(user._key, conn, 'recovery', null, user.updateTime);
+        db.connect(user._key, conn, 'recovery', null, null, user.updateTime);
       }
     }
     if (user.flaggers) {
       for (let flagger in user.flaggers) {
-        db.connect(flagger, user._key, 'spam', user.flaggers[flagger], timestamp);
+        db.connect(flagger, user._key, 'reported', user.flaggers[flagger], null, timestamp);
       }
     }
   });
