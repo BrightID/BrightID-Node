@@ -1,6 +1,9 @@
 from arango import ArangoClient
 import time
 
+SEED_CONNECTION_LEVELS = ['just met', 'already know', 'recovery']
+DEFAULT_QUOTA = 50
+
 
 def verify(fname):
     print('SEED CONNECTED')
@@ -11,13 +14,14 @@ def verify(fname):
     all_seeds = set()
     seed_group_quota = {}
     for seed_group in seed_groups:
-        userInGroups = db['usersInGroups'].find({'_to': seed_group['_id']})
-        seeds = set([ug['_from'] for ug in userInGroups])
+        userInGroups = list(db['usersInGroups'].find({'_to': seed_group['_id']}))
+        userInGroups.sort(key=lambda ug: ug['timestamp'])
+        seeds = [ug['_from'] for ug in userInGroups]
         all_seeds.update(seeds)
         seed_groups_members[seed_group['_id']] = seeds
-        seed_group_quota[seed_group['_id']] = seed_group.get('quota', 50)
+        seed_group_quota[seed_group['_id']] = seed_group.get('quota', DEFAULT_QUOTA)
 
-    for i, seed_group in enumerate(seed_groups_members):
+    for seed_group in seed_groups_members:
         members = seed_groups_members[seed_group]
         used = db['verifications'].find(
             {'name': 'SeedConnected', 'seedGroup': seed_group}).count()
@@ -28,19 +32,22 @@ def verify(fname):
             '''FOR d IN connections
                 SORT d.timestamp
                 FILTER d._from IN @members
-                    OR d._to IN @members
+                    AND d.level IN @levels
                 RETURN d''',
-            bind_vars={'members': list(members)}
+            bind_vars={'members': list(members), 'levels': SEED_CONNECTION_LEVELS}
         )
-
-        seed_neighbors = set()
+        seed_neighbors = []
         for conn in conns:
-            seed_neighbors.update([conn['_from'], conn['_to']])
-        # filter neighbors that are seeds but are not member of this seed group
-        # to allow each seed group maximize the number of non-seeds that verify
-        # and postpone the verification of those filtered seeds to their seed groups
-        seed_neighbors = [
-            m for m in seed_neighbors if m not in all_seeds or m in members]
+            if conn['_from'] not in seed_neighbors:
+                seed_neighbors.append(conn['_from'])
+
+            c1 = conn['_to'] not in seed_neighbors
+            # filter neighbors that are seeds but are not member of this seed group
+            # to allow each seed group maximize the number of non-seeds that verify
+            # and postpone the verification of those filtered seeds to their seed groups
+            c2 = conn['_to'] not in all_seeds
+            if c1 and c2:
+                seed_neighbors.append(conn['_to'])
 
         for neighbor in seed_neighbors:
             neighbor = neighbor.replace('users/', '')
