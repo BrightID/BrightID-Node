@@ -21,6 +21,8 @@ def verify(fname):
         userInGroups = list(db['usersInGroups'].find({'_to': seed_group['_id']}))
         userInGroups.sort(key=lambda ug: ug['timestamp'])
         for ug in userInGroups:
+            if ug in seeds:
+                continue
             seeds.append(ug['_from'])
 
     for seed in seeds:
