@@ -28,9 +28,9 @@ def verify(fname):
     for seed in seeds:
         verifications = {}
         verifications[seed] = get_verifications(seed)
-        Seed_connected_with_friend = 'SeedConnectedWithFriend' in verifications[seed]
-        Seed_connected = 'SeedConnected' in verifications[seed]
-        if not Seed_connected_with_friend and Seed_connected:
+        seed_connected_with_friend = 'SeedConnectedWithFriend' in verifications[seed]
+        seed_connected = 'SeedConnected' in verifications[seed]
+        if not seed_connected_with_friend and seed_connected:
             db['verifications'].insert({
                 'name': 'SeedConnectedWithFriend',
                 'user': seed.replace('users/', ''),
