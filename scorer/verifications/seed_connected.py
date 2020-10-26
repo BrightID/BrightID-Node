@@ -38,15 +38,18 @@ def verify(fname):
         )
         seed_neighbors = []
         for conn in conns:
+            # skip duplicate members
             if conn['_from'] not in seed_neighbors:
                 seed_neighbors.append(conn['_from'])
 
-            c1 = conn['_to'] not in seed_neighbors
             # filter neighbors that are seeds but are not member of this seed group
             # to allow each seed group maximize the number of non-seeds that verify
             # and postpone the verification of those filtered seeds to their seed groups
-            c2 = conn['_to'] not in all_seeds
-            if c1 and c2:
+            if conn['_to'] in all_seeds:
+                continue
+
+            # skip duplicate members
+            if conn['_to'] not in seed_neighbors:
                 seed_neighbors.append(conn['_to'])
 
         for neighbor in seed_neighbors:
