@@ -2,8 +2,8 @@ from arango import ArangoClient
 import itertools
 import time
 
-SEED_CONNECTION_LEVELS = ['just met', 'already know', 'recovery']
-NODE_CONNECTION_LEVELS = ['already know', 'recovery']
+SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
+NODE_CONNECTION_LEVELS = ['already known', 'recovery']
 CONN_DIFF_TIME = 60 * 60 * 1000
 GO_BACK_TIME = 10 * 24 * 60 * 60 * 1000
 

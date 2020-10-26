@@ -1,7 +1,7 @@
 from arango import ArangoClient
 import time
 
-SEED_CONNECTION_LEVELS = ['just met', 'already know', 'recovery']
+SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 DEFAULT_QUOTA = 50
 
 
