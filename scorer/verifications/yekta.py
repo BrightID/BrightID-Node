@@ -31,6 +31,7 @@ def verify(fname):
             }
             UPDATE {
                 rank: @rank,
+                raw_rank: @raw_rank,
                 timestamp: @timestamp
             }
             IN verifications
