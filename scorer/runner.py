@@ -1,4 +1,5 @@
 import time
+import traceback
 from datetime import datetime
 from arango import ArangoClient
 from config import *
@@ -51,4 +52,5 @@ if __name__ == '__main__':
             main()
         except Exception as e:
             print(f'Error: {e}')
+            traceback.print_exc()
             time.sleep(10)
