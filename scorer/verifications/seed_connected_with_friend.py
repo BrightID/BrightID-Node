@@ -10,12 +10,13 @@ GO_BACK_TIME = 10 * 24 * 60 * 60 * 1000
 db = ArangoClient().db('_system')
 verifications = {}
 
-def addVerificationTo(user):
+def addVerificationTo(user, friend):
     if 'SeedConnectedWithFriend' in verifications[user]:
         return
     db['verifications'].insert({
         'name': 'SeedConnectedWithFriend',
         'user': user,
+        'friend': friend,
         'timestamp': int(time.time() * 1000)
     })
     print(f"user: {user}\tverification: SeedConnectedWithFriend")
@@ -42,7 +43,7 @@ def verify(fname):
         verifications[seed] = getVerifications(seed)
         # seeds get this verification if they have SeedConnected (had quota for themselves)
         if 'SeedConnected' in verifications[seed]:
-            addVerificationTo(seed)
+            addVerificationTo(seed, None)
 
         conns = db.aql.execute('''
             FOR c IN connections
@@ -87,8 +88,8 @@ def verify(fname):
             if tf.empty() or tf.next()['level'] not in NODE_CONNECTION_LEVELS:
                 continue
 
-            addVerificationTo(pair[0])
-            addVerificationTo(pair[1])
+            addVerificationTo(pair[0], pair[1])
+            addVerificationTo(pair[1], pair[0])
 
     verifiedCount = db['verifications'].find(
         {'name': 'SeedConnectedWithFriend'}).count()
