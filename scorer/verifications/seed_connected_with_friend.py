@@ -39,7 +39,6 @@ def verify(fname):
                 seeds.append(seed)
 
     for seed in seeds:
-        verifications = {}
         verifications[seed] = getVerifications(seed)
         # seeds get this verification if they have SeedConnected (had quota for themselves)
         if 'SeedConnected' in verifications[seed]:
@@ -85,7 +84,7 @@ def verify(fname):
                 continue
 
             tf = db['connections'].find({'_from': 'users/' + pair[1], '_to': 'users/' + pair[0]})
-            if tf.empty() or tf.next['level'] not in NODE_CONNECTION_LEVELS:
+            if tf.empty() or tf.next()['level'] not in NODE_CONNECTION_LEVELS:
                 continue
 
             addVerificationTo(pair[0])
