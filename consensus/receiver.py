@@ -84,7 +84,7 @@ def update_seed_groups(from_block, to_block):
     for action in actions:
         print({k: str(v).encode("utf-8") for k, v in action.items()})
         if action['name'] == 'grant seed status':
-            groups.update({'_key': action['group'], 'seed': True, 'region': action['region'], 'info': action['info'], 'quota': action['quota']})
+            groups.update({'_key': action['group'], 'seed': True, 'region': action['region'], 'info': action['info'], 'quota': int(action['quota'])})
         else:
             groups.update({'_key': action['group'], 'seed': False})
 
