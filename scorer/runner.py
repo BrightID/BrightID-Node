@@ -14,7 +14,11 @@ db = ArangoClient().db('_system')
 
 def process(fname):
     for verifier in [seed_connected, seed_connected_with_friend, yekta, brightid, dollar_for_everyone]:
-        verifier.verify(fname)
+        try:
+            verifier.verify(fname)
+        except Exception as e:
+            print(f'Error in verifier: {e}')
+            traceback.print_exc()
 
 
 def main():
