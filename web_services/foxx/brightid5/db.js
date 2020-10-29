@@ -351,7 +351,7 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     _to: 'users/' + key1
   }).toArray().map(u => u._from.replace("users/", ""));
   if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
-    throw "One or both of the co-founders are not connected to the foundr!";
+    throw "One or both of the co-founders are not connected to the founder!";
   }
 
   const founders = [key1, key2, key3].sort()
