@@ -111,7 +111,7 @@ function userConnections(userId) {
       level: outs[u._key].level,
       verifications: userVerifications(u._key),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
-      // trusted is deprecated and will be replaced by recoveryingConnections on v6
+      // trusted is deprecated and will be replaced by recoveryConnections on v6
       trusted: getRecoveryConnections(u._key),
       // flaggers is deprecated and will be replaced by reporters on v6
       flaggers: getReporters(u._key),
