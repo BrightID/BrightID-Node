@@ -24,21 +24,13 @@ const {
   urlSafeB64ToB64
 } = require('./encoding');
 
-function getConnection(key1, key2) {
-  let conn = connectionsColl.firstExample({
-    _from: 'users/' + key1,
-    _to: 'users/' + key2
-  });
-  if (! conn) {
-    conn = connectionsColl.firstExample({
-      _from: 'users/' + key2,
-      _to: 'users/' + key1
-    });
-  }
-  return conn;
+function addConnection(key1, key2, timestamp) {
+  // this function is deprecated and will be removed on v6
+  connect(key1, key2, null, null, null, timestamp);
+  connect(key2, key1, null, null, null, timestamp);
 }
 
-function addConnection(key1, key2, timestamp) {
+function connect(key1, key2, level, reportReason, replacedWith, timestamp) {
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
   let u1 = loadUser(key1);
@@ -50,98 +42,96 @@ function addConnection(key1, key2, timestamp) {
     u2 = createUser(key2, timestamp);
   }
 
+  // set the first verified user that connect to a user as its parent
   const u1_verifications = userVerifications(key1);
-  const u2_verifications = userVerifications(key2);
-  // set the first verified user that makes a connection with a user as its parent
-  if (!u1.parent && u2_verifications && u2_verifications.includes('BrightID')) {
-    usersColl.update(u1, { parent: key2 });
-  }
   if (!u2.parent && u1_verifications && u1_verifications.includes('BrightID')) {
     usersColl.update(u2, { parent: key1 });
   }
 
-  // remove flag if exists
-  if (u1 && u1.flaggers && key2 in u1.flaggers) {
-    delete u1.flaggers[key2];
-    usersColl.update(u1, { flaggers: u1.flaggers }, { mergeObjects: false });
+
+  const _from = 'users/' + key1;
+  const _to = 'users/' + key2;
+  const conn = connectionsColl.firstExample({ _from, _to });
+
+  if (level != 'reported') {
+    // clear reportReason for levels other than reported
+    reportReason = null;
   }
-  if (u2 && u2.flaggers && key1 in u2.flaggers) {
-    delete u2.flaggers[key1];
-    usersColl.update(u2, { flaggers: u2.flaggers }, { mergeObjects: false });
+  if (level != 'reported' || reportReason != 'replaced') {
+    // clear replacedWith for levels other than reported
+    // and reportReason other than replaced
+    replacedWith = null;
+  }
+  if (replacedWith && ! loadUser(replacedWith)) {
+    throw 'the new brightid replaced with the reported brightid not found';
+  }
+  if (! level) {
+    // Set 'just met' as confidence level when old addConnection is called
+    // and there was no other level set directly using Connect
+    level = conn ? conn.level : 'just met';
+  }
+  if (level == 'recovery' && conn && conn.level == 'recovery') {
+    // do not update timestamp when updating recovery connections because
+    // recovery connections can not help recovering before a cooling time
+    timestamp = conn.timestamp;
   }
 
-  const conn = getConnection(key1, key2);
   if (! conn) {
-    connectionsColl.save({
-      _from: 'users/' + key1,
-      _to: 'users/' + key2,
-      timestamp
-    });
+    connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, timestamp });
   } else {
-    connectionsColl.update(conn, { timestamp });
+    connectionsColl.update(conn, { level, reportReason, replacedWith, timestamp });
   }
 }
 
-function removeConnection(flagger, flagged, reason, timestamp) {
-  if (! ['fake', 'duplicate', 'deceased'].includes(reason)) {
-    throw 'invalid reason';
-  }
-  const conn = getConnection(flagger, flagged);
-  if (! conn) {
-    throw 'no connection found';
-  }
-
-  connectionsColl.remove(conn);
-  
-  // add flagger to the flaggers on the flagged user
-  const flaggedUser = usersColl.document(flagged);
-  let flaggers = flaggedUser.flaggers;
-  if (! flaggers) {
-    flaggers = {}
-  }
-  flaggers[flagger] = reason;
-  usersColl.update(flaggedUser, { flaggers });
-
-  // remove the flaged user from all groups that two or more members of them
-  // flagged that user
-  const edges = usersInGroupsColl.byExample({ _from: 'users/' + flagged }).toArray();
-  edges.map(edge => {
-    const edges2 = usersInGroupsColl.byExample({ _to: edge._to }).toArray();
-    const members = edges2.map(edge2 => edge2._from.replace('users/', ''));
-    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
-    if (intersection.length >= 2) {
-      usersInGroupsColl.remove(edge);
-    }
-  });
+function removeConnection(reporter, reported, reason, timestamp) {
+  // this function is deprecated and will be removed on v6
+  connect(reporter, reported, 'reported', reason, null, timestamp);
 }
 
-function userConnections(user) {
-  user = "users/" + user;
-  const users1 = connectionsColl.byExample({
-    _from: user
-  }).toArray().map(u => u._to.replace("users/", ""));
-  const users2 = connectionsColl.byExample({
-    _to: user
-  }).toArray().map(u => u._from.replace("users/", ""));
-  return users1.concat(users2);
-}
+function userConnections(userId) {
+  let outs = connectionsColl.byExample({
+    _from: 'users/' + userId
+  }).toArray();
+  let ins = connectionsColl.byExample({
+    _to: 'users/' + userId
+  }).toArray();
 
-function loadUsers(users) {
-  // score is deprecated and will removed on v6
+  outs = outs.filter(u => u.level != 'reported');
+  outs = _.keyBy(outs, u => u._to.replace("users/", ""));
+  ins = ins.filter(u => u.level != 'reported');
+  ins = _.keyBy(ins, u => u._from.replace("users/", ""));
+  const users = _.intersection(Object.keys(ins), Object.keys(outs));
+
   return usersColl.documents(users).documents.map(u => {
     const res = {
       id: u._key,
       signingKey: u.signingKey,
+      // score is deprecated and will be removed on v6
       score: u.score,
+      level: outs[u._key].level,
       verifications: userVerifications(u._key),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
-      trusted: u.trusted,
-      flaggers: u.flaggers,
+      // trusted is deprecated and will be replaced by recoveryConnections on v6
+      trusted: getRecoveryConnections(u._key),
+      // flaggers is deprecated and will be replaced by reporters on v6
+      flaggers: getReporters(u._key),
       createdAt: u.createdAt,
-      eligible_groups: u.eligible_groups
+      // eligible_groups is deprecated and will be replaced by eligibleGroups on v6
+      eligible_groups: u.eligible_groups || []
     }
     return res;
   });
+}
+
+function getReporters(user) {
+  const reporters = {};
+  connectionsColl.byExample({
+    _to: 'users/' + user,
+    level: 'reported'
+  }).toArray().forEach(c => {
+    reporters[c._from.replace('users/', '')] = c.reportReason;
+  });
+  return reporters;
 }
 
 function groupMembers(groupId) {
@@ -151,10 +141,11 @@ function groupMembers(groupId) {
 }
 
 function isEligible(groupId, userId) {
-  const userCons = userConnections(userId);
+  const conns = connectionsColl.byExample({
+    _to: 'users/' + userId
+  }).toArray().map(u => u._from.replace("users/", ""));
   const members = groupMembers(groupId);
-  const count = _.intersection(userCons, members).length;
-
+  const count = _.intersection(conns, members).length;
   return count >= members.length / 2;
 }
 
@@ -204,7 +195,9 @@ function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
   members.forEach(member => {
-    const conns = userConnections(member);
+    const conns = connectionsColl.byExample({
+      _from: 'users/' + member
+    }).toArray().map(u => u._to.replace("users/", ""));
     neighbors.push(...conns);
   });
   const counts = {};
@@ -232,7 +225,7 @@ function groupToDic(group) {
     founders: group.founders.map(founder => founder.replace('users/', '')),
     admins: group.admins || group.founders,
     isNew: group.isNew,
-    // score on group is deprecated and will removed on v6
+    // score on group is deprecated and will be removed on v6
     score: 0,
     url: group.url,
     timestamp: group.timestamp,
@@ -326,7 +319,7 @@ function createUser(key, timestamp) {
   const user = loadUser(key);
 
   if (!user) {
-    return usersColl.save({
+    return usersColl.insert({
       score: 0,
       signingKey: urlSafeB64ToB64(key),
       createdAt: timestamp,
@@ -354,9 +347,11 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     throw 'duplicate group';
   }
 
-  const conns = userConnections(key1);
+  const conns = connectionsColl.byExample({
+    _to: 'users/' + key1
+  }).toArray().map(u => u._from.replace("users/", ""));
   if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
-    throw "Creator isn't connected to one or both of the co-founders";
+    throw "One or both of the co-founders are not connected to the founder!";
   }
 
   const founders = [key1, key2, key3].sort()
@@ -364,7 +359,7 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     throw 'some of founders already have primary groups';
   }
 
-  groupsColl.save({
+  groupsColl.insert({
     _key: groupId,
     score: 0,
     isNew: true,
@@ -409,7 +404,7 @@ function addUserToGroup(groupId, key, timestamp) {
     _to: group
   });
   if (! edge) {
-    usersInGroupsColl.save({
+    usersInGroupsColl.insert({
       _from: user,
       _to: group,
       timestamp
@@ -436,16 +431,6 @@ function addMembership(groupId, key, timestamp) {
 
   if (! isEligible(groupId, key)) {
     throw 'Not eligible to join this group';
-  }
-
-  // flagged users can't join a group that have 2 or more flaggers in them
-  const flaggers = usersColl.document(key).flaggers;
-  if (flaggers) {
-    const members = groupMembers(groupId);
-    const intersection = Object.keys(flaggers).filter(u => members.includes(u));
-    if (intersection.length >= 2) {
-      throw 'user is flagged by two or more members of the group';
-    }
   }
 
   const invite = invitationsColl.firstExample({
@@ -602,24 +587,31 @@ function linkContextId(id, context, contextId, timestamp) {
   });
 }
 
-function setTrusted(trusted, key, timestamp) {
-  // TODO: in the future users should update their trusted connections
-  // by providing the sig of one of the existing trusted connections approving that.
-  query`
-    UPDATE ${key} WITH {trusted: ${trusted}, updateTime: ${timestamp}} in users
-  `;
+function setRecoveryConnections(conns, key, timestamp) {
+  // this function is deprecated and will be removed on v6
+  conns.forEach(conn => {
+    connect(key, conn, 'recovery', null, null, timestamp);
+  });
+}
+
+function getRecoveryConnections(user) {
+  return connectionsColl.byExample({
+    _from: 'users/' + user,
+    level: 'recovery'
+  }).toArray().map(c => c._to.replace('users/', ''));
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {
-  const user = loadUser(key);
+  const recoveryConnections = getRecoveryConnections(key);
   if (signers[0] == signers[1] ||
-      !user.trusted.includes(signers[0]) ||
-      !user.trusted.includes(signers[1])) {
-    throw "request should be signed by 2 different trusted connections";
+      !recoveryConnections.includes(signers[0]) ||
+      !recoveryConnections.includes(signers[1])) {
+    throw "request should be signed by 2 different recovery connections";
   }
-  query`
-    UPDATE ${key} WITH {signingKey: ${signingKey}, updateTime: ${timestamp}} in users
-  `;
+  usersColl.update(key, {
+    signingKey,
+    updateTime: timestamp
+  });
 }
 
 function isSponsored(key) {
@@ -644,7 +636,7 @@ function sponsor(user, app, timestamp) {
     throw "sponsored before";
   }
 
-  sponsorshipsColl.save({
+  sponsorshipsColl.insert({
     _from: 'users/' + user,
     _to: 'apps/' + app
   });
@@ -677,6 +669,7 @@ function getState() {
 }
 
 module.exports = {
+  connect,
   addConnection,
   removeConnection,
   createGroup,
@@ -687,14 +680,13 @@ module.exports = {
   updateEligibleGroups,
   invite,
   dismiss,
+  userConnections,
   userGroups,
   loadUser,
   userInvitedGroups,
   createUser,
   groupMembers,
-  userConnections,
   userScore,
-  loadUsers,
   getContext,
   getApp,
   getApps,
@@ -707,9 +699,11 @@ module.exports = {
   linkContextId,
   loadOperation,
   upsertOperation,
-  setTrusted,
+  setRecoveryConnections,
   setSigningKey,
   getLastContextIds,
   unusedSponsorship,
-  getState
+  getState,
+  getReporters,
+  getRecoveryConnections
 };

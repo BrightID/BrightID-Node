@@ -2,7 +2,7 @@ import time
 from arango import ArangoClient
 
 
-def verify(graph):
+def verify(fname):
     print('DOLLAR FOR EVERYONE')
     db = ArangoClient().db('_system')
     for admin in db['users'].find({'dfeAdmin': True}):

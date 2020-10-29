@@ -1,24 +1,25 @@
 import time
+import traceback
 from datetime import datetime
-from anti_sybil.utils import *
 from arango import ArangoClient
 from config import *
 from verifications import seed_connected
-from verifications import call_joined
 from verifications import brightid
 from verifications import dollar_for_everyone
 from verifications import yekta
+from verifications import seed_connected_with_friend
 
 db = ArangoClient().db('_system')
 
 
 def process(fname):
-    json_graph = from_dump(fname)
-    graph = from_json(json_graph)
+    for verifier in [seed_connected, seed_connected_with_friend, yekta, brightid, dollar_for_everyone]:
+        try:
+            verifier.verify(fname)
+        except Exception as e:
+            print(f'Error in verifier: {e}')
+            traceback.print_exc()
 
-    for verifier in [yekta, seed_connected, call_joined, brightid, dollar_for_everyone]:
-        reset_ranks(graph)
-        verifier.verify(graph)
 
 def main():
     variables = db.collection('variables')
@@ -48,10 +49,12 @@ def main():
         print(
             '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
 
+
 if __name__ == '__main__':
     while True:
         try:
             main()
         except Exception as e:
             print(f'Error: {e}')
+            traceback.print_exc()
             time.sleep(10)

@@ -33,6 +33,7 @@ const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
 const operationsHashesColl = arango._collection('operationsHashes');
 const invitationsColl = arango._collection('invitations');
+const verificationsColl = arango._collection('verifications');
 
 const chai = require('chai');
 const should = chai.should();
@@ -97,6 +98,7 @@ describe('operations', function(){
     appsColl.truncate();
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
+    verificationsColl.truncate();
     [u1, u2, u3, u4].map((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
@@ -137,6 +139,7 @@ describe('operations', function(){
     operationsColl.truncate();
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
+    verificationsColl.truncate();
   });
   it('should be able to "Add Connection" with v5 and v4 clients', function () {
     const connect = (u1, u2, v4signing) => {
@@ -192,9 +195,14 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     apply(op);
-    db.userConnections(u1.id).length.should.equal(2);
-    db.userConnections(u2.id).length.should.equal(2);
-    db.userConnections(u3.id).length.should.equal(2);
+    connectionsColl.firstExample({
+      '_from': 'users/' + u2.id,
+      '_to': 'users/' + u3.id,
+    }).reportReason.should.equal(reason);
+    connectionsColl.firstExample({
+      '_from': 'users/' + u3.id,
+      '_to': 'users/' + u2.id,
+    }).level.should.equal('just met');
   });
 
   it('should be able to "Add Group"', function () {
@@ -353,7 +361,14 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
-    db.loadUser(u1.id).trusted.should.deep.equal([u2.id, u3.id]);
+    connectionsColl.firstExample({
+      '_from': 'users/' + u1.id,
+      '_to': 'users/' + u2.id,
+    }).level.should.equal('recovery');
+    connectionsColl.firstExample({
+      '_from': 'users/' + u1.id,
+      '_to': 'users/' + u2.id,
+    }).level.should.equal('recovery');
   });
 
   it('should be able to "Set Signing Key" with sigs provided by clients v5 and v4', function () {
@@ -377,6 +392,7 @@ describe('operations', function(){
     );
     apply(op);
     db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
+    u1.secretKey = u4.secretKey;
   });
 
   it('should be able to "Link ContextId"', function () {
@@ -418,6 +434,28 @@ describe('operations', function(){
     );
     apply(op);
     db.isSponsored(u1.id).should.equal(true);
+  });
+
+  it('should be able to "Connect"', function () {
+    const timestamp = Date.now();
+
+    let op = {
+      'v': 5,
+      'name': 'Connect',
+      'id1': u1.id,
+      'id2': u2.id,
+      'level': 'just met',
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    apply(op);
+    connectionsColl.firstExample({
+      '_from': 'users/' + u1.id,
+      '_to': 'users/' + u2.id,
+    }).level.should.equal('just met');
   });
 
 });

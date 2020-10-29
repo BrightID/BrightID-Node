@@ -2,14 +2,13 @@ import time
 from arango import ArangoClient
 
 
-def verify(graph):
-    print('BrightID')
+def verify(fname):
+    print('BRIGHTID')
     db = ArangoClient().db('_system')
     for u in db['users']:
         verifications = set([v['name'] for v in db['verifications'].find({'user': u['_key']})])
-        callJoined = 'CallJoined' in verifications
         seedConnected = 'SeedConnected' in verifications
-        if not (callJoined and seedConnected):
+        if not seedConnected:
             continue
         if 'BrightID' not in verifications:
             db['verifications'].insert({

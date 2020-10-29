@@ -4,8 +4,8 @@ ADD . /code
 WORKDIR /code/
 
 RUN apt update && apt -y install python3 python3-pip
-ADD https://github.com/BrightID/BrightID-AntiSybil/archive/v1.1.2.tar.gz ./
-RUN tar -xzf v1.1.2.tar.gz && rm v1.1.2.tar.gz
-RUN pip3 install BrightID-AntiSybil-1.1.2/.
+ADD https://github.com/BrightID/BrightID-AntiSybil/archive/v1.2.0.tar.gz ./
+RUN tar -xzf v1.2.0.tar.gz && rm v1.2.0.tar.gz
+RUN pip3 install BrightID-AntiSybil-1.2.0/.
 RUN pip3 install -r requirements.txt
 CMD python3 -u runner.py

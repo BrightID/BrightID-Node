@@ -1,54 +1,61 @@
 from arango import ArangoClient
 import time
-import sys
-sys.path.append('..')
-import config
+
+SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
+DEFAULT_QUOTA = 50
 
 
-def verify(graph):
+def verify(fname):
     print('SEED CONNECTED')
     db = ArangoClient().db('_system')
     seed_groups = list(db['groups'].find({'seed': True}))
     seed_groups.sort(key=lambda s: s['timestamp'])
     seed_groups_members = {}
     all_seeds = set()
+    seed_group_quota = {}
     for seed_group in seed_groups:
-        userInGroups = db['usersInGroups'].find({'_to': seed_group['_id']})
-        seeds = set([ug['_from'] for ug in userInGroups])
+        userInGroups = list(db['usersInGroups'].find({'_to': seed_group['_id']}))
+        userInGroups.sort(key=lambda ug: ug['timestamp'])
+        seeds = [ug['_from'] for ug in userInGroups]
         all_seeds.update(seeds)
         seed_groups_members[seed_group['_id']] = seeds
+        seed_group_quota[seed_group['_id']] = seed_group.get('quota', DEFAULT_QUOTA)
 
-    for i, seed_group in enumerate(seed_groups_members):
-        duration = int(time.time() - seed_groups[i]['timestamp'] / 1000)
-        months = int(duration / (30 * 24 * 60 * 60))
-        quota = config.INITIAL_QUOTA + months * config.MONTHLY_QUOTA
+    for seed_group in seed_groups_members:
         members = seed_groups_members[seed_group]
         used = db['verifications'].find(
             {'name': 'SeedConnected', 'seedGroup': seed_group}).count()
-        unused = quota - used
+        unused = seed_group_quota[seed_group] - used
         if unused < 1:
             continue
         conns = db.aql.execute(
             '''FOR d IN connections
                 SORT d.timestamp
                 FILTER d._from IN @members
-                    OR d._to IN @members
+                    AND d.level IN @levels
                 RETURN d''',
-            bind_vars={'members': list(members)}
+            bind_vars={'members': list(members), 'levels': SEED_CONNECTION_LEVELS}
         )
-
-        seed_neighbors = set()
+        seed_neighbors = []
         for conn in conns:
-            seed_neighbors.update([conn['_from'], conn['_to']])
-        # filter neighbors that are seeds but are not member of this seed group
-        # to allow each seed group maximize the number of non-seeds that verify
-        # and postpone the verification of those filtered seeds to their seed groups
-        seed_neighbors = [
-            m for m in seed_neighbors if m not in all_seeds or m in members]
+            # skip duplicate members
+            if conn['_from'] not in seed_neighbors:
+                seed_neighbors.append(conn['_from'])
+
+            # filter neighbors that are seeds but are not member of this seed group
+            # to allow each seed group maximize the number of non-seeds that verify
+            # and postpone the verification of those filtered seeds to their seed groups
+            if conn['_to'] in all_seeds:
+                continue
+
+            # skip duplicate members
+            if conn['_to'] not in seed_neighbors:
+                seed_neighbors.append(conn['_to'])
 
         for neighbor in seed_neighbors:
             neighbor = neighbor.replace('users/', '')
-            verifications = set([v['name'] for v in db['verifications'].find({'user': neighbor})])
+            verifications = set(
+                [v['name'] for v in db['verifications'].find({'user': neighbor})])
             if 'SeedConnected' not in verifications:
                 db['verifications'].insert({
                     'name': 'SeedConnected',
