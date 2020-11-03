@@ -6,15 +6,19 @@ import utils
 def verify(fname):
     print('BRIGHTID')
     db = ArangoClient().db('_system')
-    verifications_tbl = utils.zip2dict(fname, 'verifications')
-    users_tbl = utils.zip2dict(fname, 'users')
-    for u in users_tbl:
-        verifications = filter(lambda v: v['user'] == u['_key'], verifications_tbl)
-        verifications = [v['name'] for v in verifications]
-        seedConnected = 'SeedConnected' in verifications
-        if not seedConnected:
+    verifications = {}
+    verifications_documents = utils.documents(fname, 'verifications')
+    for d in verifications_documents:
+        if d['user'] not in verifications:
+            verifications[d['user']] = []
+        verifications[d['user']].append(d['name'])
+
+    users = utils.documents(fname, 'users')
+
+    for u in users:
+        if 'SeedConnected' not in verifications.get(u['_key'], []):
             continue
-        if 'BrightID' not in verifications:
+        if 'BrightID' not in verifications[u['_key']]:
             db['verifications'].insert({
                 'name': 'BrightID',
                 'user': u['_key'],

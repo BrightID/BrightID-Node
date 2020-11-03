@@ -2,11 +2,11 @@ import zipfile
 import json
 
 
-def zip2dict(f, table):
+def documents(f, collection):
     zf = zipfile.ZipFile(f)
     fnames = zf.namelist()
     def pattern(fname): return fname.endswith(
-        '.data.json') and fname.count('/{}_'.format(table)) > 0
+        '.data.json') and fname.count('/{}_'.format(collection)) > 0
     fname = list(filter(pattern, fnames))[0]
     content = zf.open(fname).read().decode('utf-8')
     ol = [json.loads(line) for line in content.split('\n') if line.strip()]
@@ -16,4 +16,4 @@ def zip2dict(f, table):
             d[o['data']['_key']] = o['data']
         elif o['type'] == 2302 and o['data']['_key'] in d:
             del d[o['data']['_key']]
-    return d.values()
+    return list(d.values())
