@@ -1,6 +1,8 @@
+import time
+import traceback
 from web3 import Web3
-from web3.middleware import geth_poa_middleware
 from arango import ArangoClient
+from web3.middleware import geth_poa_middleware
 import config
 
 db = ArangoClient().db('_system')
@@ -34,7 +36,7 @@ def check_sponsor_requests():
     contexts = db['contexts']
     sponsorships = db['sponsorships']
     for app in db['apps']:
-        if 'sponsorEventContract' not in app or 'wsProvider' not in app:
+        if not (app.get('sponsorEventContract') and app.get('wsProvider')):
             continue
         w3 = Web3(Web3.WebsocketProvider(
             app['wsProvider'], websocket_kwargs={'timeout': 60}))
@@ -101,10 +103,15 @@ def check_sponsor_requests():
         })
 
 
-def main():
-    update_apps_balance()
+def update():
+    print('Updating sponsorships', time.ctime())
+    # update_apps_balance()
     check_sponsor_requests()
 
 
 if __name__ == '__main__':
-    main()
+    try:
+        update()
+    except Exception as e:
+        print(f'Error in updater: {e}')
+        traceback.print_exc()

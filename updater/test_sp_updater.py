@@ -1,6 +1,6 @@
 import os
-os.environ['BN_SP_UPDATER_SP_ADDRESS'] = '0xFB32926d0A1e2082D12426B2854cb0c945AAF7c6'
-os.environ['BN_SP_UPDATER_INFURA_URL'] = 
+os.environ['BN_UPDATER_SP_ADDRESS'] = '0xFB32926d0A1e2082D12426B2854cb0c945AAF7c6'
+os.environ['BN_UPDATER_SP_INFURA_URL'] = 
 
 from eth_keys import keys
 import unittest
