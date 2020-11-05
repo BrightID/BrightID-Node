@@ -26,11 +26,20 @@ const {
 
 function addConnection(key1, key2, timestamp) {
   // this function is deprecated and will be removed on v6
-  connect(key1, key2, null, null, null, timestamp);
-  connect(key2, key1, null, null, null, timestamp);
+  connect({id1: key1, id2: key2, timestamp});
+  connect({id1: key2, id2: key1, timestamp});
 }
 
-function connect(key1, key2, level, reportReason, replacedWith, timestamp) {
+function connect(op) {
+  let {
+    id1: key1,
+    id2: key2,
+    level,
+    reportReason,
+    replacedWith,
+    requestProof,
+    timestamp
+  } = op;
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
   let u1 = loadUser(key1);
@@ -68,6 +77,7 @@ function connect(key1, key2, level, reportReason, replacedWith, timestamp) {
   if (! level) {
     // Set 'just met' as confidence level when old addConnection is called
     // and there was no other level set directly using Connect
+    // this if should be removed when v5 dropped and "Add Connection" operation removed
     level = conn ? conn.level : 'just met';
   }
   if (level == 'recovery' && conn && conn.level == 'recovery') {
@@ -76,16 +86,38 @@ function connect(key1, key2, level, reportReason, replacedWith, timestamp) {
     timestamp = conn.timestamp;
   }
 
+  // users should provide requestProof or have connections with already known
+  // or higher level to be able to report someone
+  // requestProof can not be reused to report someone
+  if (level == 'reported') {
+    if (!requestProof || connectionsColl.firstExample({ requestProof })) {
+      const otherSideConn = connectionsColl.firstExample({
+        _from: _to,
+        _to: _from
+      });
+      const otherSideLevel = otherSideConn && otherSideConn.level;
+      if (!['recovery', 'already known'].includes(otherSideLevel)) {
+        throw 'not allowed to report';
+      }
+    }
+  }
+
   if (! conn) {
-    connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, timestamp });
+    connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
   } else {
-    connectionsColl.update(conn, { level, reportReason, replacedWith, timestamp });
+    connectionsColl.update(conn, { level, reportReason, replacedWith, requestProof, timestamp });
   }
 }
 
-function removeConnection(reporter, reported, reason, timestamp) {
+function removeConnection(reporter, reported, reportReason, timestamp) {
   // this function is deprecated and will be removed on v6
-  connect(reporter, reported, 'reported', reason, null, timestamp);
+  connect({
+    id1: reporter,
+    id2: reported,
+    level: 'reported',
+    reportReason,
+    timestamp
+  });
 }
 
 function userConnections(userId) {
@@ -590,7 +622,12 @@ function linkContextId(id, context, contextId, timestamp) {
 function setRecoveryConnections(conns, key, timestamp) {
   // this function is deprecated and will be removed on v6
   conns.forEach(conn => {
-    connect(key, conn, 'recovery', null, null, timestamp);
+    connect({
+      id1: key,
+      id2: conn,
+      level: 'recovery',
+      timestamp
+    });
   });
 }
 

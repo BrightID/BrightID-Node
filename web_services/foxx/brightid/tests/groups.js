@@ -90,35 +90,6 @@ describe('groups', function () {
       usersInGroupsColl.count().should.equal(3);
     });
   });
-  describe('reporting', function() {
-    before(function() {
-      db.addConnection('a', 'd', 0);
-      db.addConnection('a', 'e', 0);
-      db.addConnection('a', 'f', 0);
-      db.addConnection('b', 'd', 0);
-      db.addConnection('b', 'e', 0);
-      db.addConnection('b', 'f', 0);
-      db.addConnection('c', 'd', 0);
-      db.addConnection('c', 'e', 0);
-      db.addConnection('c', 'f', 0);
-      db.invite('b', 'a', 'g2', 'data', Date.now());
-      db.addMembership('g2', 'a', Date.now());
-      db.invite('b', 'e', 'g2', 'data', Date.now());
-      db.addMembership('g2', 'e', Date.now());
-      db.invite('b', 'f', 'g2', 'data', Date.now());
-      db.addMembership('g2', 'f', Date.now());
-    });
-
-    it('should be able to report a connection', function(){
-      db.removeConnection('b', 'a', 'duplicate', 0);
-      db.getReporters('a').should.deep.equal({'b': 'duplicate'});
-    });
-
-    it('should be able to remove a report', function(){
-      db.connect('b', 'a', 'just met', null, null, 0);
-      db.getReporters('a').should.deep.equal({});
-    });
-  });
 
   describe('inviting', function() {
     before(function() {
@@ -160,6 +131,12 @@ describe('groups', function () {
 
   describe('dismissing', function() {
     before(function() {
+      db.addConnection('a', 'd', 0);
+      db.addConnection('b', 'd', 0);
+      db.addConnection('c', 'd', 0);
+      db.addConnection('a', 'e', 0);
+      db.addConnection('b', 'e', 0);
+      db.addConnection('c', 'e', 0);
       db.invite('b', 'd', 'g3', 'data', Date.now());
       db.invite('b', 'e', 'g3', 'data',  Date.now());
       db.addMembership('g3', 'd', Date.now());
@@ -206,6 +183,10 @@ describe('groups', function () {
       groupsColl.truncate();
       groupsColl.truncate();
       usersInGroupsColl.truncate();
+      db.addConnection('a', 'd', 0);
+      db.addConnection('a', 'e', 0);
+      db.addConnection('e', 'c', 0);
+      db.addConnection('e', 'b', 0);
       db.createGroup('g4', 'a', 'b', 'data', 'c', 'data', url, 'primary', Date.now());
       db.addMembership('g4', 'b', Date.now());
       db.addMembership('g4', 'c', Date.now());

@@ -26,19 +26,30 @@ describe('connections', function () {
       '_from': 'users/b', '_to': 'users/a'
     }).level.should.equal('just met');
   });
-  it('should be able to use "removeConnection" to set "reported" as confidence level', function() {
-    db.removeConnection('a', 'b', 'duplicate', 0);
-    const conn1 = connectionsColl.firstExample({
-      '_from': 'users/a', '_to': 'users/b'
-    });
-    conn1.level.should.equal('reported');
-    conn1.reportReason.should.equal('duplicate');
+  it('should be able to use "connect" to upgrade confidence level to "already known"', function() {
+    db.connect({id1: 'b', id2: 'a', level: 'already known'});
     connectionsColl.firstExample({
       '_from': 'users/b', '_to': 'users/a'
-    }).level.should.equal('just met');
+    }).level.should.equal('already known');
+  });
+  it('should be able to use "removeConnection" to report a connection that already knows the reporter', function() {
+    db.removeConnection('a', 'b', 'duplicate', 0);
+    const conn = connectionsColl.firstExample({
+      '_from': 'users/a', '_to': 'users/b'
+    });
+    conn.level.should.equal('reported');
+    conn.reportReason.should.equal('duplicate');
+  });
+  it('should not be able to use "removeConnection" to report a connection that does not already knows the reporter', function() {
+    (() => {
+      db.removeConnection('b', 'a', 'duplicate', 0);
+    }).should.throw('not allowed to report');
+    connectionsColl.firstExample({
+      '_from': 'users/b', '_to': 'users/a'
+    }).level.should.equal('already known');
   });
   it('should be able to use "connect" to reset confidence level to "just met"', function() {
-    db.connect('a', 'b', 'just met', null, null, 0);
+    db.connect({id1: 'a', id2: 'b', level: 'just met'});
     const conn1 = connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     });
@@ -58,22 +69,22 @@ describe('connections', function () {
     }).level.should.equal('recovery');
     connectionsColl.firstExample({
       '_from': 'users/b', '_to': 'users/a'
-    }).level.should.equal('just met');
+    }).level.should.equal('already known');
   });
   it('should be able to use "connect" to set different confidence levels', function() {
-    db.connect('a', 'b', 'reported', 'duplicate', null, 0);
+    db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate'});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('reported');
-    db.connect('a', 'b', 'just met', null, null, 0);
+    db.connect({id1: 'a', id2: 'b', level: 'just met'});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('just met');
-    db.connect('a', 'b', 'recovery', null, null, 0);
+    db.connect({id1: 'a', id2: 'b', level: 'recovery'});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
-    db.connect('a', 'c', 'just met', null, null, 0);
+    db.connect({id1: 'a', id2: 'c', level: 'just met'});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/c'
     }).level.should.equal('just met');
@@ -85,18 +96,18 @@ describe('connections', function () {
   });
 
   it('should be able to use "setSigningKey" to reset "signingKey" with "recovery" connections', function() {
-    db.connect('a', 'c', 'recovery', null, null, 0);
+    db.connect({id1: 'a', id2: 'c', level: 'recovery'});
     db.setSigningKey('newSigningKey', 'a', ['b', 'c'], 0);
     usersColl.document('a').signingKey.should.equal('newSigningKey');
   });
 
   it('should be able to get "userConnections"', function() {
-    db.connect('c', 'a', 'reported', 'duplicate', null, 0);
+    db.connect({id1: 'c', id2: 'a', level: 'reported', reportReason: 'duplicate'});
     const conns = db.userConnections('b');
     conns.length.should.equal(1);
     const a = conns[0];
     a.id.should.equal('a');
-    a.level.should.equal('just met');
+    a.level.should.equal('already known');
     a.flaggers.should.deep.equal({"c": "duplicate"});
     a.trusted.should.deep.equal(["b", "c"]);
     a.signingKey.should.equal('newSigningKey');
@@ -109,7 +120,7 @@ describe('connections', function () {
   });
 
   it('should be able to report someone as replaced', function() {
-    db.connect('c', 'a', 'reported', 'replaced', 'b', 0);
+    db.connect({id1: 'c', id2: 'a', level: 'reported', reportReason: 'replaced', replacedWith: 'b'});
     const conn = connectionsColl.firstExample({
       '_from': 'users/c', '_to': 'users/a'
     });

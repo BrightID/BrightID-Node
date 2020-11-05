@@ -51,6 +51,7 @@ schemas = Object.assign({
       level: joi.string().valid('reported', 'suspicious', 'just met', 'already known', 'recovery').required().description('level of confidence'),
       reportReason: joi.string().valid('spammer', 'fake', 'duplicate', 'deceased', 'replaced').description('for reported level, the reason for reporting the user specificed by id2'),
       replacedWith: joi.string().description('for reported as replaced, the new brightid of the replaced account'),
+      requestProof: joi.string().description('brightid + "|" + timestamp signed by the reported user to prove that he requested the connection'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Connect'),

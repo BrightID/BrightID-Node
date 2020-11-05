@@ -141,8 +141,8 @@ describe('operations', function(){
     invitationsColl.truncate();
     verificationsColl.truncate();
   });
-  it('should be able to "Add Connection" with v5 and v4 clients', function () {
-    const connect = (u1, u2, v4signing) => {
+  it('should be able to "Add Connection"', function () {
+    const connect = (u1, u2) => {
       const timestamp = Date.now();
       let op = {
         'v': 5,
@@ -155,30 +155,23 @@ describe('operations', function(){
       op.sig1 = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
       );
-      if (!v4signing) {
-        op.sig2 = uInt8ArrayToB64(
-          Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-        );
-      } else {
-        const v4message = op.name + op.id1 + op.id2 + op.timestamp;
-        op.sig2 = uInt8ArrayToB64(
-          Object.values(nacl.sign.detached(strToUint8Array(v4message), u2.secretKey))
-        );
-      }
-
+      op.sig2 = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+      );
       apply(op);
     }
     connect(u1, u2);
     connect(u1, u3);
     connect(u2, u3);
     connect(u2, u4);
-    connect(u3, u4, true);
+    connect(u3, u4);
     db.userConnections(u1.id).length.should.equal(2);
     db.userConnections(u2.id).length.should.equal(3);
     db.userConnections(u3.id).length.should.equal(3);
   });
 
   it('should be able to "Remove Connection"', function () {
+    db.connect({id1: u3.id, id2: u2.id, level: 'already known'});
     const timestamp = Date.now();
     const reason = "duplicate";
 
@@ -202,7 +195,7 @@ describe('operations', function(){
     connectionsColl.firstExample({
       '_from': 'users/' + u3.id,
       '_to': 'users/' + u2.id,
-    }).level.should.equal('just met');
+    }).level.should.equal('already known');
   });
 
   it('should be able to "Add Group"', function () {
@@ -371,7 +364,7 @@ describe('operations', function(){
     }).level.should.equal('recovery');
   });
 
-  it('should be able to "Set Signing Key" with sigs provided by clients v5 and v4', function () {
+  it('should be able to "Set Signing Key"', function () {
     const timestamp = Date.now();
     const op = {
       'v': 5,
@@ -386,9 +379,8 @@ describe('operations', function(){
     op.sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
-    const v4message = op.name + op.id + op.signingKey + op.timestamp;
     op.sig2 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(v4message), u3.secretKey))
+      Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
     );
     apply(op);
     db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
@@ -456,6 +448,36 @@ describe('operations', function(){
       '_from': 'users/' + u1.id,
       '_to': 'users/' + u2.id,
     }).level.should.equal('just met');
+  });
+
+  it('should be able to report using "Connect" by providing requestProof', function () {
+    const timestamp = Date.now();
+
+    const requestProofMessage = u1.id + '|' + timestamp;
+    const requestProof = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(requestProofMessage), u1.secretKey))
+    );
+    let op = {
+      'v': 5,
+      'name': 'Connect',
+      'id1': u2.id,
+      'id2': u1.id,
+      'level': 'reported',
+      'reportReason': 'spammer',
+      requestProof,
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    apply(op);
+    const conn = connectionsColl.firstExample({
+      '_from': 'users/' + u2.id,
+      '_to': 'users/' + u1.id,
+    })
+    conn.level.should.equal('reported');
+    conn.requestProof.should.equal(requestProof);
   });
 
 });

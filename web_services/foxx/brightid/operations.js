@@ -125,24 +125,12 @@ function verify(op) {
     if (op.name == 'Sponsor') {
       verifyAppSig(message, id, sig);
     } else {
-      try {
-        verifyUserSig(message, id, sig);
-      } catch(e) {
-        // allow adding connections by clients using v4 api
-        // or getting their help to recover
-        // this try and catch should be removed after v4 support dropped
-        if (op.name == 'Add Connection') {
-          const v4message = op.name + op.id1 + op.id2 + op.timestamp;
-          verifyUserSig(v4message, id, sig);
-        } else if (op.name == 'Set Signing Key') {
-          const v4message = op.name + op.id + op.signingKey + op.timestamp;
-          verifyUserSig(v4message, id, sig);
-        } else {
-          throw e;
-        }
-      }
+      verifyUserSig(message, id, sig);
     }
   });
+  if (op.name == 'Connect' && op.requestProof) {
+    verifyUserSig(op.id2 + '|' + op.timestamp, op.id2, op.requestProof);
+  }
   if (hash(message) != op.hash) {
     throw 'invalid hash';
   }
@@ -150,7 +138,7 @@ function verify(op) {
 
 function apply(op) {
   if (op['name'] == 'Connect') {
-    return db.connect(op.id1, op.id2, op.level, op.reportReason, op.replacedWith, op.timestamp);
+    return db.connect(op);
   } else if (op['name'] == 'Add Connection') {
     // this operation is deprecated and will be removed on v6
     // use "Connect" instead
@@ -186,7 +174,6 @@ function apply(op) {
   } else {
     throw "invalid operation";
   }
-  // fixme: add operation to operationHashes
 }
 
 function encrypt(op) {
