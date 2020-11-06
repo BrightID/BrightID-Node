@@ -1,3 +1,3 @@
 */5 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u sp_updater.py >> /var/log/sp_updater.log 2>&1"
-30 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u apps_updater.py >> /var/log/apps_updater.log 2>&1"
-0 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u seed_groups_updater.py >> /var/log/seed_groups_updater.log 2>&1"
+*/5 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u apps_updater.py >> /var/log/apps_updater.log 2>&1"
+*/5 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u seed_groups_updater.py >> /var/log/seed_groups_updater.log 2>&1"
