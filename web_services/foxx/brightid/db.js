@@ -52,8 +52,7 @@ function connect(op) {
   }
 
   // set the first verified user that connect to a user as its parent
-  const u1_verifications = userVerifications(key1);
-  if (!u2.parent && u1_verifications && u1_verifications.includes('BrightID')) {
+  if (!u2.parent && ('BrightID' in userVerifications(key1))) {
     usersColl.update(u2, { parent: key1 });
   }
 
@@ -141,7 +140,7 @@ function userConnections(userId) {
       // score is deprecated and will be removed on v6
       score: u.score,
       level: outs[u._key].level,
-      verifications: userVerifications(u._key),
+      verifications: Object.keys(userVerifications(u._key)),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
       // trusted is deprecated and will be replaced by recoveryConnections on v6
       trusted: getRecoveryConnections(u._key),
@@ -577,9 +576,15 @@ function getLastContextIds(coll, verification) {
 }
 
 function userVerifications(user) {
-  return verificationsColl.byExample({
+  const verifications = verificationsColl.byExample({
     user
-  }).toArray().map(v => v.name);
+  }).toArray();
+  return Object.assign({}, ...verifications.map(v => ({[v.name]: v})));
+}
+
+function allVerifications() {
+  let verifications = verificationsColl.all().toArray().map(v => v.name);
+  return new Set(verifications);
 }
 
 function linkContextId(id, context, contextId, timestamp) {
@@ -742,5 +747,6 @@ module.exports = {
   unusedSponsorship,
   getState,
   getReporters,
-  getRecoveryConnections
+  getRecoveryConnections,
+  allVerifications
 };

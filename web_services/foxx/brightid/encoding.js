@@ -44,6 +44,11 @@ function hash(data) {
   return b64ToUrlSafeB64(b);
 }
 
+
+function sha256(data) {
+  return crypto.sha256(data);
+}
+
 function pad32(data) {
   return data + String.fromCharCode(0).repeat(32 - data.length);
 }
@@ -61,5 +66,6 @@ module.exports = {
   urlSafeB64ToB64,
   hash,
   pad32,
-  addressToBytes32
+  addressToBytes32,
+  sha256
 };

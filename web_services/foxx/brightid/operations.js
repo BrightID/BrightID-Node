@@ -71,7 +71,7 @@ function checkLimits(op, timeWindow, limit) {
       sender = 'shared';
     } else {
       const user = usersColl.document(sender);
-      const verifications = db.userVerifications(user._key);
+      const verifications = Object.keys(db.userVerifications(user._key));
       verified = verifications && verifications.includes('BrightID');
       if (!verified && user.parent) {
         // this happens when user is not verified but has a verified connection

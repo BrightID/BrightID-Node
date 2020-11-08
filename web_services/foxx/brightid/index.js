@@ -15,7 +15,8 @@ const {
   uInt8ArrayToB64,
   hash,
   pad32,
-  addressToBytes32
+  addressToBytes32,
+  sha256
 } = require('./encoding');
 
 const router = createRouter();
@@ -36,6 +37,9 @@ const OPERATION_NOT_FOUND = 9;
 const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
+const INVALID_EXPRESSION = 13;
+
+const parser = require('expr-eval').Parser;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -102,7 +106,7 @@ const handlers = {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
     }
 
-    const verifications = db.userVerifications(id);
+    const verifications = Object.keys(db.userVerifications(id));
     const connections = db.userConnections(id);
     const groups = db.userGroups(id);
     const invites = db.userInvitedGroups(id);
@@ -148,6 +152,7 @@ const handlers = {
     let unique = true;
     let contextId = req.param('contextId');
     let contextName = req.param('context');
+    const expression = req.param('expression');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
     const context = db.getContext(contextName);
@@ -169,8 +174,22 @@ const handlers = {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     }
 
-    if (! db.userVerifications(user).includes(context.verification)) {
-      res.throw(404, 'user can not be verified for this context', {errorNum: CAN_NOT_BE_VERIFIED});
+    const verifications = db.userVerifications(user);
+    const verifications_name = Object.keys(verifications);
+    const all_verifications = db.allVerifications();
+
+    for(let v of all_verifications) {
+      !(v in verifications) && (verifications[v] = false);
+    }
+    let verified;
+    try {
+      let expr = parser.parse(expression || 'BrightID');
+      verified = expr.evaluate(verifications);
+    } catch (err) {
+      res.throw(404, 'invalid expression', {errorNum: INVALID_EXPRESSION});
+    }
+    if (! verified) {
+      res.throw(404, 'user can not be verified for this expression', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
@@ -187,13 +206,17 @@ const handlers = {
     }
 
     // sign and return the verification
-    let sig, publicKey;
+    let sig, publicKey, expressionHash;
     if (signed == 'nacl') {
       if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
         res.throw(500, 'Server setting key pair not set', {errorNum: KEYPAIR_NOT_SET});
       }
 
       let message = contextName + ',' + contextIds.join(',');
+      if (expression) {
+        expressionHash = sha256(expression);
+        message += expressionHash;
+      }
       if (timestamp) {
         message = message + ',' + timestamp;
       }
@@ -213,12 +236,16 @@ const handlers = {
 
       contextName = context.ethName;
       let message, h;
-      if (context.idsAsHex){
+      if (context.idsAsHex) {
         message = pad32(contextName) + contextIds.map(addressToBytes32).join('');
       } else {
         message = pad32(contextName) + contextIds.map(pad32).join('');
       }
       message = Buffer.from(message, 'binary').toString('hex');
+      if (expression) {
+        expressionHash = sha256(expression);
+        message += expressionHash;
+      }
       if (timestamp) {
         const t = timestamp.toString(16);
         message += ('0'.repeat(64 - t.length) + t);
@@ -241,6 +268,7 @@ const handlers = {
         context: contextName,
         contextIds: contextIds,
         sig,
+        expressionHash,
         timestamp,
         publicKey
       }
@@ -319,6 +347,7 @@ router.get('/operations/:hash', handlers.operationGet)
 router.get('/verifications/:context/:contextId', handlers.verificationGet)
   .pathParam('context', joi.string().required().description('the context in which the user is verified'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
+  .queryParam('expression', joi.string().description('request a customized verification.'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .summary('Gets a signed verification')
