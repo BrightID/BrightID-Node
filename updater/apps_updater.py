@@ -40,7 +40,6 @@ def update():
                 })
             except Exception as e:
                 print(f'Error in inserting new app: {e}')
-                traceback.print_exc()
             continue
         if app['Context'] != local_apps[name].get('context', ''):
             app_updated = True
