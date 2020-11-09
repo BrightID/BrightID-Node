@@ -120,26 +120,19 @@ function removeConnection(reporter, reported, reportReason, timestamp) {
 }
 
 function userConnections(userId) {
-  let outs = connectionsColl.byExample({
+  let conns = connectionsColl.byExample({
     _from: 'users/' + userId
   }).toArray();
-  let ins = connectionsColl.byExample({
-    _to: 'users/' + userId
-  }).toArray();
 
-  outs = outs.filter(u => u.level != 'reported');
-  outs = _.keyBy(outs, u => u._to.replace("users/", ""));
-  ins = ins.filter(u => u.level != 'reported');
-  ins = _.keyBy(ins, u => u._from.replace("users/", ""));
-  const users = _.intersection(Object.keys(ins), Object.keys(outs));
+  conns = _.keyBy(conns, u => u._to.replace("users/", ""));
 
-  return usersColl.documents(users).documents.map(u => {
+  return usersColl.documents(Object.keys(conns)).documents.map(u => {
     const res = {
       id: u._key,
       signingKey: u.signingKey,
       // score is deprecated and will be removed on v6
       score: u.score,
-      level: outs[u._key].level,
+      level: conns[u._key].level,
       verifications: Object.keys(userVerifications(u._key)),
       hasPrimaryGroup: hasPrimaryGroup(u._key),
       // trusted is deprecated and will be replaced by recoveryConnections on v6
