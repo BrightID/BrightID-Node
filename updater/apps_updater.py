@@ -26,18 +26,23 @@ def update():
             print('Error in getting logo', e)
             logo = ''
         if name not in local_apps:
-            print(f'Inser new app: {name}')
-            db['apps'].insert({
-                '_key': name.replace(' ', ''),
-                'name': name,
-                'context': app['Context'],
-                'url': app['Links'][0],
-                'logo': logo,
-                'sponsorPublicKey': app['Sponsor Public Key'],
-                'sponsorEventContract': app['Contract Address'],
-                'wsProvider': app['Websocket Endpoint']
-            })
-            continue
+            print(f'Insert new app: {name}')
+            try:
+                db['apps'].insert({
+                    '_key': name.replace(' ', ''),
+                    'name': name,
+                    'context': app['Context'],
+                    'url': app['Links'][0],
+                    'logo': logo,
+                    'sponsorPublicKey': app['Sponsor Public Key'],
+                    'sponsorEventContract': app['Contract Address'],
+                    'wsProvider': app['Websocket Endpoint']
+                })
+            except Exception as e:
+                print(f'Error in inserting new app: {e}')
+                traceback.print_exc()
+            finally:
+                continue
         if app['Context'] != local_apps[name].get('context', ''):
             app_updated = True
         elif app['Links'][0] != local_apps[name].get('url', ''):
