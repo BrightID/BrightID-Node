@@ -6,6 +6,9 @@ from web3.middleware import geth_poa_middleware
 import config
 
 db = ArangoClient().db('_system')
+variables = db['variables']
+contexts = db['contexts']
+sponsorships = db['sponsorships']
 
 
 def str2bytes32(s):
@@ -31,39 +34,45 @@ def update_apps_balance():
         db['apps'].update(app)
 
 
+def get_events(app):
+    w3 = Web3(Web3.WebsocketProvider(
+        app['wsProvider'], websocket_kwargs={'timeout': 60}))
+    if app['wsProvider'].count('rinkeby') > 0 or app['wsProvider'].count('idchain') > 0:
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
+    if variables.has('LAST_BLOCK_LOG_{}'.format(app['_key'])):
+        fb = variables['LAST_BLOCK_LOG_{}'.format(app['_key'])]['value']
+    else:
+        fb = w3.eth.getBlock('latest').number
+        variables.insert({
+            '_key': 'LAST_BLOCK_LOG_{}'.format(app['_key']),
+            'value': fb
+        })
+    cb = w3.eth.getBlock('latest').number
+    fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
+    tb = min(cb, fb + config.CHUNK)
+
+    print('\napp: {}'.format(app['_key']))
+    print('checking events from block {} to block {}'.format(fb, tb))
+    sponsor_event_contract = w3.eth.contract(
+        address=app['sponsorEventContract'],
+        abi=config.SPONSOR_EVENT_CONTRACT_ABI)
+    time.sleep(5)
+    sponsoreds = sponsor_event_contract.events.Sponsor.createFilter(
+        fromBlock=fb, toBlock=tb, argument_filters=None
+    ).get_all_entries()
+    return sponsoreds, tb
+
+
 def check_sponsor_requests():
-    variables = db['variables']
-    contexts = db['contexts']
-    sponsorships = db['sponsorships']
     for app in db['apps']:
         if not (app.get('sponsorEventContract') and app.get('wsProvider')):
             continue
-        w3 = Web3(Web3.WebsocketProvider(
-            app['wsProvider'], websocket_kwargs={'timeout': 60}))
-        if app['wsProvider'].count('rinkeby') > 0 or app['wsProvider'].count('idchain') > 0:
-            w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
-        if variables.has('LAST_BLOCK_LOG_{}'.format(app['_key'])):
-            fb = variables['LAST_BLOCK_LOG_{}'.format(app['_key'])]['value']
-        else:
-            fb = w3.eth.getBlock('latest').number
-            variables.insert({
-                '_key': 'LAST_BLOCK_LOG_{}'.format(app['_key']),
-                'value': fb
-            })
-        cb = w3.eth.getBlock('latest').number
-        fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
-        tb = min(cb, fb + config.CHUNK)
-
-        print('\napp: {}'.format(app['_key']))
-        print('checking events from block {} to block {}'.format(fb, tb))
-        sponsor_event_contract = w3.eth.contract(
-            address=app['sponsorEventContract'],
-            abi=config.SPONSOR_EVENT_CONTRACT_ABI)
-
-        sponsoreds = sponsor_event_contract.events.Sponsor.createFilter(
-            fromBlock=fb, toBlock=tb, argument_filters=None
-        ).get_all_entries()
+        try:
+            sponsoreds, tb = get_events(app)
+        except Exception as e:
+            print(f'Error in getting events: {e}')
+            continue
         for sponsored in sponsoreds:
             context_id = sponsored['args']['addr'].lower()
 
@@ -105,7 +114,7 @@ def check_sponsor_requests():
 
 def update():
     print('Updating sponsorships', time.ctime())
-    # update_apps_balance()
+    update_apps_balance()
     check_sponsor_requests()
 
 
