@@ -125,7 +125,19 @@ function verify(op) {
     if (op.name == 'Sponsor') {
       verifyAppSig(message, id, sig);
     } else {
-      verifyUserSig(message, id, sig);
+      try {
+        verifyUserSig(message, id, sig);
+      } catch(e) {
+        // allow adding connections by clients using v4 api
+        // or getting their help to recover
+        // this try and catch should be removed after v4 support dropped
+        if (op.name == 'Add Connection') {
+          const v4message = op.name + op.id1 + op.id2 + op.timestamp;
+          verifyUserSig(v4message, id, sig);
+        } else {
+          throw e;
+        }
+      }
     }
   });
   if (op.name == 'Connect' && op.requestProof) {
