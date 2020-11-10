@@ -15,7 +15,7 @@ def update():
         local_apps[app['_key']] = app
     apps = requests.get(config.APPS_JSON_FILE).json()['Applications']
     for app in apps:
-        name = app['Application']
+        key = app['Application']
         app_updated = False
         try:
             res = requests.get(app['Images'][0])
@@ -25,12 +25,12 @@ def update():
         except Exception as e:
             print('Error in getting logo', e)
             logo = ''
-        if name not in local_apps:
-            print(f'Insert new app: {name}')
+        if key not in local_apps:
+            print(f'Insert new app: {key}')
             try:
                 db['apps'].insert({
-                    '_key': name.replace(' ', ''),
-                    'name': name,
+                    '_key': key,
+                    'name': app['name'],
                     'context': app['Context'],
                     'url': app['Links'][0],
                     'logo': logo,
@@ -41,30 +41,33 @@ def update():
             except Exception as e:
                 print(f'Error in inserting new app: {e}')
             continue
-        if app['Context'] != local_apps[name].get('context', ''):
+        if app['name'] != local_apps[key].get('name', ''):
             app_updated = True
-        elif app['Links'][0] != local_apps[name].get('url', ''):
+        if app['Context'] != local_apps[key].get('context', ''):
             app_updated = True
-        elif app['Sponsor Public Key'] != local_apps[name].get('sponsorPublicKey', ''):
+        elif app['Links'][0] != local_apps[key].get('url', ''):
             app_updated = True
-        elif app['Contract Address'] != local_apps[name].get('sponsorEventContract', ''):
+        elif app['Sponsor Public Key'] != local_apps[key].get('sponsorPublicKey', ''):
             app_updated = True
-        elif app['Websocket Endpoint'] != local_apps[name].get('wsProvider', ''):
+        elif app['Contract Address'] != local_apps[key].get('sponsorEventContract', ''):
+            app_updated = True
+        elif app['Websocket Endpoint'] != local_apps[key].get('wsProvider', ''):
             app_updated = True
         if app_updated:
-            print(f'Updating {name} data')
+            print(f'Updating {key} data')
             db['apps'].update({
-                '_key': local_apps[name]['_key'],
+                '_key': local_apps[key]['_key'],
+                'name': app['name'],
                 'context': app['Context'],
                 'url': app['Links'][0],
                 'sponsorPublicKey': app['Sponsor Public Key'],
                 'sponsorEventContract': app['Contract Address'],
                 'wsProvider': app['Websocket Endpoint']
             })
-        if logo and logo != local_apps[name]['logo']:
-            print(f'Updating {name} logo')
+        if logo and logo != local_apps[key]['logo']:
+            print(f'Updating {key} logo')
             db['apps'].update({
-                '_key': local_apps[name]['_key'],
+                '_key': local_apps[key]['_key'],
                 'logo': logo
             })
 
