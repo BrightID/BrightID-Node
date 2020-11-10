@@ -530,7 +530,7 @@ function appToDic(app) {
     verificationUrl: app.verificationUrl,
     logo: app.logo,
     url: app.url,
-    unusedSponsorships: unusedSponsorship(app._key),
+    verification: getContext(app.context) ? getContext(app.context).verification : null,
     assignedSponsorships: app.totalSponsorships,
   };
 }
