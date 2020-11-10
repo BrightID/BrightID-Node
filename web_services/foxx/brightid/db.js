@@ -526,11 +526,10 @@ function appToDic(app) {
     id: app._key,
     name: app.name,
     context: app.context,
-    verification: getContext(app.context).verification,
+    verification: getContext(app.context) ? getContext(app.context).verification : null,
     verificationUrl: app.verificationUrl,
     logo: app.logo,
     url: app.url,
-    verification: getContext(app.context) ? getContext(app.context).verification : null,
     assignedSponsorships: app.totalSponsorships,
   };
 }
