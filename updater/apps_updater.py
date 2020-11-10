@@ -12,7 +12,7 @@ def update():
     print('Updating applications', time.ctime())
     local_apps = {}
     for app in db['apps']:
-        local_apps[app['name']] = app
+        local_apps[app['_key']] = app
     apps = requests.get(config.APPS_JSON_FILE).json()['Applications']
     for app in apps:
         name = app['Application']
