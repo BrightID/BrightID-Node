@@ -49,7 +49,7 @@ schemas = Object.assign({
       id2: joi.string().required().description('brightid of the target of the directed connection'),
       sig1: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
       level: joi.string().valid('reported', 'suspicious', 'just met', 'already known', 'recovery').required().description('level of confidence'),
-      reportReason: joi.string().valid('spammer', 'fake', 'duplicate', 'deceased', 'replaced').description('for reported level, the reason for reporting the user specificed by id2'),
+      reportReason: joi.string().valid('spammer', 'fake', 'duplicate', 'deceased', 'replaced', 'other').description('for reported level, the reason for reporting the user specificed by id2'),
       replacedWith: joi.string().description('for reported as replaced, the new brightid of the replaced account'),
       requestProof: joi.string().description('brightid + "|" + timestamp signed by the reported user to prove that he requested the connection'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation was created'),
