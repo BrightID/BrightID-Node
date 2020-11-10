@@ -15,7 +15,7 @@ def update():
         local_apps[app['_key']] = app
     apps = requests.get(config.APPS_JSON_FILE).json()['Applications']
     for app in apps:
-        key = app['Application']
+        key = app['Key']
         app_updated = False
         try:
             res = requests.get(app['Images'][0])
@@ -30,7 +30,7 @@ def update():
             try:
                 db['apps'].insert({
                     '_key': key,
-                    'name': app['name'],
+                    'name': app['Name'],
                     'context': app['Context'],
                     'url': app['Links'][0],
                     'logo': logo,
@@ -41,7 +41,7 @@ def update():
             except Exception as e:
                 print(f'Error in inserting new app: {e}')
             continue
-        if app['name'] != local_apps[key].get('name', ''):
+        if app['Name'] != local_apps[key].get('name', ''):
             app_updated = True
         if app['Context'] != local_apps[key].get('context', ''):
             app_updated = True
@@ -57,7 +57,7 @@ def update():
             print(f'Updating {key} data')
             db['apps'].update({
                 '_key': local_apps[key]['_key'],
-                'name': app['name'],
+                'name': app['Name'],
                 'context': app['Context'],
                 'url': app['Links'][0],
                 'sponsorPublicKey': app['Sponsor Public Key'],
