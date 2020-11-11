@@ -215,7 +215,7 @@ const handlers = {
       let message = contextName + ',' + contextIds.join(',');
       if (verification) {
         verificationHash = crypto.sha256(verification);
-        message += verificationHash;
+        message = message + ',' + verificationHash;
       }
       if (timestamp) {
         message = message + ',' + timestamp;
