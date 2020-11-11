@@ -85,22 +85,6 @@ function connect(op) {
     timestamp = conn.timestamp;
   }
 
-  // users should provide requestProof or have connections with already known
-  // or higher level to be able to report someone
-  // requestProof can not be reused to report someone
-  if (level == 'reported') {
-    if (!requestProof || connectionsColl.firstExample({ requestProof })) {
-      const otherSideConn = connectionsColl.firstExample({
-        _from: _to,
-        _to: _from
-      });
-      const otherSideLevel = otherSideConn && otherSideConn.level;
-      if (!['recovery', 'already known'].includes(otherSideLevel)) {
-        throw 'not allowed to report';
-      }
-    }
-  }
-
   if (! conn) {
     connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
   } else {
