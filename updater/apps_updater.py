@@ -36,7 +36,8 @@ def update():
                     'logo': logo,
                     'sponsorPublicKey': app['Sponsor Public Key'],
                     'sponsorEventContract': app['Contract Address'],
-                    'wsProvider': app['Websocket Endpoint']
+                    'wsProvider': app['Websocket Endpoint'],
+                    'verification': app['Verification']
                 })
             except Exception as e:
                 print(f'Error in inserting new app: {e}')
@@ -53,6 +54,8 @@ def update():
             app_updated = True
         elif app['Websocket Endpoint'] != local_apps[key].get('wsProvider', ''):
             app_updated = True
+        elif app['Verification'] != local_apps[key].get('verification', ''):
+            app_updated = True
         if app_updated:
             print(f'Updating {key} data')
             db['apps'].update({
@@ -62,7 +65,8 @@ def update():
                 'url': app['Links'][0],
                 'sponsorPublicKey': app['Sponsor Public Key'],
                 'sponsorEventContract': app['Contract Address'],
-                'wsProvider': app['Websocket Endpoint']
+                'wsProvider': app['Websocket Endpoint'],
+                'verification': app['Verification']
             })
         if logo and logo != local_apps[key]['logo']:
             print(f'Updating {key} logo')
