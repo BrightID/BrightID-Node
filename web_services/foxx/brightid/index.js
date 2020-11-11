@@ -16,8 +16,8 @@ const {
   hash,
   pad32,
   addressToBytes32,
-  sha256
 } = require('./encoding');
+const crypto = require('@arangodb/crypto');
 
 const router = createRouter();
 module.context.use(router);
@@ -213,7 +213,7 @@ const handlers = {
 
       let message = contextName + ',' + contextIds.join(',');
       if (verification) {
-        verificationHash = sha256(verification);
+        verificationHash = crypto.sha256(verification);
         message += verificationHash;
       }
       if (timestamp) {
@@ -242,7 +242,7 @@ const handlers = {
       }
       message = Buffer.from(message, 'binary').toString('hex');
       if (verification) {
-        verificationHash = sha256(verification);
+        verificationHash = crypto.sha256(verification);
         message += verificationHash;
       }
       if (timestamp) {
