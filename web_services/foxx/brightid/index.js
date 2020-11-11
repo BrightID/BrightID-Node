@@ -175,10 +175,11 @@ const handlers = {
     }
 
     const verifications = db.userVerifications(user);
-    const all_verifications = db.allVerifications();
-
-    for(let v of all_verifications) {
-      !(v in verifications) && (verifications[v] = false);
+    const allVerifications = ['BrightID', 'Yekta', 'DollarForEveryone', 'SeedConnected', 'SeedConnectedWithFriend']
+    for(let v of allVerifications) {
+      if (!verifications[v]) {
+        verifications[v] = false;
+      }
     }
     let verified;
     try {

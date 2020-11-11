@@ -558,11 +558,6 @@ function userVerifications(user) {
   return _.keyBy(verifications, v => v.name);
 }
 
-function allVerifications() {
-  let verifications = verificationsColl.all().toArray().map(v => v.name);
-  return new Set(verifications);
-}
-
 function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex } = getContext(context);
   const coll = db._collection(collection);
@@ -723,6 +718,5 @@ module.exports = {
   unusedSponsorship,
   getState,
   getReporters,
-  getRecoveryConnections,
-  allVerifications
+  getRecoveryConnections
 };
