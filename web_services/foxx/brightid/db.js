@@ -555,7 +555,7 @@ function userVerifications(user) {
   const verifications = verificationsColl.byExample({
     user
   }).toArray();
-  return Object.assign({}, ...verifications.map(v => ({[v.name]: v})));
+  return _.keyBy(verifications, v => v.name);
 }
 
 function allVerifications() {
