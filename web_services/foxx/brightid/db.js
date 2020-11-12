@@ -5,8 +5,8 @@ const { sha256 } = require('@arangodb/crypto');
 const { query, db } = require('@arangodb');
 
 const _ = require('lodash');
-
 const connectionsColl = db._collection('connections');
+const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersColl = db._collection('users');
@@ -87,6 +87,7 @@ function connect(op) {
 
   if (! conn) {
     connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
+    connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
   } else {
     connectionsColl.update(conn, { level, reportReason, replacedWith, requestProof, timestamp });
   }
