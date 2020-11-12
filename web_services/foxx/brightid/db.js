@@ -87,10 +87,10 @@ function connect(op) {
 
   if (! conn) {
     connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
-    connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
   } else {
     connectionsColl.update(conn, { level, reportReason, replacedWith, requestProof, timestamp });
   }
+  connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
 }
 
 function removeConnection(reporter, reported, reportReason, timestamp) {
