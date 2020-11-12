@@ -18,6 +18,7 @@ const {
   addressToBytes32,
 } = require('./encoding');
 const crypto = require('@arangodb/crypto');
+const parser = require('expr-eval').Parser;
 
 const router = createRouter();
 module.context.use(router);
@@ -38,8 +39,6 @@ const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
-
-const parser = require('expr-eval').Parser;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -175,16 +174,15 @@ const handlers = {
     }
 
     const verifications = db.userVerifications(user);
-    const allVerifications = ['BrightID', 'Yekta', 'DollarForEveryone', 'SeedConnected', 'SeedConnectedWithFriend']
-    for(let v of allVerifications) {
-      if (!verifications[v]) {
-        verifications[v] = false;
-      }
-    }
     let verified;
     try {
       let expr = parser.parse(verification || 'BrightID');
-      verified = expr.evaluate(verifications)
+      for(let v of expr.variables()) {
+        if (!verifications[v]) {
+          verifications[v] = false;
+        }
+      }
+      verified = expr.evaluate(verifications);
     } catch (err) {
       res.throw(404, 'invalid verification expression', {errorNum: INVALID_EXPRESSION});
     }
