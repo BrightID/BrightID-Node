@@ -7,17 +7,6 @@ import config
 
 db = ArangoClient().db('_system')
 
-local_to_json = {
-    'name': 'Name',
-    'context': 'Context',
-    'url': 'url',
-    'sponsorPublicKey': 'Sponsor Public Key',
-    'sponsorEventContract': 'Contract Address',
-    'wsProvider': 'Websocket Endpoint',
-    'verification': 'Verification',
-    'logo': 'logo'
-}
-
 
 def update():
     print('Updating applications', time.ctime())
@@ -25,52 +14,41 @@ def update():
 
     json_apps = requests.get(config.APPS_JSON_FILE).json()['Applications']
     for json_app in json_apps:
-        key = json_app['Key']
-        json_app['url'] = json_app['Links'][0]
-        local_app = local_apps.get(key, {})
-
         try:
             res = requests.get(json_app['Images'][0])
             file_format = json_app['Images'][0].split('.')[-1]
-            json_app['logo'] = 'data:image/' + file_format + ';base64,' + \
+            logo = 'data:image/' + file_format + ';base64,' + \
                 base64.b64encode(res.content).decode('ascii')
         except Exception as e:
             print('Error in getting logo', e)
-            json_app['logo'] = ''
+            logo = ''
 
-        if key not in local_apps:
-            print(f'Insert new app: {key}')
+        new_local_app = {
+            '_key': json_app['Key'],
+            'name': json_app['Name'],
+            'context': json_app['Context'],
+            'url': json_app['Links'][0],
+            'logo': logo,
+            'sponsorPublicKey': json_app['Sponsor Public Key'],
+            'sponsorEventContract': json_app['Contract Address'],
+            'wsProvider': json_app['Websocket Endpoint'],
+            'verification': json_app['Verification']
+        }
+        local_app = local_apps.get(json_app['Key'])
+
+        if not local_app:
+            print(f"Insert new app: {new_local_app['_key']}")
             try:
-                db['apps'].insert({
-                    '_key': key,
-                    'name': json_app['Name'],
-                    'context': json_app['Context'],
-                    'url': json_app['url'],
-                    'logo': json_app['logo'],
-                    'sponsorPublicKey': json_app['Sponsor Public Key'],
-                    'sponsorEventContract': json_app['Contract Address'],
-                    'wsProvider': json_app['Websocket Endpoint'],
-                    'verification': json_app['Verification']
-                })
+                db['apps'].insert(new_local_app)
             except Exception as e:
                 print(f'Error in inserting new application: {e}')
             continue
 
-        for local_key, json_key in local_to_json.items():
-            if json_app.get(json_key) != local_app.get(local_key):
-                print(f'Updating {key} application')
+        for key in new_local_app:
+            if new_local_app.get(key) != local_app.get(key):
+                print(f"Updating {new_local_app['_key']} application")
                 try:
-                    db['apps'].update({
-                        '_key': key,
-                        'name': json_app['Name'],
-                        'context': json_app['Context'],
-                        'url': json_app['url'],
-                        'sponsorPublicKey': json_app['Sponsor Public Key'],
-                        'sponsorEventContract': json_app['Contract Address'],
-                        'wsProvider': json_app['Websocket Endpoint'],
-                        'verification': json_app['Verification'],
-                        'logo': json_app['logo']
-                    })
+                    db['apps'].update(new_local_app)
                 except Exception as e:
                     print(f'Error in updating application: {e}')
                 break
