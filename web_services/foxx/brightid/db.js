@@ -515,6 +515,7 @@ function appToDic(app) {
     logo: app.logo,
     url: app.url,
     assignedSponsorships: app.totalSponsorships,
+    unusedSponsorships: unusedSponsorships(app._key)
   };
 }
 
@@ -631,7 +632,7 @@ function isSponsored(key) {
   return sponsorshipsColl.firstExample({ '_from': 'users/' + key }) != null;
 }
 
-function unusedSponsorship(app) {
+function unusedSponsorships(app) {
   const usedSponsorships = sponsorshipsColl.byExample({
     _to: 'apps/' + app
   }).count();
@@ -641,7 +642,7 @@ function unusedSponsorship(app) {
 
 function sponsor(user, app, timestamp) {
 
-  if (unusedSponsorship(app) < 1) {
+  if (unusedSponsorships(app) < 1) {
     throw "app does not have unused sponsorships";
   }
 
@@ -715,7 +716,7 @@ module.exports = {
   setRecoveryConnections,
   setSigningKey,
   getLastContextIds,
-  unusedSponsorship,
+  unusedSponsorships,
   getState,
   getReporters,
   getRecoveryConnections
