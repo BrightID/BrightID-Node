@@ -83,6 +83,8 @@ function connect(op) {
     // do not update timestamp when updating recovery connections because
     // recovery connections can not help recovering before a cooling time
     timestamp = conn.timestamp;
+  } else {
+    connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
   }
 
   if (! conn) {
@@ -90,7 +92,6 @@ function connect(op) {
   } else {
     connectionsColl.update(conn, { level, reportReason, replacedWith, requestProof, timestamp });
   }
-  connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
 }
 
 function removeConnection(reporter, reported, reportReason, timestamp) {
@@ -609,10 +610,38 @@ function setRecoveryConnections(conns, key, timestamp) {
 }
 
 function getRecoveryConnections(user) {
-  return connectionsColl.byExample({
-    _from: 'users/' + user,
-    level: 'recovery'
-  }).toArray().map(c => c._to.replace('users/', ''));
+  let connectionsTime = query`
+    FOR c IN connectionsHistory
+      SORT c.timestamp ASC
+      FILTER c._from == ${'users/' + user}
+      FILTER c.level == 'recovery'
+      RETURN c
+  `.toArray().map(c => c.timestamp);
+
+  const firstConnectionTime = connectionsTime[0] || 0;
+  const coolingTime = Date.now() - (7*24*60*60*1000);
+  let current = query`
+    FOR c IN connections
+      FILTER c._from == ${'users/' + user}
+      FILTER c.level == 'recovery'
+      FILTER c.timestamp < ${coolingTime} || c.timestamp == ${firstConnectionTime}
+      RETURN c
+  `.toArray().map(c => c._to);
+
+  let recentlyRemoved = query`
+    FOR c IN connectionsHistory
+      FILTER c._from == ${'users/' + user}
+      FILTER c.level == 'recovery'
+      FILTER c._to NOT IN ${current}
+      FILTER c.timestamp < ${coolingTime}
+      FOR c2 IN connectionsHistory
+        FILTER c2._from == c._from
+        FILTER c2._to == c._to
+        FILTER c2.level != 'recovery'
+        FILTER c2.timestamp > ${coolingTime}
+        RETURN c
+  `.toArray().map(c => c._to);
+  return current.concat(recentlyRemoved).map(c => c.replace('users/', ''));
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {
