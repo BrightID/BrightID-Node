@@ -19,6 +19,7 @@ def addVerificationTo(user, friend):
         'friend': friend,
         'timestamp': int(time.time() * 1000)
     })
+    verifications[user].append('SeedConnectedWithFriend')
     print(f"user: {user}\tverification: SeedConnectedWithFriend")
 
 def getVerifications(user):
