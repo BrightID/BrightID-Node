@@ -6,6 +6,17 @@ from arango import ArangoClient
 import config
 
 db = ArangoClient().db('_system')
+local_to_json = {
+    '_key': 'Key',
+    'name': 'Name',
+    'context': 'Context',
+    'url': 'Links',
+    'logo': 'logo',
+    'sponsorPublicKey': 'Sponsor Public Key',
+    'sponsorEventContract': 'Contract Address',
+    'wsProvider': 'Websocket Endpoint',
+    'verification': 'Verification',
+}
 
 
 def update():
@@ -17,25 +28,16 @@ def update():
         try:
             res = requests.get(json_app['Images'][0])
             file_format = json_app['Images'][0].split('.')[-1]
-            logo = 'data:image/' + file_format + ';base64,' + \
+            json_app['logo'] = 'data:image/' + file_format + ';base64,' + \
                 base64.b64encode(res.content).decode('ascii')
         except Exception as e:
             print('Error in getting logo', e)
-            logo = ''
+            json_app['logo'] = ''
 
-        new_local_app = {
-            '_key': json_app['Key'],
-            'name': json_app['Name'],
-            'context': json_app['Context'],
-            'url': json_app['Links'][0],
-            'logo': logo,
-            'sponsorPublicKey': json_app['Sponsor Public Key'],
-            'sponsorEventContract': json_app['Contract Address'],
-            'wsProvider': json_app['Websocket Endpoint'],
-            'verification': json_app['Verification']
-        }
+        new_local_app = {key: json_app[local_to_json[key]] for key in local_to_json}
+        new_local_app['url'] = new_local_app['url'][0]
+
         local_app = local_apps.get(json_app['Key'])
-
         if not local_app:
             print(f"Insert new app: {new_local_app['_key']}")
             try:
