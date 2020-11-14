@@ -29,7 +29,7 @@ def hash(op):
     return h.replace('+', '-').replace('/', '_').replace('=', '')
 
 
-def process(data):
+def process(data, block_timestamp):
     try:
         data = bytes.fromhex(data.strip('0x')).decode('utf-8')
         op = json.loads(data)
@@ -37,6 +37,7 @@ def process(data):
             h = op['_key']
         else:
             h = hash(op)
+        op['blockTime'] = block_timestamp * 1000
         r = requests.put(config.APPLY_URL.format(v=op['v'], hash=h), json=op)
     except Exception as e:
         print(data.encode('utf-8'), e)
@@ -85,14 +86,15 @@ def main():
             # When error is raised, the file will run again and no bad problem occur.
             time.sleep(3)
 
-        for block in range(last_block + 1, current_block + 1):
-            print('processing block {}'.format(block))
-            for i, tx in enumerate(w3.eth.getBlock(block, True)['transactions']):
+        for block_number in range(last_block + 1, current_block + 1):
+            print('processing block {}'.format(block_number))
+            block = w3.eth.getBlock(block_number, True)
+            for i, tx in enumerate(block['transactions']):
                 if tx['to'] and tx['to'].lower() in (config.TO_ADDRESS.lower(), config.DEPRECATED_TO_ADDRESS.lower()):
-                    process(tx['input'])
-            if block % config.SNAPSHOTS_PERIOD == 0:
-                save_snapshot(block)
-            last_block = block
+                    process(tx['input'], block.timestamp)
+            if block_number % config.SNAPSHOTS_PERIOD == 0:
+                save_snapshot(block_number)
+            last_block = block_number
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
 
 

@@ -53,6 +53,7 @@ schemas = Object.assign({
       replacedWith: joi.string().description('for reported as replaced, the new brightid of the replaced account'),
       requestProof: joi.string().description('brightid + "|" + timestamp signed by the reported user to prove that he requested the connection'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation was created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Connect'),
     joi.object({
@@ -62,6 +63,7 @@ schemas = Object.assign({
       sig1: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
       sig2: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id2'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Add Connection'),
     joi.object({
@@ -71,6 +73,7 @@ schemas = Object.assign({
       reason: joi.string().valid('fake', 'duplicate', 'deceased').required().description('the reason for removing connection specificed by the user represented by id1'),
       sig1: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Remove Connection'),
     joi.object({
@@ -85,6 +88,7 @@ schemas = Object.assign({
       type: joi.string().valid('general', 'primary').required().description('type of the group'),
       sig1: joi.string().required().description('deterministic json representation of operation object signed by the creator of group represented by id1'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Add Group'),
     joi.object({
@@ -93,6 +97,7 @@ schemas = Object.assign({
       group: joi.string().required().description('the unique id of the group'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id1'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Remove Group'),
     joi.object({
@@ -101,6 +106,7 @@ schemas = Object.assign({
       group: joi.string().required().description('the unique id of the group that the user represented by id wants to join'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Add Membership'),
     joi.object({
@@ -109,6 +115,7 @@ schemas = Object.assign({
       group: joi.string().required().description('the unique id of the group that the user represented by id wants to leave'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Remove Membership'),
     joi.object({
@@ -117,6 +124,7 @@ schemas = Object.assign({
       trusted: joi.array().items(joi.string()).required().description('brightid list of trusted connections'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Set Trusted Connections'),
     joi.object({
@@ -128,6 +136,7 @@ schemas = Object.assign({
       sig1: joi.string().required().description('deterministic json representation of operation object signed by the trusted connection represented by id1'),
       sig2: joi.string().required().description('deterministic json representation of operation object signed by the trusted connection represented by id2'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Set Signing Key'),
     joi.object({
@@ -138,6 +147,7 @@ schemas = Object.assign({
       context: joi.string().required().description('the context name in which the user represented by brightid is linking context id with his/her brightid'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Link ContextId'),
     joi.object({
@@ -147,6 +157,7 @@ schemas = Object.assign({
       app: joi.string().required().description('the app name that user is being sponsored by'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the private key shared between context owners and trusted node operators which enable them to spend sponsorships assigned to the context'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Sponsor'),
     joi.object({
@@ -157,6 +168,7 @@ schemas = Object.assign({
       data: joi.string().required().description('the group AES key encrypted for signingKey of the invitee'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the inviter'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Invite'),
     joi.object({
@@ -166,6 +178,7 @@ schemas = Object.assign({
       group: joi.string().required().description('the unique id of the group that dismissee is being dismissed from'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the dismisser'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Dismiss'),
     joi.object({
@@ -175,6 +188,7 @@ schemas = Object.assign({
       group: joi.string().required().description('the unique id of the group that new admin is being added to'),
       sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
       timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+      blockTime: joi.number().required().description('milliseconds since epoch when the block was created'),
       v: joi.number().required().valid(5).description('version of API')
     }).label('Add Admin')
   ]).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus')
