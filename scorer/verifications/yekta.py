@@ -58,12 +58,4 @@ def verify(fname):
             'timestamp': int(time.time() * 1000)
         })
 
-        for i in range(nodes_rank[n]['rank']):
-            verification = f'Yekta_{i + 1}'
-            if verification not in verifications.get(n, []):
-                db['verifications'].insert({
-                    'name': verification,
-                    'user': n,
-                    'timestamp': int(time.time() * 1000)
-                })
     print(f'verifieds: {counter}\n')
