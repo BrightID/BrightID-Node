@@ -28,6 +28,8 @@ def update():
         try:
             res = requests.get(json_app['Images'][0])
             file_format = json_app['Images'][0].split('.')[-1]
+            if file_format == 'svg':
+                file_format == 'svg+xml'
             json_app['logo'] = 'data:image/' + file_format + ';base64,' + \
                 base64.b64encode(res.content).decode('ascii')
         except Exception as e:
