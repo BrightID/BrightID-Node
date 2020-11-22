@@ -107,7 +107,6 @@ Object.keys(operations).forEach(name => {
   op.name = joi.string().valid(name).required().description('operation name');
   op.timestamp = joi.number().required().description('milliseconds since epoch when the operation created');
   op.v = joi.number().required().valid(5).description('version of API');
-  operations[name] = joi.object(op).label(name);
 });
 
 // extend lower-level schemas with higher-level schemas
@@ -155,7 +154,9 @@ schemas = Object.assign({
 
 schemas = Object.assign({
   operation: joi.alternatives().try(
-    Object.values(operations)
+    Object.keys(operations).map(
+      name => joi.object(operations[name]).label(name)
+    )
   ).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus')
 }, schemas);
 

@@ -53,7 +53,7 @@ const handlers = {
 schemas.schemas.operation = joi.alternatives().try(
   Object.values(schemas.operations).map(op => {
     op.blockTime = joi.number().required().description('milliseconds since epoch when the block was created');
-    return op;
+    return joi.object(op);
   })
 ).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus');
 
