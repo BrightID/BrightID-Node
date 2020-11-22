@@ -19,6 +19,11 @@ schemas = Object.assign({
     flaggers: joi.object().description('an object containing ids of flaggers as key and reason as value'),
     createdAt: schemas.timestamp.required().description('the user creation timestamp'),
   }),
+  connection: joi.object({
+    id: joi.string().required().description('the brightid of the connection'),
+    level: joi.string().required().description('the level of the connection'),
+    timestamp: schemas.timestamp.required().description('the timestamp of the connection'),
+  }),
   groupBase: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
     members: joi.array().items(joi.string()).required().description('brightids of group members'),
@@ -228,6 +233,33 @@ schemas = Object.assign({
       isSponsored: joi.boolean(),
       trusted: joi.array().items(joi.string()),
       flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
+    })
+  }),
+
+  userConnectionsGetResponse: joi.object({
+    data: joi.object({
+      connections: joi.array().items(schemas.connection)
+    })
+  }),
+
+  userVerificationsGetResponse: joi.object({
+    data: joi.object({
+      verifications: joi.array().items(joi.object())
+    })
+  }),
+
+  userConfirmationGetResponse: joi.object({
+    data: joi.object({
+      connectionsNum: joi.number().integer().required().description('number of connections with already known or recovery level'),
+      mutualConnectionsNum: joi.number().integer().required().description('number of mutual connections with already known or recovery level'),
+      mutualConnections: joi.array().items(joi.string()).required().description('brightids of connections'),
+      timestamp: schemas.timestamp.required().description('timestamp of last connection'),
+      createdAt: schemas.timestamp.required().description('creation time of user specified by id'),
+      reports: joi.array().items(joi.object({
+        id: joi.string().required().description('brightid of reporter'),
+        reportReason: joi.string().required().description('the reason of reporting'),
+      })).description('list of reports for the user specified by id'),
+      groupsNum: joi.number().integer().required().description('number of groups'),
     })
   }),
 

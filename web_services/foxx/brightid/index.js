@@ -3,6 +3,7 @@ const secp256k1 = require('secp256k1');
 const createKeccakHash = require('keccak');
 
 const createRouter = require('@arangodb/foxx/router');
+const _ = require('lodash');
 const joi = require('joi');
 const arango = require('@arangodb').db;
 const nacl = require('tweetnacl');
@@ -105,9 +106,24 @@ const handlers = {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
     }
 
-    const verifications = Object.keys(db.userVerifications(id));
-    const connections = db.userConnections(id);
-    const groups = db.userGroups(id);
+    const verifications = db.userVerifications(id).map(v => v.name);
+
+    let connections = db.userConnections(id);
+    const connectionsMap = _.keyBy(connections, conn => conn.id);
+    connections = connections.map(conn => {
+      const u = db.userToDic(conn.id);
+      u.level = connectionsMap[conn.id].level;
+      u.reportReason = connectionsMap[conn.id].reportReason;
+      return u;
+    });
+
+    let groups = db.userGroups(id);
+    groups = groups.map(group => {
+      const g = db.groupToDic(group.id);
+      g.joined = group.timestamp;
+      return g;
+    });
+
     const invites = db.userInvitedGroups(id);
     db.updateEligibleGroups(id, connections, groups);
 
@@ -122,6 +138,66 @@ const handlers = {
         connections,
         verifications,
         isSponsored: db.isSponsored(id)
+      }
+    });
+
+  },
+
+  userConnectionsGet: function(req, res) {
+    const id = req.param('id');
+    const direction = req.param('direction');
+    res.send({
+      data: {
+        connections: db.userConnections(id, direction)
+      }
+    });
+  },
+
+  userVerificationsGet: function(req, res) {
+    const id = req.param('id');
+    res.send({
+      data: {
+        verifications: db.userVerifications(id)
+      }
+    });
+  },
+
+  userConfirmationGet: function(req, res) {
+    const id = req.param('id');
+    const requestor = req.param('requestor');
+    const user = db.loadUser(id);
+    if (! user) {
+      res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
+    }
+    const connections = db.userConnections(id, 'inbound');
+    const requestorConnections = db.userConnections(requestor, 'outbound');
+    const isKnown = c => ['already known', 'recovery'].includes(c.level);
+
+    const connectionsNum = connections.filter(isKnown).length;
+    const mutualConnections = _.intersection(
+      connections.filter(isKnown).map(c => c.id),
+      requestorConnections.filter(isKnown).map(c => c.id)
+    );
+    const mutualConnectionsNum = mutualConnections.length;
+    const conn = connections.find(c => c.id === requestor);
+    const timestamp = conn && conn.timestamp;
+    const reports = connections.filter(c => c.level === 'reported').map(c => {
+      return {
+        id: c.id,
+        reportReason: c.reportReason
+      }
+    });
+    const groupsNum = db.userGroups(id).length;
+
+    res.send({
+      data: {
+        connectionsNum,
+        mutualConnectionsNum,
+        mutualConnections,
+        timestamp,
+        createdAt: user.createdAt,
+        reports,
+        groupsNum,
       }
     });
   },
@@ -173,7 +249,8 @@ const handlers = {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     }
 
-    const verifications = db.userVerifications(user);
+    let verifications = db.userVerifications(user);
+    verifications = _.keyBy(verifications, v => v.name);
     let verified;
     try {
       let expr = parser.parse(verification || 'BrightID');
@@ -331,9 +408,29 @@ router.post('/operations', handlers.operationsPost)
 router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
-  .description("Gets a user's score, verifications, joining date, lists of , current groups, eligible groups, and current connections.")
+  .description("Gets a user's score, verifications, joining date, lists of connections, groups and eligible groups.")
   .response(schemas.userGetResponse)
   .error(404, 'User not found');
+
+router.get('/users/:id/verifications', handlers.userVerificationsGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .summary('Get verifications of a user')
+  .description("Gets list of user's verification objects with their properties")
+  .response(schemas.userVerificationsGetResponse);
+
+router.get('/users/:id/confirmation/:requestor', handlers.userConfirmationGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user that info requested about'))
+  .pathParam('requestor', joi.string().required().description('the brightid of the user that requested info'))
+  .summary('Get information required to confirm a connection to a user')
+  .response(schemas.userConfirmationGetResponse)
+  .error(404, 'User not found');
+
+router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .pathParam('direction', joi.string().required().valid('inbound', 'outbound').description('the direction of the connection'))
+  .summary('Get inbound or outbound connections of a user')
+  .description("Gets list of user's connections with levels and timestamps")
+  .response(schemas.userConnectionsGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
