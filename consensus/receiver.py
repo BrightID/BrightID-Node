@@ -33,12 +33,8 @@ def process(data, block_timestamp):
     try:
         data = bytes.fromhex(data.strip('0x')).decode('utf-8')
         op = json.loads(data)
-        if op['v'] == 4:
-            h = op['_key']
-        else:
-            h = hash(op)
         op['blockTime'] = block_timestamp * 1000
-        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=h), json=op)
+        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=hash(op)), json=op)
     except Exception as e:
         print(data.encode('utf-8'), e)
         return False

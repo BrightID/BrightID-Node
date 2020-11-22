@@ -146,11 +146,11 @@ function verify(op) {
   if (hash(message) != op.hash) {
     throw 'invalid hash';
   }
-  // set the block time instead of user timestamp
-  op.timestamp = op.blockTime;
 }
 
 function apply(op) {
+  // set the block time instead of user timestamp
+  op.timestamp = op.blockTime;
   if (op['name'] == 'Connect') {
     return db.connect(op);
   } else if (op['name'] == 'Add Connection') {

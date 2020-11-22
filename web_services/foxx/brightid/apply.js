@@ -49,6 +49,14 @@ const handlers = {
   }
 };
 
+// add blockTime to operation schema
+schemas.operation.$_terms.matches.forEach(m => {
+  const v = {
+    schema: joi.number().required().description('milliseconds since epoch when the block was created')
+  };
+  m.schema._ids._byKey.set('blockTime', v);
+});
+
 router.put('/operations/:hash', handlers.operationsPut)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
   .body(schemas.operation)
