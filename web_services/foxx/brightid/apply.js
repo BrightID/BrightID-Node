@@ -5,7 +5,7 @@ const arango = require('@arangodb').db;
 const nacl = require('tweetnacl');
 const db = require('./db');
 const operations = require('./operations');
-const schemas = require('./schemas').schemas;
+const schemas = require('./schemas');
 
 const router = createRouter();
 module.context.use(router);
@@ -50,16 +50,16 @@ const handlers = {
 };
 
 // add blockTime to operation schema
-schemas.operation.$_terms.matches.forEach(m => {
-  const v = {
-    schema: joi.number().required().description('milliseconds since epoch when the block was created')
-  };
-  m.schema._ids._byKey.set('blockTime', v);
-});
+schemas.schemas.operation = joi.alternatives().try(
+  Object.values(schemas.operations).map(op => {
+    op.blockTime = joi.number().required().description('milliseconds since epoch when the block was created');
+    return op;
+  })
+).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus');
 
 router.put('/operations/:hash', handlers.operationsPut)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
-  .body(schemas.operation)
+  .body(schemas.schemas.operation)
   .summary('Apply operation after consensus')
   .description("Apply operation after consensus.")
   .response(null);
