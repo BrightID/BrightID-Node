@@ -35,12 +35,10 @@ def process(data, block_timestamp):
         op = json.loads(data)
         op['blockTime'] = block_timestamp * 1000
         r = requests.put(config.APPLY_URL.format(v=op['v'], hash=hash(op)), json=op)
+        print(op)
+        print(r.json())
     except Exception as e:
         print(data.encode('utf-8'), e)
-        return False
-    print(op)
-    print(r.json())
-    assert r.json().get('success') == True
 
 
 def save_snapshot(block):
