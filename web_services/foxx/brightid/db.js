@@ -17,6 +17,7 @@ const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
+const testblocksColl = db._collection('testblocks');
 
 const {
   uInt8ArrayToB64,
@@ -579,6 +580,9 @@ function linkContextId(id, context, contextId, timestamp) {
     contextId = contextId.toLowerCase();
   }
 
+  // remove testblocks if exists
+  removeBlock(contextId, 'link');
+
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
@@ -653,9 +657,15 @@ function unusedSponsorships(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, app, timestamp) {
+function sponsor(user, appName, timestamp) {
+  // remove testblocks if exists
+  const app = getApp(appName);
+  const context = getContext(app.context);
+  const coll = db._collection(context.collection);
+  const contextIds = getContextIdsByUser(coll, user);
+  removeBlock(contextIds[0], 'sponsorship');
 
-  if (unusedSponsorships(app) < 1) {
+  if (unusedSponsorships(appName) < 1) {
     throw "app does not have unused sponsorships";
   }
 
@@ -665,7 +675,7 @@ function sponsor(user, app, timestamp) {
 
   sponsorshipsColl.insert({
     _from: 'users/' + user,
-    _to: 'apps/' + app
+    _to: 'apps/' + appName
   });
 }
 
@@ -693,6 +703,29 @@ function getState() {
     initOp,
     sentOp
   }
+}
+
+function addBlock(app, contextId, act) {
+  testblocksColl.insert({
+    "app": app,
+    "contextId": contextId,
+    "act": act,
+    "timestamp": Date.now(),
+  });
+}
+
+function removeBlock(contextId, act) {
+  testblocksColl.removeByExample({
+    "contextId": contextId,
+    "act": act,
+  });
+}
+
+function getBlocks(app, contextId) {
+  return testblocksColl.byExample({
+    "app": app,
+    "contextId": contextId,
+  }).toArray().map(b => b.act);
 }
 
 module.exports = {
@@ -735,4 +768,7 @@ module.exports = {
   getRecoveryConnections,
   userToDic,
   groupToDic,
+  addBlock,
+  removeBlock,
+  getBlocks,
 };
