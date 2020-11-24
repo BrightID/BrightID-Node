@@ -209,18 +209,19 @@ schemas = Object.assign({
     })
   }),
 
-  userConfirmationGetResponse: joi.object({
+  userProfileGetResponse: joi.object({
     data: joi.object({
       connectionsNum: joi.number().integer().required().description('number of connections with already known or recovery level'),
-      mutualConnectionsNum: joi.number().integer().required().description('number of mutual connections with already known or recovery level'),
-      mutualConnections: joi.array().items(joi.string()).required().description('brightids of connections'),
-      timestamp: schemas.timestamp.required().description('timestamp of last connection'),
+      groupsNum: joi.number().integer().required().description('number of groups'),
+      mutualConnections: joi.array().items(joi.string()).required().description('brightids of mutual connections'),
+      mutualGroups: joi.array().items(joi.string()).required().description('ids of mutual groups'),
+      connectedAt: schemas.timestamp.required().description('timestamp of last connection'),
       createdAt: schemas.timestamp.required().description('creation time of user specified by id'),
       reports: joi.array().items(joi.object({
         id: joi.string().required().description('brightid of reporter'),
         reportReason: joi.string().required().description('the reason of reporting'),
       })).description('list of reports for the user specified by id'),
-      groupsNum: joi.number().integer().required().description('number of groups'),
+      verified: joi.boolean().required().description('true if user has BrightID verification')
     })
   }),
 

@@ -162,7 +162,7 @@ const handlers = {
     });
   },
 
-  userConfirmationGet: function(req, res) {
+  userProfileGet: function(req, res) {
     const id = req.param('id');
     const requestor = req.param('requestor');
     const user = db.loadUser(id);
@@ -170,34 +170,43 @@ const handlers = {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
     }
     const connections = db.userConnections(id, 'inbound');
+    const groups = db.userGroups(id);
     const requestorConnections = db.userConnections(requestor, 'outbound');
-    const isKnown = c => ['already known', 'recovery'].includes(c.level);
+    const requestorGroups = db.userGroups(requestor);
 
+    const isKnown = c => ['already known', 'recovery'].includes(c.level);
     const connectionsNum = connections.filter(isKnown).length;
+    const groupsNum = groups.length;
     const mutualConnections = _.intersection(
       connections.filter(isKnown).map(c => c.id),
       requestorConnections.filter(isKnown).map(c => c.id)
     );
-    const mutualConnectionsNum = mutualConnections.length;
+    const mutualGroups = _.intersection(
+      groups.map(g => g.id),
+      requestorGroups.map(g => g.id)
+    );
+
     const conn = connections.find(c => c.id === requestor);
-    const timestamp = conn && conn.timestamp;
+    const connectedAt = conn ? conn.timestamp: 0;
     const reports = connections.filter(c => c.level === 'reported').map(c => {
       return {
         id: c.id,
         reportReason: c.reportReason
       }
     });
-    const groupsNum = db.userGroups(id).length;
+
+    const verified = db.userVerifications(id).map(v => v.name).includes('BrightID');
 
     res.send({
       data: {
         connectionsNum,
-        mutualConnectionsNum,
+        groupsNum,
         mutualConnections,
-        timestamp,
+        mutualGroups,
+        connectedAt,
         createdAt: user.createdAt,
         reports,
-        groupsNum,
+        verified
       }
     });
   },
@@ -418,11 +427,11 @@ router.get('/users/:id/verifications', handlers.userVerificationsGet)
   .description("Gets list of user's verification objects with their properties")
   .response(schemas.userVerificationsGetResponse);
 
-router.get('/users/:id/confirmation/:requestor', handlers.userConfirmationGet)
+router.get('/users/:id/profile/:requestor', handlers.userProfileGet)
   .pathParam('id', joi.string().required().description('the brightid of the user that info requested about'))
   .pathParam('requestor', joi.string().required().description('the brightid of the user that requested info'))
-  .summary('Get information required to confirm a connection to a user')
-  .response(schemas.userConfirmationGetResponse)
+  .summary('Get profile information of a user')
+  .response(schemas.userProfileGetResponse)
   .error(404, 'User not found');
 
 router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
