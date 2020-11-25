@@ -225,10 +225,10 @@ const handlers = {
   verificationGet: function(req, res){
     let unique = true;
     let contextId = req.param('contextId');
-    let appName = req.param('app');
+    let appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
-    const app = db.getApp(appName);
+    const app = db.getApp(appKey);
     if (! app) {
       res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
     }
@@ -238,7 +238,7 @@ const handlers = {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
     }
 
-    const testblocks = db.getTestblocks(appName, contextId);
+    const testblocks = db.getTestblocks(appKey, contextId);
     if (testblocks.includes('link')) {
       res.throw(404, 'contextId not found', {errorNum: CONTEXTID_NOT_FOUND});
     } else if (testblocks.includes('sponsorship')) {
@@ -299,7 +299,7 @@ const handlers = {
         res.throw(500, 'Server setting key pair not set', {errorNum: KEYPAIR_NOT_SET});
       }
 
-      let message = appName + ',' + contextIds.join(',');
+      let message = appKey + ',' + contextIds.join(',');
       if (timestamp) {
         message = message + ',' + timestamp;
       }
@@ -315,9 +315,9 @@ const handlers = {
 
       let message, h;
       if (context.idsAsHex) {
-        message = pad32(appName) + contextIds.map(addressToBytes32).join('');
+        message = pad32(appKey) + contextIds.map(addressToBytes32).join('');
       } else {
-        message = pad32(appName) + contextIds.map(pad32).join('');
+        message = pad32(appKey) + contextIds.map(pad32).join('');
       }
       message = Buffer.from(message, 'binary').toString('hex');
       if (timestamp) {
@@ -338,7 +338,7 @@ const handlers = {
     res.send({
       data: {
         unique,
-        application: appName,
+        application: appKey,
         context: app.context,
         contextIds: contextIds,
         sig,
@@ -362,8 +362,8 @@ const handlers = {
   },
 
   appGet: function(req, res){
-    const appName = req.param('app');
-    let app = db.getApp(appName);
+    const appKey = req.param('app');
+    let app = db.getApp(appKey);
     if (! app) {
       res.throw(404, 'App not found', {errorNum: APP_NOT_FOUND} );
     } else {
@@ -396,12 +396,12 @@ const handlers = {
   },
 
   testblocksPut: function(req, res){
-    const appName = req.param('app');
+    const appKey = req.param('app');
     const action = req.param('action');
     const contextId = req.param('contextId');
     const testingKey = req.param('testingKey');
 
-    const app = db.getApp(appName);
+    const app = db.getApp(appKey);
     if (! app) {
       res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
     }
@@ -409,16 +409,16 @@ const handlers = {
       res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
     }
 
-    return db.addTestblock(appName, contextId, action);
+    return db.addTestblock(appKey, contextId, action);
   },
 
   testblocksDelete: function(req, res){
-    const appName = req.param('app');
+    const appKey = req.param('app');
     const action = req.param('action');
     const contextId = req.param('contextId');
     const testingKey = req.param('testingKey');
 
-    const app = db.getApp(appName);
+    const app = db.getApp(appKey);
     if (! app) {
       res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
     }
@@ -426,7 +426,7 @@ const handlers = {
       res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
     }
 
-    return db.removeTestblock(contextId, action, appName);
+    return db.removeTestblock(contextId, action, appKey);
   }
 
 };

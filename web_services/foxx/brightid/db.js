@@ -657,18 +657,19 @@ function unusedSponsorships(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, appName, timestamp) {
-  // remove testblocks if exists
-  const app = getApp(appName);
+function sponsor(user, appKey, timestamp) {
+  const app = getApp(appKey);
   const context = getContext(app.context);
   if (! context) {
     throw "context not found";
   }
   const coll = db._collection(context.collection);
   const contextIds = getContextIdsByUser(coll, user);
-  removeTestblock(contextIds[0], 'sponsorship', appName);
 
-  if (unusedSponsorships(appName) < 1) {
+  // remove testblocks if exists
+  removeTestblock(contextIds[0], 'sponsorship', appKey);
+
+  if (unusedSponsorships(appKey) < 1) {
     throw "app does not have unused sponsorships";
   }
 
@@ -678,7 +679,7 @@ function sponsor(user, appName, timestamp) {
 
   sponsorshipsColl.insert({
     _from: 'users/' + user,
-    _to: 'apps/' + appName
+    _to: 'apps/' + appKey
   });
 }
 
