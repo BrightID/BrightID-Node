@@ -472,7 +472,7 @@ router.get('/operations/:hash', handlers.operationGet)
   .error(404, 'Operation not found');
 
 router.get('/verifications/:app/:contextId', handlers.verificationGet)
-  .pathParam('app', joi.string().required().description('the app in which the user is verified'))
+  .pathParam('app', joi.string().required().description('the app that user is verified for'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
@@ -508,11 +508,11 @@ router.get('/state', handlers.stateGet)
   .response(schemas.stateGetResponse);
 
 router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
-  .pathParam('app', joi.string().required().description("Unique name of the app"))
+  .pathParam('app', joi.string().required().description("The key of app"))
   .pathParam('action', joi.string().required().description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .queryParam('testingKey', joi.string().description('the testing private key of the app'))
-  .summary("add blocking state applied on user's verification for testing.")
+  .queryParam('testingKey', joi.string().required().description('the secret key for testing the app'))
+  .summary("Block user's verification for testing.")
   .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.')
   .response(null);
 
