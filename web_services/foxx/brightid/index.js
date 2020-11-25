@@ -238,12 +238,12 @@ const handlers = {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
     }
 
-    const blocks = db.getTestblocks(appName, contextId);
-    if (blocks.includes('link')) {
+    const testblocks = db.getTestblocks(appName, contextId);
+    if (testblocks.includes('link')) {
       res.throw(404, 'contextId not found', {errorNum: CONTEXTID_NOT_FOUND});
-    } else if (blocks.includes('sponsorship')) {
+    } else if (testblocks.includes('sponsorship')) {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
-    } else if (blocks.includes('verification')) {
+    } else if (testblocks.includes('verification')) {
       res.throw(404, 'user can not be verified for this application', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
