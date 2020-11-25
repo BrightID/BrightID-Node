@@ -568,6 +568,7 @@ function userVerifications(user) {
     delete v._key;
     delete v._id;
     delete v._rev;
+    delete v.user;
   });
   return verifications;
 }
