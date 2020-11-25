@@ -661,6 +661,9 @@ function sponsor(user, appName, timestamp) {
   // remove testblocks if exists
   const app = getApp(appName);
   const context = getContext(app.context);
+  if (! context) {
+    throw "context not found";
+  }
   const coll = db._collection(context.collection);
   const contextIds = getContextIdsByUser(coll, user);
   removeBlock(contextIds[0], 'sponsorship', appName);
