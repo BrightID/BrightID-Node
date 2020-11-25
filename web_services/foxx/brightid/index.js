@@ -512,7 +512,7 @@ router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
   .pathParam('action', joi.string().required().description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
-  .summary('Add a block on a verification to the user.')
+  .summary('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.')
   .description('Add a block on a verification to the user.')
   .response(null);
 
