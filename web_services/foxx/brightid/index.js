@@ -238,7 +238,7 @@ const handlers = {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
     }
 
-    const blocks = db.getBlocks(appName, contextId);
+    const blocks = db.getTestblocks(appName, contextId);
     if (blocks.includes('link')) {
       res.throw(404, 'contextId not found', {errorNum: CONTEXTID_NOT_FOUND});
     } else if (blocks.includes('sponsorship')) {
@@ -409,7 +409,7 @@ const handlers = {
       res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
     }
 
-    return db.addBlock(appName, contextId, action);
+    return db.addTestblock(appName, contextId, action);
   },
 
   testblocksDelete: function(req, res){
@@ -426,7 +426,7 @@ const handlers = {
       res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
     }
 
-    return db.removeBlock(contextId, action, appName);
+    return db.removeTestblock(contextId, action, appName);
   }
 
 };

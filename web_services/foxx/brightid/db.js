@@ -581,7 +581,7 @@ function linkContextId(id, context, contextId, timestamp) {
   }
 
   // remove testblocks if exists
-  removeBlock(contextId, 'link');
+  removeTestblock(contextId, 'link');
 
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
@@ -666,7 +666,7 @@ function sponsor(user, appName, timestamp) {
   }
   const coll = db._collection(context.collection);
   const contextIds = getContextIdsByUser(coll, user);
-  removeBlock(contextIds[0], 'sponsorship', appName);
+  removeTestblock(contextIds[0], 'sponsorship', appName);
 
   if (unusedSponsorships(appName) < 1) {
     throw "app does not have unused sponsorships";
@@ -708,16 +708,11 @@ function getState() {
   }
 }
 
-function addBlock(app, contextId, action) {
-  testblocksColl.insert({
-    "app": app,
-    "contextId": contextId,
-    "action": action,
-    "timestamp": Date.now(),
-  });
+function addTestblock(app, contextId, action) {
+  testblocksColl.insert({app, contextId, action,"timestamp": Date.now()});
 }
 
-function removeBlock(contextId, action, app) {
+function removeTestblock(contextId, action, app) {
   let query;
   if (app) {
     query = {app, contextId, action};
@@ -727,7 +722,7 @@ function removeBlock(contextId, action, app) {
   testblocksColl.removeByExample(query);
 }
 
-function getBlocks(app, contextId) {
+function getTestblocks(app, contextId) {
   return testblocksColl.byExample({
     "app": app,
     "contextId": contextId,
@@ -774,7 +769,7 @@ module.exports = {
   getRecoveryConnections,
   userToDic,
   groupToDic,
-  addBlock,
-  removeBlock,
-  getBlocks,
+  addTestblock,
+  removeTestblock,
+  getTestblocks,
 };
