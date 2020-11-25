@@ -396,7 +396,7 @@ const handlers = {
 
   testblocksPut: function(req, res){
     const appName = req.param('app');
-    const act = req.param('act');
+    const action = req.param('action');
     const contextId = req.param('contextId');
     const testingKey = req.param('testingKey');
 
@@ -408,12 +408,12 @@ const handlers = {
       res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
     }
 
-    return db.addBlock(appName, contextId, act);
+    return db.addBlock(appName, contextId, action);
   },
 
   testblocksDelete: function(req, res){
     const appName = req.param('app');
-    const act = req.param('act');
+    const action = req.param('action');
     const contextId = req.param('contextId');
     const testingKey = req.param('testingKey');
 
@@ -425,7 +425,7 @@ const handlers = {
       res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
     }
 
-    return db.removeBlock(contextId, act);
+    return db.removeBlock(contextId, action);
   }
 
 };
@@ -506,18 +506,18 @@ router.get('/state', handlers.stateGet)
   .summary("Get state of this node")
   .response(schemas.stateGetResponse);
 
-router.put('/testblocks/:app/:act/:contextId', handlers.testblocksPut)
+router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
   .pathParam('app', joi.string().required().description("Unique name of the app"))
-  .pathParam('act', joi.string().required().description("The action name"))
+  .pathParam('action', joi.string().required().description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
   .summary('Add a block on a verification to the user.')
   .description('Add a block on a verification to the user.')
   .response(null);
 
-router.delete('/testblocks/:app/:act/:contextId', handlers.testblocksDelete)
+router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .pathParam('app', joi.string().required().description("Unique name of the app"))
-  .pathParam('act', joi.string().required().description("The action name"))
+  .pathParam('action', joi.string().required().description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
   .summary('Add a block on a verification to the user.')

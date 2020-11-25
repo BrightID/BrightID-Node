@@ -705,19 +705,19 @@ function getState() {
   }
 }
 
-function addBlock(app, contextId, act) {
+function addBlock(app, contextId, action) {
   testblocksColl.insert({
     "app": app,
     "contextId": contextId,
-    "act": act,
+    "action": action,
     "timestamp": Date.now(),
   });
 }
 
-function removeBlock(contextId, act) {
+function removeBlock(contextId, action) {
   testblocksColl.removeByExample({
     "contextId": contextId,
-    "act": act,
+    "action": action,
   });
 }
 
@@ -725,7 +725,7 @@ function getBlocks(app, contextId) {
   return testblocksColl.byExample({
     "app": app,
     "contextId": contextId,
-  }).toArray().map(b => b.act);
+  }).toArray().map(b => b.action);
 }
 
 module.exports = {
