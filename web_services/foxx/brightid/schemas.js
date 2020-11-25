@@ -233,7 +233,7 @@ schemas = Object.assign({
 
   verificationGetResponse: joi.object({
     data: joi.object({
-      unique: joi.string().description("true if user is unique under given application"),
+      unique: joi.string().description("true if user is verified for an app"),
       application: joi.string().description("the application name"),
       context: joi.string().description("the context name"),
       contextIds: joi.array().items(joi.string()).description("list of all contextIds this user linked from most recent to oldest including current active contextId as first member"),
