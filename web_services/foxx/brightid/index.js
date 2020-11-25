@@ -169,6 +169,8 @@ const handlers = {
     if (! user) {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
     }
+
+    const verifications = db.userVerifications(id);
     const connections = db.userConnections(id, 'inbound');
     const groups = db.userGroups(id);
     const requestorConnections = db.userConnections(requestor, 'outbound');
@@ -195,8 +197,6 @@ const handlers = {
       }
     });
 
-    const verified = db.userVerifications(id).map(v => v.name).includes('BrightID');
-
     res.send({
       data: {
         connectionsNum,
@@ -206,7 +206,7 @@ const handlers = {
         connectedAt,
         createdAt: user.createdAt,
         reports,
-        verified
+        verifications
       }
     });
   },

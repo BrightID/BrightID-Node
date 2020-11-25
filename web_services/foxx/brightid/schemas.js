@@ -221,7 +221,7 @@ schemas = Object.assign({
         id: joi.string().required().description('brightid of reporter'),
         reportReason: joi.string().required().description('the reason of reporting'),
       })).description('list of reports for the user specified by id'),
-      verified: joi.boolean().required().description('true if user has BrightID verification')
+      verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has')
     })
   }),
 
