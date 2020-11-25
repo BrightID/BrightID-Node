@@ -17,6 +17,7 @@ const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
+const testblocksColl = db._collection('testblocks');
 
 const {
   uInt8ArrayToB64,
@@ -580,6 +581,9 @@ function linkContextId(id, context, contextId, timestamp) {
     contextId = contextId.toLowerCase();
   }
 
+  // remove testblocks if exists
+  removeTestblock(contextId, 'link');
+
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
@@ -654,9 +658,19 @@ function unusedSponsorships(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, app, timestamp) {
+function sponsor(user, appKey, timestamp) {
+  const app = getApp(appKey);
+  const context = getContext(app.context);
+  if (! context) {
+    throw "context not found";
+  }
+  const coll = db._collection(context.collection);
+  const contextIds = getContextIdsByUser(coll, user);
 
-  if (unusedSponsorships(app) < 1) {
+  // remove testblocks if exists
+  removeTestblock(contextIds[0], 'sponsorship', appKey);
+
+  if (unusedSponsorships(appKey) < 1) {
     throw "app does not have unused sponsorships";
   }
 
@@ -666,7 +680,7 @@ function sponsor(user, app, timestamp) {
 
   sponsorshipsColl.insert({
     _from: 'users/' + user,
-    _to: 'apps/' + app
+    _to: 'apps/' + appKey
   });
 }
 
@@ -694,6 +708,27 @@ function getState() {
     initOp,
     sentOp
   }
+}
+
+function addTestblock(contextId, action, app) {
+  testblocksColl.insert({app, contextId, action,"timestamp": Date.now()});
+}
+
+function removeTestblock(contextId, action, app) {
+  let query;
+  if (app) {
+    query = {app, contextId, action};
+  } else {
+    query = {contextId, action};
+  }
+  testblocksColl.removeByExample(query);
+}
+
+function getTestblocks(app, contextId) {
+  return testblocksColl.byExample({
+    "app": app,
+    "contextId": contextId,
+  }).toArray().map(b => b.action);
 }
 
 module.exports = {
@@ -736,4 +771,7 @@ module.exports = {
   getRecoveryConnections,
   userToDic,
   groupToDic,
+  addTestblock,
+  removeTestblock,
+  getTestblocks,
 };

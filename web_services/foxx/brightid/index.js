@@ -18,7 +18,6 @@ const {
   pad32,
   addressToBytes32,
 } = require('./encoding');
-const crypto = require('@arangodb/crypto');
 const parser = require('expr-eval').Parser;
 
 const router = createRouter();
@@ -40,6 +39,7 @@ const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
+const INVALID_TESTING_KEY = 14;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -81,7 +81,6 @@ const handlers = {
         hash: hash(message)
       }
     });
-
   },
 
   operationGet: function(req, res){
@@ -235,13 +234,26 @@ const handlers = {
   verificationGet: function(req, res){
     let unique = true;
     let contextId = req.param('contextId');
-    let contextName = req.param('context');
-    const verification = req.param('verification');
+    let appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
-    const context = db.getContext(contextName);
+    const app = db.getApp(appKey);
+    if (! app) {
+      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
+    }
+
+    const context = db.getContext(app.context);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
+    }
+
+    const testblocks = db.getTestblocks(appKey, contextId);
+    if (testblocks.includes('link')) {
+      res.throw(404, 'contextId not found', {errorNum: CONTEXTID_NOT_FOUND});
+    } else if (testblocks.includes('sponsorship')) {
+      res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
+    } else if (testblocks.includes('verification')) {
+      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
     if (context.idsAsHex) {
@@ -262,7 +274,7 @@ const handlers = {
     verifications = _.keyBy(verifications, v => v.name);
     let verified;
     try {
-      let expr = parser.parse(verification || 'BrightID');
+      let expr = parser.parse(app.verification);
       for(let v of expr.variables()) {
         if (!verifications[v]) {
           verifications[v] = false;
@@ -273,7 +285,7 @@ const handlers = {
       res.throw(404, 'invalid verification expression', {errorNum: INVALID_EXPRESSION});
     }
     if (! verified) {
-      res.throw(404, 'user can not be verified for this verification expression', {errorNum: CAN_NOT_BE_VERIFIED});
+      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
@@ -290,17 +302,13 @@ const handlers = {
     }
 
     // sign and return the verification
-    let sig, publicKey, verificationHash;
+    let sig, publicKey;
     if (signed == 'nacl') {
       if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
         res.throw(500, 'Server setting key pair not set', {errorNum: KEYPAIR_NOT_SET});
       }
 
-      let message = contextName + ',' + contextIds.join(',');
-      if (verification) {
-        verificationHash = crypto.sha256(verification);
-        message = message + ',' + verificationHash;
-      }
+      let message = appKey + ',' + contextIds.join(',');
       if (timestamp) {
         message = message + ',' + timestamp;
       }
@@ -314,22 +322,13 @@ const handlers = {
         res.throw(500, 'Server setting "ethPrivateKey" not set', {errorNum: ETHPRIVATEKEY_NOT_SET});
       }
 
-      if (!context.ethName) {
-        res.throw(500, `"ethName" not set for context "${contextName}"`, {errorNum: ETHNAME_NOT_SET});
-      }
-
-      contextName = context.ethName;
       let message, h;
       if (context.idsAsHex) {
-        message = pad32(contextName) + contextIds.map(addressToBytes32).join('');
+        message = pad32(appKey) + contextIds.map(addressToBytes32).join('');
       } else {
-        message = pad32(contextName) + contextIds.map(pad32).join('');
+        message = pad32(appKey) + contextIds.map(pad32).join('');
       }
       message = Buffer.from(message, 'binary').toString('hex');
-      if (verification) {
-        verificationHash = crypto.sha256(verification);
-        message += verificationHash;
-      }
       if (timestamp) {
         const t = timestamp.toString(16);
         message += ('0'.repeat(64 - t.length) + t);
@@ -348,10 +347,10 @@ const handlers = {
     res.send({
       data: {
         unique,
-        context: contextName,
+        app: appKey,
+        context: app.context,
         contextIds: contextIds,
         sig,
-        verificationHash,
         timestamp,
         publicKey
       }
@@ -372,8 +371,8 @@ const handlers = {
   },
 
   appGet: function(req, res){
-    const appName = req.param('app');
-    let app = db.getApp(appName);
+    const appKey = req.param('app');
+    let app = db.getApp(appKey);
     if (! app) {
       res.throw(404, 'App not found', {errorNum: APP_NOT_FOUND} );
     } else {
@@ -403,6 +402,40 @@ const handlers = {
     res.send({
       "data": db.getState()
     });
+  },
+
+  testblocksPut: function(req, res){
+    const appKey = req.param('app');
+    const action = req.param('action');
+    const contextId = req.param('contextId');
+    const testingKey = req.param('testingKey');
+
+    const app = db.getApp(appKey);
+    if (! app) {
+      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
+    }
+    if (app.testingKey != testingKey) {
+      res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
+    }
+
+    return db.addTestblock(contextId, action, appKey);
+  },
+
+  testblocksDelete: function(req, res){
+    const appKey = req.param('app');
+    const action = req.param('action');
+    const contextId = req.param('contextId');
+    const testingKey = req.param('testingKey');
+
+    const app = db.getApp(appKey);
+    if (! app) {
+      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
+    }
+    if (app.testingKey != testingKey) {
+      res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
+    }
+
+    return db.removeTestblock(contextId, action, appKey);
   }
 
 };
@@ -447,10 +480,9 @@ router.get('/operations/:hash', handlers.operationGet)
   .response(schemas.operationGetResponse)
   .error(404, 'Operation not found');
 
-router.get('/verifications/:context/:contextId', handlers.verificationGet)
-  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
+router.get('/verifications/:app/:contextId', handlers.verificationGet)
+  .pathParam('app', joi.string().required().description('the app that user is verified for'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .queryParam('verification', joi.string().description('the verification expression that will be evaluated for user.'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .summary('Gets a signed verification')
@@ -483,6 +515,23 @@ router.get('/apps', handlers.allAppsGet)
 router.get('/state', handlers.stateGet)
   .summary("Get state of this node")
   .response(schemas.stateGetResponse);
+
+router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
+  .pathParam('app', joi.string().required().description("The key of app"))
+  .pathParam('action', joi.string().required().description("The action name"))
+  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
+  .queryParam('testingKey', joi.string().required().description('the secret key for testing the app'))
+  .summary("Block user's verification for testing.")
+  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.')
+  .response(null);
+
+router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
+  .pathParam('app', joi.string().required().description("Unique name of the app"))
+  .pathParam('action', joi.string().required().description("The action name"))
+  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
+  .queryParam('testingKey', joi.string().description('the testing private key of the app'))
+  .summary("Remove blocking state applied on user's verification for testing.")
+  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
 
 module.context.use(function (req, res, next) {
   try {

@@ -15,6 +15,7 @@ const collections = {
   'invitations': 'edge',
   'variables': 'document',
   'verifications': 'document',
+  'testblocks': 'document'
 };
 
 // deprecated collections should be added to this array after releasing

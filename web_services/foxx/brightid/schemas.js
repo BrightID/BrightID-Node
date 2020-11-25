@@ -234,7 +234,8 @@ schemas = Object.assign({
 
   verificationGetResponse: joi.object({
     data: joi.object({
-      unique: joi.string().description("true if user is unique under given context"),
+      unique: joi.string().description("true if user is verified for an app"),
+      app: joi.string().description("the key of app"),
       context: joi.string().description("the context name"),
       contextIds: joi.array().items(joi.string()).description("list of all contextIds this user linked from most recent to oldest including current active contextId as first member"),
       timestamp: schemas.timestamp.description("timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter"),
