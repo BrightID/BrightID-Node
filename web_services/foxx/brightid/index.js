@@ -339,6 +339,7 @@ const handlers = {
       data: {
         unique,
         application: appName,
+        context: app.context,
         contextIds: contextIds,
         sig,
         timestamp,
@@ -472,6 +473,7 @@ router.get('/operations/:hash', handlers.operationGet)
 
 router.get('/verifications/:app/:contextId', handlers.verificationGet)
   .pathParam('app', joi.string().required().description('the application in which the user is verified'))
+  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
