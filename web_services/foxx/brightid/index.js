@@ -244,7 +244,7 @@ const handlers = {
     } else if (testblocks.includes('sponsorship')) {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     } else if (testblocks.includes('verification')) {
-      res.throw(404, 'user can not be verified for this application', {errorNum: CAN_NOT_BE_VERIFIED});
+      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
     if (context.idsAsHex) {
@@ -276,7 +276,7 @@ const handlers = {
       res.throw(404, 'invalid verification expression', {errorNum: INVALID_EXPRESSION});
     }
     if (! verified) {
-      res.throw(404, 'user can not be verified for this application', {errorNum: CAN_NOT_BE_VERIFIED});
+      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
@@ -338,7 +338,7 @@ const handlers = {
     res.send({
       data: {
         unique,
-        application: appKey,
+        app: appKey,
         context: app.context,
         contextIds: contextIds,
         sig,
@@ -472,7 +472,7 @@ router.get('/operations/:hash', handlers.operationGet)
   .error(404, 'Operation not found');
 
 router.get('/verifications/:app/:contextId', handlers.verificationGet)
-  .pathParam('app', joi.string().required().description('the application in which the user is verified'))
+  .pathParam('app', joi.string().required().description('the app in which the user is verified'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
