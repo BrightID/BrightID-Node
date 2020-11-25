@@ -663,7 +663,7 @@ function sponsor(user, appName, timestamp) {
   const context = getContext(app.context);
   const coll = db._collection(context.collection);
   const contextIds = getContextIdsByUser(coll, user);
-  removeBlock(contextIds[0], 'sponsorship');
+  removeBlock(contextIds[0], 'sponsorship', appName);
 
   if (unusedSponsorships(appName) < 1) {
     throw "app does not have unused sponsorships";
@@ -714,11 +714,14 @@ function addBlock(app, contextId, action) {
   });
 }
 
-function removeBlock(contextId, action) {
-  testblocksColl.removeByExample({
-    "contextId": contextId,
-    "action": action,
-  });
+function removeBlock(contextId, action, app) {
+  let query;
+  if (app) {
+    query = {app, contextId, action};
+  } else {
+    query = {contextId, action};
+  }
+  testblocksColl.removeByExample(query);
 }
 
 function getBlocks(app, contextId) {
