@@ -409,7 +409,7 @@ const handlers = {
       res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
     }
 
-    return db.addTestblock(appKey, contextId, action);
+    return db.addTestblock(contextId, action, appKey);
   },
 
   testblocksDelete: function(req, res){
