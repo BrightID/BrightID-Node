@@ -71,7 +71,7 @@ function checkLimits(op, timeWindow, limit) {
       sender = 'shared';
     } else {
       const user = usersColl.document(sender);
-      const verifications = Object.keys(db.userVerifications(user._key));
+      const verifications = db.userVerifications(user._key).map(v => v.name);
       verified = verifications && verifications.includes('BrightID');
       if (!verified && user.parent) {
         // this happens when user is not verified but has a verified connection
@@ -149,6 +149,8 @@ function verify(op) {
 }
 
 function apply(op) {
+  // set the block time instead of user timestamp
+  op.timestamp = op.blockTime;
   if (op['name'] == 'Connect') {
     return db.connect(op);
   } else if (op['name'] == 'Add Connection') {
@@ -199,7 +201,7 @@ function encrypt(op) {
 function getMessage(op) {
   const signedOp = {};
   for (let k in op) {
-    if (['sig', 'sig1', 'sig2', 'hash'].includes(k)) {
+    if (['sig', 'sig1', 'sig2', 'hash', 'blockTime'].includes(k)) {
       continue;
     } else if (op.name == 'Set Signing Key' && ['id1', 'id2'].includes(k)) {
       continue;

@@ -3,6 +3,7 @@ const secp256k1 = require('secp256k1');
 const createKeccakHash = require('keccak');
 
 const createRouter = require('@arangodb/foxx/router');
+const _ = require('lodash');
 const joi = require('joi');
 const arango = require('@arangodb').db;
 const nacl = require('tweetnacl');
@@ -17,7 +18,7 @@ const {
   pad32,
   addressToBytes32,
 } = require('./encoding');
-const crypto = require('@arangodb/crypto');
+const parser = require('expr-eval').Parser;
 
 const router = createRouter();
 module.context.use(router);
@@ -38,8 +39,7 @@ const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
-
-const parser = require('expr-eval').Parser;
+const INVALID_TESTING_KEY = 14;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -81,7 +81,6 @@ const handlers = {
         hash: hash(message)
       }
     });
-
   },
 
   operationGet: function(req, res){
@@ -106,9 +105,24 @@ const handlers = {
       res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
     }
 
-    const verifications = Object.keys(db.userVerifications(id));
-    const connections = db.userConnections(id);
-    const groups = db.userGroups(id);
+    const verifications = db.userVerifications(id).map(v => v.name);
+
+    let connections = db.userConnections(id);
+    const connectionsMap = _.keyBy(connections, conn => conn.id);
+    connections = connections.map(conn => {
+      const u = db.userToDic(conn.id);
+      u.level = connectionsMap[conn.id].level;
+      u.reportReason = connectionsMap[conn.id].reportReason;
+      return u;
+    });
+
+    let groups = db.userGroups(id);
+    groups = groups.map(group => {
+      const g = db.groupToDic(group.id);
+      g.joined = group.timestamp;
+      return g;
+    });
+
     const invites = db.userInvitedGroups(id);
     db.updateEligibleGroups(id, connections, groups);
 
@@ -123,6 +137,75 @@ const handlers = {
         connections,
         verifications,
         isSponsored: db.isSponsored(id)
+      }
+    });
+
+  },
+
+  userConnectionsGet: function(req, res) {
+    const id = req.param('id');
+    const direction = req.param('direction');
+    res.send({
+      data: {
+        connections: db.userConnections(id, direction)
+      }
+    });
+  },
+
+  userVerificationsGet: function(req, res) {
+    const id = req.param('id');
+    res.send({
+      data: {
+        verifications: db.userVerifications(id)
+      }
+    });
+  },
+
+  userProfileGet: function(req, res) {
+    const id = req.param('id');
+    const requestor = req.param('requestor');
+    const user = db.loadUser(id);
+    if (! user) {
+      res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
+    }
+
+    const verifications = db.userVerifications(id);
+    const connections = db.userConnections(id, 'inbound');
+    const groups = db.userGroups(id);
+    const requestorConnections = db.userConnections(requestor, 'outbound');
+    const requestorGroups = db.userGroups(requestor);
+
+    const isKnown = c => ['already known', 'recovery'].includes(c.level);
+    const connectionsNum = connections.filter(isKnown).length;
+    const groupsNum = groups.length;
+    const mutualConnections = _.intersection(
+      connections.filter(isKnown).map(c => c.id),
+      requestorConnections.filter(isKnown).map(c => c.id)
+    );
+    const mutualGroups = _.intersection(
+      groups.map(g => g.id),
+      requestorGroups.map(g => g.id)
+    );
+
+    const conn = connections.find(c => c.id === requestor);
+    const connectedAt = conn ? conn.timestamp: 0;
+    const reports = connections.filter(c => c.level === 'reported').map(c => {
+      return {
+        id: c.id,
+        reportReason: c.reportReason
+      }
+    });
+
+    res.send({
+      data: {
+        connectionsNum,
+        groupsNum,
+        mutualConnections,
+        mutualGroups,
+        connectedAt,
+        createdAt: user.createdAt,
+        reports,
+        verifications
       }
     });
   },
@@ -151,13 +234,26 @@ const handlers = {
   verificationGet: function(req, res){
     let unique = true;
     let contextId = req.param('contextId');
-    let contextName = req.param('context');
-    const verification = req.param('verification');
+    let appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
-    const context = db.getContext(contextName);
+    const app = db.getApp(appKey);
+    if (! app) {
+      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
+    }
+
+    const context = db.getContext(app.context);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
+    }
+
+    const testblocks = db.getTestblocks(appKey, contextId);
+    if (testblocks.includes('link')) {
+      res.throw(404, 'contextId not found', {errorNum: CONTEXTID_NOT_FOUND});
+    } else if (testblocks.includes('sponsorship')) {
+      res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
+    } else if (testblocks.includes('verification')) {
+      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
     if (context.idsAsHex) {
@@ -174,22 +270,22 @@ const handlers = {
       res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
     }
 
-    const verifications = db.userVerifications(user);
-    const allVerifications = ['BrightID', 'Yekta', 'DollarForEveryone', 'SeedConnected', 'SeedConnectedWithFriend']
-    for(let v of allVerifications) {
-      if (!verifications[v]) {
-        verifications[v] = false;
-      }
-    }
+    let verifications = db.userVerifications(user);
+    verifications = _.keyBy(verifications, v => v.name);
     let verified;
     try {
-      let expr = parser.parse(verification || 'BrightID');
-      verified = expr.evaluate(verifications)
+      let expr = parser.parse(app.verification);
+      for(let v of expr.variables()) {
+        if (!verifications[v]) {
+          verifications[v] = false;
+        }
+      }
+      verified = expr.evaluate(verifications);
     } catch (err) {
       res.throw(404, 'invalid verification expression', {errorNum: INVALID_EXPRESSION});
     }
     if (! verified) {
-      res.throw(404, 'user can not be verified for this verification expression', {errorNum: CAN_NOT_BE_VERIFIED});
+      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
@@ -206,17 +302,13 @@ const handlers = {
     }
 
     // sign and return the verification
-    let sig, publicKey, verificationHash;
+    let sig, publicKey;
     if (signed == 'nacl') {
       if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
         res.throw(500, 'Server setting key pair not set', {errorNum: KEYPAIR_NOT_SET});
       }
 
-      let message = contextName + ',' + contextIds.join(',');
-      if (verification) {
-        verificationHash = crypto.sha256(verification);
-        message = message + ',' + verificationHash;
-      }
+      let message = appKey + ',' + contextIds.join(',');
       if (timestamp) {
         message = message + ',' + timestamp;
       }
@@ -230,22 +322,13 @@ const handlers = {
         res.throw(500, 'Server setting "ethPrivateKey" not set', {errorNum: ETHPRIVATEKEY_NOT_SET});
       }
 
-      if (!context.ethName) {
-        res.throw(500, `"ethName" not set for context "${contextName}"`, {errorNum: ETHNAME_NOT_SET});
-      }
-
-      contextName = context.ethName;
       let message, h;
       if (context.idsAsHex) {
-        message = pad32(contextName) + contextIds.map(addressToBytes32).join('');
+        message = pad32(appKey) + contextIds.map(addressToBytes32).join('');
       } else {
-        message = pad32(contextName) + contextIds.map(pad32).join('');
+        message = pad32(appKey) + contextIds.map(pad32).join('');
       }
       message = Buffer.from(message, 'binary').toString('hex');
-      if (verification) {
-        verificationHash = crypto.sha256(verification);
-        message += verificationHash;
-      }
       if (timestamp) {
         const t = timestamp.toString(16);
         message += ('0'.repeat(64 - t.length) + t);
@@ -264,10 +347,10 @@ const handlers = {
     res.send({
       data: {
         unique,
-        context: contextName,
+        app: appKey,
+        context: app.context,
         contextIds: contextIds,
         sig,
-        verificationHash,
         timestamp,
         publicKey
       }
@@ -288,8 +371,8 @@ const handlers = {
   },
 
   appGet: function(req, res){
-    const appName = req.param('app');
-    let app = db.getApp(appName);
+    const appKey = req.param('app');
+    let app = db.getApp(appKey);
     if (! app) {
       res.throw(404, 'App not found', {errorNum: APP_NOT_FOUND} );
     } else {
@@ -319,6 +402,40 @@ const handlers = {
     res.send({
       "data": db.getState()
     });
+  },
+
+  testblocksPut: function(req, res){
+    const appKey = req.param('app');
+    const action = req.param('action');
+    const contextId = req.param('contextId');
+    const testingKey = req.param('testingKey');
+
+    const app = db.getApp(appKey);
+    if (! app) {
+      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
+    }
+    if (app.testingKey != testingKey) {
+      res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
+    }
+
+    return db.addTestblock(contextId, action, appKey);
+  },
+
+  testblocksDelete: function(req, res){
+    const appKey = req.param('app');
+    const action = req.param('action');
+    const contextId = req.param('contextId');
+    const testingKey = req.param('testingKey');
+
+    const app = db.getApp(appKey);
+    if (! app) {
+      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
+    }
+    if (app.testingKey != testingKey) {
+      res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
+    }
+
+    return db.removeTestblock(contextId, action, appKey);
   }
 
 };
@@ -333,9 +450,29 @@ router.post('/operations', handlers.operationsPost)
 router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
-  .description("Gets a user's score, verifications, joining date, lists of , current groups, eligible groups, and current connections.")
+  .description("Gets a user's score, verifications, joining date, lists of connections, groups and eligible groups.")
   .response(schemas.userGetResponse)
   .error(404, 'User not found');
+
+router.get('/users/:id/verifications', handlers.userVerificationsGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .summary('Get verifications of a user')
+  .description("Gets list of user's verification objects with their properties")
+  .response(schemas.userVerificationsGetResponse);
+
+router.get('/users/:id/profile/:requestor', handlers.userProfileGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user that info requested about'))
+  .pathParam('requestor', joi.string().required().description('the brightid of the user that requested info'))
+  .summary('Get profile information of a user')
+  .response(schemas.userProfileGetResponse)
+  .error(404, 'User not found');
+
+router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .pathParam('direction', joi.string().required().valid('inbound', 'outbound').description('the direction of the connection'))
+  .summary('Get inbound or outbound connections of a user')
+  .description("Gets list of user's connections with levels and timestamps")
+  .response(schemas.userConnectionsGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
@@ -343,10 +480,9 @@ router.get('/operations/:hash', handlers.operationGet)
   .response(schemas.operationGetResponse)
   .error(404, 'Operation not found');
 
-router.get('/verifications/:context/:contextId', handlers.verificationGet)
-  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
+router.get('/verifications/:app/:contextId', handlers.verificationGet)
+  .pathParam('app', joi.string().required().description('the app that user is verified for'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .queryParam('verification', joi.string().description('the verification expression that will be evaluated for user.'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .summary('Gets a signed verification')
@@ -379,6 +515,23 @@ router.get('/apps', handlers.allAppsGet)
 router.get('/state', handlers.stateGet)
   .summary("Get state of this node")
   .response(schemas.stateGetResponse);
+
+router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
+  .pathParam('app', joi.string().required().description("The key of app"))
+  .pathParam('action', joi.string().required().description("The action name"))
+  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
+  .queryParam('testingKey', joi.string().required().description('the secret key for testing the app'))
+  .summary("Block user's verification for testing.")
+  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.')
+  .response(null);
+
+router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
+  .pathParam('app', joi.string().required().description("Unique name of the app"))
+  .pathParam('action', joi.string().required().description("The action name"))
+  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
+  .queryParam('testingKey', joi.string().description('the testing private key of the app'))
+  .summary("Remove blocking state applied on user's verification for testing.")
+  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
 
 module.context.use(function (req, res, next) {
   try {
