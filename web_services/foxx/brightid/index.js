@@ -175,7 +175,7 @@ const handlers = {
     const requestorConnections = db.userConnections(requestor, 'outbound');
     const requestorGroups = db.userGroups(requestor);
 
-    const isKnown = c => ['already known', 'recovery'].includes(c.level);
+    const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
     const connectionsNum = connections.filter(isKnown).length;
     const groupsNum = groups.length;
     const mutualConnections = _.intersection(

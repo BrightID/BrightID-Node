@@ -5,8 +5,8 @@ const { sha256 } = require('@arangodb/crypto');
 const { query, db } = require('@arangodb');
 
 const _ = require('lodash');
-
 const connectionsColl = db._collection('connections');
+const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersColl = db._collection('users');
@@ -80,11 +80,8 @@ function connect(op) {
     // this if should be removed when v5 dropped and "Add Connection" operation removed
     level = conn ? conn.level : 'just met';
   }
-  if (level == 'recovery' && conn && conn.level == 'recovery') {
-    // do not update timestamp when updating recovery connections because
-    // recovery connections can not help recovering before a cooling time
-    timestamp = conn.timestamp;
-  }
+
+  connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
 
   if (! conn) {
     connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
@@ -627,10 +624,57 @@ function setRecoveryConnections(conns, key, timestamp) {
 }
 
 function getRecoveryConnections(user) {
-  return connectionsColl.byExample({
-    _from: 'users/' + user,
-    level: 'recovery'
-  }).toArray().map(c => c._to.replace('users/', ''));
+  const allConnections = connectionsHistory.byExample({
+    _from == 'users/' + user
+  }).toArray().map(c => {
+    return {
+      _to: c._to.replace('users/', ''),
+      level: c.level,
+      timestamp: c.timestamp
+    }
+  });
+  allConnections.sort((c1, c2) => (c1.timestamp - c2.timestamp));
+
+  // 1) New recovery connections can participate in resetting signing key,
+  //    one week after being set as recovery connection. This limit is not
+  //    applied to recovery connections that users set for the first time.
+  // 2) Removed recovery connections can continue participating in resetting
+  //    signing key, for one week after being removed from recovery connections
+  const borderTime = Date.now() - (7*24*60*60*1000);
+  // when users set their recovery connections for the first time
+  let initTime;
+  const res = [];
+  for (let conn of allConnections) {
+    // ignore not recovery connections
+    if (conn.level != 'recovery') {
+      continue;
+    }
+    // ignore connections to users that are already added to result
+    if (res.includes(conn._to)) {
+      continue;
+    }
+    // init initTime with first recovery connection timestamp
+    if (! initTime) {
+      initTime = conn.timestamp;
+    }
+    // filter connections to a single user
+    const history = allConnections.filter(({ _to }) => (_to == conn._to));
+    const currentLevel = history[history.length - 1].level;
+    if (currentLevel == 'recovery') {
+      if (conn.timestamp < borderTime || conn.timestamp == initTime) {
+        // if recovery level set more than 7 days ago or on the first day
+        res.push(conn._to);
+      }
+    } else {
+      // find the first connection that removed the recovery level
+      const index = _.findIndex(history, conn) + 1;
+      // if recovery level removed less than 7 days ago
+      if (history[index]['timestamp'] > borderTime) {
+        res.push(conn._to);
+      }
+    }
+  }
+  return res;
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {

@@ -4,6 +4,7 @@ const { query } = require('@arangodb');
 
 const collections = {
   'connections': 'edge',
+  'connectionsHistory': 'edge',
   'groups': 'document',
   'usersInGroups': 'edge',
   'users': 'document',
@@ -165,6 +166,21 @@ function v5_3() {
 }
 
 function v5_5() {
+  console.log("add current connections to the connectionsHistory");
+  const connectionsColl = arango._collection('connections');
+  const connectionsHistoryColl = arango._collection('connectionsHistory');
+  connectionsColl.all().toArray().forEach(conn => {
+    connectionsHistoryColl.insert({
+      _from: conn['_from'],
+      _to: conn['_to'],
+      level: conn['level'],
+      reportReason: conn['reportReason'],
+      replacedWith: conn['replacedWith'],
+      requestProof: conn['requestProof'],
+      timestamp: conn['timestamp']
+    });
+  });
+
   console.log("removing 'score' attribute form groups collection");
   const groupsColl = arango._collection('groups');
   query`
