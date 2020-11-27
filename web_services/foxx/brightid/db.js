@@ -80,13 +80,8 @@ function connect(op) {
     // this if should be removed when v5 dropped and "Add Connection" operation removed
     level = conn ? conn.level : 'just met';
   }
-  if (level == 'recovery' && conn && conn.level == 'recovery') {
-    // do not update timestamp when updating recovery connections because
-    // recovery connections can not help recovering before a cooling time
-    timestamp = conn.timestamp;
-  } else {
-    connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
-  }
+
+  connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
 
   if (! conn) {
     connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
@@ -629,38 +624,47 @@ function setRecoveryConnections(conns, key, timestamp) {
 }
 
 function getRecoveryConnections(user) {
-  let connectionsTime = query`
+  const allConnections = query`
     FOR c IN connectionsHistory
       SORT c.timestamp ASC
       FILTER c._from == ${'users/' + user}
-      FILTER c.level == 'recovery'
       RETURN c
-  `.toArray().map(c => c.timestamp);
-
-  const firstConnectionTime = connectionsTime[0] || 0;
+  `.toArray().map(d => {
+      return {
+        _to: d._to.replace('users/', ''),
+        level: d.level,
+        timestamp: d.timestamp
+      }
+    });
   const coolingTime = Date.now() - (7*24*60*60*1000);
-  let current = query`
-    FOR c IN connections
-      FILTER c._from == ${'users/' + user}
-      FILTER c.level == 'recovery'
-      FILTER c.timestamp < ${coolingTime} || c.timestamp == ${firstConnectionTime}
-      RETURN c
-  `.toArray().map(c => c._to);
-
-  let recentlyRemoved = query`
-    FOR c IN connectionsHistory
-      FILTER c._from == ${'users/' + user}
-      FILTER c.level == 'recovery'
-      FILTER c._to NOT IN ${current}
-      FILTER c.timestamp < ${coolingTime}
-      FOR c2 IN connectionsHistory
-        FILTER c2._from == c._from
-        FILTER c2._to == c._to
-        FILTER c2.level != 'recovery'
-        FILTER c2.timestamp > ${coolingTime}
-        RETURN c
-  `.toArray().map(c => c._to);
-  return current.concat(recentlyRemoved).map(c => c.replace('users/', ''));
+  let firstRecoveryTime;
+  const recoveries = [];
+  for (let conn of allConnections) {
+    if (conn.level != 'recovery') {
+      continue;
+    }
+    if (recoveries.includes(conn._to)) {
+      continue;
+    }
+    if (! firstRecoveryTime) {
+      firstRecoveryTime = conn.timestamp;
+    }
+    const connHistory = allConnections.filter(({ _to }) => (_to == conn._to));
+    const currentSituation = connHistory[connHistory.length - 1];
+    if (currentSituation.level == 'recovery') {
+      if (conn.timestamp == firstRecoveryTime) {
+        recoveries.push(conn._to);
+      } else if (conn.timestamp < coolingTime) {
+        recoveries.push(conn._to);
+      }
+    } else {
+      const index = _.findIndex(connHistory, conn) + 1;
+      if (connHistory[index]['timestamp'] > coolingTime) {
+        recoveries.push(conn._to);
+      }
+    }
+  }
+  return recoveries;
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {

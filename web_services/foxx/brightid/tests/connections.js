@@ -159,13 +159,13 @@ describe('trusted connections', function () {
     db.connect({id1: 'a', id2: 'c', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now()});
 
     const recoveryConnections = db.getRecoveryConnections('a');
-    recoveryConnections.should.deep.equal(['d', 'e', 'f', 'c']);
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
   it("don't allow a trusted connection to be used for recovery if it is too new", function() {
     db.connect({id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now()});
 
     const recoveryConnections = db.getRecoveryConnections('a');
-    recoveryConnections.should.deep.equal(['d', 'e', 'f', 'c']);
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 });
