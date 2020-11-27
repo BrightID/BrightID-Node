@@ -624,47 +624,57 @@ function setRecoveryConnections(conns, key, timestamp) {
 }
 
 function getRecoveryConnections(user) {
-  const allConnections = query`
-    FOR c IN connectionsHistory
-      SORT c.timestamp ASC
-      FILTER c._from == ${'users/' + user}
-      RETURN c
-  `.toArray().map(d => {
-      return {
-        _to: d._to.replace('users/', ''),
-        level: d.level,
-        timestamp: d.timestamp
-      }
-    });
-  const coolingTime = Date.now() - (7*24*60*60*1000);
-  let firstRecoveryTime;
-  const recoveries = [];
+  const allConnections = connectionsHistory.byExample({
+    _from == 'users/' + user
+  }).toArray().map(c => {
+    return {
+      _to: c._to.replace('users/', ''),
+      level: c.level,
+      timestamp: c.timestamp
+    }
+  });
+  allConnections.sort((c1, c2) => (c1.timestamp - c2.timestamp));
+
+  // 1) New recovery connections can participate in resetting signing key,
+  //    one week after being set as recovery connection. This limit is not
+  //    applied to recovery connections that users set for the first time.
+  // 2) Removed recovery connections can continue participating in resetting
+  //    signing key, for one week after being removed from recovery connections
+  const borderTime = Date.now() - (7*24*60*60*1000);
+  // when users set their recovery connections for the first time
+  let initTime;
+  const res = [];
   for (let conn of allConnections) {
+    // ignore not recovery connections
     if (conn.level != 'recovery') {
       continue;
     }
-    if (recoveries.includes(conn._to)) {
+    // ignore connections to users that are already added to result
+    if (res.includes(conn._to)) {
       continue;
     }
-    if (! firstRecoveryTime) {
-      firstRecoveryTime = conn.timestamp;
+    // init initTime with first recovery connection timestamp
+    if (! initTime) {
+      initTime = conn.timestamp;
     }
-    const connHistory = allConnections.filter(({ _to }) => (_to == conn._to));
-    const currentSituation = connHistory[connHistory.length - 1];
-    if (currentSituation.level == 'recovery') {
-      if (conn.timestamp == firstRecoveryTime) {
-        recoveries.push(conn._to);
-      } else if (conn.timestamp < coolingTime) {
-        recoveries.push(conn._to);
+    // filter connections to a single user
+    const history = allConnections.filter(({ _to }) => (_to == conn._to));
+    const currentLevel = history[history.length - 1].level;
+    if (currentLevel == 'recovery') {
+      if (conn.timestamp < borderTime || conn.timestamp == initTime) {
+        // if recovery level set more than 7 days ago or on the first day
+        res.push(conn._to);
       }
     } else {
-      const index = _.findIndex(connHistory, conn) + 1;
-      if (connHistory[index]['timestamp'] > coolingTime) {
-        recoveries.push(conn._to);
+      // find the first connection that removed the recovery level
+      const index = _.findIndex(history, conn) + 1;
+      // if recovery level removed less than 7 days ago
+      if (history[index]['timestamp'] > borderTime) {
+        res.push(conn._to);
       }
     }
   }
-  return recoveries;
+  return res;
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {
