@@ -624,8 +624,8 @@ function setRecoveryConnections(conns, key, timestamp) {
 }
 
 function getRecoveryConnections(user) {
-  const allConnections = connectionsHistory.byExample({
-    _from = 'users/' + user
+  const allConnections = connectionsHistoryColl.byExample({
+    _from: 'users/' + user
   }).toArray().map(c => {
     return {
       _to: c._to.replace('users/', ''),
