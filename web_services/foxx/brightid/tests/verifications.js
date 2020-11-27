@@ -42,7 +42,8 @@ describe('verifications', function () {
     query`
       INSERT {
         _key: "testApp",
-        totalSponsorships: 1
+        totalSponsorships: 1,
+        context: "testContext"
       } IN ${appsColl}
     `;
     query`
@@ -104,7 +105,7 @@ describe('verifications', function () {
     });
     it('should throw "app does not have unused sponsorships" if app has no unused sponsorship', function(){
       (() => {
-        db.sponsor('4', 'testApp', 0);
+        db.sponsor('3', 'testApp', 0);
       }).should.throw('app does not have unused sponsorships');
     });
   });
