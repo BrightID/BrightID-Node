@@ -11,29 +11,6 @@ contexts = db['contexts']
 sponsorships = db['sponsorships']
 
 
-def str2bytes32(s):
-    assert len(s) <= 32
-    padding = (2 * (32 - len(s))) * '0'
-    return (bytes(s, 'utf-8')).hex() + padding
-
-
-def update_apps_balance():
-    w3 = Web3(Web3.WebsocketProvider(
-        config.INFURA_URL, websocket_kwargs={'timeout': 60}))
-    if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
-        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-    sp_contract = w3.eth.contract(
-        address=config.SP_ADDRESS,
-        abi=config.SP_ABI)
-
-    for app in db['apps']:
-        app_bytes = str2bytes32(app['_key'])
-        app['totalSponsorships'] = sp_contract.functions.totalContextBalance(
-            app_bytes).call()
-        print(app['_key'], app['totalSponsorships'])
-        db['apps'].update(app)
-
-
 def get_events(app):
     w3 = Web3(Web3.WebsocketProvider(
         app['wsProvider'], websocket_kwargs={'timeout': 60}))
@@ -64,7 +41,8 @@ def get_events(app):
     return sponsoreds, tb
 
 
-def check_sponsor_requests():
+def update():
+    print('Updating sponsors', time.ctime())
     for app in db['apps']:
         if not (app.get('sponsorEventContract') and app.get('wsProvider')):
             continue
@@ -110,12 +88,6 @@ def check_sponsor_requests():
             '_key': 'LAST_BLOCK_LOG_{}'.format(app['_key']),
             'value': tb
         })
-
-
-def update():
-    print('Updating sponsorships', time.ctime())
-    update_apps_balance()
-    check_sponsor_requests()
 
 
 if __name__ == '__main__':

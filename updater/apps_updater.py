@@ -2,8 +2,11 @@ import time
 import base64
 import requests
 import traceback
+from web3 import Web3
 from arango import ArangoClient
+from web3.middleware import geth_poa_middleware
 import config
+
 
 db = ArangoClient().db('_system')
 local_to_json = {
@@ -19,7 +22,13 @@ local_to_json = {
 }
 
 
-def update():
+def str2bytes32(s):
+    assert len(s) <= 32
+    padding = (2 * (32 - len(s))) * '0'
+    return (bytes(s, 'utf-8')).hex() + padding
+
+
+def apps_data():
     print('Updating applications', time.ctime())
     local_apps = {app['_key']: app for app in db['apps']}
 
@@ -56,6 +65,29 @@ def update():
                 except Exception as e:
                     print(f'Error in updating application: {e}')
                 break
+
+
+def apps_balance():
+    print("Updating sponsorships balance of applications", time.ctime())
+    w3 = Web3(Web3.WebsocketProvider(
+        config.INFURA_URL, websocket_kwargs={'timeout': 60}))
+    if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
+        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+    sp_contract = w3.eth.contract(
+        address=config.SP_ADDRESS,
+        abi=config.SP_ABI)
+
+    for app in db['apps']:
+        app_bytes = str2bytes32(app['_key'])
+        app['totalSponsorships'] = sp_contract.functions.totalContextBalance(
+            app_bytes).call()
+        print(app['_key'], app['totalSponsorships'])
+        db['apps'].update(app)
+
+
+def update():
+    apps_data()
+    apps_balance()
 
 
 if __name__ == '__main__':
