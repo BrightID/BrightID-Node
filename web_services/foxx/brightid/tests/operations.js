@@ -73,6 +73,7 @@ function apply(op) {
   delete op._key;
   delete op.hash;
   delete op.state;
+  op.blockTime = op.timestamp;
   const resp2 = request.put(`${applyBaseUrl}/operations/${h}`, {
     body: op,
     json: true
