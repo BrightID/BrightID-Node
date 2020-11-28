@@ -23,7 +23,6 @@ const operations = {
     sig2: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id2'),
   },
   'Remove Connection': {
-    name: joi.string().valid().required().description('operation name'),
     id1: joi.string().required().description('brightid of the user removing the connection'),
     id2: joi.string().required().description('brightid of the second user that the connection with is being removed'),
     reason: joi.string().valid('fake', 'duplicate', 'deceased').required().description('the reason for removing connection specificed by the user represented by id1'),
@@ -103,10 +102,12 @@ const operations = {
 };
 
 Object.keys(operations).forEach(name => {
-  const op = operations[name];
-  op.name = joi.string().valid(name).required().description('operation name');
-  op.timestamp = joi.number().required().description('milliseconds since epoch when the operation created');
-  op.v = joi.number().required().valid(5).description('version of API');
+  operations[name] = Object.assign({
+    name: joi.string().valid(name).required().description('operation name'),
+  }, operations[name], {
+    timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
+    v: joi.number().required().valid(5).description('version of API')
+  });
 });
 
 // extend lower-level schemas with higher-level schemas
