@@ -705,14 +705,12 @@ function unusedSponsorships(app) {
 function sponsor(user, appKey, timestamp) {
   const app = getApp(appKey);
   const context = getContext(app.context);
-  if (! context) {
-    throw "context not found";
+  if (context) {
+    const coll = db._collection(context.collection);
+    const contextIds = getContextIdsByUser(coll, user);
+    // remove testblocks if exists
+    removeTestblock(contextIds[0], 'sponsorship', appKey);
   }
-  const coll = db._collection(context.collection);
-  const contextIds = getContextIdsByUser(coll, user);
-
-  // remove testblocks if exists
-  removeTestblock(contextIds[0], 'sponsorship', appKey);
 
   if (unusedSponsorships(appKey) < 1) {
     throw "app does not have unused sponsorships";
