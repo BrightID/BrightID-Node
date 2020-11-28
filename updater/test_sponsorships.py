@@ -5,7 +5,7 @@ os.environ['BN_UPDATER_SP_INFURA_URL'] = ''
 from eth_keys import keys
 import unittest
 import random
-import sponsors
+import sponsorships
 import string
 import time
 from web3 import Web3
@@ -30,14 +30,16 @@ class TestUpdate(unittest.TestCase):
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.CONTEXT_ID = self.w3.eth.account.create(
             'SIFTALFJAFJMOHSEN').address.lower()
-        self.variables = sponsors.db.collection('variables')
-        self.users = sponsors.db.collection('users')
-        self.apps = sponsors.db.collection('apps')
-        self.contexts = sponsors.db.collection('contexts')
-        self.sponsorships = sponsors.db.collection('sponsorships')
+        self.variables = sponsorships.db.collection('variables')
+        self.users = sponsorships.db.collection('users')
+        self.apps = sponsorships.db.collection('apps')
+        self.contexts = sponsorships.db.collection('contexts')
+        self.sponsorships = sponsorships.db.collection('sponsorships')
         self.contract = self.w3.eth.contract(
             address=self.SPONSOR_EVENT_CONTRACT,
             abi=self.CONTRACT_ABI)
+        self.testblocks = sponsorships.db.collection('testblocks')
+
         self.app = {
             '_key': self.APP,
             'ethName': self.APP,
@@ -62,10 +64,16 @@ class TestUpdate(unittest.TestCase):
             '_key': self.USER,
             'verifications': [self.APP],
         })
-        context_collection = sponsors.db.create_collection(self.APP)
+        context_collection = sponsorships.db.create_collection(self.APP)
         context_collection.insert({
             'user': self.USER,
             'contextId': self.CONTEXT_ID,
+            'timestamp': int(time.time())
+        })
+        self.testblocks.insert({
+            'app': self.APP,
+            'contextId': self.CONTEXT_ID,
+            'action': 'sponsorship',
             'timestamp': int(time.time())
         })
 
@@ -83,7 +91,7 @@ class TestUpdate(unittest.TestCase):
         except:
             pass
         try:
-            sponsors.db.delete_collection(self.APP)
+            sponsorships.db.delete_collection(self.APP)
         except:
             pass
         try:
@@ -132,11 +140,11 @@ class TestUpdate(unittest.TestCase):
             '_key': 'LAST_BLOCK_LOG_{}'.format(self.APP),
             'value': lb - 1
         })
-
-        sponsors.update()
+        sponsorships.update()
         self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())
-
+        self.assertTrue(self.testblocks.find(
+            {'contextId': self.CONTEXT_ID}).empty())
 
 if __name__ == '__main__':
     unittest.main()
