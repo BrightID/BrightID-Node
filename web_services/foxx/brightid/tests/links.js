@@ -15,7 +15,7 @@ const should = chai.should();
 
 const { baseUrl } = module.context;
 
-describe('verifications', function () {
+describe('links & sponsorships', function () {
   before(function(){
     contextIdsColl = arango._create('testIds');
     usersColl.truncate();
@@ -32,7 +32,6 @@ describe('verifications', function () {
       INSERT {
         _key: "testApp",
         totalSponsorships: 1,
-        verification: "testVerification",
         context: "testContext"
       } IN ${appsColl}
     `;
