@@ -38,6 +38,8 @@ class TestUpdate(unittest.TestCase):
         self.contract = self.w3.eth.contract(
             address=self.SPONSOR_EVENT_CONTRACT,
             abi=self.CONTRACT_ABI)
+        self.testblocks = sponsors.db.collection('testblocks')
+
         self.app = {
             '_key': self.APP,
             'ethName': self.APP,
@@ -66,6 +68,12 @@ class TestUpdate(unittest.TestCase):
         context_collection.insert({
             'user': self.USER,
             'contextId': self.CONTEXT_ID,
+            'timestamp': int(time.time())
+        })
+        self.testblocks.insert({
+            'app': self.APP,
+            'contextId': self.CONTEXT_ID,
+            'action': 'sponsorship',
             'timestamp': int(time.time())
         })
 
@@ -132,11 +140,11 @@ class TestUpdate(unittest.TestCase):
             '_key': 'LAST_BLOCK_LOG_{}'.format(self.APP),
             'value': lb - 1
         })
-
         sponsors.update()
         self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())
-
+        self.assertTrue(self.testblocks.find(
+            {'contextId': self.CONTEXT_ID}).empty())
 
 if __name__ == '__main__':
     unittest.main()

@@ -9,6 +9,7 @@ db = ArangoClient().db('_system')
 variables = db['variables']
 contexts = db['contexts']
 sponsorships = db['sponsorships']
+testblocks = db['testblocks']
 
 
 def get_events(app):
@@ -64,6 +65,13 @@ def update():
                 print("the context id doesn't link to any user under this context")
                 continue
             user = c.next()['user']
+
+            # remove testblocks if exists
+            testblocks.delete_match({
+              'contextId': context_id,
+              'action': 'sponsorship',
+              'app': app['_key']
+            })
 
             c = sponsorships.find(
                 {'_from': 'users/{0}'.format(user)})
