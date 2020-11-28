@@ -1,6 +1,6 @@
 import os
 os.environ['BN_UPDATER_SP_ADDRESS'] = '0xFB32926d0A1e2082D12426B2854cb0c945AAF7c6'
-os.environ['BN_UPDATER_SP_INFURA_URL'] = 'wss://rinkeby.infura.io/ws/v3/36e48f8228ad42a297049cabc1101324'
+os.environ['BN_UPDATER_SP_INFURA_URL'] = ''
 
 from eth_keys import keys
 import unittest
@@ -19,8 +19,8 @@ class TestUpdate(unittest.TestCase):
         self.IDS_AS_HEX = True
         self.GAS = 500 * 10**3
         self.GAS_PRICE = 5 * 10**9
-        self.SPONSOR_EVENT_CONTRACT = '0x100fE6F8Fe086f2bD722CcD27e9baf38D76eB187'
-        self.CONTRACT_ABI = '[{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"},{"anonymous": false,"inputs": [{"indexed": false,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"}]'
+        self.SPONSOR_EVENT_CONTRACT = '0xE8572C106662F7Da8D6734F99bADE6BAE33c5DB8'
+        self.CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"},{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"}]'
         self.PRIVATE_KEY = 'EEBED6AE74B73BE44F4706222344E1D90363F64DA2C31B58B29F7A39EB6BFB43'
         self.APP = ''.join(random.choices(string.ascii_uppercase, k=5))
         self.USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
