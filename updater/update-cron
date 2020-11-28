@@ -1,3 +1,3 @@
-* * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u sponsors.py >> /var/log/cron.log 2>&1"
+* * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u sponsorships.py >> /var/log/cron.log 2>&1"
 3-59/5 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u apps.py >> /var/log/cron.log 2>&1"
 5-59/5 * * * * root bash -c "set -o allexport; source /tmp/environment_vars; set +o allexport; cd /code; python3 -u seed_groups.py >> /var/log/cron.log 2>&1"
