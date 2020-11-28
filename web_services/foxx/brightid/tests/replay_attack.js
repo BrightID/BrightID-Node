@@ -59,7 +59,7 @@ describe('replay attack on operations', function () {
 
   it('should not be able to add an operation twice', function () {
     const timestamp = Date.now();
-    
+
     let op = {
       name: 'Add Connection',
       id1: u1.id,
@@ -88,12 +88,14 @@ describe('replay attack on operations', function () {
     delete op._key;
     delete op.hash;
     delete op.state;
+    op.blockTime = op.timestamp;
     const resp2 = request.put(`${applyBaseUrl}/operations/${h}`, {
       body: op,
       json: true
     });
     resp2.json.success.should.equal(true);
     resp2.json.state.should.equal('applied');
+    delete op.blockTime;
 
     const resp3 = request.post(`${baseUrl}/operations`, {
       body: op,
@@ -101,7 +103,8 @@ describe('replay attack on operations', function () {
     });
     resp3.status.should.equal(400);
     resp3.json.errorMessage.should.equal('operation was applied before');
-    
+    op.blockTime = op.timestamp;
+
     const resp4 = request.put(`${applyBaseUrl}/operations/${h}`, {
       body: op,
       json: true
