@@ -3,64 +3,51 @@
 const db = require('../db.js');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
-const request = require("@arangodb/request");
-const { strToUint8Array, uInt8ArrayToB64, b64ToUrlSafeB64 } = require('../encoding');
-const nacl = require('tweetnacl');
-nacl.setPRNG(function(x, n) {
-  for (let i = 0; i < n; i++) {
-    x[i] = Math.floor(Math.random() * 256);
-  }
-});
 
 let contextIdsColl;
 const usersColl = arango._collection('users');
 const contextsColl = arango._collection('contexts');
 const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
-const verificationsColl = arango._collection('verifications');
 
 const chai = require('chai');
 const should = chai.should();
 
 const { baseUrl } = module.context;
 
-describe('verifications', function () {
+describe('links & sponsorships', function () {
   before(function(){
     contextIdsColl = arango._create('testIds');
     usersColl.truncate();
     contextsColl.truncate();
     appsColl.truncate();
     sponsorshipsColl.truncate();
-    verificationsColl.truncate();
     query`
       INSERT {
         _key: "testContext",
         collection: "testIds",
-        verification: "testVerification"
       } IN ${contextsColl}
     `;
     query`
       INSERT {
         _key: "testApp",
-        totalSponsorships: 1
+        totalSponsorships: 1,
+        context: "testContext"
       } IN ${appsColl}
     `;
     query`
       INSERT {
         _key: "2",
-        verifications: ["testVerification"]
       } IN ${usersColl}
     `;
     query`
       INSERT {
         _key: "3",
-        verifications: ["testVerification"]
       } IN ${usersColl}
     `;
     query`
       INSERT {
         _key: "4",
-        verifications: ["testVerification"]
       } IN ${usersColl}
     `;
   });
@@ -70,7 +57,6 @@ describe('verifications', function () {
     contextsColl.truncate();
     appsColl.truncate();
     sponsorshipsColl.truncate();
-    verificationsColl.truncate();
   });
   context('linkContextId()', function() {
     it('should throw "contextId is duplicate" for used contextId', function(){
@@ -104,7 +90,7 @@ describe('verifications', function () {
     });
     it('should throw "app does not have unused sponsorships" if app has no unused sponsorship', function(){
       (() => {
-        db.sponsor('4', 'testApp', 0);
+        db.sponsor('3', 'testApp', 0);
       }).should.throw('app does not have unused sponsorships');
     });
   });

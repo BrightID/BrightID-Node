@@ -4,6 +4,7 @@ const db = require('../db.js');
 const arango = require('@arangodb').db;
 const usersColl = arango._collection('users');
 const connectionsColl = arango._collection('connections');
+const connectionsHistoryColl = arango._collection('connectionsHistory');
 
 const chai = require('chai');
 const should = chai.should();
@@ -39,14 +40,6 @@ describe('connections', function () {
     });
     conn.level.should.equal('reported');
     conn.reportReason.should.equal('duplicate');
-  });
-  it('should not be able to use "removeConnection" to report a connection that does not already knows the reporter', function() {
-    (() => {
-      db.removeConnection('b', 'a', 'duplicate', 0);
-    }).should.throw('not allowed to report');
-    connectionsColl.firstExample({
-      '_from': 'users/b', '_to': 'users/a'
-    }).level.should.equal('already known');
   });
   it('should be able to use "connect" to reset confidence level to "just met"', function() {
     db.connect({id1: 'a', id2: 'b', level: 'just met'});
@@ -108,15 +101,6 @@ describe('connections', function () {
     const a = conns[0];
     a.id.should.equal('a');
     a.level.should.equal('already known');
-    a.flaggers.should.deep.equal({"c": "duplicate"});
-    a.trusted.should.deep.equal(["b", "c"]);
-    a.signingKey.should.equal('newSigningKey');
-    a.createdAt.should.equal(0);
-  });
-
-  it('should not get connnections with one side set "reported" level in "userConnections"', function() {
-    db.userConnections('a').length.should.equal(1);
-    db.userConnections('c').length.should.equal(0);
   });
 
   it('should be able to report someone as replaced', function() {
@@ -129,4 +113,42 @@ describe('connections', function () {
     conn.replacedWith.should.equal('b');
   });
 
+});
+
+describe('trusted connections', function () {
+  before(function(){
+    usersColl.truncate();
+    connectionsColl.truncate();
+    connectionsHistoryColl.truncate();
+  });
+  after(function(){
+    usersColl.truncate();
+    connectionsColl.truncate();
+    connectionsHistoryColl.truncate();
+  });
+  it('users should be able add or remove trusted connections', function() {
+    db.connect({id1: 'a', id2: 'b', level: 'recovery', 'timestamp': 1});
+    db.connect({id1: 'a', id2: 'c', level: 'recovery', 'timestamp': 1});
+    db.connect({id1: 'a', id2: 'd', level: 'recovery', 'timestamp': 1});
+    db.connect({id1: 'a', id2: 'e', level: 'recovery', 'timestamp': 2});
+    db.connect({id1: 'a', id2: 'f', level: 'recovery', 'timestamp': 3});
+    db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate', 'timestamp': 4});
+
+    const recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+  });
+
+  it('remove trusted connection should take one week to take effect to protect against takeover', function() {
+    db.connect({id1: 'a', id2: 'c', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now()});
+
+    const recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+  });
+
+  it("don't allow a trusted connection to be used for recovery if it is too new", function() {
+    db.connect({id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now()});
+
+    const recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+  });
 });

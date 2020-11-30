@@ -5,8 +5,8 @@ const { sha256 } = require('@arangodb/crypto');
 const { query, db } = require('@arangodb');
 
 const _ = require('lodash');
-
 const connectionsColl = db._collection('connections');
+const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersColl = db._collection('users');
@@ -17,6 +17,7 @@ const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
+const testblocksColl = db._collection('testblocks');
 
 const {
   uInt8ArrayToB64,
@@ -52,10 +53,10 @@ function connect(op) {
   }
 
   // set the first verified user that connect to a user as its parent
-  if (!u2.parent && ('BrightID' in userVerifications(key1))) {
+  let verifications = userVerifications(key1);
+  if (!u2.parent && (verifications.map(v => v.name).includes('BrightID'))) {
     usersColl.update(u2, { parent: key1 });
   }
-
 
   const _from = 'users/' + key1;
   const _to = 'users/' + key2;
@@ -79,11 +80,8 @@ function connect(op) {
     // this if should be removed when v5 dropped and "Add Connection" operation removed
     level = conn ? conn.level : 'just met';
   }
-  if (level == 'recovery' && conn && conn.level == 'recovery') {
-    // do not update timestamp when updating recovery connections because
-    // recovery connections can not help recovering before a cooling time
-    timestamp = conn.timestamp;
-  }
+
+  connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
 
   if (! conn) {
     connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
@@ -103,32 +101,42 @@ function removeConnection(reporter, reported, reportReason, timestamp) {
   });
 }
 
-function userConnections(userId) {
-  let conns = connectionsColl.byExample({
-    _from: 'users/' + userId
-  }).toArray();
-
-  conns = _.keyBy(conns, u => u._to.replace("users/", ""));
-
-  return usersColl.documents(Object.keys(conns)).documents.map(u => {
-    const res = {
-      id: u._key,
-      signingKey: u.signingKey,
-      // score is deprecated and will be removed on v6
-      score: u.score,
-      level: conns[u._key].level,
-      verifications: Object.keys(userVerifications(u._key)),
-      hasPrimaryGroup: hasPrimaryGroup(u._key),
-      // trusted is deprecated and will be replaced by recoveryConnections on v6
-      trusted: getRecoveryConnections(u._key),
-      // flaggers is deprecated and will be replaced by reporters on v6
-      flaggers: getReporters(u._key),
-      createdAt: u.createdAt,
-      // eligible_groups is deprecated and will be replaced by eligibleGroups on v6
-      eligible_groups: u.eligible_groups || []
+function userConnections(userId, direction = 'outbound') {
+  let query, resIdAttr;
+  if (direction == 'outbound') {
+    query = { _from: 'users/' + userId };
+    resIdAttr = '_to';
+  } else {
+    query = { _to: 'users/' + userId };
+    resIdAttr = '_from';
+  }
+  return connectionsColl.byExample(query).toArray().map(conn => {
+    return {
+      id: conn[resIdAttr].replace('users/', ''),
+      level: conn.level,
+      reportReason: conn.reportReason || undefined,
+      timestamp: conn.timestamp
     }
-    return res;
   });
+}
+
+function userToDic(userId) {
+  const u = usersColl.document('users/' + userId);
+  return {
+    id: u._key,
+    signingKey: u.signingKey,
+    // score is deprecated and will be removed on v6
+    score: u.score,
+    verifications: userVerifications(u._key).map(v => v.name),
+    hasPrimaryGroup: hasPrimaryGroup(u._key),
+    // trusted is deprecated and will be replaced by recoveryConnections on v6
+    trusted: getRecoveryConnections(u._key),
+    // flaggers is deprecated and will be replaced by reporters on v6
+    flaggers: getReporters(u._key),
+    createdAt: u.createdAt,
+    // eligible_groups is deprecated and will be replaced by eligibleGroups on v6
+    eligible_groups: u.eligible_groups || []
+  }
 }
 
 function getReporters(user) {
@@ -225,7 +233,8 @@ function updateEligibles(groupId) {
   });
 }
 
-function groupToDic(group) {
+function groupToDic(groupId) {
+  const group = groupsColl.document('groups/' + groupId);
   return {
     id: group._key,
     members: groupMembers(group._key),
@@ -243,14 +252,12 @@ function groupToDic(group) {
 function userGroups(userId) {
   return usersInGroupsColl.byExample({
     _from: 'users/' + userId
-  }).toArray().map(
-    ug => {
-      let group = groupsColl.document(ug._to);
-      group = groupToDic(group);
-      group.joined = ug.timestamp;
-      return group;
+  }).toArray().map( ug => {
+    return {
+      id: ug._to.replace('groups/', ''),
+      timestamp: ug.timestamp
     }
-  );
+  });
 }
 
 function userInvitedGroups(userId) {
@@ -259,8 +266,7 @@ function userInvitedGroups(userId) {
   }).toArray().filter(invite => {
     return Date.now() - invite.timestamp < 86400000
   }).map(invite => {
-    let group = groupsColl.document(invite._to);
-    group = groupToDic(group);
+    let group = groupToDic(invite._to.replace('groups/', ''));
     group.inviter = invite.inviter;
     group.inviteId = invite._key;
     group.data = invite.data;
@@ -556,7 +562,13 @@ function userVerifications(user) {
   const verifications = verificationsColl.byExample({
     user
   }).toArray();
-  return _.keyBy(verifications, v => v.name);
+  verifications.forEach(v => {
+    delete v._key;
+    delete v._id;
+    delete v._rev;
+    delete v.user;
+  });
+  return verifications;
 }
 
 function linkContextId(id, context, contextId, timestamp) {
@@ -565,6 +577,9 @@ function linkContextId(id, context, contextId, timestamp) {
   if (idsAsHex) {
     contextId = contextId.toLowerCase();
   }
+
+  // remove testblocks if exists
+  removeTestblock(contextId, 'link');
 
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
@@ -609,10 +624,57 @@ function setRecoveryConnections(conns, key, timestamp) {
 }
 
 function getRecoveryConnections(user) {
-  return connectionsColl.byExample({
-    _from: 'users/' + user,
-    level: 'recovery'
-  }).toArray().map(c => c._to.replace('users/', ''));
+  const allConnections = connectionsHistoryColl.byExample({
+    _from: 'users/' + user
+  }).toArray().map(c => {
+    return {
+      _to: c._to.replace('users/', ''),
+      level: c.level,
+      timestamp: c.timestamp
+    }
+  });
+  allConnections.sort((c1, c2) => (c1.timestamp - c2.timestamp));
+
+  // 1) New recovery connections can participate in resetting signing key,
+  //    one week after being set as recovery connection. This limit is not
+  //    applied to recovery connections that users set for the first time.
+  // 2) Removed recovery connections can continue participating in resetting
+  //    signing key, for one week after being removed from recovery connections
+  const borderTime = Date.now() - (7*24*60*60*1000);
+  // when users set their recovery connections for the first time
+  let initTime;
+  const res = [];
+  for (let conn of allConnections) {
+    // ignore not recovery connections
+    if (conn.level != 'recovery') {
+      continue;
+    }
+    // ignore connections to users that are already added to result
+    if (res.includes(conn._to)) {
+      continue;
+    }
+    // init initTime with first recovery connection timestamp
+    if (! initTime) {
+      initTime = conn.timestamp;
+    }
+    // filter connections to a single user
+    const history = allConnections.filter(({ _to }) => (_to == conn._to));
+    const currentLevel = history[history.length - 1].level;
+    if (currentLevel == 'recovery') {
+      if (conn.timestamp < borderTime || conn.timestamp == initTime) {
+        // if recovery level set more than 7 days ago or on the first day
+        res.push(conn._to);
+      }
+    } else {
+      // find the first connection that removed the recovery level
+      const index = _.findIndex(history, conn) + 1;
+      // if recovery level removed less than 7 days ago
+      if (history[index]['timestamp'] > borderTime) {
+        res.push(conn._to);
+      }
+    }
+  }
+  return res;
 }
 
 function setSigningKey(signingKey, key, signers, timestamp) {
@@ -640,9 +702,17 @@ function unusedSponsorships(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, app, timestamp) {
+function sponsor(user, appKey, timestamp) {
+  const app = getApp(appKey);
+  const context = getContext(app.context);
+  if (context) {
+    const coll = db._collection(context.collection);
+    const contextIds = getContextIdsByUser(coll, user);
+    // remove testblocks if exists
+    removeTestblock(contextIds[0], 'sponsorship', appKey);
+  }
 
-  if (unusedSponsorships(app) < 1) {
+  if (unusedSponsorships(appKey) < 1) {
     throw "app does not have unused sponsorships";
   }
 
@@ -652,7 +722,7 @@ function sponsor(user, app, timestamp) {
 
   sponsorshipsColl.insert({
     _from: 'users/' + user,
-    _to: 'apps/' + app
+    _to: 'apps/' + appKey
   });
 }
 
@@ -680,6 +750,27 @@ function getState() {
     initOp,
     sentOp
   }
+}
+
+function addTestblock(contextId, action, app) {
+  testblocksColl.insert({app, contextId, action,"timestamp": Date.now()});
+}
+
+function removeTestblock(contextId, action, app) {
+  let query;
+  if (app) {
+    query = {app, contextId, action};
+  } else {
+    query = {contextId, action};
+  }
+  testblocksColl.removeByExample(query);
+}
+
+function getTestblocks(app, contextId) {
+  return testblocksColl.byExample({
+    "app": app,
+    "contextId": contextId,
+  }).toArray().map(b => b.action);
 }
 
 module.exports = {
@@ -719,5 +810,10 @@ module.exports = {
   unusedSponsorships,
   getState,
   getReporters,
-  getRecoveryConnections
+  getRecoveryConnections,
+  userToDic,
+  groupToDic,
+  addTestblock,
+  removeTestblock,
+  getTestblocks,
 };

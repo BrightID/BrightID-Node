@@ -1,8 +1,10 @@
 const arango = require('@arangodb').db;
 const db = require('./db');
+const { query } = require('@arangodb');
 
 const collections = {
   'connections': 'edge',
+  'connectionsHistory': 'edge',
   'groups': 'document',
   'usersInGroups': 'edge',
   'users': 'document',
@@ -14,6 +16,7 @@ const collections = {
   'invitations': 'edge',
   'variables': 'document',
   'verifications': 'document',
+  'testblocks': 'document'
 };
 
 // deprecated collections should be added to this array after releasing
@@ -162,7 +165,48 @@ function v5_3() {
   });
 }
 
-const upgrades = ['v5', 'v5_3'];
+function v5_5() {
+  console.log("add current connections to the connectionsHistory");
+  const connectionsColl = arango._collection('connections');
+  const connectionsHistoryColl = arango._collection('connectionsHistory');
+  connectionsColl.all().toArray().forEach(conn => {
+    connectionsHistoryColl.insert({
+      _from: conn['_from'],
+      _to: conn['_to'],
+      level: conn['level'],
+      reportReason: conn['reportReason'],
+      replacedWith: conn['replacedWith'],
+      requestProof: conn['requestProof'],
+      timestamp: conn['timestamp']
+    });
+  });
+
+  console.log("removing 'score' attribute form groups collection");
+  const groupsColl = arango._collection('groups');
+  query`
+    FOR doc IN ${groupsColl}
+      REPLACE UNSET(doc, 'score') IN ${groupsColl}`;
+
+  console.log("removing 'score', 'verifications', 'flaggers', 'trusted' attributes form users collection");
+  const usersColl = arango._collection('users');
+  query`
+    FOR doc IN ${usersColl}
+      REPLACE doc WITH UNSET(doc, 'score', 'verifications', 'flaggers', 'trusted') IN ${usersColl}`;
+
+  console.log("removing 'verification' attribute form contexts collection");
+  const contextsColl = arango._collection('contexts');
+  query`
+    FOR doc IN ${contextsColl}
+      REPLACE doc WITH UNSET(doc, 'verification') IN ${contextsColl}`;
+
+  console.log("removing 'Yekta_0', 'Yekta_1', 'Yekta_2', 'Yekta_3', 'Yekta_4', 'Yekta_5' documents form verifications collection");
+  const verificationsColl = arango._collection('verifications');
+  for (let verificationName of ['Yekta_0', 'Yekta_1', 'Yekta_2', 'Yekta_3', 'Yekta_4', 'Yekta_5']) {
+    verificationsColl.removeByExample({ name: verificationName });
+  }
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5'];
 
 function initdb() {
   createCollections();

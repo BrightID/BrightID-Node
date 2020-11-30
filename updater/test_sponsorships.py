@@ -1,11 +1,11 @@
 import os
 os.environ['BN_UPDATER_SP_ADDRESS'] = '0xFB32926d0A1e2082D12426B2854cb0c945AAF7c6'
-os.environ['BN_UPDATER_SP_INFURA_URL'] = 
+os.environ['BN_UPDATER_SP_INFURA_URL'] = ''
 
 from eth_keys import keys
 import unittest
 import random
-import update
+import sponsorships
 import string
 import time
 from web3 import Web3
@@ -19,8 +19,8 @@ class TestUpdate(unittest.TestCase):
         self.IDS_AS_HEX = True
         self.GAS = 500 * 10**3
         self.GAS_PRICE = 5 * 10**9
-        self.SPONSOR_EVENT_CONTRACT = '0x100fE6F8Fe086f2bD722CcD27e9baf38D76eB187'
-        self.CONTRACT_ABI = '[{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"},{"anonymous": false,"inputs": [{"indexed": false,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"}]'
+        self.SPONSOR_EVENT_CONTRACT = '0xE8572C106662F7Da8D6734F99bADE6BAE33c5DB8'
+        self.CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"},{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"}]'
         self.PRIVATE_KEY = 'EEBED6AE74B73BE44F4706222344E1D90363F64DA2C31B58B29F7A39EB6BFB43'
         self.APP = ''.join(random.choices(string.ascii_uppercase, k=5))
         self.USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
@@ -30,14 +30,16 @@ class TestUpdate(unittest.TestCase):
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.CONTEXT_ID = self.w3.eth.account.create(
             'SIFTALFJAFJMOHSEN').address.lower()
-        self.variables = update.db.collection('variables')
-        self.users = update.db.collection('users')
-        self.apps = update.db.collection('apps')
-        self.contexts = update.db.collection('contexts')
-        self.sponsorships = update.db.collection('sponsorships')
+        self.variables = sponsorships.db.collection('variables')
+        self.users = sponsorships.db.collection('users')
+        self.apps = sponsorships.db.collection('apps')
+        self.contexts = sponsorships.db.collection('contexts')
+        self.sponsorships = sponsorships.db.collection('sponsorships')
         self.contract = self.w3.eth.contract(
             address=self.SPONSOR_EVENT_CONTRACT,
             abi=self.CONTRACT_ABI)
+        self.testblocks = sponsorships.db.collection('testblocks')
+
         self.app = {
             '_key': self.APP,
             'ethName': self.APP,
@@ -62,10 +64,16 @@ class TestUpdate(unittest.TestCase):
             '_key': self.USER,
             'verifications': [self.APP],
         })
-        context_collection = update.db.create_collection(self.APP)
+        context_collection = sponsorships.db.create_collection(self.APP)
         context_collection.insert({
             'user': self.USER,
             'contextId': self.CONTEXT_ID,
+            'timestamp': int(time.time())
+        })
+        self.testblocks.insert({
+            'app': self.APP,
+            'contextId': self.CONTEXT_ID,
+            'action': 'sponsorship',
             'timestamp': int(time.time())
         })
 
@@ -83,7 +91,7 @@ class TestUpdate(unittest.TestCase):
         except:
             pass
         try:
-            update.db.delete_collection(self.APP)
+            sponsorships.db.delete_collection(self.APP)
         except:
             pass
         try:
@@ -121,11 +129,7 @@ class TestUpdate(unittest.TestCase):
         func = self.contract.functions.sponsor(context_id)
         self.send_transaction(func)
 
-    def test_sp_updater(self):
-        # test the context_balance
-        # update.update_apps_balance()
-        # self.assertNotEqual(self.apps['ethereum']['totalSponsorships'], 0)
-
+    def test_sponsors(self):
         # test the sponsor
         lb = self.w3.eth.getBlock('latest').number
         self.sponsor(self.w3.toChecksumAddress(self.CONTEXT_ID))
@@ -136,11 +140,11 @@ class TestUpdate(unittest.TestCase):
             '_key': 'LAST_BLOCK_LOG_{}'.format(self.APP),
             'value': lb - 1
         })
-
-        update.check_sponsor_requests()
+        sponsorships.update()
         self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())
-
+        self.assertTrue(self.testblocks.find(
+            {'contextId': self.CONTEXT_ID}).empty())
 
 if __name__ == '__main__':
     unittest.main()
