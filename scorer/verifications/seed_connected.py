@@ -11,6 +11,7 @@ def addVerificationTo(user, seed, seed_group, block):
     db['verifications'].insert({
         'name': 'SeedConnected',
         'user': user,
+        'seed': seed,
         'seedGroup': seed_group,
         'timestamp': int(time.time() * 1000),
         'block': block
