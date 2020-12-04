@@ -2,7 +2,7 @@ from arango import ArangoClient
 import itertools
 import operator
 import time
-import utils
+from .utils import documents
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 NODE_CONNECTION_LEVELS = ['already known', 'recovery']
@@ -13,7 +13,7 @@ db = ArangoClient().db('_system')
 verifications = {}
 
 
-def addVerificationTo(user, friend):
+def addVerificationTo(user, friend, block):
     global verifications
     if 'SeedConnectedWithFriend' in verifications[user]:
         return
@@ -21,41 +21,43 @@ def addVerificationTo(user, friend):
         'name': 'SeedConnectedWithFriend',
         'user': user,
         'friend': friend,
-        'timestamp': int(time.time() * 1000)
+        'timestamp': int(time.time() * 1000),
+        'block': block
     })
     verifications[user].append('SeedConnectedWithFriend')
-    print(f"user: {user}\tverification: SeedConnectedWithFriend")
 
 
-def verify(fname):
+def verify(fname, past_block, current_block):
     global verifications
     print('SEED CONNECTED WITH FRIEND')
     time_limit = (int(time.time()) * 1000) - GO_BACK_TIME
-
-    verifications_documents = utils.documents(fname, 'verifications')
-    for d in verifications_documents:
+    verifications_docs = documents(fname, 'verifications')
+    for d in verifications_docs:
+        if d['block'] != past_block or d['name'] != 'SeedConnected':
+            continue
         if d['user'] not in verifications:
             verifications[d['user']] = []
         verifications[d['user']].append(d['name'])
 
-    groups = utils.documents(fname, 'groups')
-    seed_groups = list(filter(lambda g: g.get('seed'), groups))
-    seed_groups.sort(key=lambda s: s['timestamp'])
-    seed_groups = [s['_key'] for s in seed_groups]
-    user_groups_documents = utils.documents(fname, 'usersInGroups')
-    user_groups_documents.sort(key=lambda ug: ug['timestamp'])
-    seeds = set()
-    for d in user_groups_documents:
-        group_id = d['_to'].replace('groups/', '')
-        if group_id not in seed_groups:
+    for d in verifications_docs:
+        if d['block'] != past_block or d['name'] != 'SeedConnectedWithFriend':
             continue
-        seeds.add(d['_from'].replace('users/', ''))
+        if 'SeedConnected' not in verifications[d['name']]:
+            continue
+        if 'SeedConnected' not in verifications[d['friend']]:
+            continue
+        addVerificationTo(d['name'], d['friend'], current_block)
 
-    connections_documents = utils.documents(fname, 'connections')
+    groups_docs = documents(fname, 'groups')
+    seed_groups = [g['_id'] for g in groups_docs if g.get('seed')]
+
+    user_groups_docs = documents(fname, 'usersInGroups')
+    seeds = set([d['_from'].replace('users/', '')
+                 for d in user_groups_docs if d['_to'] in seed_groups])
+
+    connections_docs = documents(fname, 'connections')
     connections = {}
-    for d in connections_documents:
-        if d['timestamp'] <= time_limit:
-            continue
+    for d in connections_docs:
         f = d['_from'].replace('users/', '')
         t = d['_to'].replace('users/', '')
         if 'SeedConnected' not in verifications.get(f, []):
@@ -72,11 +74,14 @@ def verify(fname):
     for seed in seeds:
         # seeds get this verification if they have SeedConnected (had quota for themselves)
         if 'SeedConnected' in verifications.get(seed, []):
-            addVerificationTo(seed, None)
+            addVerificationTo(seed, None, current_block)
         conns = connections.get(seed, {})
         conns = sorted(conns.items(), key=operator.itemgetter(1))
         seed_conn_times = {}
         for conn in conns:
+            if conn[1] <= time_limit:
+                continue
+
             neighbor = conn[0].replace('users/', '')
             if neighbor in seeds:
                 continue
@@ -88,8 +93,10 @@ def verify(fname):
 
         pairs = itertools.combinations(seed_conn_times.keys(), 2)
         for pair in pairs:
-            p0verified = 'SeedConnectedWithFriend' in verifications.get(pair[0], [])
-            p1verified = 'SeedConnectedWithFriend' in verifications.get(pair[1], [])
+            p0verified = 'SeedConnectedWithFriend' in verifications.get(
+                pair[0], [])
+            p1verified = 'SeedConnectedWithFriend' in verifications.get(
+                pair[1], [])
             if p0verified and p1verified:
                 continue
 
@@ -105,9 +112,9 @@ def verify(fname):
             if not tf:
                 continue
 
-            addVerificationTo(pair[0], pair[1])
-            addVerificationTo(pair[1], pair[0])
+            addVerificationTo(pair[0], pair[1], current_block)
+            addVerificationTo(pair[1], pair[0], current_block)
 
     verifiedCount = db['verifications'].find(
-        {'name': 'SeedConnectedWithFriend'}).count()
+        {'name': 'SeedConnectedWithFriend', 'block': current_block}).count()
     print(f'verifieds: {verifiedCount}\n')
