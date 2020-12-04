@@ -3,19 +3,26 @@ import traceback
 from datetime import datetime
 from arango import ArangoClient
 from config import *
-from verifications import seed_connected
-from verifications import brightid
-from verifications import dollar_for_everyone
 from verifications import yekta
+from verifications import brightid
+from verifications import seed_connected
+from verifications import dollar_for_everyone
 from verifications import seed_connected_with_friend
 
 db = ArangoClient().db('_system')
+verifiers = [
+    seed_connected,
+    seed_connected_with_friend,
+    yekta,
+    brightid,
+    dollar_for_everyone
+]
 
 
-def process(fname):
-    for verifier in [seed_connected, seed_connected_with_friend, yekta, brightid, dollar_for_everyone]:
+def process(fname, past_block, current_block):
+    for verifier in verifiers:
         try:
-            verifier.verify(fname)
+            verifier.verify(fname, past_block, current_block)
         except Exception as e:
             print(f'Error in verifier: {e}')
             traceback.print_exc()
@@ -39,11 +46,19 @@ def main():
         fname = os.path.join(SNAPSHOTS_PATH, snapshots[0])
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
-        process(fname)
-        block = int(snapshots[0].strip('dump_').strip('.zip'))
-        variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
+        past_block = variables.get('VERIFICATION_BLOCK')['value']
+        current_block = int(snapshots[0].strip('dump_').strip('.zip'))
+        process(fname, past_block, current_block)
+        variables.update(
+            {'_key': 'VERIFICATION_BLOCK', 'value': current_block})
+        wiping_border = past_block - (current_block - past_block)
         if os.path.exists(fname):
             os.remove(fname)
+            db.aql.execute('''
+                FOR v IN verifications
+                    FILTER  v.block < @block
+                    REMOVE { _key: v._key } IN verifications
+                ''', bind_vars={'block': wiping_border})
         else:
             print(f'{fname} does not exist')
         print(
