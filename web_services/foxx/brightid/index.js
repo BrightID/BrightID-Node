@@ -211,7 +211,7 @@ const handlers = {
   },
 
   allVerificationsGet: function(req, res){
-    const contextName = req.param('context');
+    const appKey = req.param('app');
     const count_only = 'count_only' in req.queryParams;
     const app = db.getApp(appKey);
     if (! app) {
