@@ -206,7 +206,15 @@ function v5_5() {
   }
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5'];
+function v5_6() {
+  console.log("removing 'verification' attribute form contexts collection");
+  const contextsColl = arango._collection('contexts');
+  query`
+    FOR doc IN ${contextsColl}
+      REPLACE doc WITH UNSET(doc, 'verification') IN ${contextsColl}`;
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6'];
 
 function initdb() {
   createCollections();
