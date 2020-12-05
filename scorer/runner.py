@@ -70,7 +70,6 @@ def update_apps_verification():
                 print('invalid verification expression')
                 continue
             if verified and app not in verifications:
-                print('+++', user['_key'])
                 db['verifications'].insert({
                     'app': True,
                     'name': app,
@@ -78,7 +77,6 @@ def update_apps_verification():
                     'timestamp': int(time.time() * 1000)
                 })
             elif not verified and app in verifications:
-                print('- - -', user['_key'])
                 db['verifications'].delete_match({
                     'app': True,
                     'name': app,
