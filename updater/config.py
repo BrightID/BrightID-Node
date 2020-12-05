@@ -10,6 +10,7 @@ SP_ABI = '[{"inputs": [], "constant": true, "name": "name", "outputs": [{"type":
 SPONSOR_EVENT_CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"}]'
 
 INFURA_URL = os.environ['BN_UPDATER_SP_INFURA_URL']
+SEED_GROUPS_WS_URL = os.environ['BN_UPDATER_SEED_GROUPS_WS_URL']
 
 CHUNK = 10000
 RECHECK_CHUNK = 300
