@@ -497,7 +497,7 @@ router.get('/verifications/:app/:contextId', handlers.verificationGet)
   .error(404, 'context, contextId or verification not found');
 
 router.get('/verifications/:app', handlers.allVerificationsGet)
-  .pathParam('app', joi.string().required().description('the app in which the user is verified'))
+  .pathParam('app', joi.string().required().description('the app for which the user is verified'))
   .summary('Gets list of all of contextIds')
   .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
   .response(schemas.allVerificationsGetResponse)
