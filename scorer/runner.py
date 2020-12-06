@@ -60,11 +60,11 @@ def update_apps_verification():
     for user in db['users']:
         verifications = get_user_verification(user['_key'])
         for app in apps:
-            expr = parser.parse(apps[app])
-            variables = expr.variables()
-            verifications.update(
-                {k: False for k in variables if k not in verifications})
             try:
+                expr = parser.parse(apps[app])
+                variables = expr.variables()
+                verifications.update(
+                    {k: False for k in variables if k not in verifications})
                 verified = expr.evaluate(verifications)
             except:
                 print('invalid verification expression')
