@@ -212,6 +212,11 @@ function v5_6() {
   query`
     FOR doc IN ${contextsColl}
       REPLACE doc WITH UNSET(doc, 'verification') IN ${contextsColl}`;
+
+  console.log("removing 'ethName' attribute form context collection");
+  query`
+    FOR doc IN ${contextsColl}
+      REPLACE UNSET(doc, 'ethName') IN ${contextsColl}`;
 }
 
 const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6'];
