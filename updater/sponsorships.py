@@ -94,9 +94,6 @@ def update():
             h = base64.b64encode(sha256(message).digest()).decode("ascii")
             op['hash'] = h.replace('/', '_').replace('+', '-').replace('=', '')
             op['state'] = 'init'
-            if db['operationsHashes'].get(op['hash']):
-                print("operation was applied before")
-                continue
             op['_key'] = op['hash']
             operation = db['operations'].get(op['hash'])
             if not operation:
