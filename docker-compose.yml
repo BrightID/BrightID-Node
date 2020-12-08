@@ -49,12 +49,12 @@ services:
       - config.env
     entrypoint: python3 -u sender.py
 
-  sp_updater:
-    build: sp_updater
+  updater:
+    build: updater
     depends_on:
       - db
     network_mode: host
-    image: brightid/sp_updater
+    image: brightid/updater
     env_file:
       - config.env
 
