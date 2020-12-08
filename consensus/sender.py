@@ -8,7 +8,7 @@ from web3 import Web3
 import config
 
 w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
-db = ArangoClient().db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 
 def sendTransaction(data):
     nonce = w3.eth.getTransactionCount(config.ADDRESS, 'pending')

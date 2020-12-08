@@ -2,14 +2,14 @@ import time
 import traceback
 from datetime import datetime
 from arango import ArangoClient
-from config import *
+import config
 from verifications import seed_connected
 from verifications import brightid
 from verifications import dollar_for_everyone
 from verifications import yekta
 from verifications import seed_connected_with_friend
 
-db = ArangoClient().db('_system')
+db = ArangoClient(protocol=config.ARANGO_PROTOCOL, host=config.ARANGO_HOST, port=config.ARANGO_PORT).db('_system')
 
 
 def process(fname):
@@ -36,7 +36,7 @@ def main():
             continue
         snapshots.sort(key=lambda fname: int(
             fname.strip('dump_').strip('.zip')))
-        fname = os.path.join(SNAPSHOTS_PATH, snapshots[0])
+        fname = os.path.join(config.SNAPSHOTS_PATH, snapshots[0])
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
         process(fname)

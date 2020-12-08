@@ -1,10 +1,11 @@
 import time
 from arango import ArangoClient
+import config
 
 
 def verify(fname):
     print('DOLLAR FOR EVERYONE')
-    db = ArangoClient().db('_system')
+    db = ArangoClient(protocol=config.ARANGO_PROTOCOL, host=config.ARANGO_HOST, port=config.ARANGO_PORT).db('_system')
     for admin in db['users'].find({'dfeAdmin': True}):
         conns1 = [c['_to'] for c in db['connections'].find({'_from': admin['_id']}) if c['timestamp'] > 1564600000000]
         conns2 = [c['_from'] for c in db['connections'].find({'_to': admin['_id']}) if c['timestamp'] > 1564600000000]

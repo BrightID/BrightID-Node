@@ -47,5 +47,5 @@ RUN ["chmod", "+x", "/usr/bin/foxx"]
 ENTRYPOINT ["/entrypoint.sh"]
 
 # standard port
-EXPOSE 8529
+# EXPOSE 8529
 CMD ["arangod"]

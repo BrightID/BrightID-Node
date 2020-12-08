@@ -1,0 +1,12 @@
+{
+  "name": "brightid.public.dappnode.eth",
+  "version": "0.1.0",
+  "description": "BrightID Node stores the social graph used by BrightID",
+  "type": "service",
+  "author": "Michael Bauer",
+  "categories": ["Developer tools"],
+  "links": {
+    "homepage": "https://github.com/BrightID/BrightID-Node"
+  },
+  "license": "ISC"
+}

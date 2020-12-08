@@ -1,5 +1,6 @@
 from arango import ArangoClient
 import time
+import config
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 DEFAULT_QUOTA = 50
@@ -7,7 +8,7 @@ DEFAULT_QUOTA = 50
 
 def verify(fname):
     print('SEED CONNECTED')
-    db = ArangoClient().db('_system')
+    db = ArangoClient(protocol=config.ARANGO_PROTOCOL, host=config.ARANGO_HOST, port=config.ARANGO_PORT).db('_system')
     seed_groups = list(db['groups'].find({'seed': True}))
     seed_groups.sort(key=lambda s: s['timestamp'])
     seed_groups_members = {}

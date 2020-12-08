@@ -10,5 +10,5 @@ COPY docker-entrypoint.sh /entrypoint.sh
 COPY wait-for.sh /wait-for.sh
 
 CMD /entrypoint.sh && nodejs server.js
-EXPOSE 3000
+# EXPOSE 3000
 
