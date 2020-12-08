@@ -16,11 +16,16 @@
 ### publish package
 **TODO**
 
-### Package TODO:
-- Detect initial run and populate database accordingly
+## URLs:
+ - ArangoDB WebUI: http://db.brightid.public.dappnode:8529/
+ - BrightID node API: http://web.brightid.public.dappnode/brightid/v5/
+ - Profile service: http://web.brightid.public.dappnode/profile/ 
+
+### Package TODOs:
 - Use IDChain instance running on DAppNode by default?
 
 #### DONE:
+- Detect initial run and populate database accordingly
 - Make sure nginx.conf is correct in web container
   -> DONE (new container "web" based on nginx image)
 - Setup port mapping to access web container (API) from external

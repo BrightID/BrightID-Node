@@ -4,7 +4,6 @@ set -e
 
 INIT_BRIGHTID_DB=0
 
-# if [ "$INIT_BRIGHTID_DB" == "1" ]; then
 if [ ! -f /var/lib/arangodb3/db_initialized ]; then
     echo "Loading brightid dump for initial start..."
     wget https://explorer.brightid.org/backups/brightid.tar.gz

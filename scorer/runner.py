@@ -1,5 +1,6 @@
 import time
 import traceback
+import os
 from datetime import datetime
 from arango import ArangoClient
 import config
@@ -30,7 +31,7 @@ def main():
         })
     while True:
         snapshots = [fname for fname in os.listdir(
-            SNAPSHOTS_PATH) if fname.endswith('.zip')]
+            config.SNAPSHOTS_PATH) if fname.endswith('.zip')]
         if len(snapshots) == 0:
             time.sleep(1)
             continue
