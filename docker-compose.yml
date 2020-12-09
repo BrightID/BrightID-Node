@@ -27,7 +27,7 @@ services:
     volumes:
       - "snapshots:/snapshots"
     environment:
-      BN_CONSENSUS_INFURA_URL: "wss://idchain.one/ws/"
+      BN_CONSENSUS_INFURA_URL: "ws://idchain.public.dappnode:8546"
       BN_CONSENSUS_TO_ADDRESS: "0xb1d1CDd5C4C541f95A73b5748392A6990cBe32b7"
       BN_CONSENSUS_SNAPSHOTS_PERIOD: "240"
       BN_CONSENSUS_APPLY_URL: "http://db:8529/_db/_system/apply{v}/operations/{hash}"
@@ -44,7 +44,7 @@ services:
       - db
     image: "consensus_sender.brightid.public.dappnode.eth:0.1.0"
     environment:
-      BN_CONSENSUS_INFURA_URL: "wss://idchain.one/ws/"
+      BN_CONSENSUS_INFURA_URL: "ws://idchain.public.dappnode:8546"
       BN_CONSENSUS_TO_ADDRESS: "0xb1d1CDd5C4C541f95A73b5748392A6990cBe32b7"
       BN_CONSENSUS_SNAPSHOTS_PERIOD: "240"
       BN_CONSENSUS_APPLY_URL: "http://db:8529/_db/_system/apply{v}/operations/{hash}"
@@ -63,7 +63,7 @@ services:
       BN_UPDATER_SEED_VOTING_ADDRESS: "0x56741DbC203648983c359A48aaf68f25f5550B6a"
       BN_UPDATER_SP_ADDRESS: "0x0aB346a16ceA1B1363b20430C414eAB7bC179324"
       BN_UPDATER_SP_INFURA_URL: ""
-      BN_UPDATER_SEED_GROUPS_WS_URL: "wss://idchain.one/ws/"
+      BN_UPDATER_SEED_GROUPS_WS_URL: "ws://idchain.public.dappnode:8546"
   db:
     build: db
     image: "db.brightid.public.dappnode.eth:0.1.0"
