@@ -10,7 +10,7 @@
   "links": {
     "homepage": "https://github.com/BrightID/BrightID-Node",
     "api": "http://web.brightid-node.public.dappnode/brightid/",
-    "Arango database": "http://db.brightid.public.dappnode:8529/"
+    "Arango database": "http://db.brightid-node.public.dappnode:8529/"
   },
   "mainService": "web",
   "repository": {
