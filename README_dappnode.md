@@ -1,16 +1,7 @@
 ### release a new version
-#### Using docker.com images
-- wget https://github.com/BrightID/BrightID-Node/archive/docker.tar.gz
-- Extract into package directory, omitting the top-most dir of the archive:
-`tar -zxvf docker.tar.gz --strip-components=1`
-- Edit docker-compose.yml:
-  - remove all `build` lines, otherwise dappnodesdk will not use the images from docker.com
-  - make sure all volumes are specified in short syntax (e.g. `- "snapshots:/snapshots"`)
-  - make sure entries under `-volume` are defined with `{}` instead of `null` (e.g.: `snapshots: {}`)
-- Login with docker to enable pulling the images. Follow instructions at https://github.com/BrightID/BrightID-Node/wiki/Installation-Guide#pull-and-run-brightid-docker-images.
-- Build the package: `dappnodesdk build`
-  
-#### Building from git repo directly
+ 
+#### Build from git repo
+- install dappnode SDK: `npm install -g @dappnode/dappnodesdk`
 - Build the package: `dappnodesdk build`
   
 ### publish package
@@ -22,9 +13,11 @@
  - Profile service: http://web.brightid.public.dappnode/profile/ 
 
 ### Package TODOs:
-- Use IDChain instance running on DAppNode by default?
+- Add setup wizard to make sure user sets correct IDChain endpoint, Ethereum mainnet
+  endpoint and private key for consensus packages
 
 #### DONE:
+- Use IDChain instance running on DAppNode by default
 - Detect initial run and populate database accordingly
 - Make sure nginx.conf is correct in web container
   -> DONE (new container "web" based on nginx image)
