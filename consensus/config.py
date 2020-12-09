@@ -18,5 +18,4 @@ APPLY_URL = os.environ['BN_CONSENSUS_APPLY_URL']
 DUMP_URL = os.environ['BN_CONSENSUS_DUMP_URL']
 MAX_COLLECTION_SIZE = os.environ['BN_CONSENSUS_MAX_COLLECTION_SIZE']
 
-# 'db' is the dappnode internal hostname of the database container
-ARANGO_SERVER="http://db:8529"
+ARANGO_SERVER="http://db.brightid-node.public.dappnode:8529"

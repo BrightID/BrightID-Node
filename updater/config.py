@@ -17,5 +17,4 @@ RECHECK_CHUNK = 300
 
 APPS_JSON_FILE = 'https://apps.brightid.org/apps.json'
 
-# 'db' is the dappnode internal hostname of the database container
-ARANGO_SERVER="http://db:8529"
+ARANGO_SERVER="http://db.brightid-node.public.dappnode:8529"

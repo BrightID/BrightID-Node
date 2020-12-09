@@ -1,5 +1,5 @@
 {
-  "name": "brightid.public.dappnode.eth",
+  "name": "brightid-node.public.dappnode.eth",
   "version": "0.1.0",
   "description": "BrightID Node stores the social graph used by BrightID",
   "type": "service",
