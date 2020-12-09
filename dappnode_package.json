@@ -1,12 +1,24 @@
 {
   "name": "brightid-node.public.dappnode.eth",
   "version": "0.1.0",
+  "upstreamVersion": "TBD",
   "description": "BrightID Node stores the social graph used by BrightID",
   "type": "service",
-  "author": "Michael Bauer",
-  "categories": ["Developer tools"],
+  "author": "Michael Bauer <michael@m-bauer.org> (https://github.com/triplespeeder)",
+  "categories": ["Communications","Developer tools"],
+  "keywords": ["BrightID", "Identity", "IDChain"],
   "links": {
-    "homepage": "https://github.com/BrightID/BrightID-Node"
+    "homepage": "https://github.com/BrightID/BrightID-Node",
+    "api": "http://web.brightid-node.public.dappnode/brightid/",
+    "Arango database": "http://db.brightid.public.dappnode:8529/"
+  },
+  "mainService": "web",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/BrightID/BrightID-Node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/BrightID/BrightID-Node/issues"
   },
   "license": "ISC"
 }
