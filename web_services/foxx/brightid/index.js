@@ -33,7 +33,6 @@ const NOT_SPONSORED = 4;
 const OLD_ACCOUNT = 5;
 const KEYPAIR_NOT_SET = 6;
 const ETHPRIVATEKEY_NOT_SET = 7;
-const ETHNAME_NOT_SET = 8;
 const OPERATION_NOT_FOUND = 9;
 const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
