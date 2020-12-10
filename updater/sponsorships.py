@@ -97,8 +97,6 @@ def update():
             operation = db['operations'].get(op['hash'])
             if not operation:
                 db['operations'].insert(op)
-            else:
-                db['operations'].replace(op)
 
         variables.update({
             '_key': 'LAST_BLOCK_LOG_{}'.format(app['_key']),
