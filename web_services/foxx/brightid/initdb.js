@@ -219,7 +219,24 @@ function v5_6() {
       REPLACE UNSET(doc, 'ethName') IN ${contextsColl}`;
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6'];
+function v5_7() {
+  console.log("removing 'Yekta_0', 'Yekta_1', 'Yekta_2', 'Yekta_3', 'Yekta_4', 'Yekta_5' documents form verifications collection");
+  const verificationsColl = arango._collection('verifications');
+  for (let verificationName of ['Yekta_0', 'Yekta_1', 'Yekta_2', 'Yekta_3', 'Yekta_4', 'Yekta_5']) {
+    verificationsColl.removeByExample({ name: verificationName });
+  }
+
+  const variablesColl = arango._collection('variables');
+  const verification_block = variablesColl.document('VERIFICATION_BLOCK').value;
+  const verifications = verificationsColl.all().toArray();
+  for (let verification of verifications) {
+    verificationsColl.update(verification, {
+      block: verification_block
+    });
+  }
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_7'];
 
 function initdb() {
   createCollections();
