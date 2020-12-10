@@ -13,7 +13,6 @@ db = ArangoClient().db('_system')
 variables = db['variables']
 contexts = db['contexts']
 sponsorships = db['sponsorships']
-testblocks = db['testblocks']
 
 
 def get_events(app):
@@ -60,13 +59,6 @@ def update():
             context_id = sponsored['args']['addr'].lower()
             print('checking sponsored\tapp_name: {0}, context_id: {1}'.format(
                 app['_key'], context_id))
-
-            # remove testblocks if exists
-            testblocks.delete_match({
-                'contextId': context_id,
-                'action': 'sponsorship',
-                'app': app['_key']
-            })
 
             # check the context id is linked
             context = contexts[app['context']]
