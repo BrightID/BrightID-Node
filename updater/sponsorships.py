@@ -70,6 +70,13 @@ def update():
 
             # create Sponsor operation
             user = c.next()['user']
+
+            c = sponsorships.find(
+                {'_from': 'users/{0}'.format(user)})
+            if not c.empty():
+                print("the user is sponsored before")
+                continue
+
             op = {
                 'name': 'Sponsor',
                 'app': app['_key'],
