@@ -32,25 +32,26 @@ def verify(fname, past_block, current_block):
     print('SEED CONNECTED WITH FRIEND')
     time_limit = (int(time.time()) * 1000) - GO_BACK_TIME
     verifications_docs = documents(fname, 'verifications')
+    verifications_docs = filter(
+        lambda d: d['block'] == past_block, verifications_docs)
     for d in verifications_docs:
-        if d['block'] != past_block or d['name'] != 'SeedConnected':
+        if d['name'] != 'SeedConnected':
             continue
         if d['user'] not in verifications:
             verifications[d['user']] = []
         verifications[d['user']].append(d['name'])
 
     for d in verifications_docs:
-        if d['block'] != past_block or d['name'] != 'SeedConnectedWithFriend':
+        if d['name'] != 'SeedConnectedWithFriend':
             continue
-        if 'SeedConnected' not in verifications[d['name']]:
+        if 'SeedConnected' not in verifications[d['user']]:
             continue
-        if 'SeedConnected' not in verifications[d['friend']]:
+        if d['friend'] and 'SeedConnected' not in verifications[d['friend']]:
             continue
-        addVerificationTo(d['name'], d['friend'], current_block)
+        addVerificationTo(d['user'], d['friend'], current_block)
 
     groups_docs = documents(fname, 'groups')
-    seed_groups = [g['_id'] for g in groups_docs if g.get('seed')]
-
+    seed_groups = set(g['_id'] for g in groups_docs if g.get('seed'))
     user_groups_docs = documents(fname, 'usersInGroups')
     seeds = set([d['_from'].replace('users/', '')
                  for d in user_groups_docs if d['_to'] in seed_groups])
@@ -118,3 +119,4 @@ def verify(fname, past_block, current_block):
     verifiedCount = db['verifications'].find(
         {'name': 'SeedConnectedWithFriend', 'block': current_block}).count()
     print(f'verifieds: {verifiedCount}\n')
+    verifications = {}
