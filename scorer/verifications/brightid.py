@@ -9,6 +9,8 @@ def verify(fname, past_block, current_block):
     verifications = {}
     verifications_documents = documents(fname, 'verifications')
     for d in verifications_documents:
+        if d['block'] != past_block:
+            continue
         if d['user'] not in verifications:
             verifications[d['user']] = []
         verifications[d['user']].append(d['name'])
