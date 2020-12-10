@@ -55,15 +55,12 @@ def verify(fname, past_block, current_block):
     current_verifieds = set()
     used_quota = {}
     for d in verifications_docs:
-        if d['block'] != past_block:
+        if d['block'] != past_block or d['name'] != 'SeedConnected':
             continue
-        if d['name'] == 'SeedConnected':
-            if d['user'] not in seeds[d['seed']].keys():
-                continue
-            addVerificationTo(d['user'], d['seed'],
-                              d['seedGroup'], current_block)
-            current_verifieds.add(d['user'])
-            used_quota[d['seedGroup']] = used_quota.get(d['seedGroup'], 0) + 1
+        addVerificationTo(d['user'], d.get('seed'),
+                          d['seedGroup'], current_block)
+        current_verifieds.add(d['user'])
+        used_quota[d['seedGroup']] = used_quota.get(d['seedGroup'], 0) + 1
 
     for seed_group in seed_groups_quota:
         members = seed_group_members[seed_group]
