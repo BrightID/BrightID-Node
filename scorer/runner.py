@@ -9,9 +9,9 @@ from verifications import seed_connected
 from verifications import dollar_for_everyone
 from verifications import seed_connected_with_friend
 from py_expression_eval import Parser
+from verifications import utils
 
 db = ArangoClient().db('_system')
-verifications_docs = db.collection('verifications')
 
 verifiers = [
     seed_connected,
@@ -47,38 +47,61 @@ def main():
         snapshots.sort(key=lambda fname: int(
             fname.strip('dump_').strip('.zip')))
         fname = os.path.join(SNAPSHOTS_PATH, snapshots[0])
+
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
-        past_block = variables.get('VERIFICATION_BLOCK')['value']
+        verifications_docs = utils.documents(fname, 'verifications')
+        if verifications_docs:
+            past_block = max(verifications_docs,
+                             key=lambda d: d['block'])['block']
+        else:
+            past_block = 0
         current_block = int(snapshots[0].strip('dump_').strip('.zip'))
+        print(f'past block:{past_block} current block:{current_block}')
         process(fname, past_block, current_block)
-        update_apps_verification()
+        update_apps_verification(fname, past_block, current_block)
         variables.update(
             {'_key': 'VERIFICATION_BLOCK', 'value': current_block})
-        wiping_border = past_block - (current_block - past_block)
+
+        # remove the snapshot file
         if os.path.exists(fname):
             os.remove(fname)
-            db.aql.execute('''
-                FOR v IN verifications
-                    FILTER  v.block < @block
-                    REMOVE { _key: v._key } IN verifications
-                ''', bind_vars={'block': wiping_border})
         else:
             print(f'{fname} does not exist')
+
+        # remove old verifications
+        history_border = past_block - (current_block - past_block)
+        db.aql.execute('''
+            FOR v IN verifications
+                FILTER  v.block < @block
+                REMOVE { _key: v._key } IN verifications
+            ''', bind_vars={'block': history_border})
         print(
             '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
 
 
-def update_apps_verification():
+def update_apps_verification(fname, past_block, current_block):
+    all_verifications = {}
+    for d in utils.documents(fname, 'verifications'):
+        if d['block'] != past_block:
+            continue
+        if d['user'] not in all_verifications:
+            all_verifications[d['user']] = {}
+
+        all_verifications[d['user']][d['name']] = True
+        for k in d:
+            if k in ['_key', '_id', '_rev', 'user', 'name']:
+                continue
+            all_verifications[d['user']][f'{d["name"]}.{k}'] = d[k]
+
     print('Check the users are verified for the apps')
     parser = Parser()
-    apps_docs = db.collection('apps')
-    apps = {app["_key"]: app['verification']
-            for app in apps_docs if app.get('verification')}
 
-    users_docs = db.collection('users')
+    apps = {app["_key"]: app['verification']
+            for app in db['apps'] if app.get('verification')}
+    users_docs = utils.documents(fname, 'users')
     for user in users_docs:
-        verifications = get_user_verification(user['_key'])
+        verifications = all_verifications.get(user['_key'], {})
         for app in apps:
             try:
                 expr = parser.parse(apps[app])
@@ -94,6 +117,7 @@ def update_apps_verification():
                     'app': True,
                     'name': app,
                     'user': user['_key'],
+                    'block': current_block,
                     'timestamp': int(time.time() * 1000)
                 })
             elif not verified and app in verifications:
@@ -104,19 +128,10 @@ def update_apps_verification():
                 })
 
 
-def get_user_verification(user_key):
-    results = {}
-    verifications = filter(lambda v: v['user'] == user_key, verifications_docs)
-    for v in verifications:
-        results[v['name']] = True
-        for k in v:
-            if k in ['_key', '_id', '_rev', 'user', 'name']:
-                continue
-            results[f'{v["name"]}.{k}'] = v[k]
-    return results
-
-
 if __name__ == '__main__':
+    db['verifications'].delete_match({
+        'block': 3809200
+    })
     while True:
         try:
             main()
