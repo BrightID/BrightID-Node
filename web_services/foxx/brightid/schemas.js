@@ -274,6 +274,15 @@ schemas = Object.assign({
     })
   }),
 
+  contextDumpGetResponse: joi.object({
+    data: joi.object({
+      collection: joi.string().description("the context's collection name"),
+      idsAsHex: joi.boolean().description("true if contextIds are hex"),
+      linkAESKey: joi.string().description("the context's linkAESKey"),
+      contextIds: joi.array().items(joi.string()).description('an array of contextIds'),
+    })
+  }),
+
 }, schemas);
 
 

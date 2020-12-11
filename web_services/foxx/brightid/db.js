@@ -773,6 +773,22 @@ function getTestblocks(app, contextId) {
   }).toArray().map(b => b.action);
 }
 
+function getContextIds(coll) {
+  return coll.all().toArray().map(c => {
+    return {
+      user: c.user,
+      contextId: c.contextId,
+      timestamp: c.timestamp
+    }
+  });
+}
+
+function removePasscode(contextKey) {
+  contextsColl.update(contextKey, {
+    passcode: null
+  });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -816,4 +832,6 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  getContextIds,
+  removePasscode,
 };

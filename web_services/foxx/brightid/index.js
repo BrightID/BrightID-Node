@@ -39,6 +39,8 @@ const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
+const INCORRECT_PASSCODE = 15;
+const FORBIDDEN_REQUEST = 16;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -440,8 +442,36 @@ const handlers = {
     }
 
     return db.removeTestblock(contextId, action, appKey);
-  }
+  },
 
+  contextDumpGet: function(req, res){
+    const contextKey = req.param('context');
+    const passcode = req.queryParams['passcode'];
+    const context = db.getContext(contextKey);
+    if (! context) {
+      res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
+    }
+
+    if (! context.passcode) {
+      res.throw(403, 'forbidden request', {errorNum: FORBIDDEN_REQUEST});
+    }
+
+    if (context.passcode != passcode) {
+      res.throw(403, 'incorrect passcode', {errorNum: INCORRECT_PASSCODE});
+    }
+
+    const coll = arango._collection(context.collection);
+    const contextIds = db.getContextIds(coll);
+    db.removePasscode(contextKey);
+    res.send({
+      data: {
+        collection: context.collection,
+        idsAsHex: context.idsAsHex,
+        linkAESKey: context.linkAESKey,
+        contextIds
+      }
+    });
+  }
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -535,7 +565,17 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
   .summary("Remove blocking state applied on user's verification for testing.")
-  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
+  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.");
+
+router.get('/contexts/:context/dump', handlers.contextDumpGet)
+  .pathParam('context', joi.string().required().description('the context key'))
+  .queryParam('passcode', joi.string().required().description('the one time passcode of the context'))
+  .summary("Get a dump of the context's collection")
+  .description('Get a dump of all of contextIds in the context that are linked.')
+  .response(schemas.contextDumpGetResponse)
+  .error(404, 'context not found')
+  .error(403, 'forbidden request')
+  .error(403, 'incorrect passcode');
 
 module.context.use(function (req, res, next) {
   try {
