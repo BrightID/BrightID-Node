@@ -67,8 +67,6 @@ def update():
             if c.empty():
                 print("the context id doesn't link to any user under this context")
                 continue
-
-            # create Sponsor operation
             user = c.next()['user']
 
             c = sponsorships.find(
@@ -77,6 +75,14 @@ def update():
                 print("the user is sponsored before")
                 continue
 
+            tsponsorships = app['totalSponsorships']
+            usponsorships = sponsorships.find(
+                {'_to': 'apps/{0}'.format(app['_key'])}).count()
+            if (tsponsorships - usponsorships < 1):
+                print("the app doesn't have enough sponsorships")
+                continue
+
+            # create Sponsor operation
             op = {
                 'name': 'Sponsor',
                 'app': app['_key'],
