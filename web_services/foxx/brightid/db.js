@@ -542,14 +542,14 @@ function getContextIdsByUser(coll, id) {
   `.toArray();
 }
 
-function getLastContextIds(coll, verification) {
+function getLastContextIds(coll, appKey) {
   return query`
     FOR c IN ${coll}
       FOR u in ${usersColl}
         FILTER c.user == u._key
         FOR v in verifications
           FILTER v.user == u._key
-          FILTER ${verification} == v.name
+          FILTER ${appKey} == v.name
           FOR s IN ${sponsorshipsColl}
             FILTER s._from == u._id
             SORT c.timestamp DESC

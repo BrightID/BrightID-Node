@@ -33,7 +33,6 @@ const NOT_SPONSORED = 4;
 const OLD_ACCOUNT = 5;
 const KEYPAIR_NOT_SET = 6;
 const ETHPRIVATEKEY_NOT_SET = 7;
-const ETHNAME_NOT_SET = 8;
 const OPERATION_NOT_FOUND = 9;
 const USER_NOT_FOUND = 10;
 const IP_NOT_SET = 11;
@@ -211,15 +210,20 @@ const handlers = {
   },
 
   allVerificationsGet: function(req, res){
-    const contextName = req.param('context');
+    const appKey = req.param('app');
     const count_only = 'count_only' in req.queryParams;
-    const context = db.getContext(contextName);
+    const app = db.getApp(appKey);
+    if (! app) {
+      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
+    }
+
+    const context = db.getContext(app.context);
     if (! context) {
       res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
     }
 
     const coll = arango._collection(context.collection);
-    let contextIds = db.getLastContextIds(coll, context.verification);
+    let contextIds = db.getLastContextIds(coll, app._key);
     let data = {
       count: contextIds.length
     }
@@ -491,8 +495,8 @@ router.get('/verifications/:app/:contextId', handlers.verificationGet)
   .error(403, 'user is not sponsored')
   .error(404, 'context, contextId or verification not found');
 
-router.get('/verifications/:context', handlers.allVerificationsGet)
-  .pathParam('context', joi.string().required().description('the context in which the user is verified'))
+router.get('/verifications/:app', handlers.allVerificationsGet)
+  .pathParam('app', joi.string().required().description('the app for which the user is verified'))
   .summary('Gets list of all of contextIds')
   .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
   .response(schemas.allVerificationsGetResponse)

@@ -8,6 +8,7 @@ from verifications import brightid
 from verifications import dollar_for_everyone
 from verifications import yekta
 from verifications import seed_connected_with_friend
+from py_expression_eval import Parser
 
 db = ArangoClient().db('_system')
 
@@ -40,6 +41,7 @@ def main():
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
         process(fname)
+        update_apps_verification()
         block = int(snapshots[0].strip('dump_').strip('.zip'))
         variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
         if os.path.exists(fname):
@@ -48,6 +50,49 @@ def main():
             print(f'{fname} does not exist')
         print(
             '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
+
+
+def update_apps_verification():
+    print('Check the users are verified for the apps')
+    parser = Parser()
+    apps = {app["_key"]: app['verification']
+            for app in db['apps'] if app.get('verification')}
+    for user in db['users']:
+        verifications = get_user_verification(user['_key'])
+        for app in apps:
+            try:
+                expr = parser.parse(apps[app])
+                variables = expr.variables()
+                verifications.update(
+                    {k: False for k in variables if k not in verifications})
+                verified = expr.evaluate(verifications)
+            except:
+                print('invalid verification expression')
+                continue
+            if verified and app not in verifications:
+                db['verifications'].insert({
+                    'app': True,
+                    'name': app,
+                    'user': user['_key'],
+                    'timestamp': int(time.time() * 1000)
+                })
+            elif not verified and app in verifications:
+                db['verifications'].delete_match({
+                    'app': True,
+                    'name': app,
+                    'user': user['_key']
+                })
+
+
+def get_user_verification(user):
+    verifications = {}
+    for v in db['verifications'].find({'user': user}):
+        verifications[v['name']] = True
+        for k in v:
+            if k in ['_key', '_id', '_rev', 'user', 'name']:
+                continue
+            verifications[f'{v["name"]}.{k}'] = v[k]
+    return verifications
 
 
 if __name__ == '__main__':
