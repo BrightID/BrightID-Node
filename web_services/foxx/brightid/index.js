@@ -536,6 +536,7 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
   .summary("Remove blocking state applied on user's verification for testing.")
   .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
+  .response(null);
 
 module.context.use(function (req, res, next) {
   try {
