@@ -1,3 +1,0 @@
-# About this guide
-
-The beginning of an awesome article...
