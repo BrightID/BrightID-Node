@@ -1,0 +1,3171 @@
+{
+  "openapi": "3.0.0",
+  "paths": {
+    "/operations": {
+      "post": {
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "description": "Send operations to idchain to be applied to BrightID nodes' databases after consensus",
+                "oneOf": [
+                  {
+                    "title": "Connect",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Connect"
+                        ],
+                        "type": "string"
+                      },
+                      "id1": {
+                        "description": "brightid of the user making the directed connection",
+                        "type": "string"
+                      },
+                      "id2": {
+                        "description": "brightid of the target of the directed connection",
+                        "type": "string"
+                      },
+                      "sig1": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id1",
+                        "type": "string"
+                      },
+                      "level": {
+                        "description": "level of confidence",
+                        "enum": [
+                          "reported",
+                          "suspicious",
+                          "just met",
+                          "already known",
+                          "recovery"
+                        ],
+                        "type": "string"
+                      },
+                      "reportReason": {
+                        "description": "for reported level, the reason for reporting the user specificed by id2",
+                        "enum": [
+                          "spammer",
+                          "fake",
+                          "duplicate",
+                          "deceased",
+                          "replaced",
+                          "other"
+                        ],
+                        "type": "string"
+                      },
+                      "replacedWith": {
+                        "description": "for reported as replaced, the new brightid of the replaced account",
+                        "type": "string"
+                      },
+                      "requestProof": {
+                        "description": "brightid + \"|\" + timestamp signed by the reported user to prove that he requested the connection",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id1",
+                      "id2",
+                      "sig1",
+                      "level",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Add Connection",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Add Connection"
+                        ],
+                        "type": "string"
+                      },
+                      "id1": {
+                        "description": "brightid of the first user making the connection",
+                        "type": "string"
+                      },
+                      "id2": {
+                        "description": "brightid of the second user making the connection",
+                        "type": "string"
+                      },
+                      "sig1": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id1",
+                        "type": "string"
+                      },
+                      "sig2": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id2",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id1",
+                      "id2",
+                      "sig1",
+                      "sig2",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Remove Connection",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Remove Connection"
+                        ],
+                        "type": "string"
+                      },
+                      "id1": {
+                        "description": "brightid of the user removing the connection",
+                        "type": "string"
+                      },
+                      "id2": {
+                        "description": "brightid of the second user that the connection with is being removed",
+                        "type": "string"
+                      },
+                      "reason": {
+                        "description": "the reason for removing connection specificed by the user represented by id1",
+                        "enum": [
+                          "fake",
+                          "duplicate",
+                          "deceased"
+                        ],
+                        "type": "string"
+                      },
+                      "sig1": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id1",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id1",
+                      "id2",
+                      "reason",
+                      "sig1",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Add Group",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Add Group"
+                        ],
+                        "type": "string"
+                      },
+                      "group": {
+                        "description": "the unique id of the group",
+                        "type": "string"
+                      },
+                      "id1": {
+                        "description": "brightid of the first founder",
+                        "type": "string"
+                      },
+                      "id2": {
+                        "description": "brightid of the second founder",
+                        "type": "string"
+                      },
+                      "id3": {
+                        "description": "brightid of the third founder",
+                        "type": "string"
+                      },
+                      "inviteData2": {
+                        "description": "the group AES key encrypted for signingKey of the user represented by id2",
+                        "type": "string"
+                      },
+                      "inviteData3": {
+                        "description": "the group AES key encrypted for signingKey of the user represented by id3",
+                        "type": "string"
+                      },
+                      "url": {
+                        "description": "the url that group data (profile image and name) encrypted by group AES key can be fetched from",
+                        "type": "string"
+                      },
+                      "type": {
+                        "description": "type of the group",
+                        "enum": [
+                          "general",
+                          "primary"
+                        ],
+                        "type": "string"
+                      },
+                      "sig1": {
+                        "description": "deterministic json representation of operation object signed by the creator of group represented by id1",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "group",
+                      "id1",
+                      "id2",
+                      "id3",
+                      "inviteData2",
+                      "inviteData3",
+                      "url",
+                      "type",
+                      "sig1",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Remove Group",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Remove Group"
+                        ],
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the group admin who want to remove the group",
+                        "type": "string"
+                      },
+                      "group": {
+                        "description": "the unique id of the group",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id1",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id",
+                      "group",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Add Membership",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Add Membership"
+                        ],
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the user wants to join the group",
+                        "type": "string"
+                      },
+                      "group": {
+                        "description": "the unique id of the group that the user represented by id wants to join",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id",
+                      "group",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Remove Membership",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Remove Membership"
+                        ],
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the user wants to leave the group",
+                        "type": "string"
+                      },
+                      "group": {
+                        "description": "the unique id of the group that the user represented by id wants to leave",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id",
+                      "group",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Set Trusted Connections",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Set Trusted Connections"
+                        ],
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the user who is setting his/her trusted connections",
+                        "type": "string"
+                      },
+                      "trusted": {
+                        "description": "brightid list of trusted connections",
+                        "type": "array",
+                        "items": {
+                          "type": "string"
+                        }
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id",
+                      "trusted",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Set Signing Key",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Set Signing Key"
+                        ],
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the user who is trying to recover his/her account by setting new signing key on his/her brightid",
+                        "type": "string"
+                      },
+                      "signingKey": {
+                        "description": "the public key of the new key pair that user will use to sign operations with",
+                        "type": "string"
+                      },
+                      "id1": {
+                        "description": "brightid of a trusted connection of the user represented by id",
+                        "type": "string"
+                      },
+                      "id2": {
+                        "description": "brightid of another trusted connection of the user represented by id",
+                        "type": "string"
+                      },
+                      "sig1": {
+                        "description": "deterministic json representation of operation object signed by the trusted connection represented by id1",
+                        "type": "string"
+                      },
+                      "sig2": {
+                        "description": "deterministic json representation of operation object signed by the trusted connection represented by id2",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id",
+                      "signingKey",
+                      "id1",
+                      "id2",
+                      "sig1",
+                      "sig2",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Link ContextId",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Link ContextId"
+                        ],
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the user who is linking his/her brightid to a context id",
+                        "type": "string"
+                      },
+                      "contextId": {
+                        "description": "the unique id of the user represented by brightid in the specific context",
+                        "type": "string"
+                      },
+                      "encrypted": {
+                        "description": "the json representation of `{id: id, contextId: contextId}` encrypted using an AES key shared between all nodes manage linking brightids to contextIds for a specific context. This field is not sent by clients and will be replaced by `id` and `contextId` fields before sending operation to blockchain to keep the relation of brightids to contextIds private.",
+                        "type": "string"
+                      },
+                      "context": {
+                        "description": "the context name in which the user represented by brightid is linking context id with his/her brightid",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "context",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Sponsor",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Sponsor"
+                        ],
+                        "type": "string"
+                      },
+                      "contextId": {
+                        "description": "the contextId for the user that is being sponsored by context",
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the user that is being sponsored by context. This field is not provided by context owners who sponsor the user as they do not have users brightids. BrightID nodes that are trusted by context owners and have the private key that is used to spend sponsorships assigned to the context, will replace `contextId` by this field before sending this operation to blockchain",
+                        "type": "string"
+                      },
+                      "app": {
+                        "description": "the app name that user is being sponsored by",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the private key shared between context owners and trusted node operators which enable them to spend sponsorships assigned to the context",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "app",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Invite",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Invite"
+                        ],
+                        "type": "string"
+                      },
+                      "inviter": {
+                        "description": "brightid of the user who has admin rights in the group and can invite others to the group",
+                        "type": "string"
+                      },
+                      "invitee": {
+                        "description": "brightid of the user whom is invited to the group",
+                        "type": "string"
+                      },
+                      "group": {
+                        "description": "the unique id of the group that invitee is being invited to",
+                        "type": "string"
+                      },
+                      "data": {
+                        "description": "the group AES key encrypted for signingKey of the invitee",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the inviter",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "inviter",
+                      "invitee",
+                      "group",
+                      "data",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Dismiss",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Dismiss"
+                        ],
+                        "type": "string"
+                      },
+                      "dismisser": {
+                        "description": "brightid of the user who has admin rights in the group and can dismiss others from the group",
+                        "type": "string"
+                      },
+                      "dismissee": {
+                        "description": "brightid of the user whom is dismissed from the group",
+                        "type": "string"
+                      },
+                      "group": {
+                        "description": "the unique id of the group that dismissee is being dismissed from",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the dismisser",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "dismisser",
+                      "dismissee",
+                      "group",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  },
+                  {
+                    "title": "Add Admin",
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "description": "operation name",
+                        "enum": [
+                          "Add Admin"
+                        ],
+                        "type": "string"
+                      },
+                      "id": {
+                        "description": "brightid of the user who has admin rights in the group and can grant administratorship to other members",
+                        "type": "string"
+                      },
+                      "admin": {
+                        "description": "brightid of the member whom is being granted administratorship of the group",
+                        "type": "string"
+                      },
+                      "group": {
+                        "description": "the unique id of the group that new admin is being added to",
+                        "type": "string"
+                      },
+                      "sig": {
+                        "description": "deterministic json representation of operation object signed by the user represented by id",
+                        "type": "string"
+                      },
+                      "timestamp": {
+                        "description": "milliseconds since epoch when the operation created",
+                        "type": "number"
+                      },
+                      "v": {
+                        "description": "version of API",
+                        "enum": [
+                          5
+                        ],
+                        "type": "number"
+                      }
+                    },
+                    "additionalProperties": false,
+                    "patterns": [],
+                    "required": [
+                      "name",
+                      "id",
+                      "admin",
+                      "group",
+                      "sig",
+                      "timestamp",
+                      "v"
+                    ]
+                  }
+                ]
+              }
+            }
+          },
+          "description": "Send operations to idchain to be applied to BrightID nodes' databases after consensus"
+        },
+        "description": "Add an operation be applied after consensus.",
+        "summary": "Add an operation to be applied after consensus",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "hash": {
+                          "description": "sha256 hash of the operation message used for generating signature",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": [],
+                      "required": [
+                        "hash"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Failed to add the operation",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/operations/{hash}": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "sha256 hash of the operation message",
+            "name": "hash",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get state and result of an operation",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "state": {
+                          "description": "state of operation",
+                          "enum": [
+                            "init",
+                            "sent",
+                            "applied",
+                            "failed"
+                          ],
+                          "type": "string"
+                        },
+                        "result": {
+                          "description": "result of operation after being applied. If operation is failed this field contain the reason.",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": []
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Operation not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "the brightid of the user",
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Gets a user's score, verifications, joining date, lists of connections, groups and eligible groups.",
+        "summary": "Get information about a user",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "score": {
+                          "default": 0,
+                          "type": "number",
+                          "minimum": 0,
+                          "maximum": 5
+                        },
+                        "createdAt": {
+                          "type": "integer"
+                        },
+                        "groups": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "description": "unique identifier of the group",
+                                "type": "string"
+                              },
+                              "members": {
+                                "description": "brightids of group members",
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "type": {
+                                "description": "type of group which is \"primary\" or \"general\"",
+                                "type": "string"
+                              },
+                              "founders": {
+                                "description": "brightids of group founders",
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "admins": {
+                                "description": "brightids of group admins",
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "isNew": {
+                                "description": "true if some of founders did not join the group yet and group is still in founding stage",
+                                "type": "boolean"
+                              },
+                              "score": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5
+                              },
+                              "url": {
+                                "description": "url of encrypted group data (name and photo)",
+                                "type": "string"
+                              },
+                              "timestamp": {
+                                "description": "group creation timestamp",
+                                "type": "integer"
+                              },
+                              "joined": {
+                                "description": "timestamp when the user joined",
+                                "type": "integer"
+                              }
+                            },
+                            "additionalProperties": false,
+                            "patterns": [],
+                            "required": [
+                              "id",
+                              "members",
+                              "type",
+                              "founders",
+                              "admins",
+                              "isNew",
+                              "url",
+                              "timestamp",
+                              "joined"
+                            ]
+                          }
+                        },
+                        "invites": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "description": "unique identifier of the group",
+                                "type": "string"
+                              },
+                              "members": {
+                                "description": "brightids of group members",
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "type": {
+                                "description": "type of group which is \"primary\" or \"general\"",
+                                "type": "string"
+                              },
+                              "founders": {
+                                "description": "brightids of group founders",
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "admins": {
+                                "description": "brightids of group admins",
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "isNew": {
+                                "description": "true if some of founders did not join the group yet and group is still in founding stage",
+                                "type": "boolean"
+                              },
+                              "score": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5
+                              },
+                              "url": {
+                                "description": "url of encrypted group data (name and photo)",
+                                "type": "string"
+                              },
+                              "timestamp": {
+                                "description": "group creation timestamp",
+                                "type": "integer"
+                              },
+                              "inviteId": {
+                                "description": "unique identifier of invite",
+                                "type": "string"
+                              },
+                              "invited": {
+                                "description": "timestamp when the user was invited",
+                                "type": "integer"
+                              },
+                              "inviter": {
+                                "description": "brightid of inviter",
+                                "type": "string"
+                              },
+                              "data": {
+                                "description": "encrypted version of the AES key that group name and photo uploaded to `url` encrypted withinvitee should first decrypt this data with his/her signingKey and then fetch data in `url` and decrypt that using the AES key",
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": false,
+                            "patterns": [],
+                            "required": [
+                              "id",
+                              "members",
+                              "type",
+                              "founders",
+                              "admins",
+                              "isNew",
+                              "url",
+                              "timestamp",
+                              "inviteId",
+                              "invited",
+                              "inviter",
+                              "data"
+                            ]
+                          }
+                        },
+                        "connections": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "description": "the user id",
+                                "type": "string"
+                              },
+                              "signingKey": {
+                                "description": "the user signingKey",
+                                "type": "string"
+                              },
+                              "score": {
+                                "default": 0,
+                                "type": "number",
+                                "minimum": 0,
+                                "maximum": 5
+                              },
+                              "level": {
+                                "description": "the confidence level set on this user",
+                                "type": "string"
+                              },
+                              "verifications": {
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "hasPrimaryGroup": {
+                                "description": "true if user has primary group",
+                                "type": "boolean"
+                              },
+                              "trusted": {
+                                "description": "list of trusted connections of the user",
+                                "type": "array",
+                                "items": {
+                                  "type": "string"
+                                }
+                              },
+                              "flaggers": {
+                                "description": "an object containing ids of flaggers as key and reason as value",
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": false,
+                                "patterns": []
+                              },
+                              "createdAt": {
+                                "description": "the user creation timestamp",
+                                "type": "integer"
+                              }
+                            },
+                            "additionalProperties": false,
+                            "patterns": [],
+                            "required": [
+                              "id",
+                              "signingKey",
+                              "level",
+                              "createdAt"
+                            ]
+                          }
+                        },
+                        "verifications": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "isSponsored": {
+                          "type": "boolean"
+                        },
+                        "trusted": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "flaggers": {
+                          "description": "an object containing ids of flaggers as key and reason as value",
+                          "type": "object",
+                          "properties": {},
+                          "additionalProperties": false,
+                          "patterns": []
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": [],
+                      "required": [
+                        "createdAt"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/verifications": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "the brightid of the user",
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Gets list of user's verification objects with their properties",
+        "summary": "Get verifications of a user",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "verifications": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": false,
+                            "patterns": []
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": []
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/profile/{requestor}": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "the brightid of the user that info requested about",
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": true,
+            "description": "the brightid of the user that requested info",
+            "name": "requestor",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get profile information of a user",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "connectionsNum": {
+                          "description": "number of connections with already known or recovery level",
+                          "type": "integer"
+                        },
+                        "groupsNum": {
+                          "description": "number of groups",
+                          "type": "integer"
+                        },
+                        "mutualConnections": {
+                          "description": "brightids of mutual connections",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "mutualGroups": {
+                          "description": "ids of mutual groups",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "connectedAt": {
+                          "description": "timestamp of last connection",
+                          "type": "integer"
+                        },
+                        "createdAt": {
+                          "description": "creation time of user specified by id",
+                          "type": "integer"
+                        },
+                        "reports": {
+                          "description": "list of reports for the user specified by id",
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "description": "brightid of reporter",
+                                "type": "string"
+                              },
+                              "reportReason": {
+                                "description": "the reason of reporting",
+                                "type": "string"
+                              }
+                            },
+                            "additionalProperties": false,
+                            "patterns": [],
+                            "required": [
+                              "id",
+                              "reportReason"
+                            ]
+                          }
+                        },
+                        "verifications": {
+                          "description": "list of verification objects user has with properties each verification has",
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {},
+                            "additionalProperties": false,
+                            "patterns": []
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": [],
+                      "required": [
+                        "connectionsNum",
+                        "groupsNum",
+                        "mutualConnections",
+                        "mutualGroups",
+                        "connectedAt",
+                        "createdAt",
+                        "verifications"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "User not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/users/{id}/connections/{direction}": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "the brightid of the user",
+            "name": "id",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": true,
+            "description": "the direction of the connection",
+            "name": "direction",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Gets list of user's connections with levels and timestamps",
+        "summary": "Get inbound or outbound connections of a user",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "connections": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "description": "the brightid of the connection",
+                                "type": "string"
+                              },
+                              "level": {
+                                "description": "the level of the connection",
+                                "type": "string"
+                              },
+                              "timestamp": {
+                                "description": "the timestamp of the connection",
+                                "type": "integer"
+                              }
+                            },
+                            "additionalProperties": false,
+                            "patterns": [],
+                            "required": [
+                              "id",
+                              "level",
+                              "timestamp"
+                            ]
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": []
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verifications/{app}/{contextId}": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "the app that user is verified for",
+            "name": "app",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": true,
+            "description": "the contextId of user within the context",
+            "name": "contextId",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": false,
+            "description": "the value will be eth or nacl to indicate the type of signature returned",
+            "name": "signed",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": false,
+            "description": "request a timestamp of the specified format to be added to the response. Accepted values: \"seconds\", \"milliseconds\"",
+            "name": "timestamp",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Gets a signed verification for the user that is signed by the node",
+        "summary": "Gets a signed verification",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "unique": {
+                          "description": "true if user is verified for an app",
+                          "type": "string"
+                        },
+                        "app": {
+                          "description": "the key of app",
+                          "type": "string"
+                        },
+                        "context": {
+                          "description": "the context name",
+                          "type": "string"
+                        },
+                        "contextIds": {
+                          "description": "list of all contextIds this user linked from most recent to oldest including current active contextId as first member",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        },
+                        "timestamp": {
+                          "description": "timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter",
+                          "type": "integer"
+                        },
+                        "sig": {
+                          "description": "verification message signed by the node",
+                          "type": "string"
+                        },
+                        "publicKey": {
+                          "description": "the node's public key",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": []
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "user is not sponsored",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "context, contextId or verification not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/verifications/{app}": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "the app for which the user is verified",
+            "name": "app",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Gets list of all of contextIds in the context that are currently linked to unique humans",
+        "summary": "Gets list of all of contextIds",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "contextIds": {
+                          "description": "an array of contextIds",
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": []
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "context not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/ip": {
+      "get": {
+        "summary": "Get this server's IPv4 address",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "ip": {
+                          "description": "IPv4 address in dot-decimal notation.",
+                          "type": "string"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": []
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apps/{app}": {
+      "get": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "Unique name of the app",
+            "name": "app",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "summary": "Get information about an app",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "id": {
+                          "description": "unique app id",
+                          "type": "string"
+                        },
+                        "name": {
+                          "description": "app name",
+                          "type": "string"
+                        },
+                        "context": {
+                          "description": "app context",
+                          "type": "string"
+                        },
+                        "verification": {
+                          "description": "verification required for using the app",
+                          "type": "string"
+                        },
+                        "verificationUrl": {
+                          "description": "the url to PUT a verification with /:id",
+                          "type": "string"
+                        },
+                        "logo": {
+                          "description": "app logo (base64 encoded image)",
+                          "type": "string"
+                        },
+                        "url": {
+                          "description": "the base url for the app",
+                          "type": "string"
+                        },
+                        "assignedSponsorships": {
+                          "description": "number of assigned sponsorships",
+                          "type": "integer"
+                        },
+                        "unusedSponsorships": {
+                          "description": "number of unused sponsorships",
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": [],
+                      "required": [
+                        "id",
+                        "name",
+                        "context",
+                        "verification",
+                        "verificationUrl"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "app not found",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/apps": {
+      "get": {
+        "summary": "Get all apps",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "apps": {
+                          "type": "array",
+                          "items": {
+                            "type": "object",
+                            "properties": {
+                              "id": {
+                                "description": "unique app id",
+                                "type": "string"
+                              },
+                              "name": {
+                                "description": "app name",
+                                "type": "string"
+                              },
+                              "context": {
+                                "description": "app context",
+                                "type": "string"
+                              },
+                              "verification": {
+                                "description": "verification required for using the app",
+                                "type": "string"
+                              },
+                              "verificationUrl": {
+                                "description": "the url to PUT a verification with /:id",
+                                "type": "string"
+                              },
+                              "logo": {
+                                "description": "app logo (base64 encoded image)",
+                                "type": "string"
+                              },
+                              "url": {
+                                "description": "the base url for the app",
+                                "type": "string"
+                              },
+                              "assignedSponsorships": {
+                                "description": "number of assigned sponsorships",
+                                "type": "integer"
+                              },
+                              "unusedSponsorships": {
+                                "description": "number of unused sponsorships",
+                                "type": "integer"
+                              }
+                            },
+                            "additionalProperties": false,
+                            "patterns": [],
+                            "required": [
+                              "id",
+                              "name",
+                              "context",
+                              "verification",
+                              "verificationUrl"
+                            ]
+                          }
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": []
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/state": {
+      "get": {
+        "summary": "Get state of this node",
+        "tags": [],
+        "responses": {
+          "200": {
+            "description": "HTTP 200 OK.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "data": {
+                      "type": "object",
+                      "properties": {
+                        "lastProcessedBlock": {
+                          "description": "last block that consensus receiver service processed",
+                          "type": "integer"
+                        },
+                        "verificationsBlock": {
+                          "description": "the block that scorer service updated verifications based on operations got applied before that block",
+                          "type": "integer"
+                        }
+                      },
+                      "additionalProperties": false,
+                      "patterns": [],
+                      "required": [
+                        "lastProcessedBlock",
+                        "verificationsBlock"
+                      ]
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": []
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/testblocks/{app}/{action}/{contextId}": {
+      "put": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "The key of app",
+            "name": "app",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": true,
+            "description": "The action name",
+            "name": "action",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": true,
+            "description": "the contextId of user within the context",
+            "name": "contextId",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": false,
+            "description": "the secret key for testing the app",
+            "name": "testingKey",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.",
+        "summary": "Block user's verification for testing.",
+        "tags": [],
+        "responses": {
+          "204": {
+            "description": "HTTP 204 No Content."
+          },
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "parameters": [
+          {
+            "required": true,
+            "description": "Unique name of the app",
+            "name": "app",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": true,
+            "description": "The action name",
+            "name": "action",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": true,
+            "description": "the contextId of user within the context",
+            "name": "contextId",
+            "in": "path",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "required": false,
+            "description": "the testing private key of the app",
+            "name": "testingKey",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "description": "Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.",
+        "summary": "Remove blocking state applied on user's verification for testing.",
+        "tags": [],
+        "responses": {
+          "500": {
+            "description": "Default error response.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "error": {
+                      "anyOf": [
+                        {
+                          "type": "any",
+                          "enum": [
+                            true
+                          ]
+                        },
+                        {
+                          "oneOf": [
+                            {
+                              "type": "array",
+                              "items": {}
+                            },
+                            {
+                              "type": "boolean"
+                            },
+                            {
+                              "type": "number"
+                            },
+                            {
+                              "type": "object"
+                            },
+                            {
+                              "type": "string"
+                            }
+                          ],
+                          "nullable": true
+                        }
+                      ]
+                    },
+                    "errorNum": {
+                      "type": "integer"
+                    },
+                    "errorMessage": {
+                      "type": "string"
+                    },
+                    "code": {
+                      "type": "integer"
+                    }
+                  },
+                  "additionalProperties": false,
+                  "patterns": [],
+                  "required": [
+                    "error"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "info": {
+    "title": "brightid",
+    "description": "Allows BrightID clients (typically mobile) to update the social graph.",
+    "version": "5.6.0",
+    "license": {}
+  },
+  "servers": [
+    {
+      "url": "/_db/_system/brightid5"
+    }
+  ]
+}
