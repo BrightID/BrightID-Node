@@ -1,6 +1,10 @@
 import time
+import json
+import base64
+import ed25519
 import traceback
 from web3 import Web3
+from hashlib import sha256
 from arango import ArangoClient
 from web3.middleware import geth_poa_middleware
 import config
@@ -9,7 +13,6 @@ db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 variables = db['variables']
 contexts = db['contexts']
 sponsorships = db['sponsorships']
-testblocks = db['testblocks']
 
 
 def get_events(app):
@@ -45,7 +48,7 @@ def get_events(app):
 def update():
     print('Updating sponsors', time.ctime())
     for app in db['apps']:
-        if not (app.get('sponsorEventContract') and app.get('wsProvider')):
+        if not (app.get('sponsorEventContract') and app.get('wsProvider') and app.get('sponsorPrivateKey')):
             continue
         try:
             sponsoreds, tb = get_events(app)
@@ -54,24 +57,17 @@ def update():
             continue
         for sponsored in sponsoreds:
             context_id = sponsored['args']['addr'].lower()
-
             print('checking sponsored\tapp_name: {0}, context_id: {1}'.format(
                 app['_key'], context_id))
+
+            # check the context id is linked
             context = contexts[app['context']]
             collection = context['collection']
-            c = db[collection].find(
-                {'contextId': context_id})
+            c = db[collection].find({'contextId': context_id})
             if c.empty():
                 print("the context id doesn't link to any user under this context")
                 continue
             user = c.next()['user']
-
-            # remove testblocks if exists
-            testblocks.delete_match({
-              'contextId': context_id,
-              'action': 'sponsorship',
-              'app': app['_key']
-            })
 
             c = sponsorships.find(
                 {'_from': 'users/{0}'.format(user)})
@@ -86,12 +82,28 @@ def update():
                 print("the app doesn't have enough sponsorships")
                 continue
 
-            # sponsor
-            sponsorships.insert({
-                '_from': 'users/{}'.format(user),
-                '_to': 'apps/{}'.format(app['_key'])
-            })
-            print('Sponsored')
+            # create Sponsor operation
+            op = {
+                'name': 'Sponsor',
+                'app': app['_key'],
+                'id': user,
+                'timestamp': int(time.time() * 1000),
+                'v': 5
+            }
+            signing_key = ed25519.SigningKey(
+                base64.b64decode(app['sponsorPrivateKey']))
+            message = json.dumps(op, sort_keys=True,
+                                 separators=(',', ':')).encode('ascii')
+            sig = signing_key.sign(message)
+            op['sig'] = base64.b64encode(sig).decode('ascii')
+            h = base64.b64encode(sha256(message).digest()).decode("ascii")
+            op['hash'] = h.replace('/', '_').replace('+', '-').replace('=', '')
+            op['state'] = 'init'
+            op['_key'] = op['hash']
+            operation = db['operations'].get(op['hash'])
+            if not operation:
+                db['operations'].insert(op)
+
         variables.update({
             '_key': 'LAST_BLOCK_LOG_{}'.format(app['_key']),
             'value': tb
