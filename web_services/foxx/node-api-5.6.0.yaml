@@ -64,7 +64,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
                   required:
                     - name
                     - id1
@@ -104,7 +103,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
                   required:
                     - name
                     - id1
@@ -149,7 +147,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
                   required:
                     - name
                     - id1
@@ -209,7 +206,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
                   required:
                     - name
                     - group
@@ -250,7 +246,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
                   required:
                     - name
                     - id
@@ -286,7 +281,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - id
@@ -322,7 +317,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - id
@@ -360,7 +355,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - id
@@ -409,7 +404,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - id
@@ -462,7 +457,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - context
@@ -508,7 +503,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - app
@@ -550,7 +545,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - inviter
@@ -592,7 +587,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - dismisser
@@ -634,7 +629,7 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  patterns: []
+                  
                   required:
                     - name
                     - id
@@ -664,11 +659,11 @@ paths:
                           generating signature
                         type: string
                     additionalProperties: false
-                    patterns: []
+                    
                     required:
                       - hash
                 additionalProperties: false
-                patterns: []
+                
         "400":
           description: Failed to add the operation
           content:
@@ -696,7 +691,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "500":
@@ -726,7 +721,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -766,9 +761,9 @@ paths:
                           is failed this field contain the reason.
                         type: string
                     additionalProperties: false
-                    patterns: []
+                    
                 additionalProperties: false
-                patterns: []
+                
         "404":
           description: Operation not found
           content:
@@ -796,7 +791,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "500":
@@ -826,7 +821,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -907,7 +902,7 @@ paths:
                               description: timestamp when the user joined
                               type: integer
                           additionalProperties: false
-                          patterns: []
+                          
                           required:
                             - id
                             - members
@@ -976,7 +971,7 @@ paths:
                                 and decrypt that using the AES key
                               type: string
                           additionalProperties: false
-                          patterns: []
+                          
                           required:
                             - id
                             - members
@@ -1027,12 +1022,12 @@ paths:
                               type: object
                               properties: {}
                               additionalProperties: false
-                              patterns: []
+                              
                             createdAt:
                               description: the user creation timestamp
                               type: integer
                           additionalProperties: false
-                          patterns: []
+                          
                           required:
                             - id
                             - signingKey
@@ -1054,13 +1049,13 @@ paths:
                         type: object
                         properties: {}
                         additionalProperties: false
-                        patterns: []
+                        
                     additionalProperties: false
-                    patterns: []
+                    
                     required:
                       - createdAt
                 additionalProperties: false
-                patterns: []
+                
         "404":
           description: User not found
           content:
@@ -1088,7 +1083,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "500":
@@ -1118,7 +1113,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1152,11 +1147,11 @@ paths:
                           type: object
                           properties: {}
                           additionalProperties: false
-                          patterns: []
+                          
                     additionalProperties: false
-                    patterns: []
+                    
                 additionalProperties: false
-                patterns: []
+                
         "500":
           description: Default error response.
           content:
@@ -1184,7 +1179,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1253,7 +1248,7 @@ paths:
                               description: the reason of reporting
                               type: string
                           additionalProperties: false
-                          patterns: []
+                          
                           required:
                             - id
                             - reportReason
@@ -1265,9 +1260,9 @@ paths:
                           type: object
                           properties: {}
                           additionalProperties: false
-                          patterns: []
+                          
                     additionalProperties: false
-                    patterns: []
+                    
                     required:
                       - connectionsNum
                       - groupsNum
@@ -1277,7 +1272,7 @@ paths:
                       - createdAt
                       - verifications
                 additionalProperties: false
-                patterns: []
+                
         "404":
           description: User not found
           content:
@@ -1305,7 +1300,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "500":
@@ -1335,7 +1330,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1384,15 +1379,15 @@ paths:
                               description: the timestamp of the connection
                               type: integer
                           additionalProperties: false
-                          patterns: []
+                          
                           required:
                             - id
                             - level
                             - timestamp
                     additionalProperties: false
-                    patterns: []
+                    
                 additionalProperties: false
-                patterns: []
+                
         "500":
           description: Default error response.
           content:
@@ -1420,7 +1415,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1495,9 +1490,9 @@ paths:
                         description: the node's public key
                         type: string
                     additionalProperties: false
-                    patterns: []
+                    
                 additionalProperties: false
-                patterns: []
+                
         "403":
           description: user is not sponsored
           content:
@@ -1525,7 +1520,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "404":
@@ -1555,7 +1550,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "500":
@@ -1585,7 +1580,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1620,9 +1615,9 @@ paths:
                         items:
                           type: string
                     additionalProperties: false
-                    patterns: []
+                    
                 additionalProperties: false
-                patterns: []
+                
         "404":
           description: context not found
           content:
@@ -1650,7 +1645,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "500":
@@ -1680,7 +1675,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1704,9 +1699,9 @@ paths:
                         description: IPv4 address in dot-decimal notation.
                         type: string
                     additionalProperties: false
-                    patterns: []
+                    
                 additionalProperties: false
-                patterns: []
+                
         "500":
           description: Default error response.
           content:
@@ -1734,7 +1729,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1789,7 +1784,7 @@ paths:
                         description: number of unused sponsorships
                         type: integer
                     additionalProperties: false
-                    patterns: []
+                    
                     required:
                       - id
                       - name
@@ -1797,7 +1792,7 @@ paths:
                       - verification
                       - verificationUrl
                 additionalProperties: false
-                patterns: []
+                
         "404":
           description: app not found
           content:
@@ -1825,7 +1820,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
         "500":
@@ -1855,7 +1850,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1908,7 +1903,7 @@ paths:
                               description: number of unused sponsorships
                               type: integer
                           additionalProperties: false
-                          patterns: []
+                          
                           required:
                             - id
                             - name
@@ -1916,9 +1911,9 @@ paths:
                             - verification
                             - verificationUrl
                     additionalProperties: false
-                    patterns: []
+                    
                 additionalProperties: false
-                patterns: []
+                
         "500":
           description: Default error response.
           content:
@@ -1946,7 +1941,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -1974,12 +1969,12 @@ paths:
                           based on operations got applied before that block
                         type: integer
                     additionalProperties: false
-                    patterns: []
+                    
                     required:
                       - lastProcessedBlock
                       - verificationsBlock
                 additionalProperties: false
-                patterns: []
+                
         "500":
           description: Default error response.
           content:
@@ -2007,7 +2002,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -2073,7 +2068,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -2138,7 +2133,7 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                patterns: []
+                
                 required:
                   - error
       security: []
@@ -2147,7 +2142,12 @@ info:
   title: BrightID-Node
   description: Read and update the anonymous social graph stored on BrightID nodes.
   version: 5.6.0
+  contact:
+    url: https://github.com/BrightID/BrightID-Node
   license:
-    name: ISC
+    name: ISC License
+    url: https://github.com/BrightID/BrightID-Node/blob/master/LICENSE-ISC
 servers:
-  - url: /_db/_system/brightid5
+  - url: http://test.brightid.org/brightid/v5
+  - url: https://app.brightid.org/node/v5
+  - url: http://node.brightid.org/brightid/v5
