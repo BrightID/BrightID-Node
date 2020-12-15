@@ -15,6 +15,7 @@
 ### Package TODOs:
 - Add setup wizard to make sure user sets correct IDChain endpoint, Ethereum mainnet
   endpoint and private key for consensus packages
+- Make private key for consensus sender/recevier optional so it's easy to spin up a "read-only" node
 
 #### DONE:
 - Use IDChain instance running on DAppNode by default
