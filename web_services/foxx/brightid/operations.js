@@ -220,15 +220,23 @@ function updateSponsorOp(op) {
     op.contextId = op.contextId.toLowerCase();
   }
 
-  op.id = db.getUserByContextId(coll, op.contextId)
-  if (!op.id) {
-    throw 'unlinked context id';
+  op.id = db.getUserByContextId(coll, op.contextId);
+  if (op.id) {
+    delete op.contextId;
+    let message = getMessage(op);
+    op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
+    op.hash = hash(message);
+  } else {
+    const sponsorshipsColl = arango._collection('sponsorships');
+    sponsorshipsColl.insert({
+      _from: 'users/0',
+      _to: 'apps/' + op.app,
+      // this sponsor will expire after 1 hour
+      expireDate: Math.ceil((Date.now() / 1000) + 3600),
+      contextId: op.contextId
+    });
+    throw "this context id isn't linked yet, if it becomes linked in one hour it will be sponsored automatically";
   }
-
-  delete op.contextId;
-  let message = getMessage(op);
-  op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
-  op.hash = hash(message);
 }
 
 function decrypt(op) {
