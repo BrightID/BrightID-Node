@@ -2,15 +2,16 @@
  
 #### Build from git repo
 - install dappnode SDK: `npm install -g @dappnode/dappnodesdk`
-- Build the package: `dappnodesdk build`
+- Build the package using compose file for DAppNode: 
+  `dappnodesdk build --compose_file_name docker-compose_Dappnode.yml`
   
 ### publish package
 **TODO**
 
 ## URLs:
- - ArangoDB WebUI: http://db.brightid.public.dappnode:8529/
- - BrightID node API: http://web.brightid.public.dappnode/brightid/v5/
- - Profile service: http://web.brightid.public.dappnode/profile/ 
+ - ArangoDB WebUI: http://db.brightid-node.public.dappnode:8529/
+ - BrightID node API: http://web.brightid-node.public.dappnode/brightid/v5/
+ - Profile service: http://web.brightid-node.public.dappnode/profile/ 
 
 ### Package TODOs:
 - Add setup wizard to make sure user sets correct IDChain endpoint, Ethereum mainnet

@@ -2,9 +2,8 @@
 # Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.6.4/docker-entrypoint.sh
 set -e
 
-INIT_BRIGHTID_DB=0
-
-if [ ! -f /var/lib/arangodb3/db_initialized ]; then
+if [ "$INIT_BRIGHTID_DB" == "1" ] || [ ! -f /var/lib/arangodb3/db_initialized ]; then
+    INIT_BRIGHTID_DB=1
     echo "Loading brightid dump for initial start..."
     wget https://explorer.brightid.org/backups/brightid.tar.gz
     tar xvzf brightid.tar.gz
@@ -13,7 +12,6 @@ if [ ! -f /var/lib/arangodb3/db_initialized ]; then
     cp dump/* /docker-entrypoint-initdb.d/dumps/_system/
     rm dump -r
     touch /var/lib/arangodb3/db_initialized
-    INIT_BRIGHTID_DB=1
 fi
 
 if [ -z "$ARANGO_INIT_PORT" ] ; then
@@ -198,7 +196,7 @@ if [ "$1" = 'arangod' ]; then
         AUTHENTICATION="false"
     fi
 
-    set -- arangod "$@" --server.endpoint=tcp://0.0.0.0:8529 --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf
+    set -- arangod "$@" --server.endpoint=$BN_ARANGO_SERVER_ENDPOINT --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf
 else
     NUMACTL=""
 fi
