@@ -2149,8 +2149,8 @@ info:
     url: https://github.com/BrightID/BrightID-Node/blob/master/LICENSE-ISC
 servers:
   - url: http://test.brightid.org/brightid/v5
-    description: Testnet (http)
+    description: testnet base url
   - url: https://app.brightid.org/node/v5
-    description: Mainnet (https)
+    description: mainnet base url
   - url: http://node.brightid.org/brightid/v5
-    description: Mainnet (http)
+    description: mainnet base url
