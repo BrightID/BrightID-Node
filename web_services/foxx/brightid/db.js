@@ -642,7 +642,7 @@ function getRecoveryConnections(user) {
   //    signing key, for one week after being removed from recovery connections
   const borderTime = Date.now() - (7*24*60*60*1000);
   // when users set their recovery connections for the first time
-  let initTime;
+  let initTimeBorder;
   const res = [];
   for (let conn of allConnections) {
     // ignore not recovery connections
@@ -653,15 +653,15 @@ function getRecoveryConnections(user) {
     if (res.includes(conn._to)) {
       continue;
     }
-    // init initTime with first recovery connection timestamp
-    if (! initTime) {
-      initTime = conn.timestamp;
+    // init the initTimeBorder with first recovery connection timestamp plus 24 hours
+    if (! initTimeBorder) {
+      initTimeBorder = conn.timestamp + (24*60*60*1000);
     }
     // filter connections to a single user
     const history = allConnections.filter(({ _to }) => (_to == conn._to));
     const currentLevel = history[history.length - 1].level;
     if (currentLevel == 'recovery') {
-      if (conn.timestamp < borderTime || conn.timestamp == initTime) {
+      if (conn.timestamp < borderTime || conn.timestamp < initTimeBorder) {
         // if recovery level set more than 7 days ago or on the first day
         res.push(conn._to);
       }

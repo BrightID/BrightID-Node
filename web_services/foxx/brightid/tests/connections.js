@@ -151,4 +151,17 @@ describe('trusted connections', function () {
     const recoveryConnections = db.getRecoveryConnections('a');
     recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
   });
+
+  it("ignore cooling period from recovery connections set in the first day", function() {
+    connectionsColl.truncate();
+    connectionsHistoryColl.truncate();
+    const firstConnTime = Date.now() - 4*24*60*60*1000;
+    db.connect({id1: 'a', id2: 'b', level: 'recovery', 'timestamp': firstConnTime});
+    db.connect({id1: 'a', id2: 'c', level: 'recovery', 'timestamp': firstConnTime + (5*60*60*1000)});
+    db.connect({id1: 'a', id2: 'd', level: 'recovery', 'timestamp': firstConnTime + (22*60*60*1000)});
+    db.connect({id1: 'a', id2: 'e', level: 'recovery', 'timestamp': firstConnTime + (30*60*60*1000)});
+    const recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['b', 'c', 'd']);
+  });
+
 });
