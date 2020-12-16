@@ -77,16 +77,12 @@ services:
       - 8529
 
   web:
-    build:
-      context: ./web
-      dockerfile: Dockerfile
-      args:
-        NGINXCONF: "brightid-nginx.conf"
+    image: nginx
+    volumes:
+      - ./web_services/brightid-nginx.conf:/etc/nginx/nginx.conf
     network_mode: host
-    image: brightid/web
     env_file:
       - config.env
-
 
 volumes:
   snapshots:
