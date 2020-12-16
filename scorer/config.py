@@ -1,6 +1,6 @@
 import os
 
 SNAPSHOTS_PATH = "/snapshots"
-ARANGO_PROTOCOL="http"
-ARANGO_HOST="db.brightid-node.public.dappnode"
-ARANGO_PORT=8529
+ARANGO_PROTOCOL=os.environ['BN_ARANGO_PROTOCOL']
+ARANGO_HOST=os.environ['BN_ARANGO_HOST']
+ARANGO_PORT=os.environ['BN_ARANGO_PORT']

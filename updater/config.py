@@ -17,4 +17,4 @@ RECHECK_CHUNK = 300
 
 APPS_JSON_FILE = 'https://apps.brightid.org/apps.json'
 
-ARANGO_SERVER="http://db.brightid-node.public.dappnode:8529"
+ARANGO_SERVER=os.environ['BN_ARANGO_PROTOCOL'] + '://' + os.environ['BN_ARANGO_HOST'] + ':' + os.environ['BN_ARANGO_PORT']
