@@ -583,7 +583,7 @@ function linkContextId(id, context, contextId, timestamp) {
   // remove testblocks if exists
   removeTestblock(contextId, 'link');
 
-  let user = getUserByContextId(coll, contextId)
+  let user = getUserByContextId(coll, contextId);
   if (user && user != id) {
     throw 'contextId is duplicate';
   }
@@ -596,14 +596,13 @@ function linkContextId(id, context, contextId, timestamp) {
     throw 'only three contextIds can be linked every 24 hours';
   }
 
+  // sponsor the user if the context id is sponsored before
   const alreadySponsored = sponsorshipsColl.byExample({
     _from: 'users/0',
     contextId
-  }).toArray();
-
-  // sponsor the user if the context id is sponsored before
+  }).toArray()[0];
   if (alreadySponsored) {
-    const appKey = alreadySponsored[0]._to.replace('apps/', '');
+    const appKey = alreadySponsored._to.replace('apps/', '');
     const { sponsorPrivateKey } = getApp(appKey);
     const op = {
       name: 'Sponsor',
@@ -620,8 +619,7 @@ function linkContextId(id, context, contextId, timestamp) {
   }
 
   // accept link if the contextId is used by the same user before
-  let link;
-  for (link of links) {
+  for (let link of links) {
     if (link.contextId === contextId) {
       if (timestamp > link.timestamp) {
         coll.update(link, { timestamp });
