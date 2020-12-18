@@ -274,6 +274,23 @@ schemas = Object.assign({
     })
   }),
 
+  groupGetResponse: joi.object({
+    data: joi.object({
+      members: joi.array().items(joi.string()).required().description('brightids of members of the group'),
+      inviteds: joi.array().items(joi.string()).required().description('brightids of the users invited to this group'),
+      eligibles: joi.array().items(joi.string()).required().description('brightids of the users that eligible to join this group'),
+      admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
+      founders: joi.array().items(joi.string()).required().description('brightids of founders of the group'),
+      isNew: joi.boolean().required().description('true if group is new'),
+      seed: joi.boolean().required().description('true if group is Seed'),
+      region: joi.string().description('region of the group'),
+      type: joi.string().required().description('type of the group'),
+      url: joi.string().required().description('url of the group'),
+      info: joi.string().description('URL of a documnet that contains info about the group'),
+      timestamp: joi.number().required().description('the group creation timestamp'),
+    })
+  }),
+
 }, schemas);
 
 

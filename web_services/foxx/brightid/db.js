@@ -210,6 +210,7 @@ function updateEligibleGroups(userId, connections, currentGroups) {
 function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
+  const eligibles = [];
   members.forEach(member => {
     const conns = connectionsColl.byExample({
       _from: 'users/' + member
@@ -229,8 +230,12 @@ function updateEligibles(groupId) {
           eligible_groups
         });
       }
+      if (eligibles.indexOf(neighbor) == -1) {
+        eligibles.push(neighbor);
+      }
     }
   });
+  return eligibles;
 }
 
 function groupToDic(groupId) {
@@ -773,6 +778,16 @@ function getTestblocks(app, contextId) {
   }).toArray().map(b => b.action);
 }
 
+function loadGroup(groupId) {
+  return query`RETURN DOCUMENT(${groupsColl}, ${groupId})`.toArray()[0];
+}
+
+function groupInviteds(groupId) {
+  return invitationsColl.byExample({
+    "_to": 'groups/' + groupId,
+  }).toArray().map(g => g._from.replace('users/', ''));
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -816,4 +831,7 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  loadGroup,
+  groupInviteds,
+  updateEligibles,
 };

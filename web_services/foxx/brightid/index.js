@@ -39,6 +39,7 @@ const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
+const GROUP_NOT_FOUND = 15;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -440,7 +441,32 @@ const handlers = {
     }
 
     return db.removeTestblock(contextId, action, appKey);
-  }
+  },
+
+  groupGet: function(req, res){
+    const groupId = req.param('groupId');
+    const group = db.loadGroup(groupId);
+    if (! group) {
+      res.throw(404, "Group not found", {errorNum: GROUP_NOT_FOUND});
+    }
+
+    res.send({
+      data: {
+        members: db.groupMembers(groupId),
+        inviteds: db.groupInviteds(groupId),
+        eligibles: db.updateEligibles(groupId),
+        admins: group.admins || group.founders,
+        founders: group.founders.map(f => f.replace('users/', '')),
+        isNew: group.isNew,
+        seed: group.seed || false,
+        region: group.region,
+        type: group.type || 'general',
+        url: group.url,
+        info: group.info,
+        timestamp: group.timestamp,
+      }
+    });
+  },
 
 };
 
@@ -537,6 +563,13 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .summary("Remove blocking state applied on user's verification for testing.")
   .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
   .response(null);
+
+router.get('/groups/:groupId', handlers.groupGet)
+  .pathParam('groupId', joi.string().required().description('the id of the group'))
+  .summary('Get information about a group')
+  .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members, invited and eligible members.")
+  .response(schemas.groupGetResponse)
+  .error(404, 'Group not found');
 
 module.context.use(function (req, res, next) {
   try {
