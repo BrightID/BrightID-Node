@@ -98,6 +98,16 @@ const operations = {
     admin: joi.string().required().description('brightid of the member whom is being granted administratorship of the group'),
     group: joi.string().required().description('the unique id of the group that new admin is being added to'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Add SubKey': {
+    id: joi.string().required().description('brightid of the user who is trying to set new sub key on his/her brightid'),
+    subKey: joi.string().required().description('the public key of the new key pair that user will use to sign operations with'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Remove SubKey': {
+    id: joi.string().required().description('brightid of the user who is trying to remove the sub keys from his/her brightid'),
+    subKey: joi.string().required().description('the subKey (public key of the new key pair)'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   }
 };
 
@@ -195,6 +205,7 @@ schemas = Object.assign({
       isSponsored: joi.boolean(),
       trusted: joi.array().items(joi.string()),
       flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
+      subKeys: joi.array().items(joi.string()).required().description('list of the sub keys (public keys) of the key pairs that user use to sign operations with'),
     })
   }),
 
@@ -222,7 +233,8 @@ schemas = Object.assign({
         id: joi.string().required().description('brightid of reporter'),
         reportReason: joi.string().required().description('the reason of reporting'),
       })).description('list of reports for the user specified by id'),
-      verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has')
+      verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),
+      subKeys: joi.array().items(joi.string()).required().description('list of the sub keys (public keys) of the key pairs that user use to sign operations with'),
     })
   }),
 

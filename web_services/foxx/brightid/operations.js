@@ -20,7 +20,16 @@ const verifyUserSig = function(message, id, sig) {
   // this also enable this version of code to be used by the old users collection
   // for users that don't have signingKey
   const signingKey = (user && user.signingKey) ? user.signingKey : urlSafeB64ToB64(id);
-  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
+  const keys = (user.subKeys || []).map(subKey => urlSafeB64ToB64(subKey));
+  keys.push(signingKey);
+  let verified = false;
+  for (let key of keys) {
+    if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(key))) {
+      verified = true;
+      break;
+    }
+  }
+  if (!verified) {
     throw 'invalid signature';
   }
 }
@@ -50,6 +59,8 @@ const senderAttrs = {
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
+  'Add SubKey': ['id'],
+  'Remove SubKey': ['id'],
 };
 let operationsCount = {};
 let resetTime = 0;
@@ -109,6 +120,8 @@ const requiredSigs = {
   'Invite': [['inviter', 'sig']],
   'Dismiss': [['dismisser', 'sig']],
   'Add Admin': [['id', 'sig']],
+  'Add SubKey': [['id', 'sig']],
+  'Remove SubKey': [['id', 'sig']],
 }
 
 function verify(op) {
@@ -185,6 +198,10 @@ function apply(op) {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else if (op['name'] == 'Add Admin') {
     return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
+  } else if (op['name'] == 'Add SubKey') {
+    return db.addSubKey(op.id, op.subKey, op.timestamp);
+  } else if (op['name'] == 'Remove SubKey') {
+    return db.removeSubKey(op.id, op.subKey, op.timestamp);
   } else {
     throw "invalid operation";
   }

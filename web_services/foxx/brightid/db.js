@@ -686,6 +686,8 @@ function setSigningKey(signingKey, key, signers, timestamp) {
   }
   usersColl.update(key, {
     signingKey,
+    // remove all the subKeys
+    subKeys: [],
     updateTime: timestamp
   });
 }
@@ -773,6 +775,26 @@ function getTestblocks(app, contextId) {
   }).toArray().map(b => b.action);
 }
 
+function addSubKey(id, subKey, timestamp) {
+  const subKeys = usersColl.document(id).subKeys || [];
+  if (subKeys.indexOf(subKey) == -1) {
+    subKeys.push(subKey);
+    usersColl.update(id, { subKeys });
+  }
+}
+
+function removeSubKey(id, subKey) {
+  const subKeys = usersColl.document(id).subKeys;
+  if (subKey == '') {
+    subKeys = [];
+  } else if (subKeys.indexOf(subKey) != -1) {
+    _.remove(subKeys, function (s) {
+      return s == subKey;
+    });
+  }
+  usersColl.update(id, { subKeys });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -816,4 +838,6 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  addSubKey,
+  removeSubKey,
 };
