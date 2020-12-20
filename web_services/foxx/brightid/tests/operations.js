@@ -541,4 +541,20 @@ describe('operations', function(){
     db.userConnections(u2.id).length.should.equal(3);
   });
 
+  it('should be able to remove all subkeys', function () {
+    const timestamp = Date.now();
+    const op = {
+      'v': 5,
+      'id': u2.id,
+      'name': 'Remove SubKey',
+      timestamp
+    }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    apply(op);
+    db.loadUser(u2.id).subKeys.should.deep.equal([]);
+  });
+
 });

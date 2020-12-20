@@ -785,8 +785,8 @@ function addSubKey(id, subKey, timestamp) {
 
 function removeSubKey(id, subKey) {
   const subKeys = usersColl.document(id).subKeys;
-  if (subKey == '') {
-    subKeys = [];
+  if (!subKey) {
+    subKeys.length = 0;
   } else if (subKeys.indexOf(subKey) != -1) {
     _.remove(subKeys, function (s) {
       return s == subKey;

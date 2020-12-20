@@ -106,7 +106,7 @@ const operations = {
   },
   'Remove SubKey': {
     id: joi.string().required().description('brightid of the user who is trying to remove the sub keys from his/her brightid'),
-    subKey: joi.string().required().description('the subKey (public key of the new key pair)'),
+    subKey: joi.string().description('the subKey (public key of the new key pair)'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   }
 };
