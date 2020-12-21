@@ -14,24 +14,25 @@ const {
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
-const verifyUserSig = function(message, id, sig) {
+const verifyUserSig = function(message, id, sig, opName) {
   const user = db.loadUser(id);
   // this will happen for "Add Connection" when one party is not created
   // this also enable this version of code to be used by the old users collection
   // for users that don't have signingKey
-  const signingKey = (user && user.signingKey) ? user.signingKey : urlSafeB64ToB64(id);
-  const keys = (user.subKeys || []).map(subKey => urlSafeB64ToB64(subKey));
-  keys.push(signingKey);
-  let verified = false;
-  for (let key of keys) {
-    if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(key))) {
-      verified = true;
-      break;
+  const signingKeys = [(user && user.signingKey) ? user.signingKey : urlSafeB64ToB64(id)];
+
+  // only master key should be able to sign 'Set Signing Key', 'Add SubKey' and 'Remove SubKey' operations
+  if (! ['Set Signing Key', 'Add SubKey', 'Remove SubKey'].includes(opName)) {
+    const subKeys = (user.subKeys || []).map(subKey => urlSafeB64ToB64(subKey));
+    signingKeys.push(...subKeys)
+  }
+
+  for (let signingKey of signingKeys) {
+    if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
+      return;
     }
   }
-  if (!verified) {
-    throw 'invalid signature';
-  }
+  throw 'invalid signature';
 }
 
 const verifyAppSig = function(message, app, sig) {
@@ -139,14 +140,14 @@ function verify(op) {
       verifyAppSig(message, id, sig);
     } else {
       try {
-        verifyUserSig(message, id, sig);
+        verifyUserSig(message, id, sig, op.name);
       } catch(e) {
         // allow adding connections by clients using v4 api
         // or getting their help to recover
         // this try and catch should be removed after v4 support dropped
         if (op.name == 'Add Connection') {
           const v4message = op.name + op.id1 + op.id2 + op.timestamp;
-          verifyUserSig(v4message, id, sig);
+          verifyUserSig(v4message, id, sig, op.name);
         } else {
           throw e;
         }
@@ -154,7 +155,7 @@ function verify(op) {
     }
   });
   if (op.name == 'Connect' && op.requestProof) {
-    verifyUserSig(op.id2 + '|' + op.timestamp, op.id2, op.requestProof);
+    verifyUserSig(op.id2 + '|' + op.timestamp, op.id2, op.requestProof, op.name);
   }
   if (hash(message) != op.hash) {
     throw 'invalid hash';
