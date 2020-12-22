@@ -98,6 +98,12 @@ const operations = {
     admin: joi.string().required().description('brightid of the member whom is being granted administratorship of the group'),
     group: joi.string().required().description('the unique id of the group that new admin is being added to'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Update Group': {
+    id: joi.string().required().description('brightid of the user who has admin rights in the group and can grant administratorship to other members'),
+    group: joi.string().required().description('the unique id of the group that new admin is being added to'),
+    url: joi.string().required().description('the new url that group data (profile image and name) encrypted by group AES key can be fetched from'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   }
 };
 

@@ -788,6 +788,20 @@ function groupInviteds(groupId) {
   }).toArray().map(g => g._from.replace('users/', ''));
 }
 
+function updateGroup(admin, groupId, url, timestamp) {
+  if (! groupsColl.exists(groupId)) {
+    throw 'group not found';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(admin)) {
+    throw 'only admins can add update group';
+  }
+  groupsColl.update(group, {
+    url,
+    timestamp
+  });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -834,4 +848,5 @@ module.exports = {
   loadGroup,
   groupInviteds,
   updateEligibles,
+  updateGroup
 };

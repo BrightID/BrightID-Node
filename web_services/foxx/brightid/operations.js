@@ -50,6 +50,7 @@ const senderAttrs = {
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
+  'Update Group': ['id'],
 };
 let operationsCount = {};
 let resetTime = 0;
@@ -109,6 +110,7 @@ const requiredSigs = {
   'Invite': [['inviter', 'sig']],
   'Dismiss': [['dismisser', 'sig']],
   'Add Admin': [['id', 'sig']],
+  'Update Group': [['id', 'sig']],
 }
 
 function verify(op) {
@@ -185,6 +187,8 @@ function apply(op) {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else if (op['name'] == 'Add Admin') {
     return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
+  } else if (op['name'] == 'Update Group') {
+    return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {
     throw "invalid operation";
   }
