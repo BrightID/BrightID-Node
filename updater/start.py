@@ -15,10 +15,6 @@ def wait():
         if result != 0:
             print('db is not running yet')
             continue
-        services = [service['mount'] for service in db.foxx.services()]
-        if '/apply5' not in services:
-            print('apply5 is not installed yet')
-            continue
         collections = [c['name'] for c in db.collections()]
         if 'apps' not in collections:
             print('apps collection is not created yet')
