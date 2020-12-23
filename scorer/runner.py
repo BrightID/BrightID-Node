@@ -1,4 +1,5 @@
 import time
+import socket
 import traceback
 from datetime import datetime
 from arango import ArangoClient
@@ -95,7 +96,21 @@ def get_user_verification(user):
     return verifications
 
 
+def wait():
+    while True:
+        time.sleep(5)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('127.0.0.1', 8529))
+        sock.close()
+        if result != 0:
+            print('db is not running yet')
+            continue
+        return
+
 if __name__ == '__main__':
+    print('waiting for db ...')
+    wait()
+    print('db started')
     while True:
         try:
             main()
