@@ -94,21 +94,17 @@ function checkLimits(op, timeWindow, limit) {
   throw 'Too Many Requests';
 }
 
-const requiredSigs = {
-  'Connect': [['id1', 'sig1']],
-  'Add Connection': [['id1', 'sig1'], ['id2', 'sig2']],
-  'Remove Connection': [['id1', 'sig1']],
-  'Add Group': [['id1', 'sig1']],
-  'Remove Group': [['id', 'sig']],
-  'Add Membership': [['id', 'sig']],
-  'Remove Membership': [['id', 'sig']],
-  'Set Trusted Connections': [['id', 'sig']],
-  'Set Signing Key': [['id1', 'sig1'], ['id2', 'sig2']],
-  'Sponsor': [['app', 'sig']],
-  'Link ContextId': [['id', 'sig']],
-  'Invite': [['inviter', 'sig']],
-  'Dismiss': [['dismisser', 'sig']],
-  'Add Admin': [['id', 'sig']],
+const signerAndSigs = {
+  'Remove Connection': ['id1', 'sig1'],
+  'Add Group': ['id1', 'sig1'],
+  'Remove Group': ['id', 'sig'],
+  'Add Membership': ['id', 'sig'],
+  'Remove Membership': ['id', 'sig'],
+  'Set Trusted Connections': ['id', 'sig'],
+  'Link ContextId': ['id', 'sig'],
+  'Invite': ['inviter', 'sig'],
+  'Dismiss': ['dismisser', 'sig'],
+  'Add Admin': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -118,39 +114,32 @@ function verify(op) {
   if (op.timestamp > Date.now() + TIME_FUDGE) {
     throw "timestamp can't be in the future";
   }
-  if (op.name == 'Set Signing Key') {
+
+  let message = getMessage(op);
+  if (op.name == 'Sponsor') {
+    verifyAppSig(message, op.app, op.sig);
+  } else if (op.name == 'Set Signing Key') {
     const recoveryConnections = db.getRecoveryConnections(op.id);
     if (op.id1 == op.id2 ||
         !recoveryConnections.includes(op.id1) ||
         !recoveryConnections.includes(op.id2)) {
       throw "request should be signed by 2 different recovery connections";
     }
-  }
-
-  let message = getMessage(op);
-  requiredSigs[op.name].forEach(idAndSig => {
-    const id = op[idAndSig[0]];
-    const sig = op[idAndSig[1]];
-    if (op.name == 'Sponsor') {
-      verifyAppSig(message, id, sig);
-    } else {
-      try {
-        verifyUserSig(message, id, sig);
-      } catch(e) {
-        // allow adding connections by clients using v4 api
-        // or getting their help to recover
-        // this try and catch should be removed after v4 support dropped
-        if (op.name == 'Add Connection') {
-          const v4message = op.name + op.id1 + op.id2 + op.timestamp;
-          verifyUserSig(v4message, id, sig);
-        } else {
-          throw e;
-        }
-      }
+    verifyUserSig(message, op.id1, op.sig1);
+    verifyUserSig(message, op.id2, op.sig2);
+  } else if (op.name == 'Add Connection') {
+    verifyUserSig(message, op.id1, op.sig1);
+    verifyUserSig(message, op.id2, op.sig2);
+  } else if (op.name == 'Connect') {
+    verifyUserSig(message, op.id1, op.sig1);
+    if (op.requestProof) {
+      verifyUserSig(op.id2 + '|' + op.timestamp, op.id2, op.requestProof);
     }
-  });
-  if (op.name == 'Connect' && op.requestProof) {
-    verifyUserSig(op.id2 + '|' + op.timestamp, op.id2, op.requestProof);
+  } else {
+    const [signerAttr, sigAttr] = signerAndSigs[op.name];
+    const signer = op[signerAttr];
+    const sig = op[sigAttr];
+    verifyUserSig(message, signer, sig);
   }
   if (hash(message) != op.hash) {
     throw 'invalid hash';
