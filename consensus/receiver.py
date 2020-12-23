@@ -6,7 +6,7 @@ import base64
 import hashlib
 import zipfile
 import requests
-from arango import ArangoClient
+from arango import ArangoClient, errno
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 import config
@@ -31,14 +31,24 @@ def hash(op):
 
 def process(data, block_timestamp):
     try:
-        data = bytes.fromhex(data.strip('0x')).decode('utf-8')
-        op = json.loads(data)
+        data_bytes = bytes.fromhex(data.strip('0x'))
+        data_str = data_bytes.decode('utf-8',  'ignore')
+        op = json.loads(data_str)
         op['blockTime'] = block_timestamp * 1000
-        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=hash(op)), json=op)
         print(op)
-        print(r.json())
+        url = config.APPLY_URL.format(v=op['v'], hash=hash(op))
+        r = requests.put(url, json=op)
+        resp = r.json()
+        print(resp)
+        if resp['state'] == 'failed':
+            if resp['result'].get('errorNum') == errno.CONFLICT:
+                print('retry on conflict')
+                return process(data, block_timestamp)
+
     except Exception as e:
-        print(data.encode('utf-8'), e)
+        print('error in handling operation')
+        print(data_str)
+        print(e)
 
 
 def save_snapshot(block):
@@ -93,6 +103,22 @@ def main():
 
 
 if __name__ == '__main__':
+    while True:
+        time.sleep(5)
+        services = [service['name'] for service in db.foxx.services()]
+        if 'apply' not in services:
+            print('apply is not installed yet')
+            continue
+        collections = [c['name'] for c in db.collections()]
+        if 'apps' not in collections:
+            print('apps collection is not created yet')
+            continue
+        apps = [app for app in db.collection('apps')]
+        if len(apps) == 0:
+            print('apps collection is not loaded yet')
+            continue
+        break
+
     while True:
         try:
             print('receiver started ...')
