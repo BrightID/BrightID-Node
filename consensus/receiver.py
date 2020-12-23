@@ -37,18 +37,22 @@ def process(data, block_timestamp):
         op['blockTime'] = block_timestamp * 1000
         print(op)
         url = config.APPLY_URL.format(v=op['v'], hash=hash(op))
-        r = requests.put(url, json=op)
-        resp = r.json()
-        print(resp)
-        if resp['state'] == 'failed':
-            if resp['result'].get('errorNum') == errno.CONFLICT:
-                print('retry on conflict')
-                return process(data, block_timestamp)
-
     except Exception as e:
-        print('error in handling operation')
-        print(data_str)
-        print(e)
+        print('error in parsing operation')
+        print('data', data_str)
+        print('error', e)
+
+    r = requests.put(url, json=op)
+    resp = r.json()
+    print(resp)
+    # resp is returned from PUT /operations handler
+    if resp.get('state') == 'failed':
+        if resp['result'].get('errorNum') == errno.CONFLICT:
+            print('retry on conflict')
+            return process(data, block_timestamp)
+    # resp is returned from arango not PUT /operations handler
+    if resp.get('error'):
+        raise Exception('Error from apply service')
 
 
 def save_snapshot(block):
@@ -101,13 +105,12 @@ def main():
             last_block = block_number
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
 
-
-if __name__ == '__main__':
+def wait():
     while True:
         time.sleep(5)
-        services = [service['name'] for service in db.foxx.services()]
-        if 'apply' not in services:
-            print('apply is not installed yet')
+        services = [service['mount'] for service in db.foxx.services()]
+        if '/apply5' not in services:
+            print('apply5 is not installed yet')
             continue
         collections = [c['name'] for c in db.collections()]
         if 'apps' not in collections:
@@ -117,10 +120,13 @@ if __name__ == '__main__':
         if len(apps) == 0:
             print('apps collection is not loaded yet')
             continue
-        break
+        return
 
+if __name__ == '__main__':
     while True:
         try:
+            print('waiting for db ...')
+            wait()
             print('receiver started ...')
             main()
         except Exception as e:
