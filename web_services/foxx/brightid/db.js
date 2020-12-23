@@ -677,13 +677,7 @@ function getRecoveryConnections(user) {
   return res;
 }
 
-function setSigningKey(signingKey, key, signers, timestamp) {
-  const recoveryConnections = getRecoveryConnections(key);
-  if (signers[0] == signers[1] ||
-      !recoveryConnections.includes(signers[0]) ||
-      !recoveryConnections.includes(signers[1])) {
-    throw "request should be signed by 2 different recovery connections";
-  }
+function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
     signingKey,
     updateTime: timestamp

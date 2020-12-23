@@ -118,6 +118,15 @@ function verify(op) {
   if (op.timestamp > Date.now() + TIME_FUDGE) {
     throw "timestamp can't be in the future";
   }
+  if (op.name == 'Set Signing Key') {
+    const recoveryConnections = db.getRecoveryConnections(op.id);
+    if (op.id1 == op.id2 ||
+        !recoveryConnections.includes(op.id1) ||
+        !recoveryConnections.includes(op.id2)) {
+      throw "request should be signed by 2 different recovery connections";
+    }
+  }
+
   let message = getMessage(op);
   requiredSigs[op.name].forEach(idAndSig => {
     const id = op[idAndSig[0]];
@@ -174,7 +183,7 @@ function apply(op) {
     // use "Connect" instead
     return db.setRecoveryConnections(op.trusted, op.id, op.timestamp);
   } else if (op['name'] == 'Set Signing Key') {
-    return db.setSigningKey(op.signingKey, op.id, [op.id1, op.id2], op.timestamp);
+    return db.setSigningKey(op.signingKey, op.id, op.timestamp);
   } else if (op['name'] == 'Sponsor') {
     return db.sponsor(op.id, op.app, op.timestamp);
   } else if (op['name'] == 'Link ContextId') {
