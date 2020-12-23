@@ -219,7 +219,7 @@ function v5_6() {
       REPLACE UNSET(doc, 'ethName') IN ${contextsColl}`;
 }
 
-function v5_7() {
+function v5_6_1() {
   console.log("use _key instead of _id in admins and founders of groups");
   const groupsColl = arango._collection('groups');
   const groups = groupsColl.all().toArray();
@@ -231,7 +231,7 @@ function v5_7() {
   }
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_7'];
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1'];
 
 function initdb() {
   createCollections();
