@@ -1,5 +1,6 @@
 import os
 import time
+import socket
 import json
 import binascii
 import base64
@@ -108,6 +109,12 @@ def main():
 def wait():
     while True:
         time.sleep(5)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('127.0.0.1', 8529))
+        sock.close()
+        if result != 0:
+            print('db is not running yet')
+            continue
         services = [service['mount'] for service in db.foxx.services()]
         if '/apply5' not in services:
             print('apply5 is not installed yet')
