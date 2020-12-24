@@ -31,15 +31,19 @@ const handlers = {
     if (operationsHashesColl.exists(op.hash)) {
       return res.send({'success': true, 'state': 'duplicate'});
     }
-    operationsHashesColl.insert({ _key: op.hash });
 
     try {
       operations.verify(op);
       op.result = operations.apply(op);
       op.state = 'applied';
+      operationsHashesColl.insert({ _key: op.hash });
     } catch (e) {
       op.state = 'failed';
-      op.result = e + (e.stack ? '\n' + e.stack : '');
+      op.result = {
+        message: e.message || e,
+        stack: e.stack,
+        errorNum: e.errorNum,
+      };
     }
     if (op.name == 'Link ContextId') {
       operations.encrypt(op);
