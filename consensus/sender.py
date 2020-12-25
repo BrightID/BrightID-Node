@@ -1,4 +1,5 @@
 import os
+import socket
 import time
 import json
 import binascii
@@ -41,8 +42,24 @@ def main():
         op['state'] = 'sent'
         db.update_document(op)
 
+def wait():
+    while True:
+        time.sleep(5)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(('127.0.0.1', 8529))
+        sock.close()
+        if result != 0:
+            print('db is not running yet')
+            continue
+        collections = [c['name'] for c in db.collections()]
+        if 'operations' not in collections:
+            print('operations collection is not created yet')
+            continue
+        return
 
 if __name__ == '__main__':
+    print('waiting for db ...')
+    wait()
     print('sender started ...')
     while True:
         try:
