@@ -8,7 +8,7 @@ NODE_CONNECTION_LEVELS = ['already known', 'recovery']
 CONN_DIFF_TIME = 60 * 60 * 1000
 GO_BACK_TIME = 10 * 24 * 60 * 60 * 1000
 
-db = ArangoClient(protocol=config.ARANGO_PROTOCOL, host=config.ARANGO_HOST, port=config.ARANGO_PORT).db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 verifications = {}
 
 def addVerificationTo(user, friend):

@@ -4,9 +4,10 @@ from arango import ArangoClient
 import apps
 import seed_groups
 import sponsorships
+import config
 
 def wait():
-    db = ArangoClient().db('_system')
+    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     while True:
         time.sleep(5)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)

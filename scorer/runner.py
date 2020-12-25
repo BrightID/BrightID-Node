@@ -12,7 +12,7 @@ from verifications import yekta
 from verifications import seed_connected_with_friend
 from py_expression_eval import Parser
 
-db = ArangoClient(protocol=config.ARANGO_PROTOCOL, host=config.ARANGO_HOST, port=config.ARANGO_PORT).db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 
 
 def process(fname):
