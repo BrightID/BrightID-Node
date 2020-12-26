@@ -1,4 +1,7 @@
 import os
 
 SNAPSHOTS_PATH = "/snapshots"
-ARANGO_SERVER = os.environ['BN_ARANGO_PROTOCOL'] + '://' + os.environ['BN_ARANGO_HOST'] + ':' + os.environ['BN_ARANGO_PORT']
+BN_ARANGO_PROTOCOL = os.environ['BN_ARANGO_PROTOCOL']
+BN_ARANGO_HOST= os.environ['BN_ARANGO_HOST']
+BN_ARANGO_PORT = os.environ['BN_ARANGO_PORT']
+ARANGO_SERVER = BN_ARANGO_PROTOCOL + '://' + BN_ARANGO_HOST + ':' + BN_ARANGO_PORT

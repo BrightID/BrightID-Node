@@ -9,7 +9,7 @@ services:
     env_file:
       - config.env
     expose:
-      - 3000
+      - $BN_WS_PROFILE_SERVICE_PORT
 
   scorer:
     build: scorer
@@ -74,7 +74,7 @@ services:
     environment:
       - INIT_BRIGHTID_DB
     expose:
-      - 8529
+      - $BN_ARANGO_PORT
 
   web:
     image: nginx
