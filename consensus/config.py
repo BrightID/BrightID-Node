@@ -4,7 +4,10 @@ from eth_utils import decode_hex
 
 INFURA_URL = os.environ['BN_CONSENSUS_INFURA_URL']
 PRIVATE_KEY = os.environ['BN_CONSENSUS_PRIVATE_KEY']
-ADDRESS = keys.PrivateKey(decode_hex(PRIVATE_KEY)).public_key.to_checksum_address()
+ADDRESS = keys.PrivateKey(
+	decode_hex(PRIVATE_KEY)
+).public_key.to_checksum_address() if PRIVATE_KEY else ''
+
 
 GAS = int(os.environ['BN_CONSENSUS_GAS'])
 GAS_PRICE = int(os.environ['BN_CONSENSUS_GAS_PRICE'])
