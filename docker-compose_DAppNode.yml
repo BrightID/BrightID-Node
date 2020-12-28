@@ -6,12 +6,12 @@ services:
       - db
     image: "ws.brightid-node.public.dappnode.eth:0.1.0"
     environment:
-      BN_WS_IP: "db.brightid-node.public.dappnode"
+      BN_WS_IP: ""
       BN_WS_PUBLIC_KEY: ""
       BN_WS_PRIVATE_KEY: ""
       BN_WS_ETH_PRIVATE_KEY: ""
-      BN_ARANGO_PROTOCOL: "http"
-      BN_ARANGO_HOST: "db.brightid-node.public.dappnode"
+      BN_ARANGO_PROTOCOL: http
+      BN_ARANGO_HOST: db.brightid-node.public.dappnode
       BN_ARANGO_PORT: "8529"
   scorer:
     build: scorer
@@ -22,8 +22,8 @@ services:
     volumes:
       - "snapshots:/snapshots"
     environment:
-      BN_ARANGO_PROTOCOL: "http"
-      BN_ARANGO_HOST: "db.brightid-node.public.dappnode"
+      BN_ARANGO_PROTOCOL: http
+      BN_ARANGO_HOST: db.brightid-node.public.dappnode
       BN_ARANGO_PORT: "8529"
   consensus_receiver:
     build: consensus
@@ -34,19 +34,19 @@ services:
     volumes:
       - "snapshots:/snapshots"
     environment:
-      BN_ARANGO_PROTOCOL: "http"
-      BN_ARANGO_HOST: "db.brightid-node.public.dappnode"
+      BN_ARANGO_PROTOCOL: http
+      BN_ARANGO_HOST: db.brightid-node.public.dappnode
       BN_ARANGO_PORT: "8529"
       BN_CONSENSUS_INFURA_URL: "ws://idchain.public.dappnode:8546"
       BN_CONSENSUS_TO_ADDRESS: "0xb1d1CDd5C4C541f95A73b5748392A6990cBe32b7"
       BN_CONSENSUS_SNAPSHOTS_PERIOD: "240"
       BN_CONSENSUS_APPLY_URL: "/_db/_system/apply{v}/operations/{hash}"
-      BN_CONSENSUS_DUMP_URL: "/_api/replication/dump"
+      BN_CONSENSUS_DUMP_URL: /_api/replication/dump
       BN_CONSENSUS_MAX_COLLECTION_SIZE: "1000000000"
       BN_CONSENSUS_PRIVATE_KEY: ""
       BN_CONSENSUS_GAS: "200000"
       BN_CONSENSUS_GAS_PRICE: "10000000000"
-      RUN_TYPE: "RECEIVER"
+      RUN_TYPE: RECEIVER
   consensus_sender:
     build: consensus
     depends_on:
@@ -54,19 +54,19 @@ services:
       - db
     image: "consensus_sender.brightid-node.public.dappnode.eth:0.1.0"
     environment:
-      BN_ARANGO_PROTOCOL: "http"
-      BN_ARANGO_HOST: "db.brightid-node.public.dappnode"
+      BN_ARANGO_PROTOCOL: http
+      BN_ARANGO_HOST: db.brightid-node.public.dappnode
       BN_ARANGO_PORT: "8529"
       BN_CONSENSUS_INFURA_URL: "ws://idchain.public.dappnode:8546"
       BN_CONSENSUS_TO_ADDRESS: "0xb1d1CDd5C4C541f95A73b5748392A6990cBe32b7"
       BN_CONSENSUS_SNAPSHOTS_PERIOD: "240"
       BN_CONSENSUS_APPLY_URL: "/_db/_system/apply{v}/operations/{hash}"
-      BN_CONSENSUS_DUMP_URL: "/_api/replication/dump"
+      BN_CONSENSUS_DUMP_URL: /_api/replication/dump
       BN_CONSENSUS_MAX_COLLECTION_SIZE: "1000000000"
       BN_CONSENSUS_PRIVATE_KEY: ""
       BN_CONSENSUS_GAS: "200000"
       BN_CONSENSUS_GAS_PRICE: "10000000000"
-      RUN_TYPE: "SENDER"
+      RUN_TYPE: SENDER
   updater:
     build: updater
     depends_on:
@@ -77,6 +77,9 @@ services:
       BN_UPDATER_SP_ADDRESS: "0x0aB346a16ceA1B1363b20430C414eAB7bC179324"
       BN_UPDATER_SP_INFURA_URL: "ws://geth.dappnode:8546"
       BN_UPDATER_SEED_GROUPS_WS_URL: "ws://idchain.public.dappnode:8546"
+      BN_ARANGO_PROTOCOL: http
+      BN_ARANGO_HOST: db.brightid-node.public.dappnode
+      BN_ARANGO_PORT: "8529"
   db:
     build: db
     image: "db.brightid-node.public.dappnode.eth:0.1.0"
@@ -88,6 +91,8 @@ services:
   web:
     build: web
     image: "web.brightid-node.public.dappnode.eth:0.1.0"
+    ports:
+      - "80:80"
 volumes:
   snapshots: {}
   data: {}
