@@ -77,6 +77,9 @@ services:
       BN_UPDATER_SP_ADDRESS: "0x0aB346a16ceA1B1363b20430C414eAB7bC179324"
       BN_UPDATER_SP_INFURA_URL: "ws://geth.dappnode:8546"
       BN_UPDATER_SEED_GROUPS_WS_URL: "ws://idchain.public.dappnode:8546"
+      BN_ARANGO_PROTOCOL: http
+      BN_ARANGO_HOST: db.brightid-node.public.dappnode
+      BN_ARANGO_PORT: "8529"
   db:
     build: db
     image: "db.brightid-node.public.dappnode.eth:0.1.0"
