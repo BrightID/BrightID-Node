@@ -1,4 +1,5 @@
 import time
+import socket
 import traceback
 import os
 from datetime import datetime
@@ -11,7 +12,7 @@ from verifications import yekta
 from verifications import seed_connected_with_friend
 from py_expression_eval import Parser
 
-db = ArangoClient(protocol=config.ARANGO_PROTOCOL, host=config.ARANGO_HOST, port=config.ARANGO_PORT).db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 
 
 def process(fname):
@@ -96,7 +97,21 @@ def get_user_verification(user):
     return verifications
 
 
+def wait():
+    while True:
+        time.sleep(5)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex((config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
+        sock.close()
+        if result != 0:
+            print('db is not running yet')
+            continue
+        return
+
 if __name__ == '__main__':
+    print('waiting for db ...')
+    wait()
+    print('db started')
     while True:
         try:
             main()

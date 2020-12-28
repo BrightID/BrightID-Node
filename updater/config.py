@@ -17,4 +17,7 @@ RECHECK_CHUNK = 300
 
 APPS_JSON_FILE = 'https://apps.brightid.org/apps.json'
 
-ARANGO_SERVER=os.environ['BN_ARANGO_PROTOCOL'] + '://' + os.environ['BN_ARANGO_HOST'] + ':' + os.environ['BN_ARANGO_PORT']
+BN_ARANGO_PROTOCOL = os.environ['BN_ARANGO_PROTOCOL']
+BN_ARANGO_HOST= os.environ['BN_ARANGO_HOST']
+BN_ARANGO_PORT = int(os.environ['BN_ARANGO_PORT'])
+ARANGO_SERVER = f'{BN_ARANGO_PROTOCOL}://{BN_ARANGO_HOST}:{BN_ARANGO_PORT}'
