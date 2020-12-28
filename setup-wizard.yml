@@ -1,0 +1,80 @@
+version: "2"
+fields:
+  - id: updater_eth
+    title: Ethereum node url
+    description: >-
+      BrightID Node updater needs access to a synchronized Ethereum mainnet node.
+      If you have not already, make sure to install and sync an Eth1.x node of your choice.
+      Then, input the URL of the node that you wish to use or a remote one:
+
+      - Geth `ws://geth.dappnode:8546` - [Install link](http://my.dappnode/#/installer/geth.dnp.dappnode.eth)
+
+      - Turbo Geth `http://turbo-geth.dappnode:8545` - [Install link](http://my.dappnode/#/installer/turbo-geth.dnp.dappnode)
+
+      - OpenEthereum `http://openethereum.dappnode:8545` - [Install link](http://my.dappnode/#/installer/openethereum.dnp.dappnode.eth)
+
+      - Nethermind `http://nethermind.public.dappnode:8545` - [Install link](http://my.dappnode/#/installer/nethermind.public.dappnode.eth)
+
+      - Remote node (example URL) `https://remote-node-provider.io`
+    target:
+      type: environment
+      name: BN_UPDATER_SP_INFURA_URL
+      service: updater
+    required: true
+
+  - id: updater_idc
+    title: Updater IDChain node url
+    description: >-
+      BrightID node updater needs access to an IDChain node.
+
+      - IDChain DNP: `ws://idchain.public.dappnode:8546` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
+
+      - Remote node (example URL): `https://remote-node-provider.io`
+    target:
+      type: environment
+      name: BN_UPDATER_SEED_GROUPS_WS_URL
+      service: updater
+    required: true
+
+  - id: consensus_sender_private_key
+    title: Private key of consensus sender account
+    description: >-
+      Provide the private key of an IDChain account that will submit BrightID operations to IDChain. Required
+      if you want to provide a public API service and/or connect clients with your endpoint.
+      Make sure the account has a sufficient EIDI balance.
+    required: false
+    secret: true
+    target:
+      type: environment
+      name: BN_CONSENSUS_PRIVATE_KEY
+      service: consensus_sender
+
+  - id: consensus_sender_idc
+    title: Consensus Sender IDChain node url
+    description: >-
+      BrightID node consensus sender needs access to an IDChain node.
+
+      - IDChain DNP: `ws://idchain.public.dappnode:8546` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
+
+      - Remote node (example URL): `https://remote-node-provider.io`
+    target:
+      type: environment
+      name: BN_CONSENSUS_INFURA_URL
+      service:
+        - consensus_sender
+    required: true
+
+  - id: consensus_receiver_idc
+    title: Consensus Receiver IDChain node url
+    description: >-
+      BrightID node consensus receiver needs access to an IDChain node.
+
+      - IDChain DNP: `ws://idchain.public.dappnode:8546` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
+
+      - Remote node (example URL): `https://remote-node-provider.io`
+    target:
+      type: environment
+      name: BN_CONSENSUS_INFURA_URL
+      service: consensus_receiver
+    required: true
+
