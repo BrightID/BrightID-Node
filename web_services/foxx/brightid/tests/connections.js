@@ -85,11 +85,6 @@ describe('connections', function () {
       '_from': 'users/a', '_to': 'users/c'
     }).level.should.equal('just met');
   });
-  it('should not be able to use "setSigningKey" to reset "signingKey" with not "recovery" connections', function() {
-    (() => {
-      db.setSigningKey('newSigningKey', 'a', ['b', 'c'], timestamp);
-    }).should.throw('request should be signed by 2 different recovery connections');
-  });
 
   it('should be able to use "setSigningKey" to reset "signingKey" with "recovery" connections', function() {
     db.connect({id1: 'a', id2: 'c', level: 'recovery', timestamp});
