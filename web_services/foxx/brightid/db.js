@@ -165,6 +165,9 @@ function isEligible(groupId, userId) {
   return count >= members.length / 2;
 }
 
+// storing eligible groups on users documents and updating them
+// from this route will be removed when clients updated to use
+// new GET /groups/{id} result to show eligibles in invite list
 function updateEligibleGroups(userId, connections, currentGroups) {
   connections = connections.map(uId => 'users/' + uId);
   currentGroups = currentGroups.map(gId => 'groups/' + gId);
@@ -210,27 +213,38 @@ function updateEligibleGroups(userId, connections, currentGroups) {
 function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
+  const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
+
   members.forEach(member => {
     const conns = connectionsColl.byExample({
       _from: 'users/' + member
-    }).toArray().map(u => u._to.replace("users/", ""));
+    }).toArray().filter(isKnown).map(
+      c => c._to.replace("users/", "")
+    ).filter(u => !members.includes(u));
     neighbors.push(...conns);
   });
+
   const counts = {};
-  for (let i = 0; i < neighbors.length; i++) {
-    counts[neighbors[i]] = (counts[neighbors[i]] || 0) + 1;
+  for (let neighbor of neighbors) {
+    counts[neighbor] = (counts[neighbor] || 0) + 1;
   }
-  Object.keys(counts).forEach(neighbor => {
-    if (counts[neighbor] >= members.length / 2) {
-      const eligible_groups = usersColl.document(neighbor).eligible_groups || [];
-      if (eligible_groups.indexOf(groupId) == -1) {
-        eligible_groups.push(groupId);
-        usersColl.update(neighbor, {
-          eligible_groups
-        });
-      }
+  const eligibles = Object.keys(counts).filter(neighbor => {
+    return counts[neighbor] >= members.length / 2;
+  });
+  // storing eligible groups on users documents and updating them
+  // from this route will be removed when clients updated to use
+  // new GET /groups/{id} result to show eligibles in invite list
+  eligibles.forEach(neighbor => {
+    let { eligible_groups } = usersColl.document(neighbor);
+    eligible_groups = eligible_groups || [];
+    if (eligible_groups.indexOf(groupId) == -1) {
+      eligible_groups.push(groupId);
+      usersColl.update(neighbor, {
+        eligible_groups
+      });
     }
   });
+  return eligibles;
 }
 
 function groupToDic(groupId) {
@@ -767,6 +781,40 @@ function getTestblocks(app, contextId) {
   }).toArray().map(b => b.action);
 }
 
+function loadGroup(groupId) {
+  return query`RETURN DOCUMENT(${groupsColl}, ${groupId})`.toArray()[0];
+}
+
+function groupInvites(groupId) {
+  return invitationsColl.byExample({
+    "_to": 'groups/' + groupId,
+  }).toArray().filter(invite => {
+    return Date.now() - invite.timestamp < 86400000
+  }).map(invite => {
+    return {
+      inviter: invite.inviter,
+      invitee: invite._from.replace('users/', ''),
+      id: invite._key,
+      data: invite.data,
+      timestamp: invite.timestamp
+    }
+  });
+}
+
+function updateGroup(admin, groupId, url, timestamp) {
+  if (! groupsColl.exists(groupId)) {
+    throw 'group not found';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(admin)) {
+    throw 'only admins can update the group';
+  }
+  groupsColl.update(group, {
+    url,
+    timestamp
+  });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -810,4 +858,8 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  loadGroup,
+  groupInvites,
+  updateEligibles,
+  updateGroup
 };

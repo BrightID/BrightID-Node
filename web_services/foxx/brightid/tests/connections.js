@@ -8,18 +8,21 @@ const connectionsHistoryColl = arango._collection('connectionsHistory');
 
 const chai = require('chai');
 const should = chai.should();
+const timestamp = Date.now();
 
 describe('connections', function () {
   before(function(){
     usersColl.truncate();
     connectionsColl.truncate();
+    connectionsHistoryColl.truncate();
   });
   after(function(){
     usersColl.truncate();
     connectionsColl.truncate();
+    connectionsHistoryColl.truncate();
   });
   it('should be able to use "addConnection" to set "just met" as confidence level', function() {
-    db.addConnection('a', 'b', 0);
+    db.addConnection('a', 'b', timestamp);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('just met');
@@ -28,13 +31,13 @@ describe('connections', function () {
     }).level.should.equal('just met');
   });
   it('should be able to use "connect" to upgrade confidence level to "already known"', function() {
-    db.connect({id1: 'b', id2: 'a', level: 'already known'});
+    db.connect({id1: 'b', id2: 'a', level: 'already known', timestamp});
     connectionsColl.firstExample({
       '_from': 'users/b', '_to': 'users/a'
     }).level.should.equal('already known');
   });
   it('should be able to use "removeConnection" to report a connection that already knows the reporter', function() {
-    db.removeConnection('a', 'b', 'duplicate', 0);
+    db.removeConnection('a', 'b', 'duplicate', timestamp);
     const conn = connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     });
@@ -42,7 +45,7 @@ describe('connections', function () {
     conn.reportReason.should.equal('duplicate');
   });
   it('should be able to use "connect" to reset confidence level to "just met"', function() {
-    db.connect({id1: 'a', id2: 'b', level: 'just met'});
+    db.connect({id1: 'a', id2: 'b', level: 'just met', timestamp});
     const conn1 = connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     });
@@ -50,13 +53,13 @@ describe('connections', function () {
     (conn1.reportReason === null).should.equal(true);
   });
   it('should be able to use "setRecoveryConnections" to set "recovery" as confidence level', function() {
-    db.setRecoveryConnections(['b'], 'a', 0);
+    db.setRecoveryConnections(['b'], 'a', timestamp);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
   });
   it('should not reset "recovery" confidence level to "just met" when calling "addConnection"', function() {
-    db.addConnection('a', 'b', 0);
+    db.addConnection('a', 'b', timestamp);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
@@ -65,32 +68,32 @@ describe('connections', function () {
     }).level.should.equal('already known');
   });
   it('should be able to use "connect" to set different confidence levels', function() {
-    db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate'});
+    db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate', timestamp});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('reported');
-    db.connect({id1: 'a', id2: 'b', level: 'just met'});
+    db.connect({id1: 'a', id2: 'b', level: 'just met', timestamp});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('just met');
-    db.connect({id1: 'a', id2: 'b', level: 'recovery'});
+    db.connect({id1: 'a', id2: 'b', level: 'recovery', timestamp});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('recovery');
-    db.connect({id1: 'a', id2: 'c', level: 'just met'});
+    db.connect({id1: 'a', id2: 'c', level: 'just met', timestamp});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/c'
     }).level.should.equal('just met');
   });
 
   it('should be able to use "setSigningKey" to reset "signingKey" with "recovery" connections', function() {
-    db.connect({id1: 'a', id2: 'c', level: 'recovery'});
-    db.setSigningKey('newSigningKey', 'a', ['b', 'c'], 0);
+    db.connect({id1: 'a', id2: 'c', level: 'recovery', timestamp});
+    db.setSigningKey('newSigningKey', 'a', ['b', 'c'], timestamp);
     usersColl.document('a').signingKey.should.equal('newSigningKey');
   });
 
   it('should be able to get "userConnections"', function() {
-    db.connect({id1: 'c', id2: 'a', level: 'reported', reportReason: 'duplicate'});
+    db.connect({id1: 'c', id2: 'a', level: 'reported', reportReason: 'duplicate', timestamp: 0});
     const conns = db.userConnections('b');
     conns.length.should.equal(1);
     const a = conns[0];
@@ -99,7 +102,7 @@ describe('connections', function () {
   });
 
   it('should be able to report someone as replaced', function() {
-    db.connect({id1: 'c', id2: 'a', level: 'reported', reportReason: 'replaced', replacedWith: 'b'});
+    db.connect({id1: 'c', id2: 'a', level: 'reported', reportReason: 'replaced', replacedWith: 'b', timestamp});
     const conn = connectionsColl.firstExample({
       '_from': 'users/c', '_to': 'users/a'
     });
