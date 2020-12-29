@@ -444,19 +444,19 @@ const handlers = {
   },
 
   groupGet: function(req, res){
-    const groupId = req.param('groupId');
-    const group = db.loadGroup(groupId);
+    const id = req.param('id');
+    const group = db.loadGroup(id);
     if (! group) {
       res.throw(404, "Group not found", {errorNum: GROUP_NOT_FOUND});
     }
 
     res.send({
       data: {
-        members: db.groupMembers(groupId),
-        inviteds: db.groupInviteds(groupId),
-        eligibles: db.updateEligibles(groupId),
-        admins: group.admins || group.founders,
-        founders: group.founders.map(f => f.replace('users/', '')),
+        members: db.groupMembers(id),
+        invites: db.groupInvites(id),
+        eligibles: db.updateEligibles(id),
+        admins: group.admins,
+        founders: group.founders,
         isNew: group.isNew,
         seed: group.seed || false,
         region: group.region,
@@ -564,8 +564,8 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
   .response(null);
 
-router.get('/groups/:groupId', handlers.groupGet)
-  .pathParam('groupId', joi.string().required().description('the id of the group'))
+router.get('/groups/:id', handlers.groupGet)
+  .pathParam('id', joi.string().required().description('the id of the group'))
   .summary('Get information about a group')
   .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members, invited and eligible members.")
   .response(schemas.groupGetResponse)

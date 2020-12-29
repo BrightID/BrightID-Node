@@ -94,14 +94,14 @@ const operations = {
     sig: joi.string().required().description('deterministic json representation of operation object signed by the dismisser'),
   },
   'Add Admin': {
-    id: joi.string().required().description('brightid of the user who has admin rights in the group and can grant administratorship to other members'),
+    id: joi.string().required().description('brightid of one of the current admins of the group'),
     admin: joi.string().required().description('brightid of the member whom is being granted administratorship of the group'),
-    group: joi.string().required().description('the unique id of the group that new admin is being added to'),
-    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+    group: joi.string().required().description('the unique id of the group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the admin user represented by id'),
   },
   'Update Group': {
-    id: joi.string().required().description('brightid of the user who has admin rights in the group and can grant administratorship to other members'),
-    group: joi.string().required().description('the unique id of the group that new admin is being added to'),
+    id: joi.string().required().description('brightid of one of the admins of the group'),
+    group: joi.string().required().description('the unique id of the group'),
     url: joi.string().required().description('the new url that group data (profile image and name) encrypted by group AES key can be fetched from'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   }
@@ -283,8 +283,14 @@ schemas = Object.assign({
   groupGetResponse: joi.object({
     data: joi.object({
       members: joi.array().items(joi.string()).required().description('brightids of members of the group'),
-      inviteds: joi.array().items(joi.string()).required().description('brightids of the users invited to this group'),
-      eligibles: joi.array().items(joi.string()).required().description('brightids of the users that eligible to join this group'),
+      invites: joi.array().items(joi.object({
+        inviter: joi.string().required().description('brightid of inviter'),
+        invitee: joi.string().required().description('brightid of invitee'),
+        id: joi.string().required().description('unique id of invite'),
+        data: joi.string().required().description('AES key of group encrypted for invitee'),
+        timestamp: joi.number().required().description('timestamp of invite'),
+      })).required(),
+      eligibles: joi.array().items(joi.string()).required().description('brightids of the users that are eligible to join the group'),
       admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
       founders: joi.array().items(joi.string()).required().description('brightids of founders of the group'),
       isNew: joi.boolean().required().description('true if group is new'),
