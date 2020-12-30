@@ -40,7 +40,7 @@ const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
 const INCORRECT_PASSCODE = 15;
-const FORBIDDEN_REQUEST = 16;
+const PASSCODE_NOT_SET = 16;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -453,7 +453,7 @@ const handlers = {
     }
 
     if (! context.passcode) {
-      res.throw(403, 'forbidden request', {errorNum: FORBIDDEN_REQUEST});
+      res.throw(403, 'passcode not set', {errorNum: PASSCODE_NOT_SET});
     }
 
     if (context.passcode != passcode) {
@@ -527,8 +527,8 @@ router.get('/verifications/:app/:contextId', handlers.verificationGet)
 
 router.get('/verifications/:app', handlers.allVerificationsGet)
   .pathParam('app', joi.string().required().description('the app for which the user is verified'))
-  .summary('Gets list of all of contextIds')
-  .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
+  .summary('Gets list of all of contextIds verifed for an app')
+  .description("Gets list of all of contextIds in the context that are sponsored and verified for using an app")
   .response(schemas.allVerificationsGetResponse)
   .error(404, 'context not found');
 
@@ -555,8 +555,8 @@ router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
   .pathParam('action', joi.string().valid('sponsorship', 'link', 'verification').required().description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().required().description('the secret key for testing the app'))
-  .summary("Block user's verification for testing.")
-  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.')
+  .summary("Block user's verification for testing")
+  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing')
   .response(null);
 
 router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
@@ -564,17 +564,17 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .pathParam('action', joi.string().required().valid('sponsorship', 'link', 'verification').description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
-  .summary("Remove blocking state applied on user's verification for testing.")
-  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.");
+  .summary("Remove blocking state applied on user's verification for testing")
+  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing");
 
 router.get('/contexts/:context/dump', handlers.contextDumpGet)
   .pathParam('context', joi.string().required().description('the context key'))
   .queryParam('passcode', joi.string().required().description('the one time passcode of the context'))
-  .summary("Get a dump of the context's collection")
-  .description('Get a dump of all of contextIds in the context that are linked.')
+  .summary("Get all required info to transfer a context to a new node")
+  .description('Get list of all contextIds linked under a context, the AES key used to encrypt/decrypt links, and idsAsHex which indicates if contextIds are hex strings')
   .response(schemas.contextDumpGetResponse)
   .error(404, 'context not found')
-  .error(403, 'forbidden request')
+  .error(403, 'passcode not set')
   .error(403, 'incorrect passcode');
 
 module.context.use(function (req, res, next) {
