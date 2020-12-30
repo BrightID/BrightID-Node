@@ -569,7 +569,7 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
 
 router.get('/contexts/:context/dump', handlers.contextDumpGet)
   .pathParam('context', joi.string().required().description('the context key'))
-  .queryParam('passcode', joi.string().required().description('the one time passcode of the context'))
+  .queryParam('passcode', joi.string().required().description('the one time passcode that authorize access to this endpoint once'))
   .summary("Get dump of a context")
   .description('Get all required info to transfer a context to a new node')
   .response(schemas.contextDumpGetResponse)
