@@ -341,6 +341,26 @@ describe('operations', function(){
     groupsColl.document(groupId).admins.should.include(u4.id);
   });
 
+  it('admins should be able "Update Group" to edit name and photo for groups', function () {
+    const newUrl = 'http://url.com/newDummyUrl';
+    const timestamp = Date.now();
+    const groupId = db.userGroups(u2.id)[0].id;
+    const op = {
+      'v': 5,
+      'name': 'Update Group',
+      'id': u2.id,
+      'url': newUrl,
+      'group': groupId,
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    apply(op);
+    groupsColl.document(groupId).url.should.equal(newUrl);
+  });
+
   it('should be able to "Set Trusted Connections"', function () {
     const timestamp = Date.now();
     const op = {

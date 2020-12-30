@@ -41,6 +41,8 @@ const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
 const INCORRECT_PASSCODE = 15;
 const PASSCODE_NOT_SET = 16;
+const GROUP_NOT_FOUND = 17;
+
 
 const handlers = {
   operationsPost: function(req, res){
@@ -455,7 +457,6 @@ const handlers = {
     if (! context.passcode) {
       res.throw(403, 'passcode not set', {errorNum: PASSCODE_NOT_SET});
     }
-
     if (context.passcode != passcode) {
       res.throw(403, 'incorrect passcode', {errorNum: INCORRECT_PASSCODE});
     }
@@ -471,7 +472,32 @@ const handlers = {
         contextIds
       }
     });
-  }
+  },
+
+  groupGet: function(req, res){
+    const id = req.param('id');
+    const group = db.loadGroup(id);
+    if (! group) {
+      res.throw(404, "Group not found", {errorNum: GROUP_NOT_FOUND});
+    }
+
+    res.send({
+      data: {
+        members: db.groupMembers(id),
+        invites: db.groupInvites(id),
+        eligibles: db.updateEligibles(id),
+        admins: group.admins,
+        founders: group.founders,
+        isNew: group.isNew,
+        seed: group.seed || false,
+        region: group.region,
+        type: group.type || 'general',
+        url: group.url,
+        info: group.info,
+        timestamp: group.timestamp,
+      }
+    });
+  },
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -565,7 +591,8 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
   .summary("Remove blocking state applied on user's verification for testing")
-  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing");
+  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing")
+  .response(null);
 
 router.get('/contexts/:context/dump', handlers.contextDumpGet)
   .pathParam('context', joi.string().required().description('the context key'))
@@ -576,6 +603,13 @@ router.get('/contexts/:context/dump', handlers.contextDumpGet)
   .error(404, 'context not found')
   .error(403, 'passcode not set')
   .error(403, 'incorrect passcode');
+
+router.get('/groups/:id', handlers.groupGet)
+  .pathParam('id', joi.string().required().description('the id of the group'))
+  .summary('Get information about a group')
+  .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members, invited and eligible members.")
+  .response(schemas.groupGetResponse)
+  .error(404, 'Group not found');
 
 module.context.use(function (req, res, next) {
   try {

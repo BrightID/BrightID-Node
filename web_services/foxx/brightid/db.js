@@ -165,6 +165,9 @@ function isEligible(groupId, userId) {
   return count >= members.length / 2;
 }
 
+// storing eligible groups on users documents and updating them
+// from this route will be removed when clients updated to use
+// new GET /groups/{id} result to show eligibles in invite list
 function updateEligibleGroups(userId, connections, currentGroups) {
   connections = connections.map(uId => 'users/' + uId);
   currentGroups = currentGroups.map(gId => 'groups/' + gId);
@@ -210,27 +213,38 @@ function updateEligibleGroups(userId, connections, currentGroups) {
 function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
+  const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
+
   members.forEach(member => {
     const conns = connectionsColl.byExample({
       _from: 'users/' + member
-    }).toArray().map(u => u._to.replace("users/", ""));
+    }).toArray().filter(isKnown).map(
+      c => c._to.replace("users/", "")
+    ).filter(u => !members.includes(u));
     neighbors.push(...conns);
   });
+
   const counts = {};
-  for (let i = 0; i < neighbors.length; i++) {
-    counts[neighbors[i]] = (counts[neighbors[i]] || 0) + 1;
+  for (let neighbor of neighbors) {
+    counts[neighbor] = (counts[neighbor] || 0) + 1;
   }
-  Object.keys(counts).forEach(neighbor => {
-    if (counts[neighbor] >= members.length / 2) {
-      const eligible_groups = usersColl.document(neighbor).eligible_groups || [];
-      if (eligible_groups.indexOf(groupId) == -1) {
-        eligible_groups.push(groupId);
-        usersColl.update(neighbor, {
-          eligible_groups
-        });
-      }
+  const eligibles = Object.keys(counts).filter(neighbor => {
+    return counts[neighbor] >= members.length / 2;
+  });
+  // storing eligible groups on users documents and updating them
+  // from this route will be removed when clients updated to use
+  // new GET /groups/{id} result to show eligibles in invite list
+  eligibles.forEach(neighbor => {
+    let { eligible_groups } = usersColl.document(neighbor);
+    eligible_groups = eligible_groups || [];
+    if (eligible_groups.indexOf(groupId) == -1) {
+      eligible_groups.push(groupId);
+      usersColl.update(neighbor, {
+        eligible_groups
+      });
     }
   });
+  return eligibles;
 }
 
 function groupToDic(groupId) {
@@ -642,7 +656,7 @@ function getRecoveryConnections(user) {
   //    signing key, for one week after being removed from recovery connections
   const borderTime = Date.now() - (7*24*60*60*1000);
   // when users set their recovery connections for the first time
-  let initTime;
+  let initTimeBorder;
   const res = [];
   for (let conn of allConnections) {
     // ignore not recovery connections
@@ -653,15 +667,15 @@ function getRecoveryConnections(user) {
     if (res.includes(conn._to)) {
       continue;
     }
-    // init initTime with first recovery connection timestamp
-    if (! initTime) {
-      initTime = conn.timestamp;
+    // init the initTimeBorder with first recovery connection timestamp plus 24 hours
+    if (! initTimeBorder) {
+      initTimeBorder = conn.timestamp + (24*60*60*1000);
     }
     // filter connections to a single user
     const history = allConnections.filter(({ _to }) => (_to == conn._to));
     const currentLevel = history[history.length - 1].level;
     if (currentLevel == 'recovery') {
-      if (conn.timestamp < borderTime || conn.timestamp == initTime) {
+      if (conn.timestamp < borderTime || conn.timestamp < initTimeBorder) {
         // if recovery level set more than 7 days ago or on the first day
         res.push(conn._to);
       }
@@ -677,13 +691,7 @@ function getRecoveryConnections(user) {
   return res;
 }
 
-function setSigningKey(signingKey, key, signers, timestamp) {
-  const recoveryConnections = getRecoveryConnections(key);
-  if (signers[0] == signers[1] ||
-      !recoveryConnections.includes(signers[0]) ||
-      !recoveryConnections.includes(signers[1])) {
-    throw "request should be signed by 2 different recovery connections";
-  }
+function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
     signingKey,
     updateTime: timestamp
@@ -783,9 +791,43 @@ function getContextIds(coll) {
   });
 }
 
+function loadGroup(groupId) {
+  return query`RETURN DOCUMENT(${groupsColl}, ${groupId})`.toArray()[0];
+}
+
+function groupInvites(groupId) {
+  return invitationsColl.byExample({
+    "_to": 'groups/' + groupId,
+  }).toArray().filter(invite => {
+    return Date.now() - invite.timestamp < 86400000
+  }).map(invite => {
+    return {
+      inviter: invite.inviter,
+      invitee: invite._from.replace('users/', ''),
+      id: invite._key,
+      data: invite.data,
+      timestamp: invite.timestamp
+    }
+  });
+}
+
 function removePasscode(contextKey) {
   contextsColl.update(contextKey, {
     passcode: null
+  });
+}
+
+function updateGroup(admin, groupId, url, timestamp) {
+  if (! groupsColl.exists(groupId)) {
+    throw 'group not found';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(admin)) {
+    throw 'only admins can update the group';
+  }
+  groupsColl.update(group, {
+    url,
+    timestamp
   });
 }
 
@@ -834,4 +876,8 @@ module.exports = {
   getTestblocks,
   getContextIds,
   removePasscode,
+  loadGroup,
+  groupInvites,
+  updateEligibles,
+  updateGroup
 };

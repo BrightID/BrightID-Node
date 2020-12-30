@@ -1,2 +1,2 @@
-python-arango==4.2.1
+python-arango==5.4.0
 py_expression_eval==0.3.10

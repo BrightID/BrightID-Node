@@ -1,10 +1,10 @@
 import time
 from arango import ArangoClient
-
+import config
 
 def verify(fname):
     print('BRIGHTID')
-    db = ArangoClient().db('_system')
+    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     for u in db['users']:
         verifications = set([v['name'] for v in db['verifications'].find({'user': u['_key']})])
         seedConnected = 'SeedConnected' in verifications

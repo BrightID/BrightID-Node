@@ -9,7 +9,7 @@ from arango import ArangoClient
 from web3.middleware import geth_poa_middleware
 import config
 
-db = ArangoClient().db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 variables = db['variables']
 contexts = db['contexts']
 sponsorships = db['sponsorships']
