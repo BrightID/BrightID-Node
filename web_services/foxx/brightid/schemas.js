@@ -276,10 +276,10 @@ schemas = Object.assign({
 
   contextDumpGetResponse: joi.object({
     data: joi.object({
-      collection: joi.string().description("the context's collection name"),
-      idsAsHex: joi.boolean().description("true if contextIds are hex"),
-      linkAESKey: joi.string().description("the context's linkAESKey"),
-      contextIds: joi.array().items(joi.string()).description('an array of contextIds'),
+      collection: joi.string().required().description('the collection name used to store contextIds linked under the context'),
+      idsAsHex: joi.boolean().required().description('true if contextIds are hex strings'),
+      linkAESKey: joi.string().required().description('the AES key used to encrypt links before sending to IDChain and decrypt after receiving them'),
+      contextIds: joi.array().required().items(joi.string()).description('list of all contextIds linked under the context'),
     })
   }),
 
