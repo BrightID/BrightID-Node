@@ -39,7 +39,10 @@ const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
-const GROUP_NOT_FOUND = 15;
+const INCORRECT_PASSCODE = 15;
+const PASSCODE_NOT_SET = 16;
+const GROUP_NOT_FOUND = 17;
+
 
 const handlers = {
   operationsPost: function(req, res){
@@ -443,6 +446,34 @@ const handlers = {
     return db.removeTestblock(contextId, action, appKey);
   },
 
+  contextDumpGet: function(req, res){
+    const contextKey = req.param('context');
+    const passcode = req.queryParams['passcode'];
+    const context = db.getContext(contextKey);
+    if (! context) {
+      res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
+    }
+
+    if (! context.passcode) {
+      res.throw(403, 'passcode not set', {errorNum: PASSCODE_NOT_SET});
+    }
+    if (context.passcode != passcode) {
+      res.throw(403, 'incorrect passcode', {errorNum: INCORRECT_PASSCODE});
+    }
+
+    const coll = arango._collection(context.collection);
+    const contextIds = db.getContextIds(coll);
+    db.removePasscode(contextKey);
+    res.send({
+      data: {
+        collection: context.collection,
+        idsAsHex: context.idsAsHex,
+        linkAESKey: context.linkAESKey,
+        contextIds
+      }
+    });
+  },
+
   groupGet: function(req, res){
     const id = req.param('id');
     const group = db.loadGroup(id);
@@ -467,7 +498,6 @@ const handlers = {
       }
     });
   },
-
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -523,8 +553,8 @@ router.get('/verifications/:app/:contextId', handlers.verificationGet)
 
 router.get('/verifications/:app', handlers.allVerificationsGet)
   .pathParam('app', joi.string().required().description('the app for which the user is verified'))
-  .summary('Gets list of all of contextIds')
-  .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
+  .summary('Gets list of all of contextIds verifed for an app')
+  .description("Gets list of all of contextIds in the context that are sponsored and verified for using an app")
   .response(schemas.allVerificationsGetResponse)
   .error(404, 'context not found');
 
@@ -551,8 +581,8 @@ router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
   .pathParam('action', joi.string().valid('sponsorship', 'link', 'verification').required().description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().required().description('the secret key for testing the app'))
-  .summary("Block user's verification for testing.")
-  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.')
+  .summary("Block user's verification for testing")
+  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing')
   .response(null);
 
 router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
@@ -560,9 +590,19 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .pathParam('action', joi.string().required().valid('sponsorship', 'link', 'verification').description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
-  .summary("Remove blocking state applied on user's verification for testing.")
-  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
+  .summary("Remove blocking state applied on user's verification for testing")
+  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing")
   .response(null);
+
+router.get('/contexts/:context/dump', handlers.contextDumpGet)
+  .pathParam('context', joi.string().required().description('the context key'))
+  .queryParam('passcode', joi.string().required().description('the one time passcode that authorize access to this endpoint once'))
+  .summary("Get dump of a context")
+  .description('Get all required info to transfer a context to a new node')
+  .response(schemas.contextDumpGetResponse)
+  .error(404, 'context not found')
+  .error(403, 'passcode not set')
+  .error(403, 'incorrect passcode');
 
 router.get('/groups/:id', handlers.groupGet)
   .pathParam('id', joi.string().required().description('the id of the group'))

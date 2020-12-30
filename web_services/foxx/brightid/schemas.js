@@ -280,6 +280,15 @@ schemas = Object.assign({
     })
   }),
 
+  contextDumpGetResponse: joi.object({
+    data: joi.object({
+      collection: joi.string().required().description('the collection name used to store contextIds linked under the context'),
+      idsAsHex: joi.boolean().required().description('true if contextIds are hex strings'),
+      linkAESKey: joi.string().required().description('the AES key used to encrypt links before sending to IDChain and decrypt after receiving them'),
+      contextIds: joi.array().required().items(joi.string()).description('list of all contextIds linked under the context'),
+    })
+  }),
+
   groupGetResponse: joi.object({
     data: joi.object({
       members: joi.array().items(joi.string()).required().description('brightids of members of the group'),

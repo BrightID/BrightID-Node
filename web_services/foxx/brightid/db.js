@@ -781,6 +781,16 @@ function getTestblocks(app, contextId) {
   }).toArray().map(b => b.action);
 }
 
+function getContextIds(coll) {
+  return coll.all().toArray().map(c => {
+    return {
+      user: c.user,
+      contextId: c.contextId,
+      timestamp: c.timestamp
+    }
+  });
+}
+
 function loadGroup(groupId) {
   return query`RETURN DOCUMENT(${groupsColl}, ${groupId})`.toArray()[0];
 }
@@ -798,6 +808,12 @@ function groupInvites(groupId) {
       data: invite.data,
       timestamp: invite.timestamp
     }
+  });
+}
+
+function removePasscode(contextKey) {
+  contextsColl.update(contextKey, {
+    passcode: null
   });
 }
 
@@ -858,6 +874,8 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  getContextIds,
+  removePasscode,
   loadGroup,
   groupInvites,
   updateEligibles,
