@@ -25,7 +25,7 @@ describe('links & sponsorships', function () {
     query`
       INSERT {
         _key: "testContext",
-        collection: "testIds",
+        collection: "testIds"
       } IN ${contextsColl}
     `;
     query`
@@ -37,17 +37,17 @@ describe('links & sponsorships', function () {
     `;
     query`
       INSERT {
-        _key: "2",
+        _key: "2"
       } IN ${usersColl}
     `;
     query`
       INSERT {
-        _key: "3",
+        _key: "3"
       } IN ${usersColl}
     `;
     query`
       INSERT {
-        _key: "4",
+        _key: "4"
       } IN ${usersColl}
     `;
   });

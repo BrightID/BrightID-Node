@@ -228,13 +228,13 @@ function sponsor(app, contextId) {
   }
 
   const sponsorshipsColl = arango._collection('sponsorships');
-  const id = db.getUserByContextId(coll, op.contextId);
+  const id = db.getUserByContextId(coll, contextId);
 
   if (id) {
     // contextId is linked to a brightid
     const timestamp = Date.now();
     db.sponsor(id, app, timestamp);
-    op = { name: 'Sponsor', app, id, timestamp }
+    op = { name: 'Sponsor', app, id, timestamp, v: 5 }
     let message = getMessage(op);
     op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
     op.hash = hash(message);

@@ -12,7 +12,6 @@ const {
   b64ToUint8Array,
   hash
 } = require('./encoding');
-const operations = require('./operations');
 
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
@@ -617,6 +616,7 @@ function linkContextId(id, context, contextId, timestamp) {
   const tempSponsorship = sponsorshipsColl.firstExample({ contextId });
   if (tempSponsorship) {
     const app = tempSponsorship._to.replace('apps/', '');
+    const operations = require('./operations');
     operations.sponsor(app, contextId);
   }
 }

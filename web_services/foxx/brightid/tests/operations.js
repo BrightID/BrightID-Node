@@ -60,7 +60,7 @@ function apply(op) {
   if (op.name == 'Sponsor') {
     let cId = idsAsHex ? op.contextId.toLowerCase() : op.contextId;
     if (!db.getUserByContextId(contextIdsColl, cId)) {
-      return resp1
+      return resp1;
     }
   }
   resp1.status.should.equal(200);
