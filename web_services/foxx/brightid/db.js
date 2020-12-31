@@ -12,6 +12,7 @@ const {
   b64ToUint8Array,
   hash
 } = require('./encoding');
+const operations = require('./operations');
 
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
@@ -592,30 +593,8 @@ function linkContextId(id, context, contextId, timestamp) {
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
   );
-  if (recentLinks.length >=3) {
+  if (recentLinks.length >= 3) {
     throw 'only three contextIds can be linked every 24 hours';
-  }
-
-  // sponsor the user if the context id is sponsored before
-  const alreadySponsored = sponsorshipsColl.byExample({
-    _from: 'users/0',
-    contextId
-  }).toArray()[0];
-  if (alreadySponsored) {
-    const appKey = alreadySponsored._to.replace('apps/', '');
-    const { sponsorPrivateKey } = getApp(appKey);
-    const op = {
-      name: 'Sponsor',
-      app: appKey,
-      id,
-      timestamp,
-      v: 5
-    };
-    const message = stringify(op);
-    op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
-    op.hash = hash(message);
-    op.state = 'init';
-    upsertOperation(op);
   }
 
   // accept link if the contextId is used by the same user before
@@ -633,6 +612,13 @@ function linkContextId(id, context, contextId, timestamp) {
     contextId,
     timestamp
   });
+
+  // sponsor the user if contextId is temporarily sponsored
+  const tempSponsorship = sponsorshipsColl.firstExample({ contextId });
+  if (tempSponsorship) {
+    const app = tempSponsorship._to.replace('apps/', '');
+    operations.sponsor(app, contextId);
+  }
 }
 
 function setRecoveryConnections(conns, key, timestamp) {
@@ -744,12 +730,6 @@ function sponsor(user, appKey, timestamp) {
   if (isSponsored(user)) {
     throw "sponsored before";
   }
-
-  // remove the document if the context id is sponsored before
-  sponsorshipsColl.removeByExample({
-    _from: 'users/0',
-    contextId: contextIds[0]
-  });
 
   sponsorshipsColl.insert({
     _from: 'users/' + user,

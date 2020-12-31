@@ -211,31 +211,49 @@ function getMessage(op) {
   return stringify(signedOp);
 }
 
-function updateSponsorOp(op) {
-  const { sponsorPrivateKey, context } = db.getApp(op.app);
+function sponsor(app, contextId) {
+  const { sponsorPrivateKey, context } = db.getApp(app);
+
+  if (!sponsorPrivateKey || !db.getContext(context)) {
+    throw 'can not relay sponsor requests for this app';
+  } else if (db.unusedSponsorships(app) < 1) {
+    throw 'app does not have unused sponsorships';
+  }
+
   const { collection, idsAsHex } = db.getContext(context);
   const coll = arango._collection(collection);
 
   if (idsAsHex) {
-    op.contextId = op.contextId.toLowerCase();
+    contextId = contextId.toLowerCase();
   }
 
-  op.id = db.getUserByContextId(coll, op.contextId);
-  if (op.id) {
-    delete op.contextId;
+  const sponsorshipsColl = arango._collection('sponsorships');
+  const id = db.getUserByContextId(coll, op.contextId);
+
+  if (id) {
+    // contextId is linked to a brightid
+    const timestamp = Date.now();
+    db.sponsor(id, app, timestamp);
+    op = { name: 'Sponsor', app, id, timestamp }
     let message = getMessage(op);
     op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
     op.hash = hash(message);
+    op.state = 'init';
+    db.upsertOperation(op);
+    // remove temporary sponsorship if exists
+    sponsorshipsColl.removeByExample({
+      _from: 'users/0',
+      contextId: contextId
+    });
   } else {
-    const sponsorshipsColl = arango._collection('sponsorships');
+    // contextId is not linked to a brightid yet
+    // add a temporary sponsorship to be applied after user linked contextId
     sponsorshipsColl.insert({
       _from: 'users/0',
-      _to: 'apps/' + op.app,
-      // this sponsor will expire after 1 hour
+      _to: 'apps/' + app,
       expireDate: Math.ceil((Date.now() / 1000) + 3600),
-      contextId: op.contextId
+      contextId: contextId
     });
-    throw "this context id isn't linked yet, if it becomes linked in one hour it will be sponsored automatically";
   }
 }
 
@@ -256,7 +274,7 @@ module.exports = {
   encrypt,
   decrypt,
   verifyUserSig,
-  updateSponsorOp,
+  sponsor,
   checkLimits,
   getMessage
 };
