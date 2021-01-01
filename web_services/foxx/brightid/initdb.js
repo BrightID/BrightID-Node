@@ -28,7 +28,8 @@ const deprecated = [
 ];
 
 const indexes = [
-  {'collection': 'verifications', 'fields': ['name', 'user'], 'type': 'persistent'},
+  {'collection': 'verifications', 'fields': ['user'], 'type': 'persistent'},
+  {'collection': 'verifications', 'fields': ['name'], 'type': 'persistent'},
   {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0}
 ]
 
