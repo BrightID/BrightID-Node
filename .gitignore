@@ -2,11 +2,6 @@ foxx/dev/
 *.pyc
 node_modules
 
-
-
-
-
-
-
-
-
+# DAppNodeSDK release directories
+build_*
+/docker.tar.gz

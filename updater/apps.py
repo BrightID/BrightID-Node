@@ -8,7 +8,7 @@ from web3.middleware import geth_poa_middleware
 import config
 
 
-db = ArangoClient().db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 local_to_json = {
     '_key': 'Key',
     'name': 'Name',
@@ -28,33 +28,35 @@ def str2bytes32(s):
     return (bytes(s, 'utf-8')).hex() + padding
 
 
+def get_logo(url):
+    try:
+        res = requests.get(url)
+        file_format = url.split('.')[-1]
+        if file_format == 'svg':
+            file_format == 'svg+xml'
+        logo = 'data:image/' + file_format + ';base64,' + \
+            base64.b64encode(res.content).decode('ascii')
+    except Exception as e:
+        print('Error in getting logo', e)
+        logo = ''
+    return logo
+
+
 def apps_data():
-    print('Updating applications', time.ctime())
+    print('Updating apps', time.ctime())
     local_apps = {app['_key']: app for app in db['apps']}
 
     json_apps = requests.get(config.APPS_JSON_FILE).json()['Applications']
+    new_local_apps = []
     for json_app in json_apps:
-        try:
-            res = requests.get(json_app['Images'][0])
-            file_format = json_app['Images'][0].split('.')[-1]
-            if file_format == 'svg':
-                file_format == 'svg+xml'
-            json_app['logo'] = 'data:image/' + file_format + ';base64,' + \
-                base64.b64encode(res.content).decode('ascii')
-        except Exception as e:
-            print('Error in getting logo', e)
-            json_app['logo'] = ''
-
-        new_local_app = {key: json_app[local_to_json[key]] for key in local_to_json}
+        json_app['logo'] = get_logo(json_app['Images'][0])
+        new_local_app = {key: json_app[local_to_json[key]]
+                         for key in local_to_json}
         new_local_app['url'] = new_local_app['url'][0]
-
         local_app = local_apps.get(json_app['Key'])
         if not local_app:
-            print(f"Insert new app: {new_local_app['_key']}")
-            try:
-                db['apps'].insert(new_local_app)
-            except Exception as e:
-                print(f'Error in inserting new application: {e}')
+            print(f"New app: {new_local_app['_key']}")
+            new_local_apps.append(new_local_app)
             continue
 
         for key in new_local_app:
@@ -65,10 +67,15 @@ def apps_data():
                 except Exception as e:
                     print(f'Error in updating application: {e}')
                 break
+    try:
+        print("Inserting new apps")
+        db['apps'].import_bulk(new_local_apps)
+    except Exception as e:
+        print(f'Error in inserting new apps: {e}')
 
 
 def apps_balance():
-    print("Updating sponsorships balance of applications", time.ctime())
+    print("Updating sponsorships balance of the apps", time.ctime())
     w3 = Web3(Web3.WebsocketProvider(
         config.INFURA_URL, websocket_kwargs={'timeout': 60}))
     if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:

@@ -94,9 +94,15 @@ const operations = {
     sig: joi.string().required().description('deterministic json representation of operation object signed by the dismisser'),
   },
   'Add Admin': {
-    id: joi.string().required().description('brightid of the user who has admin rights in the group and can grant administratorship to other members'),
+    id: joi.string().required().description('brightid of one of the current admins of the group'),
     admin: joi.string().required().description('brightid of the member whom is being granted administratorship of the group'),
-    group: joi.string().required().description('the unique id of the group that new admin is being added to'),
+    group: joi.string().required().description('the unique id of the group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the admin user represented by id'),
+  },
+  'Update Group': {
+    id: joi.string().required().description('brightid of one of the admins of the group'),
+    group: joi.string().required().description('the unique id of the group'),
+    url: joi.string().required().description('the new url that group data (profile image and name) encrypted by group AES key can be fetched from'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
   'Add Subkey': {
@@ -283,6 +289,38 @@ schemas = Object.assign({
     data: joi.object({
       lastProcessedBlock: joi.number().integer().required().description('last block that consensus receiver service processed'),
       verificationsBlock: joi.number().integer().required().description('the block that scorer service updated verifications based on operations got applied before that block'),
+    })
+  }),
+
+  contextDumpGetResponse: joi.object({
+    data: joi.object({
+      collection: joi.string().required().description('the collection name used to store contextIds linked under the context'),
+      idsAsHex: joi.boolean().required().description('true if contextIds are hex strings'),
+      linkAESKey: joi.string().required().description('the AES key used to encrypt links before sending to IDChain and decrypt after receiving them'),
+      contextIds: joi.array().required().items(joi.string()).description('list of all contextIds linked under the context'),
+    })
+  }),
+
+  groupGetResponse: joi.object({
+    data: joi.object({
+      members: joi.array().items(joi.string()).required().description('brightids of members of the group'),
+      invites: joi.array().items(joi.object({
+        inviter: joi.string().required().description('brightid of inviter'),
+        invitee: joi.string().required().description('brightid of invitee'),
+        id: joi.string().required().description('unique id of invite'),
+        data: joi.string().required().description('AES key of group encrypted for invitee'),
+        timestamp: joi.number().required().description('timestamp of invite'),
+      })).required(),
+      eligibles: joi.array().items(joi.string()).required().description('brightids of the users that are eligible to join the group'),
+      admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
+      founders: joi.array().items(joi.string()).required().description('brightids of founders of the group'),
+      isNew: joi.boolean().required().description('true if group is new'),
+      seed: joi.boolean().required().description('true if group is Seed'),
+      region: joi.string().description('region of the group'),
+      type: joi.string().required().description('type of the group'),
+      url: joi.string().required().description('url of the group'),
+      info: joi.string().description('URL of a documnet that contains info about the group'),
+      timestamp: joi.number().required().description('the group creation timestamp'),
     })
   }),
 

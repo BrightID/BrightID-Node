@@ -20,7 +20,7 @@ const collections = {
 };
 
 // deprecated collections should be added to this array after releasing
-// second update to allow 2 last released versions work together 
+// second update to allow 2 last released versions work together
 const deprecated = [
   'removed',
   'newGroups',
@@ -28,8 +28,9 @@ const deprecated = [
 ];
 
 const indexes = [
-  {'collection': 'verifications',  'fields': ['name']},
-  {'collection': 'verifications',  'fields': ['user']}
+  {'collection': 'verifications', 'fields': ['user'], 'type': 'persistent'},
+  {'collection': 'verifications', 'fields': ['name'], 'type': 'persistent'},
+  {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0}
 ]
 
 function createCollections() {
@@ -50,7 +51,8 @@ function createIndexes() {
   console.log("creating indexes ...");
   for (let index of indexes) {
     const coll = arango._collection(index.collection);
-    coll.ensureIndex({type: 'persistent', fields: index.fields})
+    delete index.collection;
+    coll.ensureIndex(index);
     console.log(`${index.fields} indexed in ${index.collection} collection`);
   };
 }
@@ -219,7 +221,19 @@ function v5_6() {
       REPLACE UNSET(doc, 'ethName') IN ${contextsColl}`;
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6'];
+function v5_6_1() {
+  console.log("use _key instead of _id in admins and founders of groups");
+  const groupsColl = arango._collection('groups');
+  const groups = groupsColl.all().toArray();
+  for (let group of groups) {
+    groupsColl.update(group, {
+      'founders': group.founders.map(f => f.replace('users/', '')),
+      'admins': (group.admins || group.founders).map(a => a.replace('users/', ''))
+    });
+  }
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1'];
 
 function initdb() {
   createCollections();
