@@ -698,6 +698,8 @@ function getRecoveryConnections(user) {
 function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
     signingKey,
+    // remove all the subkeys
+    subkeys: [],
     updateTime: timestamp
   });
 }
@@ -836,6 +838,20 @@ function updateGroup(admin, groupId, url, timestamp) {
   });
 }
 
+function addSubkey(id, subkey, timestamp) {
+  const subkeys = usersColl.document(id).subkeys || [];
+  if (subkeys.indexOf(subkey) == -1) {
+    subkeys.push(subkey);
+    usersColl.update(id, { subkeys });
+  }
+}
+
+function removeSubkey(id, subkey) {
+  let subkeys = usersColl.document(id).subkeys || [];
+  subkeys = subkey ? subkeys.filter(s => s != subkey) : [];
+  usersColl.update(id, { subkeys });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -879,6 +895,8 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  addSubkey,
+  removeSubkey,
   getContextIds,
   removePasscode,
   loadGroup,

@@ -14,15 +14,24 @@ const {
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
-const verifyUserSig = function(message, id, sig) {
+const verifyUserSig = function(message, id, sig, opName) {
   const user = db.loadUser(id);
-  // this will happen for "Add Connection" when one party is not created
-  // this also enable this version of code to be used by the old users collection
-  // for users that don't have signingKey
-  const signingKey = (user && user.signingKey) ? user.signingKey : urlSafeB64ToB64(id);
-  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
-    throw 'invalid signature';
+  // When "Add Connection" is called on a user that is not created yet
+  // signingKey can be calculated from user's brightid
+  let signingKey = user ? user.signingKey : urlSafeB64ToB64(id)
+  const signingKeys = [signingKey];
+  // 'Add Subkey' and 'Remove Subkey' can only be signed using master key
+  if (! ['Add Subkey', 'Remove Subkey'].includes(opName)) {
+    const subkeys = (user && user.subkeys) || [];
+    signingKeys.push(...subkeys)
   }
+
+  for (signingKey of signingKeys) {
+    if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
+      return;
+    }
+  }
+  throw 'invalid signature';
 }
 
 const verifyAppSig = function(message, app, sig) {
@@ -50,6 +59,8 @@ const senderAttrs = {
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
+  'Add Subkey': ['id'],
+  'Remove Subkey': ['id'],
   'Update Group': ['id'],
 };
 let operationsCount = {};
@@ -95,6 +106,7 @@ function checkLimits(op, timeWindow, limit) {
   throw 'Too Many Requests';
 }
 
+
 const signerAndSigs = {
   'Remove Connection': ['id1', 'sig1'],
   'Add Group': ['id1', 'sig1'],
@@ -107,6 +119,8 @@ const signerAndSigs = {
   'Dismiss': ['dismisser', 'sig'],
   'Add Admin': ['id', 'sig'],
   'Update Group': ['id', 'sig'],
+  'Add Subkey': ['id', 'sig'],
+  'Remove Subkey': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -185,6 +199,10 @@ function apply(op) {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else if (op['name'] == 'Add Admin') {
     return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
+  } else if (op['name'] == 'Add Subkey') {
+    return db.addSubkey(op.id, op.subkey, op.timestamp);
+  } else if (op['name'] == 'Remove Subkey') {
+    return db.removeSubkey(op.id, op.subkey, op.timestamp);
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {
