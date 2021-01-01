@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
+const _ = require('lodash');
 const { getMessage } = require('../operations');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
@@ -46,46 +47,26 @@ const u4 = nacl.sign.keyPair();
 let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } = nacl.sign.keyPair();
 let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
-const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
-const contextId2 = '0x085Ae95B261fF13f826159db99e073DFFD1424Ef';
+const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b'.toLowerCase();
 const contextName = "ethereum";
-const appName = "ethereum";
-const idsAsHex = true;
+const app = "ethereum";
 
 function apply(op) {
-  const resp1 = request.post(`${baseUrl}/operations`, {
+  let resp = request.post(`${baseUrl}/operations`, {
     body: op,
     json: true
   });
-  if (op.name == 'Sponsor') {
-    let cId = idsAsHex ? op.contextId.toLowerCase() : op.contextId;
-    if (!db.getUserByContextId(contextIdsColl, cId)) {
-      return resp1;
-    }
-  }
-  resp1.status.should.equal(200);
+  resp.status.should.equal(200);
   let h = hash(getMessage(op));
-  resp1.json.data.hash.should.equal(h);
-  if (op.name == 'Sponsor') {
-    if (idsAsHex) {
-      op.contextId = op.contextId.toLowerCase();
-    }
-    op.id = db.getUserByContextId(contextIdsColl, op.contextId);
-    delete op.contextId;
-    h = hash(getMessage(op));
-  }
+  resp.json.data.hash.should.equal(h);
   op = operationsColl.document(h);
-  delete op._rev;
-  delete op._id;
-  delete op._key;
-  delete op.hash;
-  delete op.state;
+  op = _.omit(op, ['_rev','_id', '_key', 'hash', 'state']);
   op.blockTime = op.timestamp;
-  const resp2 = request.put(`${applyBaseUrl}/operations/${h}`, {
+  resp = request.put(`${applyBaseUrl}/operations/${h}`, {
     body: op,
     json: true
   });
-  resp2.json.success.should.equal(true);
+  resp.json.success.should.equal(true);
 }
 
 describe('operations', function(){
@@ -120,12 +101,12 @@ describe('operations', function(){
         _key: ${contextName},
         collection: ${contextName},
         linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))},
-        idsAsHex: ${idsAsHex}
+        idsAsHex: true
       } IN ${contextsColl}
     `;
     query`
       INSERT {
-        _key: ${appName},
+        _key: ${app},
         context: ${contextName},
         totalSponsorships: 3,
         sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
@@ -409,21 +390,15 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
     );
     apply(op);
-    let cId;
-    if (idsAsHex) {
-      cId = contextId.toLowerCase();
-    } else {
-      cId = contextId;
-    }
-    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(cId);
+    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
   });
 
   it('should be able to "Sponsor"', function () {
     const timestamp = Date.now();
-    const op = {
+    let op = {
       'v': 5,
       'name': 'Sponsor',
-      'app': appName,
+      app,
       timestamp,
       contextId,
     }
@@ -431,66 +406,64 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
     );
-    apply(op);
+    let resp = request.post(`${baseUrl}/operations`, { body: op, json: true });
+    resp.status.should.equal(200);
     db.isSponsored(u1.id).should.equal(true);
+    op = operationsColl.firstExample({ name: 'Sponsor' });
+    const h = op.hash;
+    op = _.omit(op, ['_rev','_id', '_key', 'hash', 'state']);
+    op.blockTime = op.timestamp;
+    resp = request.put(`${applyBaseUrl}/operations/${h}`, {
+      body: op,
+      json: true
+    });
+    resp.json.result.should.equal('sponsored before');
   });
 
-  it('should be able to "Sponsor a contextId before linking"', function () {
+  it('should be able to "Sponsor" before linking', function () {
+    contextIdsColl.truncate();
+    sponsorshipsColl.truncate();
     const timestamp = Date.now();
-    const op = {
+    let op = {
       'v': 5,
       'name': 'Sponsor',
-      'app': appName,
+      app,
       timestamp,
-      contextId: contextId2,
+      contextId,
     }
-    const message = getMessage(op);
+    let message = getMessage(op);
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
     );
-    apply(op);
-    let cId = idsAsHex ? op.contextId.toLowerCase() : op.contextId;
-    const sponsoredContextId = sponsorshipsColl.byExample({
+    let resp = request.post(`${baseUrl}/operations`, {
+      body: op,
+      json: true
+    });
+    resp.status.should.equal(200);
+    let h = hash(getMessage(op));
+    resp.json.data.hash.should.equal(h);
+    operationsColl.exists(h).should.equal(false);
+    const tempSponsorship = sponsorshipsColl.firstExample({
       _from: 'users/0',
-      contextId: cId
-    }).toArray()[0];
-    sponsoredContextId.contextId.should.equal(cId);
-  });
+    });
+    tempSponsorship.contextId.should.equal(op.contextId);
+    db.isSponsored(u1.id).should.equal(false);
 
-  it('should be able to "Sponsor the user by linking the already sponsored ContextId"', function () {
-    const timestamp = Date.now();
-    const op = {
+    op = {
       'v': 5,
       'name': 'Link ContextId',
       'context': contextName,
       timestamp,
-      'id': u2.id,
-      contextId: contextId2,
+      'id': u1.id,
+      contextId,
     }
-    const message = getMessage(op);
+    message = getMessage(op);
     op.sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
-    let cId = idsAsHex ? op.contextId.toLowerCase() : op.contextId;
-    db.getContextIdsByUser(contextIdsColl, u2.id)[0].should.equal(cId);
-    const op2 = operationsColl.byExample({
-      'name': 'Sponsor',
-      'id': u2.id
-    }).toArray()[0];
-    const h = op2._key;
-    delete op2._rev;
-    delete op2._key;
-    delete op2._id;
-    delete op2.hash;
-    delete op2.state;
-    op2.blockTime = op2.timestamp;
-    const resp2 = request.put(`${applyBaseUrl}/operations/${h}`, {
-      body: op2,
-      json: true
-    });
-    resp2.json.success.should.equal(true);
-    db.isSponsored(u2.id).should.equal(true);
+    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
+    db.isSponsored(u1.id).should.equal(true);
   });
 
   it('should be able to "Connect"', function () {
