@@ -513,7 +513,9 @@ router.post('/operations', handlers.operationsPost)
   .summary('Add an operation to be applied after consensus')
   .description('Add an operation be applied after consensus.')
   .response(schemas.operationPostResponse)
-  .error(400, 'Failed to add the operation');
+  .error(400, 'Failed to add the operation')
+  .error(403, 'Bad signature')
+  .error(429, 'Too Many Requests');
 
 router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
