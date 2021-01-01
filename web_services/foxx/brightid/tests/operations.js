@@ -439,7 +439,7 @@ describe('operations', function(){
       body: op,
       json: true
     });
-    resp.json.result.should.equal('sponsored before');
+    resp.json.result.message.should.equal('sponsored before');
   });
 
   it('should be able to "Sponsor" before linking', function () {
