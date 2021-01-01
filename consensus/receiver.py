@@ -18,7 +18,8 @@ if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') 
 
 
 def hash(op):
-    op = {k: op[k] for k in op if k not in ('sig', 'sig1', 'sig2', 'hash', 'blockTime')}
+    op = {k: op[k] for k in op if k not in (
+        'sig', 'sig1', 'sig2', 'hash', 'blockTime')}
     if op['name'] == 'Set Signing Key':
         del op['id1']
         del op['id2']
@@ -34,7 +35,8 @@ def process(data, block_timestamp):
         data = bytes.fromhex(data.strip('0x')).decode('utf-8')
         op = json.loads(data)
         op['blockTime'] = block_timestamp * 1000
-        r = requests.put(config.APPLY_URL.format(v=op['v'], hash=hash(op)), json=op)
+        r = requests.put(config.APPLY_URL.format(
+            v=op['v'], hash=hash(op)), json=op)
         print(op)
         print(r.json())
     except Exception as e:
@@ -42,18 +44,17 @@ def process(data, block_timestamp):
 
 
 def save_snapshot(block):
-    batch = db.replication.create_dump_batch(ttl=1000)
     fname = config.SNAPSHOTS_PATH.format(block)
     zf = zipfile.ZipFile(fname + '.tmp', mode='w')
-    for collection in ('users', 'groups', 'usersInGroups', 'connections', 'verifications'):
-        params = {'batchId': batch['id'], 'collection': collection,
-                  'chunkSize': config.MAX_COLLECTION_SIZE}
-        r = requests.get(config.DUMP_URL, params=params)
-        zf.writestr(
-            'dump/{}_{}.data.json'.format(collection, batch['id']), r.text)
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    COLLECTIONS_FILE = os.path.join(dir_path, 'collections.json')
+    os.system('rm /tmp/scorerDump -rf')
+    os.system(f'arangodump --overwrite true --compress-output false --server.password "" --output-directory "/tmp/scorerDump" --maskings {COLLECTIONS_FILE}')
+    for root, dirs, files in os.walk('/tmp/scorerDump'):
+        for file in files:
+            zf.write(os.path.join(root, file), file)
     zf.close()
     os.rename(fname + '.tmp', fname)
-    db.replication.delete_dump_batch(batch['id'])
 
 
 def main():
