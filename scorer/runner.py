@@ -1,18 +1,19 @@
+import os
 import time
+import zipfile
 import traceback
 from datetime import datetime
 from arango import ArangoClient
+from py_expression_eval import Parser
 from config import *
 from verifications import yekta
 from verifications import brightid
 from verifications import seed_connected
 from verifications import dollar_for_everyone
 from verifications import seed_connected_with_friend
-from py_expression_eval import Parser
-from verifications import utils
 
 db = ArangoClient().db('_system')
-
+snapshot_db = ArangoClient().db('snapshot')
 verifiers = [
     seed_connected,
     seed_connected_with_friend,
@@ -22,10 +23,10 @@ verifiers = [
 ]
 
 
-def process(fname, past_block, current_block):
+def process(fname):
     for verifier in verifiers:
         try:
-            verifier.verify(fname, past_block, current_block)
+            verifier.verify(fname)
         except Exception as e:
             print(f'Error in verifier: {e}')
             traceback.print_exc()
@@ -50,18 +51,12 @@ def main():
 
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
-        verifications_docs = utils.documents(fname, 'verifications')
-        if verifications_docs:
-            past_block = max(verifications_docs,
-                             key=lambda d: d['block'])['block']
-        else:
-            past_block = 0
-        current_block = int(snapshots[0].strip('dump_').strip('.zip'))
-        print(f'past block:{past_block} current block:{current_block}')
-        process(fname, past_block, current_block)
-        update_apps_verification(fname, past_block, current_block)
+        restore_snapshot(fname)
+        process(fname)
+        update_apps_verification(fname)
+        block = int(snapshots[0].strip('dump_').strip('.zip'))
         variables.update(
-            {'_key': 'VERIFICATION_BLOCK', 'value': current_block})
+            {'_key': 'VERIFICATION_BLOCK', 'value': block})
 
         # remove the snapshot file
         if os.path.exists(fname):
@@ -69,22 +64,13 @@ def main():
         else:
             print(f'{fname} does not exist')
 
-        # remove old verifications
-        history_border = past_block - (current_block - past_block)
-        db.aql.execute('''
-            FOR v IN verifications
-                FILTER  v.block < @block
-                REMOVE { _key: v._key } IN verifications
-            ''', bind_vars={'block': history_border})
         print(
             '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
 
 
-def update_apps_verification(fname, past_block, current_block):
+def update_apps_verification(fname):
     all_verifications = {}
-    for d in utils.documents(fname, 'verifications'):
-        if d['block'] != past_block:
-            continue
+    for d in snapshot_db['verifications']:
         if d['user'] not in all_verifications:
             all_verifications[d['user']] = {}
 
@@ -99,8 +85,7 @@ def update_apps_verification(fname, past_block, current_block):
 
     apps = {app["_key"]: app['verification']
             for app in db['apps'] if app.get('verification')}
-    users_docs = utils.documents(fname, 'users')
-    for user in users_docs:
+    for user in snapshot_db['users']:
         verifications = all_verifications.get(user['_key'], {})
         for app in apps:
             try:
@@ -117,7 +102,6 @@ def update_apps_verification(fname, past_block, current_block):
                     'app': True,
                     'name': app,
                     'user': user['_key'],
-                    'block': current_block,
                     'timestamp': int(time.time() * 1000)
                 })
             elif not verified and app in verifications:
@@ -128,10 +112,14 @@ def update_apps_verification(fname, past_block, current_block):
                 })
 
 
+def restore_snapshot(f):
+    os.system('rm /tmp/scorerRestore -rf')
+    zf = zipfile.ZipFile(f)
+    zf.extractall('/tmp/scorerRestore')
+    os.system('arangorestore --server.username "root" --server.password "" --server.database snapshot --create-database true --create-collection true --import-data true --input-directory "/tmp/scorerRestore"')
+
+
 if __name__ == '__main__':
-    db['verifications'].delete_match({
-        'block': 3809200
-    })
     while True:
         try:
             main()

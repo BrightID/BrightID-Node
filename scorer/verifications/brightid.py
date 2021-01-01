@@ -1,31 +1,29 @@
 import time
 from arango import ArangoClient
-from .utils import documents
 
 
-def verify(fname, past_block, current_block):
+def verify(fname):
     print('BRIGHTID')
     db = ArangoClient().db('_system')
-    verifications = {}
-    verifications_documents = documents(fname, 'verifications')
-    for d in verifications_documents:
-        if d['block'] != past_block:
-            continue
-        if d['user'] not in verifications:
-            verifications[d['user']] = []
-        verifications[d['user']].append(d['name'])
+    snapshot_db = ArangoClient().db('snapshot')
+    verifieds = {v['user']
+                 for v in db['verifications'].find({'name': 'BrightID'})}
 
-    users = documents(fname, 'users')
-
-    for u in users:
-        if 'SeedConnected' not in verifications.get(u['_key'], []):
+    for user in snapshot_db['users']:
+        if user['_key'] in verifieds:
             continue
+
+        c = snapshot_db['verifications'].find({
+            'user': user['_key'],
+            'name': 'SeedConnected'
+        })
+        if c.empty() or c.batch()[0].get('score', 0) < 1:
+            continue
+
         db['verifications'].insert({
             'name': 'BrightID',
-            'user': u['_key'],
-            'timestamp': int(time.time() * 1000),
-            'block': current_block
+            'user': user['_key'],
+            'timestamp': int(time.time() * 1000)
         })
-    verifiedCount = db['verifications'].find(
-        {'name': 'BrightID', 'block': current_block}).count()
-    print(f'verifieds: {verifiedCount}\n')
+    verifiedCount = db['verifications'].find({'name': 'BrightID'}).count()
+    print('verifieds: {}\n'.format(verifiedCount))

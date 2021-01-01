@@ -1,29 +1,37 @@
 import time
 from arango import ArangoClient
-from .utils import documents
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 
 
-def verify(fname, past_block, current_block):
+def verify(fname):
     print('DOLLAR FOR EVERYONE')
-    users_documents = documents(fname, 'users')
-    admins = filter(lambda u: u.get('dfeAdmin', False), users_documents)
-    admins = [a['_id'] for a in admins]
-
-    connections_documents = documents(fname, 'connections')
-    connections = filter(lambda c: c['_from'] in admins and c['level']
-                         in SEED_CONNECTION_LEVELS and c['timestamp'] > 1564600000000, connections_documents)
-
     db = ArangoClient().db('_system')
-    neighbors = set([c['_to'].replace('users/', '') for c in connections])
-    for neighbor in neighbors:
+    snapshot_db = ArangoClient().db('snapshot')
+    admins = [u['_id'] for u in snapshot_db['users'].find({'dfeAdmin': True})]
+    cursor = snapshot_db.aql.execute('''
+        FOR c IN connections
+            FILTER c._from IN @admins
+                AND c.level IN @levels
+                AND c.timestamp > @time_limit
+                RETURN c._to
+    ''', bind_vars={
+        'admins': admins,
+        'levels': SEED_CONNECTION_LEVELS,
+        'time_limit': 1564600000000
+    })
+    users = {u.replace('users/', '') for u in cursor}
+    verifieds = {v['user']
+                 for v in db['verifications'].find({'name': 'DollarForEveryone'})}
+    for user in users:
+        if user in verifieds:
+            continue
+
         db['verifications'].insert({
             'name': 'DollarForEveryone',
-            'user': neighbor,
-            'timestamp': int(time.time() * 1000),
-            'block': current_block
+            'user': user,
+            'timestamp': int(time.time() * 1000)
         })
     verifiedCount = db['verifications'].find(
-        {'name': 'DollarForEveryone', 'block': current_block}).count()
+        {'name': 'DollarForEveryone'}).count()
     print('verifieds: {}\n'.format(verifiedCount))

@@ -1,3 +1,1 @@
-import os
-
-SNAPSHOTS_PATH = "/snapshots"
+SNAPSHOTS_PATH = '/snapshots'
