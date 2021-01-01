@@ -1,18 +1,7 @@
 'use strict';
 const { sha256 } = require('@arangodb/crypto');
 const { query, db } = require('@arangodb');
-const stringify = require('fast-json-stable-stringify');
-const nacl = require('tweetnacl');
 const _ = require('lodash');
-const {
-  uInt8ArrayToB64,
-  b64ToUrlSafeB64,
-  urlSafeB64ToB64,
-  strToUint8Array,
-  b64ToUint8Array,
-  hash
-} = require('./encoding');
-
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
@@ -26,6 +15,11 @@ const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
 const testblocksColl = db._collection('testblocks');
+const {
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64,
+  urlSafeB64ToB64
+} = require('./encoding');
 
 function addConnection(key1, key2, timestamp) {
   // this function is deprecated and will be removed on v6
