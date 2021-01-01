@@ -226,13 +226,18 @@ function v5_7() {
     verificationsColl.removeByExample({ name: verificationName });
   }
 
-  const variablesColl = arango._collection('variables');
-  const verification_block = variablesColl.document('VERIFICATION_BLOCK').value;
   const verifications = verificationsColl.all().toArray();
   for (let verification of verifications) {
-    verificationsColl.update(verification, {
-      block: verification_block
-    });
+    if (verification.name == 'SeedConnected') {
+      verificationsColl.replace(verification, {
+        'name': verification.name,
+        'user': verification.user,
+        'seeds': [verification.seed],
+        'seedGroups': [verification.seedGroup.replace('groups/', '')],
+        'score': 1,
+        'timestamp': verification.timestamp,
+      });
+    }
   }
 }
 
