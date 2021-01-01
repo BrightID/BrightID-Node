@@ -20,7 +20,7 @@ const collections = {
 };
 
 // deprecated collections should be added to this array after releasing
-// second update to allow 2 last released versions work together 
+// second update to allow 2 last released versions work together
 const deprecated = [
   'removed',
   'newGroups',
@@ -28,8 +28,8 @@ const deprecated = [
 ];
 
 const indexes = [
-  {'collection': 'verifications',  'fields': ['name']},
-  {'collection': 'verifications',  'fields': ['user']}
+  {'collection': 'verifications', 'fields': ['name', 'user'], 'type': 'persistent'},
+  {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0}
 ]
 
 function createCollections() {
@@ -50,7 +50,8 @@ function createIndexes() {
   console.log("creating indexes ...");
   for (let index of indexes) {
     const coll = arango._collection(index.collection);
-    coll.ensureIndex({type: 'persistent', fields: index.fields})
+    delete index.collection;
+    coll.ensureIndex(index);
     console.log(`${index.fields} indexed in ${index.collection} collection`);
   };
 }

@@ -1,10 +1,18 @@
 'use strict';
-
 const { sha256 } = require('@arangodb/crypto');
-
 const { query, db } = require('@arangodb');
-
+const stringify = require('fast-json-stable-stringify');
+const nacl = require('tweetnacl');
 const _ = require('lodash');
+const {
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64,
+  urlSafeB64ToB64,
+  strToUint8Array,
+  b64ToUint8Array,
+  hash
+} = require('./encoding');
+
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
@@ -18,12 +26,6 @@ const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
 const testblocksColl = db._collection('testblocks');
-
-const {
-  uInt8ArrayToB64,
-  b64ToUrlSafeB64,
-  urlSafeB64ToB64
-} = require('./encoding');
 
 function addConnection(key1, key2, timestamp) {
   // this function is deprecated and will be removed on v6
@@ -595,17 +597,21 @@ function linkContextId(id, context, contextId, timestamp) {
   // remove testblocks if exists
   removeTestblock(contextId, 'link');
 
+  let user = getUserByContextId(coll, contextId);
+  if (user && user != id) {
+    throw 'contextId is duplicate';
+  }
+
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
   );
-  if (recentLinks.length >=3) {
+  if (recentLinks.length >= 3) {
     throw 'only three contextIds can be linked every 24 hours';
   }
 
   // accept link if the contextId is used by the same user before
-  let link;
-  for (link of links) {
+  for (let link of links) {
     if (link.contextId === contextId) {
       if (timestamp > link.timestamp) {
         coll.update(link, { timestamp });
@@ -614,15 +620,19 @@ function linkContextId(id, context, contextId, timestamp) {
     }
   }
 
-  if (getUserByContextId(coll, contextId)) {
-    throw 'contextId is duplicate';
-  }
-
   coll.insert({
     user: id,
     contextId,
     timestamp
   });
+
+  // sponsor the user if contextId is temporarily sponsored
+  const tempSponsorship = sponsorshipsColl.firstExample({ contextId });
+  if (tempSponsorship) {
+    const app = tempSponsorship._to.replace('apps/', '');
+    const operations = require('./operations');
+    operations.sponsor(app, contextId);
+  }
 }
 
 function setRecoveryConnections(conns, key, timestamp) {
@@ -713,9 +723,10 @@ function unusedSponsorships(app) {
 function sponsor(user, appKey, timestamp) {
   const app = getApp(appKey);
   const context = getContext(app.context);
+  let contextIds;
   if (context) {
     const coll = db._collection(context.collection);
-    const contextIds = getContextIdsByUser(coll, user);
+    contextIds = getContextIdsByUser(coll, user);
     // remove testblocks if exists
     removeTestblock(contextIds[0], 'sponsorship', appKey);
   }

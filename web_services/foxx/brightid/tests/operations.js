@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
+const _ = require('lodash');
 const { getMessage } = require('../operations');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
@@ -46,39 +47,26 @@ const u4 = nacl.sign.keyPair();
 let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } = nacl.sign.keyPair();
 let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
-const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b';
+const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b'.toLowerCase();
 const contextName = "ethereum";
-const appName = "ethereum";
-const idsAsHex = true;
+const app = "ethereum";
 
 function apply(op) {
-  const resp1 = request.post(`${baseUrl}/operations`, {
+  let resp = request.post(`${baseUrl}/operations`, {
     body: op,
     json: true
   });
-  resp1.status.should.equal(200);
+  resp.status.should.equal(200);
   let h = hash(getMessage(op));
-  resp1.json.data.hash.should.equal(h);
-  if (op.name == 'Sponsor') {
-    if (idsAsHex) {
-      op.contextId = op.contextId.toLowerCase();
-    }
-    op.id = db.getUserByContextId(contextIdsColl, op.contextId);
-    delete op.contextId;
-    h = hash(getMessage(op));
-  }
+  resp.json.data.hash.should.equal(h);
   op = operationsColl.document(h);
-  delete op._rev;
-  delete op._id;
-  delete op._key;
-  delete op.hash;
-  delete op.state;
+  op = _.omit(op, ['_rev','_id', '_key', 'hash', 'state']);
   op.blockTime = op.timestamp;
-  const resp2 = request.put(`${applyBaseUrl}/operations/${h}`, {
+  resp = request.put(`${applyBaseUrl}/operations/${h}`, {
     body: op,
     json: true
   });
-  resp2.json.success.should.equal(true);
+  resp.json.success.should.equal(true);
 }
 
 describe('operations', function(){
@@ -112,14 +100,13 @@ describe('operations', function(){
       INSERT {
         _key: ${contextName},
         collection: ${contextName},
-        verification: ${contextName},
         linkAESKey: ${uInt8ArrayToB64(Object.values(linkAESKey))},
-        idsAsHex: ${idsAsHex}
+        idsAsHex: true
       } IN ${contextsColl}
     `;
     query`
       INSERT {
-        _key: ${appName},
+        _key: ${app},
         context: ${contextName},
         totalSponsorships: 3,
         sponsorPublicKey: ${uInt8ArrayToB64(Object.values(sponsorPublicKey))},
@@ -423,21 +410,15 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u4.secretKey))
     );
     apply(op);
-    let cId;
-    if (idsAsHex) {
-      cId = contextId.toLowerCase();
-    } else {
-      cId = contextId;
-    }
-    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(cId);
+    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
   });
 
   it('should be able to "Sponsor"', function () {
     const timestamp = Date.now();
-    const op = {
+    let op = {
       'v': 5,
       'name': 'Sponsor',
-      'app': appName,
+      app,
       timestamp,
       contextId,
     }
@@ -445,7 +426,63 @@ describe('operations', function(){
     op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
     );
+    let resp = request.post(`${baseUrl}/operations`, { body: op, json: true });
+    resp.status.should.equal(200);
+    db.isSponsored(u1.id).should.equal(true);
+    op = operationsColl.firstExample({ name: 'Sponsor' });
+    const h = op.hash;
+    op = _.omit(op, ['_rev','_id', '_key', 'hash', 'state']);
+    op.blockTime = op.timestamp;
+    resp = request.put(`${applyBaseUrl}/operations/${h}`, {
+      body: op,
+      json: true
+    });
+    resp.json.result.should.equal('sponsored before');
+  });
+
+  it('should be able to "Sponsor" before linking', function () {
+    contextIdsColl.truncate();
+    sponsorshipsColl.truncate();
+    const timestamp = Date.now();
+    let op = {
+      'v': 5,
+      'name': 'Sponsor',
+      app,
+      timestamp,
+      contextId,
+    }
+    let message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
+    );
+    let resp = request.post(`${baseUrl}/operations`, {
+      body: op,
+      json: true
+    });
+    resp.status.should.equal(200);
+    let h = hash(getMessage(op));
+    resp.json.data.hash.should.equal(h);
+    operationsColl.exists(h).should.equal(false);
+    const tempSponsorship = sponsorshipsColl.firstExample({
+      _from: 'users/0',
+    });
+    tempSponsorship.contextId.should.equal(op.contextId);
+    db.isSponsored(u1.id).should.equal(false);
+
+    op = {
+      'v': 5,
+      'name': 'Link ContextId',
+      'context': contextName,
+      timestamp,
+      'id': u1.id,
+      contextId,
+    }
+    message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
     apply(op);
+    db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
     db.isSponsored(u1.id).should.equal(true);
   });
 

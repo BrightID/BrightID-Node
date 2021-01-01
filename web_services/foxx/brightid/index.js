@@ -49,39 +49,47 @@ const handlers = {
     const op = req.body;
     const message = operations.getMessage(op);
     op.hash = hash(message);
+
     if (operationsHashesColl.exists(op.hash)) {
       res.throw(400, 'operation was applied before');
+    } else if (JSON.stringify(op).length > 2000) {
+      res.throw(400, 'operation is too big');
     }
+
+    // verify signature
     try {
       operations.verify(op);
-      // allow 60 operations in 15 minutes window by default
-      const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
-      const limit = module.context.configuration.operationsLimit || 60;
-      operations.checkLimits(op, timeWindow, limit);
-      if (op.name == 'Link ContextId') {
-        operations.encrypt(op);
-      }
-      else if (op.name == 'Sponsor') {
-        operations.updateSponsorOp(op);
-        // Sponsor operation hash will be chaned by above update
-        if (operationsHashesColl.exists(op.hash)) {
-          res.throw(400, 'operation was applied before');
-        }
-      }
-      op.state = 'init';
-      if (JSON.stringify(op).length > 2000) {
-          res.throw(400, 'Operation is too big');
-      }
-      db.upsertOperation(op);
     } catch (e) {
-      const code = (e == 'Too Many Requests') ? 429 : 400;
-      res.throw(code, e);
+      res.throw(403, e);
     }
+
+    // allow 60 operations in 15 minutes window by default
+    const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
+    const limit = module.context.configuration.operationsLimit || 60;
+    try {
+      operations.checkLimits(op, timeWindow, limit);
+    } catch (e) {
+      res.throw(429, e);
+    }
+
+    if (op.name == 'Link ContextId') {
+      operations.encrypt(op);
+    }
+
+    if (op.name == 'Sponsor') {
+      try {
+        operations.sponsor(op.app, op.contextId);
+      } catch (e) {
+        res.throw(400, e);
+      }
+    } else {
+      op.state = 'init';
+      db.upsertOperation(op);
+    }
+
     res.send({
       data: {
-        // use hash(message) not op.hash to return original operation hash
-        // for Sponsor instead of updated one that have id instead of contextId
-        hash: hash(message)
+        hash: op.hash
       }
     });
   },
