@@ -14,15 +14,11 @@ const {
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
-const verifyUserSig = function(message, id, sig, opName) {
+const verifyUserSig = function(message, id, sig) {
   const user = db.loadUser(id);
   // When "Add Connection" is called on a user that is not created yet
   // signingKey can be calculated from user's brightid
-  let signingKey = user ? user.signingKey : urlSafeB64ToB64(id)
-  const signingKeys = [signingKey];
-  const subkeys = (user && user.subkeys) || [];
-  signingKeys.push(...subkeys);
-
+  let signingKeys = user ? user.signingKeys : [urlSafeB64ToB64(id)];
   for (signingKey of signingKeys) {
     if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
       return;
@@ -56,8 +52,8 @@ const senderAttrs = {
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
-  'Add Subkey': ['id'],
-  'Remove Subkey': ['id'],
+  'Add Signing Key': ['id'],
+  'Remove Signing Key': ['id'],
   'Update Group': ['id'],
 };
 let operationsCount = {};
@@ -116,8 +112,8 @@ const signerAndSigs = {
   'Dismiss': ['dismisser', 'sig'],
   'Add Admin': ['id', 'sig'],
   'Update Group': ['id', 'sig'],
-  'Add Subkey': ['id', 'sig'],
-  'Remove Subkey': ['id', 'sig'],
+  'Add Signing Key': ['id', 'sig'],
+  'Remove Signing Key': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -196,10 +192,10 @@ function apply(op) {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else if (op['name'] == 'Add Admin') {
     return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
-  } else if (op['name'] == 'Add Subkey') {
-    return db.addSubkey(op.id, op.subkey, op.timestamp);
-  } else if (op['name'] == 'Remove Subkey') {
-    return db.removeSubkey(op.id, op.subkey, op.timestamp);
+  } else if (op['name'] == 'Add Signing Key') {
+    return db.addSigningKey(op.id, op.signingKey, op.timestamp);
+  } else if (op['name'] == 'Remove Signing Key') {
+    return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {

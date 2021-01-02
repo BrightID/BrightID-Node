@@ -236,7 +236,18 @@ function v5_6_1() {
   }
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1'];
+function v5_7() {
+  console.log("change 'signingKey' to 'signingKeys' attribute in the users");
+  query`
+    FOR u IN users
+      UPDATE { _key: u._key, signingKeys: [u.signingKey] } IN users`;
+
+  query`
+    FOR u IN users
+      REPLACE UNSET(u, 'signingKey') IN users`;
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7'];
 
 function initdb() {
   createCollections();

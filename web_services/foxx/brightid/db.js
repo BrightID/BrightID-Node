@@ -120,7 +120,7 @@ function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
   return {
     id: u._key,
-    signingKey: u.signingKey,
+    signingKeys: u.signingKeys,
     // score is deprecated and will be removed on v6
     score: u.score,
     verifications: userVerifications(u._key).map(v => v.name),
@@ -345,7 +345,7 @@ function createUser(key, timestamp) {
   if (!user) {
     return usersColl.insert({
       score: 0,
-      signingKey: urlSafeB64ToB64(key),
+      signingKeys: [urlSafeB64ToB64(key)],
       createdAt: timestamp,
       _key: key
     });
@@ -697,9 +697,7 @@ function getRecoveryConnections(user) {
 
 function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
-    signingKey,
-    // remove all the subkeys
-    subkeys: [],
+    signingKeys: [signingKey],
     updateTime: timestamp
   });
 }
@@ -838,18 +836,18 @@ function updateGroup(admin, groupId, url, timestamp) {
   });
 }
 
-function addSubkey(id, subkey, timestamp) {
-  const subkeys = usersColl.document(id).subkeys || [];
-  if (subkeys.indexOf(subkey) == -1) {
-    subkeys.push(subkey);
-    usersColl.update(id, { subkeys });
+function addSigningKey(id, signingKey, timestamp) {
+  const signingKeys = usersColl.document(id).signingKeys || [];
+  if (signingKeys.indexOf(signingKey) == -1) {
+    signingKeys.push(signingKey);
+    usersColl.update(id, { signingKeys });
   }
 }
 
-function removeSubkey(id, subkey) {
-  let subkeys = usersColl.document(id).subkeys || [];
-  subkeys = subkey ? subkeys.filter(s => s != subkey) : [];
-  usersColl.update(id, { subkeys });
+function removeSigningKey(id, signingKey) {
+  let signingKeys = usersColl.document(id).signingKeys || [];
+  signingKeys = signingKeys.filter(s => s != signingKey);
+  usersColl.update(id, { signingKeys });
 }
 
 module.exports = {
@@ -895,8 +893,8 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
-  addSubkey,
-  removeSubkey,
+  addSigningKey,
+  removeSigningKey,
   getContextIds,
   removePasscode,
   loadGroup,

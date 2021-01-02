@@ -393,7 +393,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
     );
     apply(op);
-    db.loadUser(u1.id).signingKey.should.equal(u4.signingKey);
+    db.loadUser(u1.id).signingKeys.should.deep.equal([u4.signingKey]);
     u1.secretKey = u4.secretKey;
   });
 
@@ -540,15 +540,15 @@ describe('operations', function(){
     conn.requestProof.should.equal(requestProof);
   });
 
-  it('should be able to "Add Subkey"', function () {
-    const addSubkey = (u, subkey) => {
+  it('should be able to "Add Signing Key"', function () {
+    const addSigningKey = (u, signingKey) => {
       const timestamp = Date.now();
       const op = {
         'v': 5,
         'id': u.id,
-        'name': 'Add Subkey',
-        'subkey': subkey,
-        'timestamp': timestamp
+        'name': 'Add Signing Key',
+        signingKey,
+        timestamp
       }
       const message = getMessage(op);
       op.sig = uInt8ArrayToB64(
@@ -556,18 +556,18 @@ describe('operations', function(){
       );
       apply(op);
     }
-    addSubkey(u2, u5.signingKey);
-    addSubkey(u2, u6.signingKey);
-    db.loadUser(u2.id).subkeys.should.deep.equal([u5.signingKey, u6.signingKey]);
+    addSigningKey(u2, u5.signingKey);
+    addSigningKey(u2, u6.signingKey);
+    db.loadUser(u2.id).signingKeys.should.deep.equal([u2.signingKey, u5.signingKey, u6.signingKey]);
   });
 
-  it('should be able to "Remove Subkey"', function () {
+  it('should be able to "Remove Signing Key"', function () {
     const timestamp = Date.now();
     const op = {
       'v': 5,
       'id': u2.id,
-      'name': 'Remove Subkey',
-      'subkey': u5.signingKey,
+      'name': 'Remove Signing Key',
+      'signingKey': u5.signingKey,
       timestamp
     }
     const message = getMessage(op);
@@ -575,10 +575,10 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     apply(op);
-    db.loadUser(u2.id).subkeys.should.deep.equal([u6.signingKey]);
+    db.loadUser(u2.id).signingKeys.should.deep.equal([u2.signingKey, u6.signingKey]);
   });
 
-  it('should be able to sign an operation using subkey', function () {
+  it('should be able to sign an operation using new Signing Key', function () {
     const timestamp = Date.now();
     let op = {
       'v': 5,
@@ -596,22 +596,6 @@ describe('operations', function(){
     db.userConnections(u2.id).filter(
       u => u.id == u3.id
     )[0].level.should.equal('recovery');
-  });
-
-  it('should be able to remove all subkeys', function () {
-    const timestamp = Date.now();
-    const op = {
-      'v': 5,
-      'id': u2.id,
-      'name': 'Remove Subkey',
-      timestamp
-    }
-    const message = getMessage(op);
-    op.sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    apply(op);
-    db.loadUser(u2.id).subkeys.should.deep.equal([]);
   });
 
 });

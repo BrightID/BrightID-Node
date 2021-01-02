@@ -89,7 +89,7 @@ describe('connections', function () {
   it('should be able to use "setSigningKey" to reset "signingKey" with "recovery" connections', function() {
     db.connect({id1: 'a', id2: 'c', level: 'recovery', timestamp});
     db.setSigningKey('newSigningKey', 'a', ['b', 'c'], timestamp);
-    usersColl.document('a').signingKey.should.equal('newSigningKey');
+    usersColl.document('a').signingKeys.should.deep.equal(['newSigningKey']);
   });
 
   it('should be able to get "userConnections"', function() {

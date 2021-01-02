@@ -105,14 +105,14 @@ const operations = {
     url: joi.string().required().description('the new url that group data (profile image and name) encrypted by group AES key can be fetched from'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
-  'Add Subkey': {
-    id: joi.string().required().description('brightid of the user who is adding new subkey'),
-    subkey: joi.string().required().description('the public key of the new key pair that user can sign operations with'),
+  'Add Signing Key': {
+    id: joi.string().required().description('brightid of the user who is adding new signingKey'),
+    signingKey: joi.string().required().description('the public key of the new key pair that user can sign operations with'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
-  'Remove Subkey': {
-    id: joi.string().required().description('brightid of the user who is removing the subkey'),
-    subkey: joi.string().description('the subkey that is being removed'),
+  'Remove Signing Key': {
+    id: joi.string().required().description('brightid of the user who is removing the signingKey'),
+    signingKey: joi.string().required().description('the signingKey that is being removed'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   }
 };
