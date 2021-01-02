@@ -51,9 +51,9 @@ function createIndexes() {
   console.log("creating indexes ...");
   for (let index of indexes) {
     const coll = arango._collection(index.collection);
+    console.log(`${index.fields} indexed in ${index.collection} collection`);
     delete index.collection;
     coll.ensureIndex(index);
-    console.log(`${index.fields} indexed in ${index.collection} collection`);
   };
 }
 
