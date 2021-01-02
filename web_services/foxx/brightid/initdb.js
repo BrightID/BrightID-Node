@@ -30,7 +30,10 @@ const deprecated = [
 const indexes = [
   {'collection': 'verifications', 'fields': ['user'], 'type': 'persistent'},
   {'collection': 'verifications', 'fields': ['name'], 'type': 'persistent'},
-  {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0}
+  {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0},
+  {'collection': 'sponsorships', 'fields': ['contextId'], 'type': 'persistent'},
+  {'collection': 'connections', 'fields': ['level'], 'type': 'persistent'},
+  {'collection': 'groups', 'fields': ['seed'], 'type': 'persistent'},
 ]
 
 function createCollections() {
