@@ -20,11 +20,8 @@ const verifyUserSig = function(message, id, sig, opName) {
   // signingKey can be calculated from user's brightid
   let signingKey = user ? user.signingKey : urlSafeB64ToB64(id)
   const signingKeys = [signingKey];
-  // 'Add Subkey' and 'Remove Subkey' can only be signed using master key
-  if (! ['Add Subkey', 'Remove Subkey'].includes(opName)) {
-    const subkeys = (user && user.subkeys) || [];
-    signingKeys.push(...subkeys)
-  }
+  const subkeys = (user && user.subkeys) || [];
+  signingKeys.push(...subkeys);
 
   for (signingKey of signingKeys) {
     if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
