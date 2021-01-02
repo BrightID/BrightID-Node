@@ -77,7 +77,7 @@ def update():
                     'expireDate': int(time.time()) + 3600,
                     'contextId': context_id
                 })
-                print(f"{context_id} is not linked to a brightid yet, a temporary sponsorship is added to be applied after user linked contextId")
+                print(f"{context_id} is not linked to a brightid yet, a temporary sponsorship is added to be applied after user links contextId")
                 continue
 
             user = c.next()['user']
