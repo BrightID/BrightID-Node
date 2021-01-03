@@ -34,6 +34,7 @@ const indexes = [
   {'collection': 'sponsorships', 'fields': ['contextId'], 'type': 'persistent'},
   {'collection': 'connections', 'fields': ['level'], 'type': 'persistent'},
   {'collection': 'groups', 'fields': ['seed'], 'type': 'persistent'},
+  {'collection': 'operations', 'fields': ['state'], 'type': 'persistent'},
 ]
 
 function createCollections() {
