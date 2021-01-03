@@ -264,6 +264,7 @@ function sponsor(app, contextId) {
     sponsorshipsColl.insert({
       _from: 'users/0',
       _to: 'apps/' + app,
+      // it will expire after one hour
       expireDate: Math.ceil((Date.now() / 1000) + 3600),
       contextId: contextId
     });
