@@ -14,14 +14,13 @@
  - Profile service: http://web.brightid-node.public.dappnode/profile/ 
 
 ### TODOs:
-- Add setup wizard to make sure user sets correct IDChain endpoint, Ethereum mainnet
-  endpoint and private key for consensus packages
-- Make private key for consensus sender/recevier optional so it's easy to spin up a "read-only" node
-- Add logo
-- Set upstream version
-- 
+- Set upstream version 
 
 #### DONE:
+- Add setup wizard to make sure user sets correct IDChain endpoint, Ethereum mainnet
+  endpoint and private key for consensus packages
+- Add logo
+- Make private key for consensus sender/recevier optional so it's easy to spin up a "read-only" node
 - Use IDChain instance running on DAppNode by default
 - Detect initial run and populate database accordingly
 - Make sure nginx.conf is correct in web container

@@ -20,7 +20,7 @@ const collections = {
 };
 
 // deprecated collections should be added to this array after releasing
-// second update to allow 2 last released versions work together 
+// second update to allow 2 last released versions work together
 const deprecated = [
   'removed',
   'newGroups',
@@ -28,8 +28,13 @@ const deprecated = [
 ];
 
 const indexes = [
-  {'collection': 'verifications',  'fields': ['name']},
-  {'collection': 'verifications',  'fields': ['user']}
+  {'collection': 'verifications', 'fields': ['user'], 'type': 'persistent'},
+  {'collection': 'verifications', 'fields': ['name'], 'type': 'persistent'},
+  {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0},
+  {'collection': 'sponsorships', 'fields': ['contextId'], 'type': 'persistent'},
+  {'collection': 'connections', 'fields': ['level'], 'type': 'persistent'},
+  {'collection': 'groups', 'fields': ['seed'], 'type': 'persistent'},
+  {'collection': 'operations', 'fields': ['state'], 'type': 'persistent'},
 ]
 
 function createCollections() {
@@ -50,8 +55,9 @@ function createIndexes() {
   console.log("creating indexes ...");
   for (let index of indexes) {
     const coll = arango._collection(index.collection);
-    coll.ensureIndex({type: 'persistent', fields: index.fields})
     console.log(`${index.fields} indexed in ${index.collection} collection`);
+    delete index.collection;
+    coll.ensureIndex(index);
   };
 }
 
@@ -231,7 +237,18 @@ function v5_6_1() {
   }
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1'];
+function v5_7() {
+  console.log("change 'signingKey' to 'signingKeys' attribute in the users");
+  query`
+    FOR u IN users
+      UPDATE { _key: u._key, signingKeys: [u.signingKey] } IN users`;
+
+  query`
+    FOR u IN users
+      REPLACE UNSET(u, 'signingKey') IN users`;
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7'];
 
 function initdb() {
   createCollections();

@@ -16,13 +16,15 @@ const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (m
 
 const verifyUserSig = function(message, id, sig) {
   const user = db.loadUser(id);
-  // this will happen for "Add Connection" when one party is not created
-  // this also enable this version of code to be used by the old users collection
-  // for users that don't have signingKey
-  const signingKey = (user && user.signingKey) ? user.signingKey : urlSafeB64ToB64(id);
-  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
-    throw 'invalid signature';
+  // When "Add Connection" is called on a user that is not created yet
+  // signingKey can be calculated from user's brightid
+  let signingKeys = user ? user.signingKeys : [urlSafeB64ToB64(id)];
+  for (signingKey of signingKeys) {
+    if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
+      return;
+    }
   }
+  throw 'invalid signature';
 }
 
 const verifyAppSig = function(message, app, sig) {
@@ -50,6 +52,9 @@ const senderAttrs = {
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
+  'Add Signing Key': ['id'],
+  'Remove Signing Key': ['id'],
+  'Update Group': ['id'],
 };
 let operationsCount = {};
 let resetTime = 0;
@@ -94,6 +99,7 @@ function checkLimits(op, timeWindow, limit) {
   throw 'Too Many Requests';
 }
 
+
 const signerAndSigs = {
   'Remove Connection': ['id1', 'sig1'],
   'Add Group': ['id1', 'sig1'],
@@ -105,6 +111,9 @@ const signerAndSigs = {
   'Invite': ['inviter', 'sig'],
   'Dismiss': ['dismisser', 'sig'],
   'Add Admin': ['id', 'sig'],
+  'Update Group': ['id', 'sig'],
+  'Add Signing Key': ['id', 'sig'],
+  'Remove Signing Key': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -183,6 +192,12 @@ function apply(op) {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else if (op['name'] == 'Add Admin') {
     return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
+  } else if (op['name'] == 'Add Signing Key') {
+    return db.addSigningKey(op.id, op.signingKey, op.timestamp);
+  } else if (op['name'] == 'Remove Signing Key') {
+    return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
+  } else if (op['name'] == 'Update Group') {
+    return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {
     throw "invalid operation";
   }
@@ -209,24 +224,51 @@ function getMessage(op) {
   return stringify(signedOp);
 }
 
-function updateSponsorOp(op) {
-  const { sponsorPrivateKey, context } = db.getApp(op.app);
+function sponsor(app, contextId) {
+  const { sponsorPrivateKey, context } = db.getApp(app);
+
+  if (!sponsorPrivateKey || !db.getContext(context)) {
+    throw 'can not relay sponsor requests for this app';
+  } else if (db.unusedSponsorships(app) < 1) {
+    throw 'app does not have unused sponsorships';
+  }
+
   const { collection, idsAsHex } = db.getContext(context);
   const coll = arango._collection(collection);
 
   if (idsAsHex) {
-    op.contextId = op.contextId.toLowerCase();
+    contextId = contextId.toLowerCase();
   }
 
-  op.id = db.getUserByContextId(coll, op.contextId)
-  if (!op.id) {
-    throw 'unlinked context id';
-  }
+  const sponsorshipsColl = arango._collection('sponsorships');
+  const id = db.getUserByContextId(coll, contextId);
 
-  delete op.contextId;
-  let message = getMessage(op);
-  op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
-  op.hash = hash(message);
+  if (id) {
+    // contextId is linked to a brightid
+    const timestamp = Date.now();
+    db.sponsor(id, app, timestamp);
+    op = { name: 'Sponsor', app, id, timestamp, v: 5 }
+    let message = getMessage(op);
+    op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
+    op.hash = hash(message);
+    op.state = 'init';
+    db.upsertOperation(op);
+    // remove temporary sponsorship if exists
+    sponsorshipsColl.removeByExample({
+      _from: 'users/0',
+      contextId: contextId
+    });
+  } else {
+    // contextId is not linked to a brightid yet
+    // add a temporary sponsorship to be applied after user linked contextId
+    sponsorshipsColl.insert({
+      _from: 'users/0',
+      _to: 'apps/' + app,
+      // it will expire after one hour
+      expireDate: Math.ceil((Date.now() / 1000) + 3600),
+      contextId: contextId
+    });
+  }
 }
 
 function decrypt(op) {
@@ -246,7 +288,7 @@ module.exports = {
   encrypt,
   decrypt,
   verifyUserSig,
-  updateSponsorOp,
+  sponsor,
   checkLimits,
   getMessage
 };

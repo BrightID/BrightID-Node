@@ -1,9 +1,6 @@
 'use strict';
-
 const { sha256 } = require('@arangodb/crypto');
-
 const { query, db } = require('@arangodb');
-
 const _ = require('lodash');
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
@@ -18,7 +15,6 @@ const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
 const testblocksColl = db._collection('testblocks');
-
 const {
   uInt8ArrayToB64,
   b64ToUrlSafeB64,
@@ -124,7 +120,8 @@ function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
   return {
     id: u._key,
-    signingKey: u.signingKey,
+    // all signing keys will be returned on v6
+    signingKey: u.signingKeys[0],
     // score is deprecated and will be removed on v6
     score: u.score,
     verifications: userVerifications(u._key).map(v => v.name),
@@ -165,6 +162,9 @@ function isEligible(groupId, userId) {
   return count >= members.length / 2;
 }
 
+// storing eligible groups on users documents and updating them
+// from this route will be removed when clients updated to use
+// new GET /groups/{id} result to show eligibles in invite list
 function updateEligibleGroups(userId, connections, currentGroups) {
   connections = connections.map(uId => 'users/' + uId);
   currentGroups = currentGroups.map(gId => 'groups/' + gId);
@@ -210,27 +210,38 @@ function updateEligibleGroups(userId, connections, currentGroups) {
 function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
+  const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
+
   members.forEach(member => {
     const conns = connectionsColl.byExample({
       _from: 'users/' + member
-    }).toArray().map(u => u._to.replace("users/", ""));
+    }).toArray().filter(isKnown).map(
+      c => c._to.replace("users/", "")
+    ).filter(u => !members.includes(u));
     neighbors.push(...conns);
   });
+
   const counts = {};
-  for (let i = 0; i < neighbors.length; i++) {
-    counts[neighbors[i]] = (counts[neighbors[i]] || 0) + 1;
+  for (let neighbor of neighbors) {
+    counts[neighbor] = (counts[neighbor] || 0) + 1;
   }
-  Object.keys(counts).forEach(neighbor => {
-    if (counts[neighbor] >= members.length / 2) {
-      const eligible_groups = usersColl.document(neighbor).eligible_groups || [];
-      if (eligible_groups.indexOf(groupId) == -1) {
-        eligible_groups.push(groupId);
-        usersColl.update(neighbor, {
-          eligible_groups
-        });
-      }
+  const eligibles = Object.keys(counts).filter(neighbor => {
+    return counts[neighbor] >= members.length / 2;
+  });
+  // storing eligible groups on users documents and updating them
+  // from this route will be removed when clients updated to use
+  // new GET /groups/{id} result to show eligibles in invite list
+  eligibles.forEach(neighbor => {
+    let { eligible_groups } = usersColl.document(neighbor);
+    eligible_groups = eligible_groups || [];
+    if (eligible_groups.indexOf(groupId) == -1) {
+      eligible_groups.push(groupId);
+      usersColl.update(neighbor, {
+        eligible_groups
+      });
     }
   });
+  return eligibles;
 }
 
 function groupToDic(groupId) {
@@ -335,7 +346,7 @@ function createUser(key, timestamp) {
   if (!user) {
     return usersColl.insert({
       score: 0,
-      signingKey: urlSafeB64ToB64(key),
+      signingKeys: [urlSafeB64ToB64(key)],
       createdAt: timestamp,
       _key: key
     });
@@ -581,17 +592,21 @@ function linkContextId(id, context, contextId, timestamp) {
   // remove testblocks if exists
   removeTestblock(contextId, 'link');
 
+  let user = getUserByContextId(coll, contextId);
+  if (user && user != id) {
+    throw 'contextId is duplicate';
+  }
+
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
   );
-  if (recentLinks.length >=3) {
+  if (recentLinks.length >= 3) {
     throw 'only three contextIds can be linked every 24 hours';
   }
 
   // accept link if the contextId is used by the same user before
-  let link;
-  for (link of links) {
+  for (let link of links) {
     if (link.contextId === contextId) {
       if (timestamp > link.timestamp) {
         coll.update(link, { timestamp });
@@ -600,15 +615,19 @@ function linkContextId(id, context, contextId, timestamp) {
     }
   }
 
-  if (getUserByContextId(coll, contextId)) {
-    throw 'contextId is duplicate';
-  }
-
   coll.insert({
     user: id,
     contextId,
     timestamp
   });
+
+  // sponsor the user if contextId is temporarily sponsored
+  const tempSponsorship = sponsorshipsColl.firstExample({ contextId });
+  if (tempSponsorship) {
+    const app = tempSponsorship._to.replace('apps/', '');
+    const operations = require('./operations');
+    operations.sponsor(app, contextId);
+  }
 }
 
 function setRecoveryConnections(conns, key, timestamp) {
@@ -679,7 +698,7 @@ function getRecoveryConnections(user) {
 
 function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
-    signingKey,
+    signingKeys: [signingKey],
     updateTime: timestamp
   });
 }
@@ -699,9 +718,10 @@ function unusedSponsorships(app) {
 function sponsor(user, appKey, timestamp) {
   const app = getApp(appKey);
   const context = getContext(app.context);
+  let contextIds;
   if (context) {
     const coll = db._collection(context.collection);
-    const contextIds = getContextIdsByUser(coll, user);
+    contextIds = getContextIdsByUser(coll, user);
     // remove testblocks if exists
     removeTestblock(contextIds[0], 'sponsorship', appKey);
   }
@@ -767,6 +787,70 @@ function getTestblocks(app, contextId) {
   }).toArray().map(b => b.action);
 }
 
+function getContextIds(coll) {
+  return coll.all().toArray().map(c => {
+    return {
+      user: c.user,
+      contextId: c.contextId,
+      timestamp: c.timestamp
+    }
+  });
+}
+
+function loadGroup(groupId) {
+  return query`RETURN DOCUMENT(${groupsColl}, ${groupId})`.toArray()[0];
+}
+
+function groupInvites(groupId) {
+  return invitationsColl.byExample({
+    "_to": 'groups/' + groupId,
+  }).toArray().filter(invite => {
+    return Date.now() - invite.timestamp < 86400000
+  }).map(invite => {
+    return {
+      inviter: invite.inviter,
+      invitee: invite._from.replace('users/', ''),
+      id: invite._key,
+      data: invite.data,
+      timestamp: invite.timestamp
+    }
+  });
+}
+
+function removePasscode(contextKey) {
+  contextsColl.update(contextKey, {
+    passcode: null
+  });
+}
+
+function updateGroup(admin, groupId, url, timestamp) {
+  if (! groupsColl.exists(groupId)) {
+    throw 'group not found';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(admin)) {
+    throw 'only admins can update the group';
+  }
+  groupsColl.update(group, {
+    url,
+    timestamp
+  });
+}
+
+function addSigningKey(id, signingKey, timestamp) {
+  const signingKeys = usersColl.document(id).signingKeys || [];
+  if (signingKeys.indexOf(signingKey) == -1) {
+    signingKeys.push(signingKey);
+    usersColl.update(id, { signingKeys });
+  }
+}
+
+function removeSigningKey(id, signingKey) {
+  let signingKeys = usersColl.document(id).signingKeys || [];
+  signingKeys = signingKeys.filter(s => s != signingKey);
+  usersColl.update(id, { signingKeys });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -810,4 +894,12 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  addSigningKey,
+  removeSigningKey,
+  getContextIds,
+  removePasscode,
+  loadGroup,
+  groupInvites,
+  updateEligibles,
+  updateGroup
 };

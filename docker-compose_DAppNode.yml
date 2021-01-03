@@ -6,7 +6,7 @@ services:
       - db
     image: "ws.brightid-node.public.dappnode.eth:0.1.0"
     environment:
-      BN_WS_IP: db.brightid-node.public.dappnode
+      BN_WS_IP: ""
       BN_WS_PUBLIC_KEY: ""
       BN_WS_PRIVATE_KEY: ""
       BN_WS_ETH_PRIVATE_KEY: ""
@@ -91,6 +91,8 @@ services:
   web:
     build: web
     image: "web.brightid-node.public.dappnode.eth:0.1.0"
+    ports:
+      - "80:80"
 volumes:
   snapshots: {}
   data: {}
