@@ -120,7 +120,8 @@ function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
   return {
     id: u._key,
-    signingKeys: u.signingKeys,
+    // all signing keys will be returned on v6
+    signingKey: u.signingKeys[0],
     // score is deprecated and will be removed on v6
     score: u.score,
     verifications: userVerifications(u._key).map(v => v.name),
