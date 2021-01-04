@@ -78,7 +78,7 @@ const handlers = {
 
     if (op.name == 'Sponsor') {
       try {
-        operations.sponsor(op.app, op.contextId);
+        db.sponsor(op);
       } catch (e) {
         res.throw(400, e);
       }

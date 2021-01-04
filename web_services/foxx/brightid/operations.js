@@ -185,7 +185,7 @@ function apply(op) {
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, op.timestamp);
   } else if (op['name'] == 'Sponsor') {
-    return db.sponsor(op.id, op.app, op.timestamp);
+    return db.sponsor(op);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
   } else if (op['name'] == 'Invite') {
@@ -231,53 +231,6 @@ function getMessage(op) {
   return stringify(signedOp);
 }
 
-function sponsor(app, contextId) {
-  const { sponsorPrivateKey, context } = db.getApp(app);
-
-  if (!sponsorPrivateKey || !db.getContext(context)) {
-    throw 'can not relay sponsor requests for this app';
-  } else if (db.unusedSponsorships(app) < 1) {
-    throw 'app does not have unused sponsorships';
-  }
-
-  const { collection, idsAsHex } = db.getContext(context);
-  const coll = arango._collection(collection);
-
-  if (idsAsHex) {
-    contextId = contextId.toLowerCase();
-  }
-
-  const sponsorshipsColl = arango._collection('sponsorships');
-  const id = db.getUserByContextId(coll, contextId);
-
-  if (id) {
-    // contextId is linked to a brightid
-    const timestamp = Date.now();
-    db.sponsor(id, app, timestamp);
-    op = { name: 'Sponsor', app, id, timestamp, v: 5 }
-    let message = getMessage(op);
-    op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
-    op.hash = hash(message);
-    op.state = 'init';
-    db.upsertOperation(op);
-    // remove temporary sponsorship if exists
-    sponsorshipsColl.removeByExample({
-      _from: 'users/0',
-      contextId: contextId
-    });
-  } else {
-    // contextId is not linked to a brightid yet
-    // add a temporary sponsorship to be applied after user linked contextId
-    sponsorshipsColl.insert({
-      _from: 'users/0',
-      _to: 'apps/' + app,
-      // it will expire after one hour
-      expireDate: Math.ceil((Date.now() / 1000) + 3600),
-      contextId: contextId
-    });
-  }
-}
-
 function decrypt(op) {
   const { linkAESKey } = db.getContext(op.context);
   const decrypted = CryptoJS.AES.decrypt(op.encrypted, linkAESKey)
@@ -295,7 +248,6 @@ module.exports = {
   encrypt,
   decrypt,
   verifyUserSig,
-  sponsor,
   checkLimits,
   getMessage
 };

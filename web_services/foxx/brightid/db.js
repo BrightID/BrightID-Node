@@ -2,6 +2,17 @@
 const { sha256 } = require('@arangodb/crypto');
 const { query, db } = require('@arangodb');
 const _ = require('lodash');
+const stringify = require('fast-json-stable-stringify');
+const nacl = require('tweetnacl');
+const {
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64,
+  urlSafeB64ToB64,
+  strToUint8Array,
+  b64ToUint8Array,
+  hash
+} = require('./encoding');
+
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
@@ -15,11 +26,6 @@ const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
 const testblocksColl = db._collection('testblocks');
-const {
-  uInt8ArrayToB64,
-  b64ToUrlSafeB64,
-  urlSafeB64ToB64
-} = require('./encoding');
 
 function addConnection(key1, key2, timestamp) {
   // this function is deprecated and will be removed on v6
@@ -625,8 +631,10 @@ function linkContextId(id, context, contextId, timestamp) {
   const tempSponsorship = sponsorshipsColl.firstExample({ contextId });
   if (tempSponsorship) {
     const app = tempSponsorship._to.replace('apps/', '');
-    const operations = require('./operations');
-    operations.sponsor(app, contextId);
+    sponsorshipsColl.remove( tempSponsorship._key );
+    // pass contextId instead of id to broadcast sponsor operation
+    sponsor({ contextId, app, timestamp });
+
   }
 }
 
@@ -715,28 +723,91 @@ function unusedSponsorships(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, appKey, timestamp) {
-  const app = getApp(appKey);
-  const context = getContext(app.context);
-  let contextIds;
-  if (context) {
-    const coll = db._collection(context.collection);
-    contextIds = getContextIdsByUser(coll, user);
-    // remove testblocks if exists
-    removeTestblock(contextIds[0], 'sponsorship', appKey);
-  }
-
-  if (unusedSponsorships(appKey) < 1) {
+// this method is called in different situations:
+// 1) Sponsor operation with contextId is posted to the brightid service.
+//    a) contextId may already be linked to a brightid
+//    b) or it may not be linked yet
+// 2) Sponsor operation with user id is sent to the apply service
+// 3) Link ContextId operation is sent to the apply service for
+//    a contextId that was sponsored temporarily before linking
+function sponsor(op) {
+  if (unusedSponsorships(op.app) < 1) {
     throw "app does not have unused sponsorships";
   }
 
-  if (isSponsored(user)) {
+  // if 2) Sponsor operation with user id is sent to the apply service
+  if (op.id) {
+    if (isSponsored(op.id)) {
+      throw "sponsored before";
+    }
+    sponsorshipsColl.insert({
+      _from: 'users/' + op.id,
+      _to: 'apps/' + op.app,
+      timestamp: op.timestamp,
+    });
+    return;
+  }
+
+  // if we have user contextId
+  const app = getApp(op.app);
+  const context = getContext(app.context);
+  if (!app.sponsorPrivateKey || !context) {
+    throw 'can not relay sponsor requests for this app';
+  }
+
+  const coll = db._collection(context.collection);
+  if (context.idsAsHex) {
+    op.contextId = op.contextId.toLowerCase();
+  }
+  // remove testblocks if exists
+  removeTestblock(op.contextId, 'sponsorship', op.app);
+  const id = getUserByContextId(coll, op.contextId);
+
+  // if 1-b) Sponsor operation with contextId is posted to the brightid service
+  // but contextId is not linked to a brightid yet
+  // add a temporary sponsorship to be applied after user linked contextId
+  if (!id) {
+    sponsorshipsColl.insert({
+      _from: 'users/0',
+      _to: 'apps/' + op.app,
+      // it will expire after one hour
+      expireDate: Math.ceil((Date.now() / 1000) + 3600),
+      contextId: op.contextId
+    });
+    return;
+  }
+
+  if (isSponsored(id)) {
     throw "sponsored before";
   }
 
+  // if 1-a or 3
+
+  // broadcast sponsor operation with user brightid that can be applied
+  // by all nodes including those that not support sponsor app's context
+  const sponsorUserOp = {
+    name: 'Sponsor',
+    app: op.app,
+    id,
+    timestamp: op.timestamp,
+    v: 5
+  }
+  const message = stringify(sponsorUserOp);
+  sponsorUserOp.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(app.sponsorPrivateKey))));
+  sponsorUserOp.hash = hash(message);
+  sponsorUserOp.state = 'init';
+  upsertOperation(sponsorUserOp);
+
+  // sponsor user instantly instead of waiting for applying sponsor operation
+  // with user brightid, to prevent apps getting not sponsored error for users
+  // that are sponsored before linking, when link operation applied but
+  // broadcasted sponsor operation not arrived yet.
+  // this approach may result in loosing consensus in sponsorships but
+  // seems not to be important
   sponsorshipsColl.insert({
-    _from: 'users/' + user,
-    _to: 'apps/' + appKey
+    _from: 'users/' + id,
+    _to: 'apps/' + op.app,
+    timestamp: op.timestamp,
   });
 }
 
