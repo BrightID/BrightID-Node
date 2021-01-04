@@ -113,7 +113,7 @@ describe('connections', function () {
 
 });
 
-describe('trusted connections', function () {
+describe('recovery connections', function () {
   before(function(){
     usersColl.truncate();
     connectionsColl.truncate();
@@ -124,7 +124,7 @@ describe('trusted connections', function () {
     connectionsColl.truncate();
     connectionsHistoryColl.truncate();
   });
-  it('users should be able add or remove trusted connections', function() {
+  it('users should be able add or remove recovery connections', function() {
     db.connect({id1: 'a', id2: 'b', level: 'recovery', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'c', level: 'recovery', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'd', level: 'recovery', 'timestamp': 1});
@@ -136,14 +136,14 @@ describe('trusted connections', function () {
     recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
-  it('remove trusted connection should take one week to take effect to protect against takeover', function() {
+  it('remove recovery connection should take one week to take effect to protect against takeover', function() {
     db.connect({id1: 'a', id2: 'c', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now()});
 
     const recoveryConnections = db.getRecoveryConnections('a');
     recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
-  it("don't allow a trusted connection to be used for recovery if it is too new", function() {
+  it("don't allow a recovery connection to be used for recovery if it is too new", function() {
     db.connect({id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now()});
 
     const recoveryConnections = db.getRecoveryConnections('a');
