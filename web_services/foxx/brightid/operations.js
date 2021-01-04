@@ -21,7 +21,7 @@ const verifyUserSig = function(message, id, sig) {
   let signingKeys = user ? user.signingKeys : [urlSafeB64ToB64(id)];
   for (signingKey of signingKeys) {
     if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
-      return;
+      return signingKey;
     }
   }
   throw 'invalid signature';
@@ -54,6 +54,7 @@ const senderAttrs = {
   'Add Admin': ['id'],
   'Add Signing Key': ['id'],
   'Remove Signing Key': ['id'],
+  'Remove All Signing Keys': ['id'],
   'Update Group': ['id'],
 };
 let operationsCount = {};
@@ -114,6 +115,7 @@ const signerAndSigs = {
   'Update Group': ['id', 'sig'],
   'Add Signing Key': ['id', 'sig'],
   'Remove Signing Key': ['id', 'sig'],
+  'Remove All Signing Keys': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -196,6 +198,11 @@ function apply(op) {
     return db.addSigningKey(op.id, op.signingKey, op.timestamp);
   } else if (op['name'] == 'Remove Signing Key') {
     return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
+  } else if (op['name'] == 'Remove All Signing Keys') {
+    // verifyUserSig returns the key that used to sign the op
+    // removeAllSigningKeys remove all keys except this one
+    const signingKey = verifyUserSig(getMessage(op), op.id, op.sig);
+    return db.removeAllSigningKeys(op.id, signingKey, op.timestamp);
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {

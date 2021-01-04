@@ -114,6 +114,10 @@ const operations = {
     id: joi.string().required().description('brightid of the user who is removing the signingKey'),
     signingKey: joi.string().required().description('the signingKey that is being removed'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Remove All Signing Keys': {
+    id: joi.string().required().description('brightid of the user who is removing all the signingKeys except the one that used to sign this operation'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   }
 };
 

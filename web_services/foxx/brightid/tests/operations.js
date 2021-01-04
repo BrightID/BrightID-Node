@@ -598,4 +598,20 @@ describe('operations', function(){
     )[0].level.should.equal('recovery');
   });
 
+  it('should be able to "Remove All Signing Keys"', function () {
+    const timestamp = Date.now();
+    const op = {
+      'v': 5,
+      'id': u2.id,
+      'name': 'Remove All Signing Keys',
+      timestamp
+    }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u6.secretKey))
+    );
+    apply(op);
+    db.loadUser(u2.id).signingKeys.should.deep.equal([u6.signingKey]);
+  });
+
 });

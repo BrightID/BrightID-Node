@@ -851,6 +851,12 @@ function removeSigningKey(id, signingKey) {
   usersColl.update(id, { signingKeys });
 }
 
+function removeAllSigningKeys(id, signingKey) {
+  let signingKeys = usersColl.document(id).signingKeys || [];
+  signingKeys = signingKeys.filter(s => s == signingKey);
+  usersColl.update(id, { signingKeys });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -896,6 +902,7 @@ module.exports = {
   getTestblocks,
   addSigningKey,
   removeSigningKey,
+  removeAllSigningKeys,
   getContextIds,
   removePasscode,
   loadGroup,
