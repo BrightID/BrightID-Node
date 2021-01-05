@@ -148,7 +148,7 @@ const handlers = {
         connections,
         verifications,
         isSponsored: db.isSponsored(id),
-        subkeys: user.subkeys
+        signingKeys: user.signingKeys
       }
     });
 
@@ -218,7 +218,7 @@ const handlers = {
         createdAt: user.createdAt,
         reports,
         verifications,
-        subkeys: user.subkeys
+        signingKeys: user.signingKeys
       }
     });
   },

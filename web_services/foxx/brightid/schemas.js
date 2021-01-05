@@ -135,7 +135,8 @@ Object.keys(operations).forEach(name => {
 schemas = Object.assign({
   user: joi.object({
     id: joi.string().required().description('the user id'),
-    signingKey: joi.string().required().description('the user signingKey'),
+    // this will be replaced by signingKeys on v6
+    signingKey: joi.string().required().description('the first signingKey of the user'),
     score: schemas.score,
     level: joi.string().required().description('the confidence level set on this user'),
     verifications: joi.array().items(joi.string()),
@@ -216,7 +217,7 @@ schemas = Object.assign({
       isSponsored: joi.boolean(),
       trusted: joi.array().items(joi.string()),
       flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
-      subkeys: joi.array().items(joi.string()).required().description('list of subkeys that user can sign operations with'),
+      signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
     })
   }),
 
@@ -245,7 +246,7 @@ schemas = Object.assign({
         reportReason: joi.string().required().description('the reason of reporting'),
       })).description('list of reports for the user specified by id'),
       verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),
-      subkeys: joi.array().items(joi.string()).required().description('list of subkeys bound to user master key'),
+      signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
     })
   }),
 
