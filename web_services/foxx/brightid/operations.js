@@ -158,6 +158,14 @@ function verify(op) {
 }
 
 function apply(op) {
+  if (op['name'] == 'Remove All Signing Keys') {
+    // verifyUserSig returns the key that used to sign the op
+    // removeAllSigningKeys remove all keys except this one
+    const signingKey = verifyUserSig(getMessage(op), op.id, op.sig);
+    op.timestamp = op.blockTime;
+    return db.removeAllSigningKeys(op.id, signingKey, op.timestamp);
+  }
+
   // set the block time instead of user timestamp
   op.timestamp = op.blockTime;
   if (op['name'] == 'Connect') {
@@ -198,11 +206,6 @@ function apply(op) {
     return db.addSigningKey(op.id, op.signingKey, op.timestamp);
   } else if (op['name'] == 'Remove Signing Key') {
     return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
-  } else if (op['name'] == 'Remove All Signing Keys') {
-    // verifyUserSig returns the key that used to sign the op
-    // removeAllSigningKeys remove all keys except this one
-    const signingKey = verifyUserSig(getMessage(op), op.id, op.sig);
-    return db.removeAllSigningKeys(op.id, signingKey, op.timestamp);
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {
