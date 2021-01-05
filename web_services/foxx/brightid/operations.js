@@ -16,13 +16,15 @@ const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (m
 
 const verifyUserSig = function(message, id, sig) {
   const user = db.loadUser(id);
-  // this will happen for "Add Connection" when one party is not created
-  // this also enable this version of code to be used by the old users collection
-  // for users that don't have signingKey
-  const signingKey = (user && user.signingKey) ? user.signingKey : urlSafeB64ToB64(id);
-  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
-    throw 'invalid signature';
+  // When "Add Connection" is called on a user that is not created yet
+  // signingKey can be calculated from user's brightid
+  let signingKeys = user ? user.signingKeys : [urlSafeB64ToB64(id)];
+  for (signingKey of signingKeys) {
+    if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
+      return signingKey;
+    }
   }
+  throw 'invalid signature';
 }
 
 const verifyAppSig = function(message, app, sig) {
@@ -50,6 +52,10 @@ const senderAttrs = {
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
+  'Add Signing Key': ['id'],
+  'Remove Signing Key': ['id'],
+  'Remove All Signing Keys': ['id'],
+  'Update Group': ['id'],
 };
 let operationsCount = {};
 let resetTime = 0;
@@ -94,6 +100,7 @@ function checkLimits(op, timeWindow, limit) {
   throw 'Too Many Requests';
 }
 
+
 const signerAndSigs = {
   'Remove Connection': ['id1', 'sig1'],
   'Add Group': ['id1', 'sig1'],
@@ -105,6 +112,10 @@ const signerAndSigs = {
   'Invite': ['inviter', 'sig'],
   'Dismiss': ['dismisser', 'sig'],
   'Add Admin': ['id', 'sig'],
+  'Update Group': ['id', 'sig'],
+  'Add Signing Key': ['id', 'sig'],
+  'Remove Signing Key': ['id', 'sig'],
+  'Remove All Signing Keys': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -147,6 +158,14 @@ function verify(op) {
 }
 
 function apply(op) {
+  if (op['name'] == 'Remove All Signing Keys') {
+    // verifyUserSig returns the key that used to sign the op
+    // removeAllSigningKeys remove all keys except this one
+    const signingKey = verifyUserSig(getMessage(op), op.id, op.sig);
+    op.timestamp = op.blockTime;
+    return db.removeAllSigningKeys(op.id, signingKey, op.timestamp);
+  }
+
   // set the block time instead of user timestamp
   op.timestamp = op.blockTime;
   if (op['name'] == 'Connect') {
@@ -174,7 +193,7 @@ function apply(op) {
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, op.timestamp);
   } else if (op['name'] == 'Sponsor') {
-    return db.sponsor(op.id, op.app, op.timestamp);
+    return db.sponsor(op);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);
   } else if (op['name'] == 'Invite') {
@@ -183,6 +202,12 @@ function apply(op) {
     return db.dismiss(op.dismisser, op.dismissee, op.group, op.timestamp);
   } else if (op['name'] == 'Add Admin') {
     return db.addAdmin(op.id, op.admin, op.group, op.timestamp);
+  } else if (op['name'] == 'Add Signing Key') {
+    return db.addSigningKey(op.id, op.signingKey, op.timestamp);
+  } else if (op['name'] == 'Remove Signing Key') {
+    return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
+  } else if (op['name'] == 'Update Group') {
+    return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {
     throw "invalid operation";
   }
@@ -209,26 +234,6 @@ function getMessage(op) {
   return stringify(signedOp);
 }
 
-function updateSponsorOp(op) {
-  const { sponsorPrivateKey, context } = db.getApp(op.app);
-  const { collection, idsAsHex } = db.getContext(context);
-  const coll = arango._collection(collection);
-
-  if (idsAsHex) {
-    op.contextId = op.contextId.toLowerCase();
-  }
-
-  op.id = db.getUserByContextId(coll, op.contextId)
-  if (!op.id) {
-    throw 'unlinked context id';
-  }
-
-  delete op.contextId;
-  let message = getMessage(op);
-  op.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(sponsorPrivateKey))));
-  op.hash = hash(message);
-}
-
 function decrypt(op) {
   const { linkAESKey } = db.getContext(op.context);
   const decrypted = CryptoJS.AES.decrypt(op.encrypted, linkAESKey)
@@ -246,7 +251,6 @@ module.exports = {
   encrypt,
   decrypt,
   verifyUserSig,
-  updateSponsorOp,
   checkLimits,
   getMessage
 };

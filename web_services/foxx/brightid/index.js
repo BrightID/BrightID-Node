@@ -39,45 +39,57 @@ const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
+const INCORRECT_PASSCODE = 15;
+const PASSCODE_NOT_SET = 16;
+const GROUP_NOT_FOUND = 17;
+
 
 const handlers = {
   operationsPost: function(req, res){
     const op = req.body;
     const message = operations.getMessage(op);
     op.hash = hash(message);
+
     if (operationsHashesColl.exists(op.hash)) {
       res.throw(400, 'operation was applied before');
+    } else if (JSON.stringify(op).length > 2000) {
+      res.throw(400, 'operation is too big');
     }
+
+    // verify signature
     try {
       operations.verify(op);
-      // allow 60 operations in 15 minutes window by default
-      const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
-      const limit = module.context.configuration.operationsLimit || 60;
-      operations.checkLimits(op, timeWindow, limit);
-      if (op.name == 'Link ContextId') {
-        operations.encrypt(op);
-      }
-      else if (op.name == 'Sponsor') {
-        operations.updateSponsorOp(op);
-        // Sponsor operation hash will be chaned by above update
-        if (operationsHashesColl.exists(op.hash)) {
-          res.throw(400, 'operation was applied before');
-        }
-      }
-      op.state = 'init';
-      if (JSON.stringify(op).length > 2000) {
-          res.throw(400, 'Operation is too big');
-      }
-      db.upsertOperation(op);
     } catch (e) {
-      const code = (e == 'Too Many Requests') ? 429 : 400;
-      res.throw(code, e);
+      res.throw(403, e);
     }
+
+    // allow 60 operations in 15 minutes window by default
+    const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
+    const limit = module.context.configuration.operationsLimit || 60;
+    try {
+      operations.checkLimits(op, timeWindow, limit);
+    } catch (e) {
+      res.throw(429, e);
+    }
+
+    if (op.name == 'Link ContextId') {
+      operations.encrypt(op);
+    }
+
+    if (op.name == 'Sponsor') {
+      try {
+        db.sponsor(op);
+      } catch (e) {
+        res.throw(400, e);
+      }
+    } else {
+      op.state = 'init';
+      db.upsertOperation(op);
+    }
+
     res.send({
       data: {
-        // use hash(message) not op.hash to return original operation hash
-        // for Sponsor instead of updated one that have id instead of contextId
-        hash: hash(message)
+        hash: op.hash
       }
     });
   },
@@ -135,7 +147,8 @@ const handlers = {
         groups,
         connections,
         verifications,
-        isSponsored: db.isSponsored(id)
+        isSponsored: db.isSponsored(id),
+        signingKeys: user.signingKeys
       }
     });
 
@@ -204,7 +217,8 @@ const handlers = {
         connectedAt,
         createdAt: user.createdAt,
         reports,
-        verifications
+        verifications,
+        signingKeys: user.signingKeys
       }
     });
   },
@@ -440,8 +454,60 @@ const handlers = {
     }
 
     return db.removeTestblock(contextId, action, appKey);
-  }
+  },
 
+  contextDumpGet: function(req, res){
+    const contextKey = req.param('context');
+    const passcode = req.queryParams['passcode'];
+    const context = db.getContext(contextKey);
+    if (! context) {
+      res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
+    }
+
+    if (! context.passcode) {
+      res.throw(403, 'passcode not set', {errorNum: PASSCODE_NOT_SET});
+    }
+    if (context.passcode != passcode) {
+      res.throw(403, 'incorrect passcode', {errorNum: INCORRECT_PASSCODE});
+    }
+
+    const coll = arango._collection(context.collection);
+    const contextIds = db.getContextIds(coll);
+    db.removePasscode(contextKey);
+    res.send({
+      data: {
+        collection: context.collection,
+        idsAsHex: context.idsAsHex,
+        linkAESKey: context.linkAESKey,
+        contextIds
+      }
+    });
+  },
+
+  groupGet: function(req, res){
+    const id = req.param('id');
+    const group = db.loadGroup(id);
+    if (! group) {
+      res.throw(404, "Group not found", {errorNum: GROUP_NOT_FOUND});
+    }
+
+    res.send({
+      data: {
+        members: db.groupMembers(id),
+        invites: db.groupInvites(id),
+        eligibles: db.updateEligibles(id),
+        admins: group.admins,
+        founders: group.founders,
+        isNew: group.isNew,
+        seed: group.seed || false,
+        region: group.region,
+        type: group.type || 'general',
+        url: group.url,
+        info: group.info,
+        timestamp: group.timestamp,
+      }
+    });
+  },
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -449,7 +515,9 @@ router.post('/operations', handlers.operationsPost)
   .summary('Add an operation to be applied after consensus')
   .description('Add an operation be applied after consensus.')
   .response(schemas.operationPostResponse)
-  .error(400, 'Failed to add the operation');
+  .error(400, 'Failed to add the operation')
+  .error(403, 'Bad signature')
+  .error(429, 'Too Many Requests');
 
 router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
@@ -497,8 +565,8 @@ router.get('/verifications/:app/:contextId', handlers.verificationGet)
 
 router.get('/verifications/:app', handlers.allVerificationsGet)
   .pathParam('app', joi.string().required().description('the app for which the user is verified'))
-  .summary('Gets list of all of contextIds')
-  .description("Gets list of all of contextIds in the context that are currently linked to unique humans")
+  .summary('Gets list of all of contextIds verifed for an app')
+  .description("Gets list of all of contextIds in the context that are sponsored and verified for using an app")
   .response(schemas.allVerificationsGetResponse)
   .error(404, 'context not found');
 
@@ -525,8 +593,8 @@ router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
   .pathParam('action', joi.string().valid('sponsorship', 'link', 'verification').required().description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().required().description('the secret key for testing the app'))
-  .summary("Block user's verification for testing.")
-  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.')
+  .summary("Block user's verification for testing")
+  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing')
   .response(null);
 
 router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
@@ -534,9 +602,26 @@ router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
   .pathParam('action', joi.string().required().valid('sponsorship', 'link', 'verification').description("The action name"))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
   .queryParam('testingKey', joi.string().description('the testing private key of the app'))
-  .summary("Remove blocking state applied on user's verification for testing.")
-  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.")
+  .summary("Remove blocking state applied on user's verification for testing")
+  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing")
   .response(null);
+
+router.get('/contexts/:context/dump', handlers.contextDumpGet)
+  .pathParam('context', joi.string().required().description('the context key'))
+  .queryParam('passcode', joi.string().required().description('the one time passcode that authorize access to this endpoint once'))
+  .summary("Get dump of a context")
+  .description('Get all required info to transfer a context to a new node')
+  .response(schemas.contextDumpGetResponse)
+  .error(404, 'context not found')
+  .error(403, 'passcode not set')
+  .error(403, 'incorrect passcode');
+
+router.get('/groups/:id', handlers.groupGet)
+  .pathParam('id', joi.string().required().description('the id of the group'))
+  .summary('Get information about a group')
+  .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members, invited and eligible members.")
+  .response(schemas.groupGetResponse)
+  .error(404, 'Group not found');
 
 module.context.use(function (req, res, next) {
   try {

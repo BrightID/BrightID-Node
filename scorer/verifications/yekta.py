@@ -3,13 +3,14 @@ from arango import ArangoClient
 from anti_sybil.utils import draw_graph
 import anti_sybil.algorithms as algorithms
 from anti_sybil.utils import *
+import config
 
 
 def verify(fname):
     print('YEKTA')
     json_graph = from_dump(fname)
     graph = from_json(json_graph)
-    db = ArangoClient().db('_system')
+    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     ranker = algorithms.Yekta(graph, {})
     ranker.rank()
     draw_graph(ranker.graph, 'nodes.html')

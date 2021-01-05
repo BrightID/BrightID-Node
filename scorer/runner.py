@@ -1,9 +1,10 @@
 import time
 import socket
 import traceback
+import os
 from datetime import datetime
 from arango import ArangoClient
-from config import *
+import config
 from verifications import seed_connected
 from verifications import brightid
 from verifications import dollar_for_everyone
@@ -11,7 +12,7 @@ from verifications import yekta
 from verifications import seed_connected_with_friend
 from py_expression_eval import Parser
 
-db = ArangoClient().db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 
 
 def process(fname):
@@ -32,13 +33,13 @@ def main():
         })
     while True:
         snapshots = [fname for fname in os.listdir(
-            SNAPSHOTS_PATH) if fname.endswith('.zip')]
+            config.SNAPSHOTS_PATH) if fname.endswith('.zip')]
         if len(snapshots) == 0:
             time.sleep(1)
             continue
         snapshots.sort(key=lambda fname: int(
             fname.strip('dump_').strip('.zip')))
-        fname = os.path.join(SNAPSHOTS_PATH, snapshots[0])
+        fname = os.path.join(config.SNAPSHOTS_PATH, snapshots[0])
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
         process(fname)
@@ -100,7 +101,7 @@ def wait():
     while True:
         time.sleep(5)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex(('127.0.0.1', 8529))
+        result = sock.connect_ex((config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
         sock.close()
         if result != 0:
             print('db is not running yet')

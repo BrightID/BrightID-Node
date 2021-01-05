@@ -55,17 +55,18 @@ const operations = {
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
   'Set Trusted Connections': {
-    id: joi.string().required().description('brightid of the user who is setting his/her trusted connections'),
-    trusted: joi.array().items(joi.string()).required().description('brightid list of trusted connections'),
+    id: joi.string().required().description('brightid of the user who is setting recovery connections'),
+    trusted: joi.array().items(joi.string()).required().description('brightid list of recovery connections'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
+  // this operation should be renamed to "Social Recovery" in v6
   'Set Signing Key': {
-    id: joi.string().required().description('brightid of the user who is trying to recover his/her account by setting new signing key on his/her brightid'),
+    id: joi.string().required().description('brightid of the user who is resetting signingKeys by social recovery'),
     signingKey: joi.string().required().description('the public key of the new key pair that user will use to sign operations with'),
-    id1: joi.string().required().description('brightid of a trusted connection of the user represented by id'),
-    id2: joi.string().required().description('brightid of another trusted connection of the user represented by id'),
-    sig1: joi.string().required().description('deterministic json representation of operation object signed by the trusted connection represented by id1'),
-    sig2: joi.string().required().description('deterministic json representation of operation object signed by the trusted connection represented by id2'),
+    id1: joi.string().required().description('brightid of a recovery connection of the user represented by id'),
+    id2: joi.string().required().description('brightid of a recovery connection of the user represented by id'),
+    sig1: joi.string().required().description('deterministic json representation of operation object signed by the recovery connection represented by id1'),
+    sig2: joi.string().required().description('deterministic json representation of operation object signed by the recovery connection represented by id2'),
   },
   'Link ContextId': {
     id: joi.string().description('brightid of the user who is linking his/her brightid to a context id'),
@@ -94,9 +95,29 @@ const operations = {
     sig: joi.string().required().description('deterministic json representation of operation object signed by the dismisser'),
   },
   'Add Admin': {
-    id: joi.string().required().description('brightid of the user who has admin rights in the group and can grant administratorship to other members'),
+    id: joi.string().required().description('brightid of one of the current admins of the group'),
     admin: joi.string().required().description('brightid of the member whom is being granted administratorship of the group'),
-    group: joi.string().required().description('the unique id of the group that new admin is being added to'),
+    group: joi.string().required().description('the unique id of the group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the admin user represented by id'),
+  },
+  'Update Group': {
+    id: joi.string().required().description('brightid of one of the admins of the group'),
+    group: joi.string().required().description('the unique id of the group'),
+    url: joi.string().required().description('the new url that group data (profile image and name) encrypted by group AES key can be fetched from'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Add Signing Key': {
+    id: joi.string().required().description('brightid of the user who is adding new signingKey'),
+    signingKey: joi.string().required().description('the public key of the new key pair that user can sign operations with'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Remove Signing Key': {
+    id: joi.string().required().description('brightid of the user who is removing the signingKey'),
+    signingKey: joi.string().required().description('the signingKey that is being removed'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Remove All Signing Keys': {
+    id: joi.string().required().description('brightid of the user who is removing all the signingKeys except the one that used to sign this operation'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   }
 };
@@ -114,12 +135,13 @@ Object.keys(operations).forEach(name => {
 schemas = Object.assign({
   user: joi.object({
     id: joi.string().required().description('the user id'),
-    signingKey: joi.string().required().description('the user signingKey'),
+    // this will be replaced by signingKeys on v6
+    signingKey: joi.string().required().description('the first signingKey of the user'),
     score: schemas.score,
     level: joi.string().required().description('the confidence level set on this user'),
     verifications: joi.array().items(joi.string()),
     hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
-    trusted: joi.array().items(joi.string()).description('list of trusted connections of the user'),
+    trusted: joi.array().items(joi.string()).description('list of recovery connections of the user'),
     flaggers: joi.object().description('an object containing ids of flaggers as key and reason as value'),
     createdAt: schemas.timestamp.required().description('the user creation timestamp'),
   }),
@@ -195,6 +217,7 @@ schemas = Object.assign({
       isSponsored: joi.boolean(),
       trusted: joi.array().items(joi.string()),
       flaggers: joi.object().description("an object containing ids of flaggers as key and reason as value"),
+      signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
     })
   }),
 
@@ -222,7 +245,8 @@ schemas = Object.assign({
         id: joi.string().required().description('brightid of reporter'),
         reportReason: joi.string().required().description('the reason of reporting'),
       })).description('list of reports for the user specified by id'),
-      verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has')
+      verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),
+      signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
     })
   }),
 
@@ -271,6 +295,38 @@ schemas = Object.assign({
     data: joi.object({
       lastProcessedBlock: joi.number().integer().required().description('last block that consensus receiver service processed'),
       verificationsBlock: joi.number().integer().required().description('the block that scorer service updated verifications based on operations got applied before that block'),
+    })
+  }),
+
+  contextDumpGetResponse: joi.object({
+    data: joi.object({
+      collection: joi.string().required().description('the collection name used to store contextIds linked under the context'),
+      idsAsHex: joi.boolean().required().description('true if contextIds are hex strings'),
+      linkAESKey: joi.string().required().description('the AES key used to encrypt links before sending to IDChain and decrypt after receiving them'),
+      contextIds: joi.array().required().items(joi.string()).description('list of all contextIds linked under the context'),
+    })
+  }),
+
+  groupGetResponse: joi.object({
+    data: joi.object({
+      members: joi.array().items(joi.string()).required().description('brightids of members of the group'),
+      invites: joi.array().items(joi.object({
+        inviter: joi.string().required().description('brightid of inviter'),
+        invitee: joi.string().required().description('brightid of invitee'),
+        id: joi.string().required().description('unique id of invite'),
+        data: joi.string().required().description('AES key of group encrypted for invitee'),
+        timestamp: joi.number().required().description('timestamp of invite'),
+      })).required(),
+      eligibles: joi.array().items(joi.string()).required().description('brightids of the users that are eligible to join the group'),
+      admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
+      founders: joi.array().items(joi.string()).required().description('brightids of founders of the group'),
+      isNew: joi.boolean().required().description('true if group is new'),
+      seed: joi.boolean().required().description('true if group is Seed'),
+      region: joi.string().description('region of the group'),
+      type: joi.string().required().description('type of the group'),
+      url: joi.string().required().description('url of the group'),
+      info: joi.string().description('URL of a documnet that contains info about the group'),
+      timestamp: joi.number().required().description('the group creation timestamp'),
     })
   }),
 

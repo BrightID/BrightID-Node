@@ -9,7 +9,7 @@ from arango import ArangoClient
 from web3.middleware import geth_poa_middleware
 import config
 
-db = ArangoClient().db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 variables = db['variables']
 contexts = db['contexts']
 sponsorships = db['sponsorships']
@@ -30,13 +30,12 @@ def get_events(app):
             'value': fb
         })
     cb = w3.eth.getBlock('latest').number
-    fb = fb - config.RECHECK_CHUNK if fb > config.RECHECK_CHUNK else cb - config.RECHECK_CHUNK
     tb = min(cb, fb + config.CHUNK)
 
     print('\napp: {}'.format(app['_key']))
     print('checking events from block {} to block {}'.format(fb, tb))
     sponsor_event_contract = w3.eth.contract(
-        address=app['sponsorEventContract'],
+        address=w3.toChecksumAddress(app['sponsorEventContract']),
         abi=config.SPONSOR_EVENT_CONTRACT_ABI)
     time.sleep(5)
     sponsoreds = sponsor_event_contract.events.Sponsor.createFilter(
@@ -60,26 +59,32 @@ def update():
             print('checking sponsored\tapp_name: {0}, context_id: {1}'.format(
                 app['_key'], context_id))
 
+            tsponsorships = app['totalSponsorships']
+            usponsorships = sponsorships.find(
+                {'_to': 'apps/{0}'.format(app['_key'])}).count()
+            if (tsponsorships - usponsorships < 1):
+                print("app does not have unused sponsorships")
+                continue
+
             # check the context id is linked
             context = contexts[app['context']]
             collection = context['collection']
             c = db[collection].find({'contextId': context_id})
             if c.empty():
-                print("the context id doesn't link to any user under this context")
+                db['sponsorships'].insert({
+                    '_from': 'users/0',
+                    '_to': 'apps/' + app['_key'],
+                    'expireDate': int(time.time()) + 3600,
+                    'contextId': context_id
+                })
+                print(f"{context_id} is not linked to a brightid yet, a temporary sponsorship is added to be applied after user links contextId")
                 continue
-            user = c.next()['user']
 
+            user = c.next()['user']
             c = sponsorships.find(
                 {'_from': 'users/{0}'.format(user)})
             if not c.empty():
                 print("the user is sponsored before")
-                continue
-
-            tsponsorships = app['totalSponsorships']
-            usponsorships = sponsorships.find(
-                {'_to': 'apps/{0}'.format(app['_key'])}).count()
-            if (tsponsorships - usponsorships < 1):
-                print("the app doesn't have enough sponsorships")
                 continue
 
             # create Sponsor operation

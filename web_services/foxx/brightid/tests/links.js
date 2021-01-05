@@ -86,11 +86,11 @@ describe('links & sponsorships', function () {
   });
   context('sponsor()', function() {
     it('should be able to sponsor a user if app has unused sponsorships and user is not sponsored before', function() {
-      db.sponsor('2', 'testApp', 0);
+      db.sponsor({ id: '2', app: 'testApp', timestamp: 0 });
     });
     it('should throw "app does not have unused sponsorships" if app has no unused sponsorship', function(){
       (() => {
-        db.sponsor('3', 'testApp', 0);
+        db.sponsor({ id: '3', app: 'testApp', timestamp: 0 });
       }).should.throw('app does not have unused sponsorships');
     });
   });

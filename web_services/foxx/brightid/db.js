@@ -1,10 +1,18 @@
 'use strict';
-
 const { sha256 } = require('@arangodb/crypto');
-
 const { query, db } = require('@arangodb');
-
 const _ = require('lodash');
+const stringify = require('fast-json-stable-stringify');
+const nacl = require('tweetnacl');
+const {
+  uInt8ArrayToB64,
+  b64ToUrlSafeB64,
+  urlSafeB64ToB64,
+  strToUint8Array,
+  b64ToUint8Array,
+  hash
+} = require('./encoding');
+
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
@@ -18,12 +26,6 @@ const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
 const testblocksColl = db._collection('testblocks');
-
-const {
-  uInt8ArrayToB64,
-  b64ToUrlSafeB64,
-  urlSafeB64ToB64
-} = require('./encoding');
 
 function addConnection(key1, key2, timestamp) {
   // this function is deprecated and will be removed on v6
@@ -124,7 +126,8 @@ function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
   return {
     id: u._key,
-    signingKey: u.signingKey,
+    // all signing keys will be returned on v6
+    signingKey: u.signingKeys[0],
     // score is deprecated and will be removed on v6
     score: u.score,
     verifications: userVerifications(u._key).map(v => v.name),
@@ -165,6 +168,9 @@ function isEligible(groupId, userId) {
   return count >= members.length / 2;
 }
 
+// storing eligible groups on users documents and updating them
+// from this route will be removed when clients updated to use
+// new GET /groups/{id} result to show eligibles in invite list
 function updateEligibleGroups(userId, connections, currentGroups) {
   connections = connections.map(uId => 'users/' + uId);
   currentGroups = currentGroups.map(gId => 'groups/' + gId);
@@ -210,27 +216,38 @@ function updateEligibleGroups(userId, connections, currentGroups) {
 function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
+  const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
+
   members.forEach(member => {
     const conns = connectionsColl.byExample({
       _from: 'users/' + member
-    }).toArray().map(u => u._to.replace("users/", ""));
+    }).toArray().filter(isKnown).map(
+      c => c._to.replace("users/", "")
+    ).filter(u => !members.includes(u));
     neighbors.push(...conns);
   });
+
   const counts = {};
-  for (let i = 0; i < neighbors.length; i++) {
-    counts[neighbors[i]] = (counts[neighbors[i]] || 0) + 1;
+  for (let neighbor of neighbors) {
+    counts[neighbor] = (counts[neighbor] || 0) + 1;
   }
-  Object.keys(counts).forEach(neighbor => {
-    if (counts[neighbor] >= members.length / 2) {
-      const eligible_groups = usersColl.document(neighbor).eligible_groups || [];
-      if (eligible_groups.indexOf(groupId) == -1) {
-        eligible_groups.push(groupId);
-        usersColl.update(neighbor, {
-          eligible_groups
-        });
-      }
+  const eligibles = Object.keys(counts).filter(neighbor => {
+    return counts[neighbor] >= members.length / 2;
+  });
+  // storing eligible groups on users documents and updating them
+  // from this route will be removed when clients updated to use
+  // new GET /groups/{id} result to show eligibles in invite list
+  eligibles.forEach(neighbor => {
+    let { eligible_groups } = usersColl.document(neighbor);
+    eligible_groups = eligible_groups || [];
+    if (eligible_groups.indexOf(groupId) == -1) {
+      eligible_groups.push(groupId);
+      usersColl.update(neighbor, {
+        eligible_groups
+      });
     }
   });
+  return eligibles;
 }
 
 function groupToDic(groupId) {
@@ -335,7 +352,7 @@ function createUser(key, timestamp) {
   if (!user) {
     return usersColl.insert({
       score: 0,
-      signingKey: urlSafeB64ToB64(key),
+      signingKeys: [urlSafeB64ToB64(key)],
       createdAt: timestamp,
       _key: key
     });
@@ -581,17 +598,21 @@ function linkContextId(id, context, contextId, timestamp) {
   // remove testblocks if exists
   removeTestblock(contextId, 'link');
 
+  let user = getUserByContextId(coll, contextId);
+  if (user && user != id) {
+    throw 'contextId is duplicate';
+  }
+
   const links = coll.byExample({user: id}).toArray();
   const recentLinks = links.filter(
     link => timestamp - link.timestamp < 24*3600*1000
   );
-  if (recentLinks.length >=3) {
+  if (recentLinks.length >= 3) {
     throw 'only three contextIds can be linked every 24 hours';
   }
 
   // accept link if the contextId is used by the same user before
-  let link;
-  for (link of links) {
+  for (let link of links) {
     if (link.contextId === contextId) {
       if (timestamp > link.timestamp) {
         coll.update(link, { timestamp });
@@ -600,15 +621,21 @@ function linkContextId(id, context, contextId, timestamp) {
     }
   }
 
-  if (getUserByContextId(coll, contextId)) {
-    throw 'contextId is duplicate';
-  }
-
   coll.insert({
     user: id,
     contextId,
     timestamp
   });
+
+  // sponsor the user if contextId is temporarily sponsored
+  const tempSponsorship = sponsorshipsColl.firstExample({ contextId });
+  if (tempSponsorship) {
+    const app = tempSponsorship._to.replace('apps/', '');
+    sponsorshipsColl.remove( tempSponsorship._key );
+    // pass contextId instead of id to broadcast sponsor operation
+    sponsor({ contextId, app, timestamp });
+
+  }
 }
 
 function setRecoveryConnections(conns, key, timestamp) {
@@ -679,7 +706,7 @@ function getRecoveryConnections(user) {
 
 function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
-    signingKey,
+    signingKeys: [signingKey],
     updateTime: timestamp
   });
 }
@@ -696,27 +723,91 @@ function unusedSponsorships(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-function sponsor(user, appKey, timestamp) {
-  const app = getApp(appKey);
-  const context = getContext(app.context);
-  if (context) {
-    const coll = db._collection(context.collection);
-    const contextIds = getContextIdsByUser(coll, user);
-    // remove testblocks if exists
-    removeTestblock(contextIds[0], 'sponsorship', appKey);
-  }
-
-  if (unusedSponsorships(appKey) < 1) {
+// this method is called in different situations:
+// 1) Sponsor operation with contextId is posted to the brightid service.
+//    a) contextId may already be linked to a brightid
+//    b) or it may not be linked yet
+// 2) Sponsor operation with user id is sent to the apply service
+// 3) Link ContextId operation is sent to the apply service for
+//    a contextId that was sponsored temporarily before linking
+function sponsor(op) {
+  if (unusedSponsorships(op.app) < 1) {
     throw "app does not have unused sponsorships";
   }
 
-  if (isSponsored(user)) {
+  // if 2) Sponsor operation with user id is sent to the apply service
+  if (op.id) {
+    if (isSponsored(op.id)) {
+      throw "sponsored before";
+    }
+    sponsorshipsColl.insert({
+      _from: 'users/' + op.id,
+      _to: 'apps/' + op.app,
+      timestamp: op.timestamp,
+    });
+    return;
+  }
+
+  // if we have user contextId
+  const app = getApp(op.app);
+  const context = getContext(app.context);
+  if (!app.sponsorPrivateKey || !context) {
+    throw 'can not relay sponsor requests for this app';
+  }
+
+  const coll = db._collection(context.collection);
+  if (context.idsAsHex) {
+    op.contextId = op.contextId.toLowerCase();
+  }
+  // remove testblocks if exists
+  removeTestblock(op.contextId, 'sponsorship', op.app);
+  const id = getUserByContextId(coll, op.contextId);
+
+  // if 1-b) Sponsor operation with contextId is posted to the brightid service
+  // but contextId is not linked to a brightid yet
+  // add a temporary sponsorship to be applied after user linked contextId
+  if (!id) {
+    sponsorshipsColl.insert({
+      _from: 'users/0',
+      _to: 'apps/' + op.app,
+      // it will expire after one hour
+      expireDate: Math.ceil((Date.now() / 1000) + 3600),
+      contextId: op.contextId
+    });
+    return;
+  }
+
+  if (isSponsored(id)) {
     throw "sponsored before";
   }
 
+  // if 1-a or 3
+
+  // broadcast sponsor operation with user brightid that can be applied
+  // by all nodes including those that not support sponsor app's context
+  const sponsorUserOp = {
+    name: 'Sponsor',
+    app: op.app,
+    id,
+    timestamp: op.timestamp,
+    v: 5
+  }
+  const message = stringify(sponsorUserOp);
+  sponsorUserOp.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(app.sponsorPrivateKey))));
+  sponsorUserOp.hash = hash(message);
+  sponsorUserOp.state = 'init';
+  upsertOperation(sponsorUserOp);
+
+  // sponsor user instantly instead of waiting for applying sponsor operation
+  // with user brightid, to prevent apps getting not sponsored error for users
+  // that are sponsored before linking, when link operation applied but
+  // broadcasted sponsor operation not arrived yet.
+  // this approach may result in loosing consensus in sponsorships but
+  // seems not to be important
   sponsorshipsColl.insert({
-    _from: 'users/' + user,
-    _to: 'apps/' + appKey
+    _from: 'users/' + id,
+    _to: 'apps/' + op.app,
+    timestamp: op.timestamp,
   });
 }
 
@@ -767,6 +858,76 @@ function getTestblocks(app, contextId) {
   }).toArray().map(b => b.action);
 }
 
+function getContextIds(coll) {
+  return coll.all().toArray().map(c => {
+    return {
+      user: c.user,
+      contextId: c.contextId,
+      timestamp: c.timestamp
+    }
+  });
+}
+
+function loadGroup(groupId) {
+  return query`RETURN DOCUMENT(${groupsColl}, ${groupId})`.toArray()[0];
+}
+
+function groupInvites(groupId) {
+  return invitationsColl.byExample({
+    "_to": 'groups/' + groupId,
+  }).toArray().filter(invite => {
+    return Date.now() - invite.timestamp < 86400000
+  }).map(invite => {
+    return {
+      inviter: invite.inviter,
+      invitee: invite._from.replace('users/', ''),
+      id: invite._key,
+      data: invite.data,
+      timestamp: invite.timestamp
+    }
+  });
+}
+
+function removePasscode(contextKey) {
+  contextsColl.update(contextKey, {
+    passcode: null
+  });
+}
+
+function updateGroup(admin, groupId, url, timestamp) {
+  if (! groupsColl.exists(groupId)) {
+    throw 'group not found';
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.admins || ! group.admins.includes(admin)) {
+    throw 'only admins can update the group';
+  }
+  groupsColl.update(group, {
+    url,
+    timestamp
+  });
+}
+
+function addSigningKey(id, signingKey, timestamp) {
+  const signingKeys = usersColl.document(id).signingKeys || [];
+  if (signingKeys.indexOf(signingKey) == -1) {
+    signingKeys.push(signingKey);
+    usersColl.update(id, { signingKeys });
+  }
+}
+
+function removeSigningKey(id, signingKey) {
+  let signingKeys = usersColl.document(id).signingKeys || [];
+  signingKeys = signingKeys.filter(s => s != signingKey);
+  usersColl.update(id, { signingKeys });
+}
+
+function removeAllSigningKeys(id, signingKey) {
+  let signingKeys = usersColl.document(id).signingKeys || [];
+  signingKeys = signingKeys.filter(s => s == signingKey);
+  usersColl.update(id, { signingKeys });
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -810,4 +971,13 @@ module.exports = {
   addTestblock,
   removeTestblock,
   getTestblocks,
+  addSigningKey,
+  removeSigningKey,
+  removeAllSigningKeys,
+  getContextIds,
+  removePasscode,
+  loadGroup,
+  groupInvites,
+  updateEligibles,
+  updateGroup
 };

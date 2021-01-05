@@ -2,7 +2,9 @@
 # Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.6.4/docker-entrypoint.sh
 set -e
 
-if [ "$INIT_BRIGHTID_DB" == "1" ]; then
+if [ "$INIT_BRIGHTID_DB" == "1" ] || [ ! -f /var/lib/arangodb3/ENGINE ]; then
+    INIT_BRIGHTID_DB=1
+    echo "Loading brightid dump for initial start..."
     wget https://explorer.brightid.org/backups/brightid.tar.gz
     tar xvzf brightid.tar.gz
     rm brightid.tar.gz
@@ -83,19 +85,19 @@ if [ "$1" = 'arangod' ]; then
             echo >&2 "  You need to specify one of ARANGO_ROOT_PASSWORD, ARANGO_ROOT_PASSWORD_FILE, ARANGO_NO_AUTH and ARANGO_RANDOM_ROOT_PASSWORD"
             exit 1
         fi
-        
+
         if [ ! -z "$ARANGO_RANDOM_ROOT_PASSWORD" ]; then
             ARANGO_ROOT_PASSWORD=$(pwgen -s -1 16)
             echo "==========================================="
             echo "GENERATED ROOT PASSWORD: $ARANGO_ROOT_PASSWORD"
             echo "==========================================="
         fi
-        
+
         if [ ! -z "${ARANGO_ROOT_PASSWORD+x}" ]; then
             echo "Initializing root user...Hang on..."
             ARANGODB_DEFAULT_ROOT_PASSWORD="$ARANGO_ROOT_PASSWORD" /usr/sbin/arango-init-database -c /tmp/arangod.conf --server.rest-server false --log.level error --database.init-database true || true
             export ARANGO_ROOT_PASSWORD
-        
+
             if [ ! -z "${ARANGO_ROOT_PASSWORD}" ]; then
                 ARANGOSH_ARGS=" --server.password ${ARANGO_ROOT_PASSWORD} "
             fi
@@ -193,7 +195,7 @@ if [ "$1" = 'arangod' ]; then
         AUTHENTICATION="false"
     fi
 
-    set -- arangod "$@" --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf
+    set -- arangod "$@" --server.endpoint=$BN_ARANGO_SERVER_ENDPOINT --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf
 else
     NUMACTL=""
 fi
