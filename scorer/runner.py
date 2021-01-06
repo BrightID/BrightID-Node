@@ -125,12 +125,14 @@ def wait():
     while True:
         time.sleep(5)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
+        result = sock.connect_ex(
+            (config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
         sock.close()
         if result != 0:
             print('db is not running yet')
             continue
         return
+
 
 if __name__ == '__main__':
     print('waiting for db ...')
