@@ -118,7 +118,7 @@ def restore_snapshot(f):
     os.system('rm /tmp/scorerRestore -rf')
     zf = zipfile.ZipFile(f)
     zf.extractall('/tmp/scorerRestore')
-    os.system('arangorestore --server.username "root" --server.password "" --server.database snapshot --create-database true --create-collection true --import-data true --input-directory "/tmp/scorerRestore"')
+    os.system('arangorestore --server.username "root" --server.password "" --server.database snapshot --create-database true --create-collection true --import-data true --input-directory "/tmp/scorerRestore/dump"')
 
 
 def wait():

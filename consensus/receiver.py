@@ -66,7 +66,7 @@ def save_snapshot(block):
     os.system(f'arangodump --overwrite true --compress-output false --server.password "" --output-directory "/tmp/scorerDump" --maskings {COLLECTIONS_FILE}')
     for root, dirs, files in os.walk('/tmp/scorerDump'):
         for file in files:
-            zf.write(os.path.join(root, file), file)
+            zf.write(os.path.join(root, file), f'/dump/{file}')
     zf.close()
     os.rename(fname + '.tmp', fname)
 
