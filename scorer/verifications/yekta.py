@@ -2,11 +2,12 @@ import time
 from arango import ArangoClient
 import anti_sybil.algorithms as algorithms
 from anti_sybil.utils import *
+import config
 
 
 def verify(fname):
     print('YEKTA')
-    db = ArangoClient().db('_system')
+    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     json_graph = from_dump(fname)
     graph = from_json(json_graph)
     ranker = algorithms.Yekta(graph, {})

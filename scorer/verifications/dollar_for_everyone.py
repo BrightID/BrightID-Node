@@ -1,13 +1,14 @@
 import time
 from arango import ArangoClient
+import config
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 
 
 def verify(fname):
     print('DOLLAR FOR EVERYONE')
-    db = ArangoClient().db('_system')
-    snapshot_db = ArangoClient().db('snapshot')
+    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
+    snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
     admins = [u['_id'] for u in snapshot_db['users'].find({'dfeAdmin': True})]
     cursor = snapshot_db.aql.execute('''
         FOR c IN connections

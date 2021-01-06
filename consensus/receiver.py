@@ -1,17 +1,18 @@
 import os
 import time
+import socket
 import json
 import binascii
 import base64
 import hashlib
 import zipfile
 import requests
-from arango import ArangoClient
+from arango import ArangoClient, errno
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
 import config
 
-db = ArangoClient().db('_system')
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -32,15 +33,28 @@ def hash(op):
 
 def process(data, block_timestamp):
     try:
-        data = bytes.fromhex(data.strip('0x')).decode('utf-8')
-        op = json.loads(data)
+        data_bytes = bytes.fromhex(data.strip('0x'))
+        data_str = data_bytes.decode('utf-8', 'ignore')
+        op = json.loads(data_str)
         op['blockTime'] = block_timestamp * 1000
-        r = requests.put(config.APPLY_URL.format(
-            v=op['v'], hash=hash(op)), json=op)
         print(op)
-        print(r.json())
+        url = config.APPLY_URL.format(v=op['v'], hash=hash(op))
     except Exception as e:
-        print(data.encode('utf-8'), e)
+        print('error in parsing operation')
+        print('data', data_str)
+        print('error', e)
+
+    r = requests.put(url, json=op)
+    resp = r.json()
+    print(resp)
+    # resp is returned from PUT /operations handler
+    if resp.get('state') == 'failed':
+        if resp['result'].get('errorNum') == errno.CONFLICT:
+            print('retry on conflict')
+            return process(data, block_timestamp)
+    # resp is returned from arango not PUT /operations handler
+    if resp.get('error'):
+        raise Exception('Error from apply service')
 
 
 def save_snapshot(block):
@@ -93,9 +107,36 @@ def main():
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
 
 
+def wait():
+    while True:
+        time.sleep(5)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        result = sock.connect_ex(
+            (config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
+        sock.close()
+        if result != 0:
+            print('db is not running yet')
+            continue
+        services = [service['mount'] for service in db.foxx.services()]
+        if '/apply5' not in services:
+            print('apply5 is not installed yet')
+            continue
+        collections = [c['name'] for c in db.collections()]
+        if 'apps' not in collections:
+            print('apps collection is not created yet')
+            continue
+        apps = [app for app in db.collection('apps')]
+        if len(apps) == 0:
+            print('apps collection is not loaded yet')
+            continue
+        return
+
+
 if __name__ == '__main__':
     while True:
         try:
+            print('waiting for db ...')
+            wait()
             print('receiver started ...')
             main()
         except Exception as e:

@@ -1,5 +1,6 @@
 from arango import ArangoClient
 import time
+import config
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 DEFAULT_QUOTA = 50
@@ -8,12 +9,13 @@ PENALTY = 2
 
 def verify(fname):
     print('SEED CONNECTED')
-    db = ArangoClient().db('_system')
-    snapshot_db = ArangoClient().db('snapshot')
+    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
+    snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 
     already_verifieds = set(
         v['user'] for v in snapshot_db['verifications'].find({'name': 'SeedConnected'}))
     seed_groups = list(snapshot_db['groups'].find({'seed': True}))
+    seed_groups.sort(key=lambda s: s['timestamp'])
     seed_groups_members = {}
     seed_groups_quota = {}
     seed_conns = {}

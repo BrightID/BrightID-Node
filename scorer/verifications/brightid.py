@@ -1,11 +1,11 @@
 import time
 from arango import ArangoClient
-
+import config
 
 def verify(fname):
     print('BRIGHTID')
-    db = ArangoClient().db('_system')
-    snapshot_db = ArangoClient().db('snapshot')
+    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
+    snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
     verifieds = {v['user']
                  for v in db['verifications'].find({'name': 'BrightID'})}
 

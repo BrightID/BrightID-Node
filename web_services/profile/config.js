@@ -1,6 +1,6 @@
 const is_dev = process.env.NODE_ENV === "dev";
 
-const port = process.env.PORT || 3000;
+const port = process.env.BN_WS_PROFILE_SERVICE_PORT || 3000;
 
 const node_cache = {
   stdTTL: 900,
