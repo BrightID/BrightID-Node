@@ -9,16 +9,16 @@ def verify(fname):
     snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
     already_verifieds = {v['user']
                          for v in db['verifications'].find({'name': 'BrightID'})}
-    verifieds = {v['user']
-                 for v in snapshot_db['verifications'].find({'name': 'SeedConnected'})}
+    candidates = list(snapshot_db['verifications'].find(
+        {'name': 'SeedConnected'}))
 
-    for user in verifieds:
-        if user in already_verifieds:
+    for candidate in candidates:
+        if candidate['user'] in already_verifieds or candidate['score'] < 1:
             continue
 
         db['verifications'].insert({
             'name': 'BrightID',
-            'user': user,
+            'user': candidate['user'],
             'timestamp': int(time.time() * 1000)
         })
     verifiedCount = db['verifications'].find({'name': 'BrightID'}).count()
