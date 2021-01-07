@@ -263,7 +263,7 @@ function v5_8() {
         'user': verification.user,
         'seeds': [verification.seed],
         'seedGroups': [verification.seedGroup.replace('groups/', '')],
-        'score': 1,
+        'rank': 1,
         'timestamp': verification.timestamp,
       });
     }

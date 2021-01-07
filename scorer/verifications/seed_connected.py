@@ -44,13 +44,13 @@ def verify(fname):
             neighbor = conn['_to'].replace('users/', '')
             if neighbor not in verifieds:
                 verifieds[neighbor] = {
-                    'score': 0, 'seeds': [], 'seed_groups': [], 'reporters': []}
+                    'rank': 0, 'seeds': [], 'seed_groups': [], 'reporters': []}
 
-            # if a user reported by a Seed, it's score will decrease
+            # if a user reported by a Seed, it's rank will decrease
             if conn['level'] not in SEED_CONNECTION_LEVELS:
                 reporter = conn['_from'].replace('users/', '')
                 if reporter not in verifieds[neighbor]['reporters']:
-                    verifieds[neighbor]['score'] -= PENALTY
+                    verifieds[neighbor]['rank'] -= PENALTY
                     verifieds[neighbor]['reporters'].append(reporter)
                 continue
 
@@ -66,7 +66,7 @@ def verify(fname):
 
             verifieds[neighbor]['seed_groups'].append(seed_group)
             verifieds[neighbor]['seeds'].append(seed)
-            verifieds[neighbor]['score'] += 1
+            verifieds[neighbor]['rank'] += 1
             unused -= 1
 
     for verified in verifieds:
@@ -81,14 +81,14 @@ def verify(fname):
             INSERT {
                 name: 'SeedConnected',
                 user: @user,
-                score: @score,
+                rank: @rank,
                 seeds: @seeds,
                 seedGroups: @seed_groups,
                 reporters: @reporters,
                 timestamp: @timestamp
             }
             UPDATE {
-                score: @score,
+                rank: @rank,
                 seeds: @seeds,
                 seedGroups: @seed_groups,
                 reporters: @reporters,
@@ -97,7 +97,7 @@ def verify(fname):
             IN verifications
         ''', bind_vars={
             'user': verified,
-            'score': verifieds[verified]['score'],
+            'rank': verifieds[verified]['rank'],
             'seeds': verifieds[verified]['seeds'],
             'seed_groups': verifieds[verified]['seed_groups'],
             'reporters': verifieds[verified]['reporters'],

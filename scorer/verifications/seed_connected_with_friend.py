@@ -47,7 +47,7 @@ def verify(fname):
     for seed in seeds:
         verifications[seed] = getVerifications(seed)
         # seeds get this verification if they have SeedConnected (had quota for themselves)
-        if verifications[seed].get('SeedConnected', {}).get('score', 0) > 0:
+        if verifications[seed].get('SeedConnected', {}).get('rank', 0) > 0:
             addVerificationTo(seed, None)
 
         conns = snapshot_db.aql.execute('''
@@ -70,7 +70,7 @@ def verify(fname):
             if neighbor not in verifications:
                 verifications[neighbor] = getVerifications(neighbor)
 
-            if verifications[neighbor].get('SeedConnected', {}).get('score', 0) < 1:
+            if verifications[neighbor].get('SeedConnected', {}).get('rank', 0) < 1:
                 continue
 
             seedConnTimes[neighbor] = conn['timestamp']

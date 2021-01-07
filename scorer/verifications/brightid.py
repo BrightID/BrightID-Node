@@ -13,7 +13,7 @@ def verify(fname):
         {'name': 'SeedConnected'}))
 
     for candidate in candidates:
-        if candidate['user'] in already_verifieds or candidate['score'] < 1:
+        if candidate['user'] in already_verifieds or candidate['rank'] < 1:
             continue
 
         db['verifications'].insert({
