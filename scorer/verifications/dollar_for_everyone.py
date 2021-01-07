@@ -1,5 +1,6 @@
 import time
 from arango import ArangoClient
+from . import utils
 import config
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
@@ -31,7 +32,8 @@ def verify(fname):
         db['verifications'].insert({
             'name': 'DollarForEveryone',
             'user': user,
-            'timestamp': int(time.time() * 1000)
+            'timestamp': int(time.time() * 1000),
+            'hash': utils.hash('DOLLAR FOR EVERYONE', 'user')
         })
     verifiedCount = db['verifications'].find(
         {'name': 'DollarForEveryone'}).count()

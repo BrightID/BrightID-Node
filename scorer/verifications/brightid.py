@@ -1,5 +1,6 @@
 import time
 from arango import ArangoClient
+from . import utils
 import config
 
 
@@ -19,7 +20,8 @@ def verify(fname):
         db['verifications'].insert({
             'name': 'BrightID',
             'user': candidate['user'],
-            'timestamp': int(time.time() * 1000)
+            'timestamp': int(time.time() * 1000),
+            'hash': utils.hash('BrightID', candidate['user'])
         })
     verifiedCount = db['verifications'].find({'name': 'BrightID'}).count()
     print('verifieds: {}\n'.format(verifiedCount))

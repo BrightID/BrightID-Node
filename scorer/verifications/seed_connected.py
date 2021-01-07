@@ -1,5 +1,6 @@
 from arango import ArangoClient
 import time
+from . import utils
 import config
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
@@ -85,14 +86,16 @@ def verify(fname):
                 seeds: @seeds,
                 seedGroups: @seed_groups,
                 reporters: @reporters,
-                timestamp: @timestamp
+                timestamp: @timestamp,
+                hash: @hash
             }
             UPDATE {
                 rank: @rank,
                 seeds: @seeds,
                 seedGroups: @seed_groups,
                 reporters: @reporters,
-                timestamp: @timestamp
+                timestamp: @timestamp,
+                hash: @hash
             }
             IN verifications
         ''', bind_vars={
@@ -101,7 +104,8 @@ def verify(fname):
             'seeds': verifieds[verified]['seeds'],
             'seed_groups': verifieds[verified]['seed_groups'],
             'reporters': verifieds[verified]['reporters'],
-            'timestamp': int(time.time() * 1000)
+            'timestamp': int(time.time() * 1000),
+            'hash': utils.hash('SeedConnected', verified, verifieds[verified]['rank'])
         })
 
     # if a user is not connected to a seed (with enough quota) anymore,

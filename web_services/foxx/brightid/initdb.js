@@ -1,6 +1,7 @@
 const arango = require('@arangodb').db;
 const db = require('./db');
 const { query } = require('@arangodb');
+const { hash } = require('./encoding');
 
 const collections = {
   'connections': 'edge',
@@ -255,6 +256,7 @@ function v5_8() {
     verificationsColl.removeByExample({ name: verificationName });
   }
 
+  console.log("add 'hash' to the verifications and update SeedConnected verifications");
   const verifications = verificationsColl.all().toArray();
   for (let verification of verifications) {
     if (verification.name == 'SeedConnected') {
@@ -265,6 +267,11 @@ function v5_8() {
         'seedGroups': [verification.seedGroup.replace('groups/', '')],
         'rank': 1,
         'timestamp': verification.timestamp,
+        'hash': hash(verification.name + verification.user + (verification.rank || ''))
+      });
+    } else {
+      verificationsColl.update(verification, {
+        'hash': hash(verification.name + verification.user + (verification.rank || ''))
       });
     }
   }

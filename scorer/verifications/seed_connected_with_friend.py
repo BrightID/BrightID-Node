@@ -1,6 +1,7 @@
 from arango import ArangoClient
 import itertools
 import time
+from . import utils
 import config
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
@@ -20,7 +21,8 @@ def addVerificationTo(user, friend):
         'name': 'SeedConnectedWithFriend',
         'user': user,
         'friend': friend,
-        'timestamp': int(time.time() * 1000)
+        'timestamp': int(time.time() * 1000),
+        'hash': utils.hash('SeedConnectedWithFriend', user)
     }
     db['verifications'].insert(verifications[user]['SeedConnectedWithFriend'])
 

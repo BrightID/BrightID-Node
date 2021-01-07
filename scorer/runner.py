@@ -3,7 +3,6 @@ import time
 import zipfile
 import socket
 import traceback
-import os
 from datetime import datetime
 from arango import ArangoClient
 from py_expression_eval import Parser

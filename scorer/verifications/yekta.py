@@ -2,6 +2,7 @@ import time
 from arango import ArangoClient
 import anti_sybil.algorithms as algorithms
 from anti_sybil.utils import *
+from . import utils
 import config
 
 
@@ -27,18 +28,21 @@ def verify(fname):
                 user: @user,
                 rank: @rank,
                 raw_rank: @raw_rank,
-                timestamp: @timestamp
+                timestamp: @timestamp,
+                hash: @hash
             }
             UPDATE {
                 rank: @rank,
                 raw_rank: @raw_rank,
-                timestamp: @timestamp
+                timestamp: @timestamp,
+                hash: @hash
             }
             IN verifications
         ''', bind_vars={
             'user': node.name,
             'rank': node.rank,
             'raw_rank': node.raw_rank,
-            'timestamp': int(time.time() * 1000)
+            'timestamp': int(time.time() * 1000),
+            'hash': utils.hash('Yekta', node.name, node.rank)
         })
     print(f'verifieds: {counter}\n')
