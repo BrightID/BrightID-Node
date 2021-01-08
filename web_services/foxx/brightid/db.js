@@ -829,11 +829,13 @@ function getState() {
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
   const initOp = operationsColl.byExample({'state': 'init'}).toArray().length;
   const sentOp = operationsColl.byExample({'state': 'sent'}).toArray().length;
+  const verificationsHashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
   return {
     lastProcessedBlock,
     verificationsBlock,
     initOp,
-    sentOp
+    sentOp,
+    verificationsHashes
   }
 }
 
