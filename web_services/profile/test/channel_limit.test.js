@@ -38,4 +38,19 @@ describe('Channel limit', () => {
         .expect(config.channel_limit_response_code)
         expect(res.body).toHaveProperty('error', config.channel_limit_message)
     })
+
+    it(`should not fail when uploading additional entries starting with "sig_", "connection_" and "group_" to recovery channels`, async() => {
+        let res = await request(app)
+        .post(`/upload/${channelId}`)
+        .send({
+            data: `Another profile data`,
+            uuid: 'sig_' + uuidv4(),
+        })
+        .expect(201)
+        // double-check channel list returns correct size
+        res = await request(app)
+        .get(`/list/${channelId}`)
+        .expect(200)
+        expect(res.body.profileIds).toHaveLength(config.channel_entry_limit + 1);
+    })
 })

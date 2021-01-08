@@ -42,8 +42,14 @@ app.post("/upload/:channel", function (req, res) {
   if (current_data) {
     // provided data is a responder profile. Add to existing channel.
 
-    // Bail out if channel is full
-    if (current_data.length >= config.channel_entry_limit) {
+    const isRecoveryChannel = (uuid) =>
+      uuid.startsWith('connection_') ||
+      uuid.startsWith('group_') ||
+      uuid.startsWith('sig_');
+
+    // Bail out if group connection channel is full
+    // and ignore the limit if it's a recovery channel
+    if (current_data.length >= config.channel_entry_limit && !isRecoveryChannel(uuid)) {
       res.status(config.channel_limit_response_code).json({error: config.channel_limit_message});
       return;
     }
