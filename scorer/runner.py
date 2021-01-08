@@ -6,6 +6,8 @@ import traceback
 from datetime import datetime
 from arango import ArangoClient
 from py_expression_eval import Parser
+from hashlib import sha256
+import base64
 import config
 from verifications import yekta
 from verifications import seed_connected
@@ -16,19 +18,19 @@ from verifications import seed_connected_with_friend
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 snapshot_db = ArangoClient().db('snapshot')
-verifiers = [
-    seed_connected,
-    seed_connected_with_friend,
-    yekta,
-    brightid,
-    dollar_for_everyone
-]
+verifiers = {
+    'SeedConnected': seed_connected,
+    'SeedConnectedWithFriend': seed_connected_with_friend,
+    'Yekta': yekta,
+    'BrightID': brightid,
+    'DollarForEveryone': dollar_for_everyone
+}
 
 
 def process(fname):
-    for verifier in verifiers:
+    for verification_name in verifiers:
         try:
-            verifier.verify(fname)
+            verifiers[verification_name].verify(fname)
         except Exception as e:
             print(f'Error in verifier: {e}')
             traceback.print_exc()
@@ -58,6 +60,7 @@ def main():
         block = int(snapshots[0].strip('dump_').strip('.zip'))
         variables.update(
             {'_key': 'VERIFICATION_BLOCK', 'value': block})
+        update_hashes(block)
 
         # remove the snapshot file
         if os.path.exists(fname):
@@ -118,6 +121,28 @@ def restore_snapshot(f):
     zf = zipfile.ZipFile(f)
     zf.extractall('/tmp/scorerRestore')
     os.system('arangorestore --server.username "root" --server.password "" --server.database snapshot --create-database true --create-collection true --import-data true --input-directory "/tmp/scorerRestore/dump"')
+
+
+def update_hashes(block):
+    variables = db.collection('variables')
+    if not variables.has('VERIFICATIONS_HASHES'):
+        variables.insert({
+            '_key': 'VERIFICATIONS_HASHES',
+            'hashes': []
+        })
+    new_hash = {'block': block}
+    for verification_name in verifiers:
+        verifications = db['verifications'].find({'name': verification_name})
+        message = ''.join([v['hash'] for v in verifications]).encode('ascii')
+        h = base64.b64encode(sha256(message).digest()).decode("ascii")
+        new_hash[verification_name] = h.replace(
+            '/', '_').replace('+', '-').replace('=', '')
+    hashes = sorted(variables.get('VERIFICATIONS_HASHES')['hashes'],
+                    key=lambda k: k['block'])
+    hashes.append(new_hash)
+    if len(hashes) > 3:
+        hashes.pop(0)
+    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes})
 
 
 def wait():
