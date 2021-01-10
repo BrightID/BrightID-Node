@@ -9,7 +9,7 @@ import config
 def verify(block):
     print('YEKTA')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-    json_graph = from_db('snapshot', block)
+    json_graph = from_db('snapshot')
     graph = from_json(json_graph)
     ranker = algorithms.Yekta(graph, {})
     ranker.rank()
