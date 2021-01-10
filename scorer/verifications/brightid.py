@@ -4,7 +4,7 @@ from . import utils
 import config
 
 
-def verify(fname):
+def verify(block):
     print('BRIGHTID')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
@@ -20,6 +20,7 @@ def verify(fname):
         db['verifications'].insert({
             'name': 'BrightID',
             'user': candidate['user'],
+            'block': block,
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('BrightID', candidate['user'])
         })

@@ -6,10 +6,10 @@ from . import utils
 import config
 
 
-def verify(fname):
+def verify(block):
     print('YEKTA')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-    json_graph = from_dump(fname)
+    json_graph = from_db('snapshot', block)
     graph = from_json(json_graph)
     ranker = algorithms.Yekta(graph, {})
     ranker.rank()
@@ -28,12 +28,14 @@ def verify(fname):
                 user: @user,
                 rank: @rank,
                 raw_rank: @raw_rank,
+                block: @block,
                 timestamp: @timestamp,
                 hash: @hash
             }
             UPDATE {
                 rank: @rank,
                 raw_rank: @raw_rank,
+                block: @block,
                 timestamp: @timestamp,
                 hash: @hash
             }
@@ -42,6 +44,7 @@ def verify(fname):
             'user': node.name,
             'rank': node.rank,
             'raw_rank': node.raw_rank,
+            'block': block,
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('Yekta', node.name, node.rank)
         })

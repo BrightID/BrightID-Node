@@ -8,7 +8,7 @@ DEFAULT_QUOTA = 50
 PENALTY = 2
 
 
-def verify(fname):
+def verify(block):
     print('SEED CONNECTED')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
@@ -86,6 +86,7 @@ def verify(fname):
                 seeds: @seeds,
                 seedGroups: @seed_groups,
                 reporters: @reporters,
+                block: @block,
                 timestamp: @timestamp,
                 hash: @hash
             }
@@ -94,6 +95,7 @@ def verify(fname):
                 seeds: @seeds,
                 seedGroups: @seed_groups,
                 reporters: @reporters,
+                block: @block,
                 timestamp: @timestamp,
                 hash: @hash
             }
@@ -104,6 +106,7 @@ def verify(fname):
             'seeds': verifieds[verified]['seeds'],
             'seed_groups': verifieds[verified]['seed_groups'],
             'reporters': verifieds[verified]['reporters'],
+            'block': block,
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('SeedConnected', verified, verifieds[verified]['rank'])
         })

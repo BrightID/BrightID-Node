@@ -6,7 +6,7 @@ import config
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 
 
-def verify(fname):
+def verify(block):
     print('DOLLAR FOR EVERYONE')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
@@ -32,6 +32,7 @@ def verify(fname):
         db['verifications'].insert({
             'name': 'DollarForEveryone',
             'user': user,
+            'block': block,
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('DOLLAR FOR EVERYONE', 'user')
         })

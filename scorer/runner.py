@@ -1,5 +1,6 @@
 import os
 import time
+import shutil
 import zipfile
 import socket
 import traceback
@@ -17,7 +18,7 @@ from verifications import dollar_for_everyone
 from verifications import seed_connected_with_friend
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-snapshot_db = ArangoClient().db('snapshot')
+snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 verifiers = {
     'SeedConnected': seed_connected,
     'SeedConnectedWithFriend': seed_connected_with_friend,
@@ -27,10 +28,10 @@ verifiers = {
 }
 
 
-def process(fname):
+def process(block):
     for verification_name in verifiers:
         try:
-            verifiers[verification_name].verify(fname)
+            verifiers[verification_name].verify(block)
         except Exception as e:
             print(f'Error in verifier: {e}')
             traceback.print_exc()
@@ -55,9 +56,9 @@ def main():
         print(
             '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
         restore_snapshot(fname)
-        process(fname)
-        update_apps_verification(fname)
         block = int(snapshots[0].strip('dump_').strip('.zip'))
+        process(block)
+        update_apps_verification(block)
         variables.update(
             {'_key': 'VERIFICATION_BLOCK', 'value': block})
         update_hashes(block)
@@ -72,7 +73,7 @@ def main():
             '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
 
 
-def update_apps_verification(fname):
+def update_apps_verification(block):
     all_verifications = {}
     for d in snapshot_db['verifications']:
         if d['user'] not in all_verifications:
@@ -106,6 +107,7 @@ def update_apps_verification(fname):
                     'app': True,
                     'name': app,
                     'user': user['_key'],
+                    'block': block,
                     'timestamp': int(time.time() * 1000)
                 })
             elif not verified and app in verifications:
@@ -117,7 +119,8 @@ def update_apps_verification(fname):
 
 
 def restore_snapshot(f):
-    os.system('rm /tmp/scorerRestore -rf')
+    if os.path.exists('/tmp/scorerRestore/dump'):
+        shutil.rmtree('/tmp/scorerRestore/dump')
     zf = zipfile.ZipFile(f)
     zf.extractall('/tmp/scorerRestore')
     os.system('arangorestore --server.username "root" --server.password "" --server.database snapshot --create-database true --create-collection true --import-data true --input-directory "/tmp/scorerRestore/dump"')

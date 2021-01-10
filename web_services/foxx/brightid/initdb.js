@@ -256,7 +256,8 @@ function v5_8() {
     verificationsColl.removeByExample({ name: verificationName });
   }
 
-  console.log("add 'hash' to the verifications and update SeedConnected verifications");
+  console.log("add 'hash' and 'block' to the verifications and update SeedConnected verifications");
+  const verification_block = variablesColl.document('VERIFICATION_BLOCK').value;
   const verifications = verificationsColl.all().toArray();
   for (let verification of verifications) {
     if (verification.name == 'SeedConnected') {
@@ -266,11 +267,13 @@ function v5_8() {
         'seeds': [verification.seed],
         'seedGroups': [verification.seedGroup.replace('groups/', '')],
         'rank': 1,
+        'block': verification_block,
         'timestamp': verification.timestamp,
         'hash': hash(verification.name + verification.user + (verification.rank || ''))
       });
     } else {
       verificationsColl.update(verification, {
+        'block': verification_block,
         'hash': hash(verification.name + verification.user + (verification.rank || ''))
       });
     }

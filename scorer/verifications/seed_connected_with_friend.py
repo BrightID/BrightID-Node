@@ -14,13 +14,14 @@ snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 verifications = {}
 
 
-def addVerificationTo(user, friend):
+def addVerificationTo(user, friend, block):
     if 'SeedConnectedWithFriend' in verifications[user]:
         return
     verifications[user]['SeedConnectedWithFriend'] = {
         'name': 'SeedConnectedWithFriend',
         'user': user,
         'friend': friend,
+        'block': block,
         'timestamp': int(time.time() * 1000),
         'hash': utils.hash('SeedConnectedWithFriend', user)
     }
@@ -31,7 +32,7 @@ def getVerifications(user):
     return {v['name']: v for v in snapshot_db['verifications'].find({'user': user})}
 
 
-def verify(fname):
+def verify(block):
     print('SEED CONNECTED WITH FRIEND')
     time_limit = (int(time.time()) * 1000) - GO_BACK_TIME
     seed_groups = list(snapshot_db['groups'].find({'seed': True}))
@@ -50,7 +51,7 @@ def verify(fname):
         verifications[seed] = getVerifications(seed)
         # seeds get this verification if they have SeedConnected (had quota for themselves)
         if verifications[seed].get('SeedConnected', {}).get('rank', 0) > 0:
-            addVerificationTo(seed, None)
+            addVerificationTo(seed, None, block)
 
         conns = snapshot_db.aql.execute('''
             FOR c IN connections
@@ -98,8 +99,8 @@ def verify(fname):
             if tf.empty() or tf.next()['level'] not in NODE_CONNECTION_LEVELS:
                 continue
 
-            addVerificationTo(pair[0], pair[1])
-            addVerificationTo(pair[1], pair[0])
+            addVerificationTo(pair[0], pair[1], block)
+            addVerificationTo(pair[1], pair[0], block)
 
     # if a user doesn't have the SeedConnected verification anymore,
     # the SeedConnectedWithFriend will revoke.
