@@ -1,7 +1,6 @@
 import os
 import time
 import shutil
-import zipfile
 import socket
 import traceback
 from datetime import datetime
@@ -11,7 +10,6 @@ from hashlib import sha256
 import base64
 import config
 from verifications import yekta
-from verifications import seed_connected
 from verifications import brightid
 from verifications import seed_connected
 from verifications import dollar_for_everyone
@@ -46,17 +44,21 @@ def main():
         })
     while True:
         snapshots = [fname for fname in os.listdir(
-            config.SNAPSHOTS_PATH) if fname.endswith('.zip')]
+            config.SNAPSHOTS_PATH) if fname.endswith('_fnl')]
         if len(snapshots) == 0:
             time.sleep(1)
             continue
         snapshots.sort(key=lambda fname: int(
-            fname.strip('dump_').strip('.zip')))
+            fname.strip('dump_').strip('_fnl')))
         fname = os.path.join(config.SNAPSHOTS_PATH, snapshots[0])
         print(
-            '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
-        restore_snapshot(fname)
-        block = int(snapshots[0].strip('dump_').strip('.zip'))
+            f"{str(datetime.now()).split('.')[0]} - processing {fname} started ...")
+
+        # restore snapshot
+        os.system(
+            f"arangorestore --server.username 'root' --server.password '' --server.database snapshot --create-database true --create-collection true --import-data true --input-directory {fname}")
+
+        block = int(snapshots[0].strip('dump_').strip('_fnl'))
         process(block)
         update_apps_verification(block)
         variables.update(
@@ -65,12 +67,12 @@ def main():
 
         # remove the snapshot file
         if os.path.exists(fname):
-            os.remove(fname)
+            shutil.rmtree(fname)
         else:
             print(f'{fname} does not exist')
 
         print(
-            '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
+            f"{str(datetime.now()).split('.')[0]} - processing {fname} completed")
 
 
 def update_apps_verification(block):
@@ -118,14 +120,6 @@ def update_apps_verification(block):
                 })
 
 
-def restore_snapshot(f):
-    if os.path.exists('/tmp/scorerRestore/dump'):
-        shutil.rmtree('/tmp/scorerRestore/dump')
-    zf = zipfile.ZipFile(f)
-    zf.extractall('/tmp/scorerRestore')
-    os.system('arangorestore --server.username "root" --server.password "" --server.database snapshot --create-database true --create-collection true --import-data true --input-directory "/tmp/scorerRestore/dump"')
-
-
 def update_hashes(block):
     variables = db.collection('variables')
     if not variables.has('VERIFICATIONS_HASHES'):
@@ -140,8 +134,8 @@ def update_hashes(block):
         h = base64.b64encode(sha256(message).digest()).decode("ascii")
         new_hash[verification_name] = h.replace(
             '/', '_').replace('+', '-').replace('=', '')
-    hashes = sorted(variables.get('VERIFICATIONS_HASHES')['hashes'],
-                    key=lambda k: k['block'])
+    hashes = sorted(variables.get('VERIFICATIONS_HASHES')
+                    ['hashes'], key=lambda k: k['block'])
     hashes.append(new_hash)
     if len(hashes) > 3:
         hashes.pop(0)

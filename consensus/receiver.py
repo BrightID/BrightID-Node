@@ -2,10 +2,9 @@ import os
 import time
 import socket
 import json
-import binascii
 import base64
 import hashlib
-import zipfile
+import shutil
 import requests
 from arango import ArangoClient, errno
 from web3 import Web3
@@ -58,17 +57,17 @@ def process(data, block_timestamp):
 
 
 def save_snapshot(block):
-    fname = config.SNAPSHOTS_PATH.format(block)
-    zf = zipfile.ZipFile(fname + '.tmp', mode='w')
+    dir_name = config.SNAPSHOTS_PATH.format(block)
+    fnl_dir_name = f'{dir_name}_fnl'
     dir_path = os.path.dirname(os.path.realpath(__file__))
-    COLLECTIONS_FILE = os.path.join(dir_path, 'collections.json')
-    os.system('rm /tmp/scorerDump -rf')
-    os.system(f'arangodump --overwrite true --compress-output false --server.password "" --output-directory "/tmp/scorerDump" --maskings {COLLECTIONS_FILE}')
-    for root, dirs, files in os.walk('/tmp/scorerDump'):
-        for file in files:
-            zf.write(os.path.join(root, file), f'/dump/{file}')
-    zf.close()
-    os.rename(fname + '.tmp', fname)
+    collections_file = os.path.join(dir_path, 'collections.json')
+    for d in [dir_name, fnl_dir_name]:
+        if os.path.exists(d):
+            shutil.rmtree(d)
+    os.mkdir(dir_name)
+    os.system(
+        f'arangodump --overwrite true --compress-output false --server.password "" --output-directory {dir_name} --maskings {collections_file}')
+    shutil.move(dir_name, fnl_dir_name)
 
 
 def main():
