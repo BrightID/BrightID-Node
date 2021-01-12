@@ -102,16 +102,19 @@ def verify(block):
             addVerificationTo(pair[0], pair[1], block)
             addVerificationTo(pair[1], pair[0], block)
 
+    # revoking verification of the users that are not eligible anymore
     # if a user doesn't have the SeedConnected verification anymore,
     # the SeedConnectedWithFriend will revoke.
-    s1 = set(v['user'] for v in snapshot_db['verifications'].find(
-        {'name': 'SeedConnectedWithFriend'}))
-    s2 = set(v['user'] for v in snapshot_db['verifications'].find(
+    seed_connecteds = set(v['user'] for v in snapshot_db['verifications'].find(
         {'name': 'SeedConnected'}))
-    for user in (s1 - s2):
+    already_verifieds = db['verifications'].find(
+        {'name': 'SeedConnectedWithFriend'})
+    for v in already_verifieds:
+        if v['user'] in seed_connecteds:
+            continue
         db['verifications'].delete_match({
             'name': 'SeedConnectedWithFriend',
-            'user': user
+            'user': v['user']
         })
 
     verifiedCount = db['verifications'].find(
