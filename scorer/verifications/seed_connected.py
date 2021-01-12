@@ -4,8 +4,8 @@ from . import utils
 import config
 
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
-DEFAULT_QUOTA = 50
-PENALTY = 2
+DEFAULT_QUOTA = 9999
+PENALTY = 3
 
 
 def verify(block):
@@ -13,13 +13,12 @@ def verify(block):
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 
-    already_verifieds = set(
-        v['user'] for v in snapshot_db['verifications'].find({'name': 'SeedConnected'}))
-    seed_groups = list(snapshot_db['groups'].find({'seed': True}))
-    seed_groups.sort(key=lambda s: s['timestamp'])
+    already_verifieds = {v['user'] for v in snapshot_db['verifications'].find(
+        {'name': 'SeedConnected'})}
     seed_groups_members = {}
     seed_groups_quota = {}
     seed_conns = {}
+    seed_groups = snapshot_db['groups'].find({'seed': True})
     for seed_group in seed_groups:
         userInGroups = list(snapshot_db['usersInGroups'].find(
             {'_to': seed_group['_id']}))
@@ -34,7 +33,7 @@ def verify(block):
             seed_conns[seed] = list(
                 snapshot_db['connections'].find({'_from': seed}))
     verifieds = {}
-    for seed_group in seed_groups_quota:
+    for seed_group in seed_groups_members:
         members = seed_groups_members[seed_group]
         unused = seed_groups_quota[seed_group]
         conns = []
@@ -69,6 +68,15 @@ def verify(block):
             verifieds[neighbor]['seeds'].append(seed)
             verifieds[neighbor]['rank'] += 1
             unused -= 1
+
+        # if quota doesn't set yet
+        # set the number of users connected to this group as quota
+        # we can remove this in the next release
+        if seed_groups_quota[seed_group] == DEFAULT_QUOTA:
+            db['groups'].update({
+                '_key': seed_group,
+                'quota': DEFAULT_QUOTA - unused
+            })
 
     for verified in verifieds:
         if not verifieds[verified]['seeds'] and not verifieds[verified]['reporters']:
@@ -111,12 +119,11 @@ def verify(block):
             'hash': utils.hash('SeedConnected', verified, verifieds[verified]['rank'])
         })
 
-    # if a user is not connected to a seed (with enough quota) anymore,
-    # the SeedConnected will revoke.
-    for already_verified in already_verifieds:
+    # revoking verification of the users that are not eligible anymore
+    for ineligible in already_verifieds:
         db['verifications'].delete_match({
             'name': 'SeedConnected',
-            'user': already_verified
+            'user': ineligible
         })
 
     verifiedCount = db['verifications'].find({'name': 'SeedConnected'}).count()
