@@ -126,5 +126,10 @@ def verify(block):
             'user': ineligible
         })
 
-    verifiedCount = db['verifications'].find({'name': 'SeedConnected'}).count()
+    verifiedCount = db.aql.execute('''
+        FOR v in verifications
+            FILTER v.name == 'SeedConnected'
+                AND v.rank > 0
+            RETURN v
+    ''', count=True).count()
     print('verifieds: {}\n'.format(verifiedCount))
