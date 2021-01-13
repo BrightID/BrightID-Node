@@ -38,6 +38,12 @@ const indexes = [
   {'collection': 'operations', 'fields': ['state'], 'type': 'persistent'},
 ]
 
+const variables = [
+  { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
+  {'_key': 'VERIFICATIONS_HASHES', 'hashes': []},
+  {'_key': 'VERIFICATION_BLOCK', 'value': 0},
+]
+
 function createCollections() {
   console.log("creating collections if they do not exist ...");
   for (let collection in collections) {
@@ -71,6 +77,15 @@ function removeDeprecatedCollections() {
       console.log(`${collection} dropped`);
     } else {
       console.log(`${collection} dropped before`);
+    }
+  }
+}
+
+function initializeVariables() {
+  console.log("initialize variables ...");
+  for (let variable of variables) {
+    if (! variablesColl.exists(variable._key)) {
+      variablesColl.insert(variable);
     }
   }
 }
@@ -287,12 +302,12 @@ function initdb() {
   createIndexes();
   removeDeprecatedCollections();
   variablesColl = arango._collection('variables');
+  initializeVariables();
   let index;
   if (variablesColl.exists('LAST_DB_UPGRADE')) {
     upgrade = variablesColl.document('LAST_DB_UPGRADE').value;
     index = upgrades.indexOf(upgrade) + 1;
   } else {
-    variablesColl.insert({ _key: 'LAST_DB_UPGRADE', value: -1 });
     index = 0;
   }
   while (upgrades[index]) {

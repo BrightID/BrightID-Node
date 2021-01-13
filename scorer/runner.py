@@ -37,11 +37,6 @@ def process(block):
 
 def main():
     variables = db.collection('variables')
-    if not variables.has('VERIFICATION_BLOCK'):
-        variables.insert({
-            '_key': 'VERIFICATION_BLOCK',
-            'value': 0
-        })
     while True:
         snapshots = [fname for fname in os.listdir(
             config.SNAPSHOTS_PATH) if fname.endswith('_fnl')]
@@ -121,11 +116,6 @@ def update_apps_verification(block):
 
 def update_hashes(block):
     variables = db.collection('variables')
-    if not variables.has('VERIFICATIONS_HASHES'):
-        variables.insert({
-            '_key': 'VERIFICATIONS_HASHES',
-            'hashes': []
-        })
     new_hash = {'block': block}
     for verification_name in verifiers:
         verifications = db['verifications'].find({'name': verification_name})
