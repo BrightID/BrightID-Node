@@ -61,10 +61,7 @@ def main():
         update_hashes(block)
 
         # remove the snapshot file
-        if os.path.exists(fname):
-            shutil.rmtree(fname)
-        else:
-            print(f'{fname} does not exist')
+        shutil.rmtree(fname, ignore_errors=True)
         print(
             f"{str(datetime.now()).split('.')[0]} - processing {fname} completed")
 
