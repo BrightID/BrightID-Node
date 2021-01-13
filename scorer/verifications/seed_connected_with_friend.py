@@ -17,47 +17,60 @@ verifications = {}
 def addVerificationTo(user, friend, block):
     if 'SeedConnectedWithFriend' in verifications[user]:
         return
-    verifications[user]['SeedConnectedWithFriend'] = {
+    db['verifications'].insert({
         'name': 'SeedConnectedWithFriend',
         'user': user,
         'friend': friend,
         'block': block,
         'timestamp': int(time.time() * 1000),
         'hash': utils.hash('SeedConnectedWithFriend', user)
-    }
-    db['verifications'].insert(verifications[user]['SeedConnectedWithFriend'])
+    })
+    verifications[user].append('SeedConnectedWithFriend')
 
 
 def getVerifications(user, block):
-    verifications = {v['name']: v for v in snapshot_db['verifications'].find(
-        {'user': user, 'block': block})}
-    return verifications
+    cursor = db['verifications'].find(
+        {'user': user, 'name': 'SeedConnected', 'block': block})
+    v = [v['name'] for v in cursor if v['rank'] > 0]
+    return v
 
 
 def verify(block):
     print('SEED CONNECTED WITH FRIEND')
     time_limit = (int(time.time()) * 1000) - GO_BACK_TIME
-    seed_groups = list(snapshot_db['groups'].find({'seed': True}))
-    seed_groups.sort(key=lambda s: s['timestamp'])
-    seeds = []
-    for seed_group in seed_groups:
-        userInGroups = list(snapshot_db['usersInGroups'].find(
-            {'_to': seed_group['_id']}))
-        userInGroups.sort(key=lambda ug: ug['timestamp'])
-        for ug in userInGroups:
-            seed = ug['_from'].replace('users/', '')
-            if seed not in seeds:
-                seeds.append(seed)
 
+    # check already verified users
+    past_block = db['variables'].get('VERIFICATION_BLOCK')['value']
+    verifieds = db.aql.execute('''
+        FOR v1 IN verifications
+            FILTER v1.name == 'SeedConnectedWithFriend'
+                AND v1.block == @past_block
+            FOR v2 IN verifications
+                FILTER v2.name == 'SeedConnected'
+                    AND v2.user == v1.user
+                    AND v2.block == @current_block
+                    AND v2.rank > 0
+                return v1
+        ''', bind_vars={'past_block': past_block, 'current_block': block})
+    for v in verifieds:
+        verifications[v['user']] = ['SeedConnected']
+        addVerificationTo(v['user'], v['friend'], block)
+
+    # check for new verified users
+    seeds = set()
+    for seed_group in snapshot_db['groups'].find({'seed': True}):
+        userInGroups = snapshot_db['usersInGroups'].find(
+            {'_to': seed_group['_id']})
+        seeds.update({ug['_from'].replace('users/', '')
+                      for ug in userInGroups})
     for seed in seeds:
         verifications[seed] = getVerifications(seed, block)
         # seeds get this verification if they have SeedConnected (had quota for themselves)
-        if verifications[seed].get('SeedConnected', {}).get('rank', 0) > 0:
+        if 'SeedConnected' in verifications[seed]:
             addVerificationTo(seed, None, block)
 
         conns = snapshot_db.aql.execute('''
             FOR c IN connections
-                SORT c.timestamp
                 FILTER c._from == @seed
                     AND c.level IN @levels
                     AND c.timestamp > @time_limit
@@ -66,28 +79,26 @@ def verify(block):
             'seed': 'users/' + seed,
             'levels': SEED_CONNECTION_LEVELS,
             'time_limit': time_limit
-        }).batch()
-        seedConnTimes = {}
+        })
+        seed_conn_times = {}
         for conn in conns:
             neighbor = conn['_to'].replace('users/', '')
             if neighbor in seeds:
                 continue
             if neighbor not in verifications:
                 verifications[neighbor] = getVerifications(neighbor, block)
-
-            if verifications[neighbor].get('SeedConnected', {}).get('rank', 0) < 1:
+            if 'SeedConnected' not in verifications[neighbor]:
                 continue
+            seed_conn_times[neighbor] = conn['timestamp']
 
-            seedConnTimes[neighbor] = conn['timestamp']
-
-        pairs = itertools.combinations(seedConnTimes.keys(), 2)
+        pairs = itertools.combinations(seed_conn_times.keys(), 2)
         for pair in pairs:
             p0verified = 'SeedConnectedWithFriend' in verifications[pair[0]]
             p1verified = 'SeedConnectedWithFriend' in verifications[pair[1]]
             if p0verified and p1verified:
                 continue
 
-            gap = abs(seedConnTimes[pair[0]] - seedConnTimes[pair[1]])
+            gap = abs(seed_conn_times[pair[0]] - seed_conn_times[pair[1]])
             if gap > CONN_DIFF_TIME:
                 continue
 
@@ -105,5 +116,5 @@ def verify(block):
             addVerificationTo(pair[1], pair[0], block)
 
     verifiedCount = db['verifications'].find(
-        {'name': 'SeedConnectedWithFriend'}).count()
+        {'name': 'SeedConnectedWithFriend', 'block': block}).count()
     print(f'verifieds: {verifiedCount}\n')
