@@ -18,7 +18,8 @@ def verify(block):
     seed_groups_members = {}
     seed_groups_quota = {}
     seed_conns = {}
-    seed_groups = snapshot_db['groups'].find({'seed': True})
+    seed_groups = list(snapshot_db['groups'].find({'seed': True}))
+    seed_groups.sort(key=lambda s: s['timestamp'])
     for seed_group in seed_groups:
         userInGroups = list(snapshot_db['usersInGroups'].find(
             {'_to': seed_group['_id']}))
