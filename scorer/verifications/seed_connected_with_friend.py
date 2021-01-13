@@ -28,8 +28,10 @@ def addVerificationTo(user, friend, block):
     db['verifications'].insert(verifications[user]['SeedConnectedWithFriend'])
 
 
-def getVerifications(user):
-    return {v['name']: v for v in snapshot_db['verifications'].find({'user': user})}
+def getVerifications(user, block):
+    verifications = {v['name']: v for v in snapshot_db['verifications'].find(
+        {'user': user, 'block': block})}
+    return verifications
 
 
 def verify(block):
@@ -48,7 +50,7 @@ def verify(block):
                 seeds.append(seed)
 
     for seed in seeds:
-        verifications[seed] = getVerifications(seed)
+        verifications[seed] = getVerifications(seed, block)
         # seeds get this verification if they have SeedConnected (had quota for themselves)
         if verifications[seed].get('SeedConnected', {}).get('rank', 0) > 0:
             addVerificationTo(seed, None, block)
@@ -71,7 +73,7 @@ def verify(block):
             if neighbor in seeds:
                 continue
             if neighbor not in verifications:
-                verifications[neighbor] = getVerifications(neighbor)
+                verifications[neighbor] = getVerifications(neighbor, block)
 
             if verifications[neighbor].get('SeedConnected', {}).get('rank', 0) < 1:
                 continue
@@ -101,21 +103,6 @@ def verify(block):
 
             addVerificationTo(pair[0], pair[1], block)
             addVerificationTo(pair[1], pair[0], block)
-
-    # revoking verification of the users that are not eligible anymore
-    # if a user doesn't have the SeedConnected verification anymore,
-    # the SeedConnectedWithFriend will revoke.
-    seed_connecteds = set(v['user'] for v in snapshot_db['verifications'].find(
-        {'name': 'SeedConnected'}))
-    already_verifieds = db['verifications'].find(
-        {'name': 'SeedConnectedWithFriend'})
-    for v in already_verifieds:
-        if v['user'] in seed_connecteds:
-            continue
-        db['verifications'].delete_match({
-            'name': 'SeedConnectedWithFriend',
-            'user': v['user']
-        })
 
     verifiedCount = db['verifications'].find(
         {'name': 'SeedConnectedWithFriend'}).count()

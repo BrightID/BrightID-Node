@@ -13,8 +13,6 @@ def verify(block):
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 
-    already_verifieds = {v['user'] for v in snapshot_db['verifications'].find(
-        {'name': 'SeedConnected'})}
     seed_groups_members = {}
     seed_groups_quota = {}
     seed_conns = {}
@@ -80,57 +78,23 @@ def verify(block):
             })
 
     for verified in verifieds:
-        if not verifieds[verified]['seeds'] and not verifieds[verified]['reporters']:
-            continue
-        already_verifieds.discard(verified)
-        db.aql.execute('''
-            UPSERT {
-                user: @user,
-                name: 'SeedConnected'
-            }
-            INSERT {
-                name: 'SeedConnected',
-                user: @user,
-                rank: @rank,
-                seeds: @seeds,
-                seedGroups: @seed_groups,
-                reporters: @reporters,
-                block: @block,
-                timestamp: @timestamp,
-                hash: @hash
-            }
-            UPDATE {
-                rank: @rank,
-                seeds: @seeds,
-                seedGroups: @seed_groups,
-                reporters: @reporters,
-                block: @block,
-                timestamp: @timestamp,
-                hash: @hash
-            }
-            IN verifications
-        ''', bind_vars={
+        db['verifications'].insert({
+            'name': 'SeedConnected',
             'user': verified,
             'rank': verifieds[verified]['rank'],
             'seeds': verifieds[verified]['seeds'],
-            'seed_groups': verifieds[verified]['seed_groups'],
+            'seedGroups': verifieds[verified]['seed_groups'],
             'reporters': verifieds[verified]['reporters'],
             'block': block,
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('SeedConnected', verified, verifieds[verified]['rank'])
         })
 
-    # revoking verification of the users that are not eligible anymore
-    for ineligible in already_verifieds:
-        db['verifications'].delete_match({
-            'name': 'SeedConnected',
-            'user': ineligible
-        })
-
     verifiedCount = db.aql.execute('''
         FOR v in verifications
             FILTER v.name == 'SeedConnected'
                 AND v.rank > 0
+                AND v.block == @block
             RETURN v
-    ''', count=True).count()
+    ''', bind_vars={'block': block}, count=True).count()
     print('verifieds: {}\n'.format(verifiedCount))

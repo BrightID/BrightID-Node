@@ -18,29 +18,8 @@ def verify(block):
 
     for node in ranker.graph:
         counter[node.rank] += 1
-        db.aql.execute('''
-            UPSERT {
-                user: @user,
-                name: 'Yekta'
-            }
-            INSERT {
-                name: 'Yekta',
-                user: @user,
-                rank: @rank,
-                raw_rank: @raw_rank,
-                block: @block,
-                timestamp: @timestamp,
-                hash: @hash
-            }
-            UPDATE {
-                rank: @rank,
-                raw_rank: @raw_rank,
-                block: @block,
-                timestamp: @timestamp,
-                hash: @hash
-            }
-            IN verifications
-        ''', bind_vars={
+        db['verifications'].insert({
+            'name': 'Yekta',
             'user': node.name,
             'rank': node.rank,
             'raw_rank': node.raw_rank,
@@ -48,4 +27,5 @@ def verify(block):
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('Yekta', node.name, node.rank)
         })
+
     print(f'verifieds: {counter}\n')

@@ -56,10 +56,7 @@ def main():
         block = int(snapshots[0].strip('dump_').strip('_fnl'))
         process(block)
         update_apps_verification(block)
-        variables.update(
-            {'_key': 'VERIFICATION_BLOCK', 'value': block})
-        update_hashes(block)
-
+        update_verifications_state(block)
         # remove the snapshot file
         shutil.rmtree(fname, ignore_errors=True)
         print(
@@ -68,23 +65,21 @@ def main():
 
 def update_apps_verification(block):
     all_verifications = {}
-    for d in snapshot_db['verifications']:
-        if d['user'] not in all_verifications:
-            all_verifications[d['user']] = {}
+    for v in db['verifications'].find({'block': block}):
+        if v['user'] not in all_verifications:
+            all_verifications[v['user']] = {}
 
-        all_verifications[d['user']][d['name']] = True
-        for k in d:
+        all_verifications[v['user']][v['name']] = True
+        for k in v:
             if k in ['_key', '_id', '_rev', 'user', 'name']:
                 continue
-            all_verifications[d['user']][f'{d["name"]}.{k}'] = d[k]
+            all_verifications[v['user']][f'{v["name"]}.{k}'] = v[k]
 
     print('Check the users are verified for the apps')
     parser = Parser()
-
     apps = {app["_key"]: app['verification']
             for app in db['apps'] if app.get('verification')}
-    for user in snapshot_db['users']:
-        verifications = all_verifications.get(user['_key'], {})
+    for user, verifications in all_verifications.items():
         for app in apps:
             try:
                 expr = parser.parse(apps[app])
@@ -95,24 +90,21 @@ def update_apps_verification(block):
             except:
                 print('invalid verification expression')
                 continue
-            if verified and app not in verifications:
+            if verified:
                 db['verifications'].insert({
                     'app': True,
                     'name': app,
-                    'user': user['_key'],
+                    'user': user,
                     'block': block,
                     'timestamp': int(time.time() * 1000)
                 })
-            elif not verified and app in verifications:
-                db['verifications'].delete_match({
-                    'app': True,
-                    'name': app,
-                    'user': user['_key']
-                })
 
 
-def update_hashes(block):
+def update_verifications_state(block):
     variables = db.collection('variables')
+    variables.update(
+        {'_key': 'VERIFICATION_BLOCK', 'value': block})
+
     new_hash = {'block': block}
     for verification_name in verifiers:
         verifications = db['verifications'].find({'name': verification_name})
@@ -127,6 +119,13 @@ def update_hashes(block):
     if len(hashes) > 3:
         hashes.pop(0)
     variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes})
+
+    # remove extra verifications
+    db.aql.execute('''
+        FOR v IN verifications
+            FILTER  v.block < @wiping_border
+            REMOVE { _key: v._key } IN verifications
+        ''', bind_vars={'wiping_border': hashes[0]['block']})
 
 
 def wait():
