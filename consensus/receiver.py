@@ -61,10 +61,6 @@ def save_snapshot(block):
     fnl_dir_name = f'{dir_name}_fnl'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, 'collections.json')
-    for d in [dir_name, fnl_dir_name]:
-        if os.path.exists(d):
-            shutil.rmtree(d)
-    os.mkdir(dir_name)
     os.system(
         f'arangodump --overwrite true --compress-output false --server.password "" --output-directory {dir_name} --maskings {collections_file}')
     shutil.move(dir_name, fnl_dir_name)
