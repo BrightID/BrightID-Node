@@ -70,7 +70,6 @@ def main():
             shutil.rmtree(fname)
         else:
             print(f'{fname} does not exist')
-
         print(
             f"{str(datetime.now()).split('.')[0]} - processing {fname} completed")
 
@@ -130,7 +129,8 @@ def update_hashes(block):
     new_hash = {'block': block}
     for verification_name in verifiers:
         verifications = db['verifications'].find({'name': verification_name})
-        message = ''.join([v['hash'] for v in verifications]).encode('ascii')
+        message = ''.join(sorted([v['hash']
+                                  for v in verifications])).encode('ascii')
         h = base64.b64encode(sha256(message).digest()).decode("ascii")
         new_hash[verification_name] = h.replace(
             '/', '_').replace('+', '-').replace('=', '')
