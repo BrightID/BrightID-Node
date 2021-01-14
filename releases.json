@@ -1,8 +1,9 @@
 {
-  "0.1.0": {
+  "1.0.0": {
     "uploadedTo": {
-      "dappnode": "Wed, 16 Dec 2020 17:04:25 GMT"
+      "dappnode": "Tue, 12 Jan 2021 10:23:24 GMT"
     },
-    "hash": "/ipfs/QmdXnkmTSRhcb5KNcMpSyHvqbKavD7B28jHtFrLFRugBB3"
+    "hash": "/ipfs/QmXgmKmQ8gM2fyydwvavo6cZmpphCsFWWVa2K8dtNqxLpf",
+    "link": "https://dappnode.github.io/sdk-publish/?r=brightid-node.public.dappnode.eth&v=1.0.0&h=%2Fipfs%2FQmXgmKmQ8gM2fyydwvavo6cZmpphCsFWWVa2K8dtNqxLpf&d=0x8eB38a926C096c5d99e71D84973b8E9C690B99A9"
   }
 }
