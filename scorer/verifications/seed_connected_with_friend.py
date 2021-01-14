@@ -64,7 +64,8 @@ def verify(block):
         seeds.update({ug['_from'].replace('users/', '')
                       for ug in userInGroups})
     for seed in seeds:
-        verifications[seed] = getVerifications(seed, block)
+        if seed not in verifications:
+            verifications[seed] = getVerifications(seed, block)
         # seeds get this verification if they have SeedConnected (had quota for themselves)
         if 'SeedConnected' in verifications[seed]:
             addVerificationTo(seed, None, block)
