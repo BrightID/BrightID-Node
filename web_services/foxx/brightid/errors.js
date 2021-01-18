@@ -41,12 +41,12 @@ const NOT_INVITED = { 'number': 39, 'message': 'The user not invited to join thi
 const DELETE_GROUP_PERMISSION = { 'number': 40, 'message': 'Only admins can delete a group' };
 const LEAVE_GROUP = { 'number': 41, 'message': 'Last admin can not leave the group' };
 const DUPLICATE_CONTEXTID = { 'number': 42, 'message': 'ContextId: %s is duplicate' };
-const TOO_MANY_LINK_REQUEST = { 'number': 43, 'message': 'only three contextIds can be linked every 24 hours' };
+const TOO_MANY_LINK_REQUEST = { 'number': 43, 'message': 'Only three contextIds can be linked every 24 hours' };
 const UNUSED_SPONSORSHIPS = { 'number': 44, 'message': 'The app: %s does not have unused sponsorships' };
 const SPONSORED_BEFORE = { 'number': 45, 'message': 'The user is sponsored before' };
 const FORBIDDEN_SPONSOR_REQUEST = { 'number': 46, 'message': 'Can not relay sponsor requests for this app: %s' };
 const UPDATE_GROUP_PERMISSION = { 'number': 47, 'message': 'Only admins can update the group' };
-const REPLACED_BRIGHTID = { 'number': 48, 'message': 'the new brightid replaced with the reported brightid not found' };
+const REPLACED_BRIGHTID = { 'number': 48, 'message': 'The new brightid replaced with the reported brightid not found' };
 
 class BrightIDError extends Error {
   constructor() {
