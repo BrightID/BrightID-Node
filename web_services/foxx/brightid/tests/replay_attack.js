@@ -102,7 +102,7 @@ describe('replay attack on operations', function () {
       json: true
     });
     resp3.status.should.equal(400);
-    resp3.json.errorMessage.should.equal('operation was applied before');
+    resp3.json.errorMessage.should.equal(`The operation represented by operationHash: ${h} was applied before`);
     op.blockTime = op.timestamp;
 
     const resp4 = request.put(`${applyBaseUrl}/operations/${h}`, {

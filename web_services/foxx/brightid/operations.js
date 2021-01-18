@@ -11,6 +11,7 @@ const {
   urlSafeB64ToB64,
   hash
 } = require('./encoding');
+const errors = require('./errors');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
@@ -24,16 +25,16 @@ const verifyUserSig = function(message, id, sig) {
       return signingKey;
     }
   }
-  throw 'invalid signature';
+  throw new errors.InvalidSignatureError();
 }
 
 const verifyAppSig = function(message, app, sig) {
   app = db.getApp(app);
   if (!app) {
-    throw 'invalid app';
+    throw new errors.AppNotFoundError();
   }
   if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(app.sponsorPublicKey))) {
-    throw 'invalid signature';
+    throw new errors.InvalidSignatureError();
   }
 }
 
@@ -57,6 +58,7 @@ const senderAttrs = {
   'Remove All Signing Keys': ['id'],
   'Update Group': ['id'],
 };
+
 let operationsCount = {};
 let resetTime = 0;
 function checkLimits(op, timeWindow, limit) {
@@ -97,9 +99,8 @@ function checkLimits(op, timeWindow, limit) {
       return;
     }
   }
-  throw 'Too Many Requests';
+  throw new errors.TooManyOperationsError();
 }
-
 
 const signerAndSigs = {
   'Remove Connection': ['id1', 'sig1'],
@@ -120,10 +121,10 @@ const signerAndSigs = {
 
 function verify(op) {
   if (op.v != 5) {
-    throw 'invalid operation version';
+    throw new errors.InvalidOperationVersionError();
   }
   if (op.timestamp > Date.now() + TIME_FUDGE) {
-    throw "timestamp can't be in the future";
+    throw new errors.InvalidOperationTimestampError();
   }
 
   let message = getMessage(op);
@@ -134,7 +135,7 @@ function verify(op) {
     if (op.id1 == op.id2 ||
         !recoveryConnections.includes(op.id1) ||
         !recoveryConnections.includes(op.id2)) {
-      throw "request should be signed by 2 different recovery connections";
+      throw new errors.InvalidRecoveryConnectionsError();
     }
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
@@ -153,7 +154,7 @@ function verify(op) {
     verifyUserSig(message, signer, sig);
   }
   if (hash(message) != op.hash) {
-    throw 'invalid hash';
+    throw new errors.InvalidOperationHashError();
   }
 }
 
@@ -209,7 +210,7 @@ function apply(op) {
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {
-    throw "invalid operation";
+    throw new errors.InvalidOperationNameError();
   }
 }
 

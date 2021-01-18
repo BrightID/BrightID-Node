@@ -59,11 +59,11 @@ describe('links & sponsorships', function () {
     sponsorshipsColl.truncate();
   });
   context('linkContextId()', function() {
-    it('should throw "contextId is duplicate" for used contextId', function(){
+    it('should throw "ContextId: {contextId} is duplicate" for used contextId', function(){
       db.linkContextId('2', 'testContext', 'used', 5);
       (() => {
         db.linkContextId('3', 'testContext', 'used', 10);
-      }).should.throw('contextId is duplicate');
+      }).should.throw('ContextId: used is duplicate');
     });
     it('should allow same user to relink used contextIds', function(){
       db.linkContextId('2', 'testContext', 'second', 11);
@@ -88,10 +88,10 @@ describe('links & sponsorships', function () {
     it('should be able to sponsor a user if app has unused sponsorships and user is not sponsored before', function() {
       db.sponsor({ id: '2', app: 'testApp', timestamp: 0 });
     });
-    it('should throw "app does not have unused sponsorships" if app has no unused sponsorship', function(){
+    it('should throw "The app: {app} does not have unused sponsorships" if app has no unused sponsorship', function(){
       (() => {
         db.sponsor({ id: '3', app: 'testApp', timestamp: 0 });
-      }).should.throw('app does not have unused sponsorships');
+      }).should.throw('The app: testApp does not have unused sponsorships');
     });
   });
 });

@@ -32,7 +32,7 @@ describe('', function () {
     operations.checkLimits({ name: 'Remove Group', id: 'a' }, 100, 2);
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'a' }, 100, 2);
-    }).should.throw('Too Many Requests');
+    }).should.throw('Too many operations');
   });
   it('limit should be removed after time window passed', function() {
     // for some reason setTimeout is not working
@@ -45,7 +45,7 @@ describe('', function () {
     operations.checkLimits({ name: 'Add Group', id1: 'c' }, 100, 2);
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'b' }, 100, 2);
-    }).should.throw('Too Many Requests');
+    }).should.throw('Too many operations');
   });
   it('connecting to first verified user should set parent', function() {
     db.addConnection('a', 'c', 1);
@@ -54,11 +54,11 @@ describe('', function () {
   it('unverified users with parent should have different limit', function() {
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'b' }, 100, 2);
-    }).should.throw('Too Many Requests');
+    }).should.throw('Too many operations');
     operations.checkLimits({ name: 'Add Group', id1: 'c' }, 100, 2);
     operations.checkLimits({ name: 'Add Group', id1: 'c' }, 100, 2);
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'c' }, 100, 2);
-    }).should.throw('Too Many Requests');
+    }).should.throw('Too many operations');
   });
 });
