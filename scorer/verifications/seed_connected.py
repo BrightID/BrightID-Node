@@ -1,72 +1,68 @@
 from arango import ArangoClient
 import time
+from . import utils
 import config
 
-SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
-DEFAULT_QUOTA = 50
+PENALTY = 3
+# 08/13/2020 12:00am (UTC)
+IGNORE_QUOTA_BEFORE = 1597276800000
 
 
-def verify(fname):
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
+snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
+
+
+def seed_connections(group_id):
+    cursor = snapshot_db['usersInGroups'].find({'_to': group_id})
+    members = [ug['_from'] for ug in cursor]
+    connections = []
+    for member in members:
+        cursor = snapshot_db['connections'].find({'_from': member})
+        connections.extend(cursor)
+    connections.sort(key=lambda c: (c['initTimestamp'], c['_from'], c['_to']))
+    return connections
+
+
+def verify(block):
     print('SEED CONNECTED')
-    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-    seed_groups = list(db['groups'].find({'seed': True}))
-    seed_groups.sort(key=lambda s: s['timestamp'])
-    seed_groups_members = {}
-    all_seeds = set()
-    seed_group_quota = {}
+    users = {}
+    seed_groups = list(snapshot_db['groups'].find({'seed': True}))
     for seed_group in seed_groups:
-        userInGroups = list(db['usersInGroups'].find({'_to': seed_group['_id']}))
-        userInGroups.sort(key=lambda ug: ug['timestamp'])
-        seeds = [ug['_from'] for ug in userInGroups]
-        all_seeds.update(seeds)
-        seed_groups_members[seed_group['_id']] = seeds
-        seed_group_quota[seed_group['_id']] = seed_group.get('quota', DEFAULT_QUOTA)
+        connections = seed_connections(seed_group['_id'])
+        quota = seed_group.get('quota', 0)
+        for c in connections:
+            u = c['_to'].replace('users/', '')
+            if u not in users:
+                users[u] = {'connected': set(), 'reported': set()}
 
-    for seed_group in seed_groups_members:
-        members = seed_groups_members[seed_group]
-        used = db['verifications'].find(
-            {'name': 'SeedConnected', 'seedGroup': seed_group}).count()
-        unused = seed_group_quota[seed_group] - used
-        if unused < 1:
-            continue
-        conns = db.aql.execute(
-            '''FOR d IN connections
-                SORT d.timestamp
-                FILTER d._from IN @members
-                    AND d.level IN @levels
-                RETURN d''',
-            bind_vars={'members': list(members), 'levels': SEED_CONNECTION_LEVELS}
-        )
-        seed_neighbors = []
-        for conn in conns:
-            # skip duplicate members
-            if conn['_from'] not in seed_neighbors:
-                seed_neighbors.append(conn['_from'])
+            if c['level'] in ['just met', 'already known', 'recovery']:
+                users[u]['connected'].add(seed_group['_key'])
+                already_connected = seed_group['_key'] in users[u]['connected']
+                ignore_quota = c['initTimestamp'] < IGNORE_QUOTA_BEFORE
+                if not (already_connected or ignore_quota):
+                    quota -= 1
+            elif c['level'] == 'reported':
+                users[u]['reported'].add(seed_group['_key'])
 
-            # filter neighbors that are seeds but are not member of this seed group
-            # to allow each seed group maximize the number of non-seeds that verify
-            # and postpone the verification of those filtered seeds to their seed groups
-            if conn['_to'] in all_seeds:
-                continue
+    for u, d in users.items():
+        # penalizing users that are reported by seeds
+        rank = len(d['connected']) - len(d['reported'])*PENALTY
+        db['verifications'].insert({
+            'name': 'SeedConnected',
+            'user': u,
+            'rank': rank,
+            'connected': list(d['connected']),
+            'reported': list(d['reported']),
+            'block': block,
+            'timestamp': int(time.time() * 1000),
+            'hash': utils.hash('SeedConnected', u, rank)
+        })
 
-            # skip duplicate members
-            if conn['_to'] not in seed_neighbors:
-                seed_neighbors.append(conn['_to'])
-
-        for neighbor in seed_neighbors:
-            neighbor = neighbor.replace('users/', '')
-            verifications = set(
-                [v['name'] for v in db['verifications'].find({'user': neighbor})])
-            if 'SeedConnected' not in verifications:
-                db['verifications'].insert({
-                    'name': 'SeedConnected',
-                    'user': neighbor,
-                    'seedGroup': seed_group,
-                    'timestamp': int(time.time() * 1000)
-                })
-                print('user: {}\tverification: SeedConnected'.format(neighbor))
-                unused -= 1
-                if unused < 1:
-                    break
-    verifiedCount = db['verifications'].find({'name': 'SeedConnected'}).count()
-    print('verifieds: {}\n'.format(verifiedCount))
+    verifiedCount = db.aql.execute('''
+        FOR v in verifications
+            FILTER v.name == 'SeedConnected'
+                AND v.rank > 0
+                AND v.block == @block
+            RETURN v
+    ''', bind_vars={'block': block}, count=True).count()
+    print('verifications: {}\n'.format(verifiedCount))

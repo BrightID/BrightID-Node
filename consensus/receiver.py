@@ -2,10 +2,9 @@ import os
 import time
 import socket
 import json
-import binascii
 import base64
 import hashlib
-import zipfile
+import shutil
 import requests
 from arango import ArangoClient, errno
 from web3 import Web3
@@ -19,7 +18,8 @@ if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') 
 
 
 def hash(op):
-    op = {k: op[k] for k in op if k not in ('sig', 'sig1', 'sig2', 'hash', 'blockTime')}
+    op = {k: op[k] for k in op if k not in (
+        'sig', 'sig1', 'sig2', 'hash', 'blockTime')}
     if op['name'] == 'Set Signing Key':
         del op['id1']
         del op['id2']
@@ -33,7 +33,7 @@ def hash(op):
 def process(data, block_timestamp):
     try:
         data_bytes = bytes.fromhex(data.strip('0x'))
-        data_str = data_bytes.decode('utf-8',  'ignore')
+        data_str = data_bytes.decode('utf-8', 'ignore')
         op = json.loads(data_str)
         op['blockTime'] = block_timestamp * 1000
         print(op)
@@ -57,18 +57,13 @@ def process(data, block_timestamp):
 
 
 def save_snapshot(block):
-    batch = db.replication.create_dump_batch(ttl=1000)
-    fname = config.SNAPSHOTS_PATH.format(block)
-    zf = zipfile.ZipFile(fname + '.tmp', mode='w')
-    for collection in ('users', 'groups', 'usersInGroups', 'connections', 'verifications'):
-        params = {'batchId': batch['id'], 'collection': collection,
-                  'chunkSize': config.MAX_COLLECTION_SIZE}
-        r = requests.get(config.DUMP_URL, params=params)
-        zf.writestr(
-            'dump/{}_{}.data.json'.format(collection, batch['id']), r.text)
-    zf.close()
-    os.rename(fname + '.tmp', fname)
-    db.replication.delete_dump_batch(batch['id'])
+    dir_name = config.SNAPSHOTS_PATH.format(block)
+    fnl_dir_name = f'{dir_name}_fnl'
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    collections_file = os.path.join(dir_path, 'collections.json')
+    os.system(
+        f'arangodump --overwrite true --compress-output false --server.password "" --output-directory {dir_name} --maskings {collections_file}')
+    shutil.move(dir_name, fnl_dir_name)
 
 
 def main():
@@ -106,11 +101,13 @@ def main():
             last_block = block_number
             variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
 
+
 def wait():
     while True:
         time.sleep(5)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
+        result = sock.connect_ex(
+            (config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
         sock.close()
         if result != 0:
             print('db is not running yet')
@@ -128,6 +125,7 @@ def wait():
             print('apps collection is not loaded yet')
             continue
         return
+
 
 if __name__ == '__main__':
     while True:
