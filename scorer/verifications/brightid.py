@@ -15,14 +15,21 @@ def verify(block):
             RETURN v.user
     ''', bind_vars={'block': block})
 
-    for verified in verifieds:
-        db['verifications'].insert({
+    batch_db = db.begin_batch_execution(return_result=True)
+    verifications = batch_db.collection('verifications')
+    for i, verified in enumerate(verifieds):
+        verifications.insert({
             'name': 'BrightID',
             'user': verified,
             'block': block,
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('BrightID', verified)
         })
+        if i % 1000 == 0:
+            batch_db.commit()
+            batch_db = db.begin_batch_execution(return_result=True)
+            verifications = batch_db.collection('verifications')
+    batch_db.commit()
 
     verifiedCount = db['verifications'].find({
         'name': 'BrightID', 'block': block}).count()

@@ -13,7 +13,6 @@ def verify(block):
     graph = from_json(json_graph)
     ranker = algorithms.Yekta(graph, {})
     ranker.rank()
-    draw_graph(ranker.graph, 'nodes.html')
     counter = dict.fromkeys(range(0, 6), 0)
 
     for node in ranker.graph:

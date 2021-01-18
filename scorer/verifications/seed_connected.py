@@ -3,91 +3,59 @@ import time
 from . import utils
 import config
 
-SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
-DEFAULT_QUOTA = 9999
 PENALTY = 3
+# 08/13/2020 12:00am (UTC)
+IGNORE_QUOTA_BEFORE = 1597276800000
+
+
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
+snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
+
+
+def seed_connections(group_id):
+    cursor = snapshot_db['usersInGroups'].find({'_to': group_id})
+    members = [ug['_from'] for ug in cursor]
+    connections = []
+    for member in members:
+        cursor = snapshot_db['connections'].find({'_from': member})
+        connections.extend(cursor)
+    connections.sort(key=lambda c: (c['initTimestamp'], c['_from'], c['_to']))
+    return connections
 
 
 def verify(block):
     print('SEED CONNECTED')
-    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-    snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
-
-    seed_groups_members = {}
-    seed_groups_quota = {}
-    seed_conns = {}
+    users = {}
     seed_groups = list(snapshot_db['groups'].find({'seed': True}))
-    seed_groups.sort(key=lambda s: s['timestamp'])
     for seed_group in seed_groups:
-        userInGroups = list(snapshot_db['usersInGroups'].find(
-            {'_to': seed_group['_id']}))
-        userInGroups.sort(key=lambda ug: ug['timestamp'])
-        seeds = [ug['_from'] for ug in userInGroups]
-        seed_groups_members[seed_group['_key']] = seeds
-        seed_groups_quota[seed_group['_key']] = seed_group.get(
-            'quota', DEFAULT_QUOTA)
-        for seed in seeds:
-            if seed in seed_conns:
-                continue
-            seed_conns[seed] = list(
-                snapshot_db['connections'].find({'_from': seed}))
-    verifieds = {}
-    for seed_group in seed_groups_members:
-        members = seed_groups_members[seed_group]
-        unused = seed_groups_quota[seed_group]
-        conns = []
-        for member in members:
-            conns.extend(seed_conns[member])
-        conns.sort(key=lambda c: c['timestamp'])
-        for conn in conns:
-            neighbor = conn['_to'].replace('users/', '')
-            if neighbor not in verifieds:
-                verifieds[neighbor] = {
-                    'rank': 0, 'seeds': [], 'seed_groups': [], 'reporters': []}
+        connections = seed_connections(seed_group['_id'])
+        quota = seed_group.get('quota', 0)
+        for c in connections:
+            u = c['_to'].replace('users/', '')
+            if u not in users:
+                users[u] = {'connected': set(), 'reported': set()}
 
-            # if a user reported by a Seed, it's rank will decrease
-            if conn['level'] not in SEED_CONNECTION_LEVELS:
-                reporter = conn['_from'].replace('users/', '')
-                if reporter not in verifieds[neighbor]['reporters']:
-                    verifieds[neighbor]['rank'] -= PENALTY
-                    verifieds[neighbor]['reporters'].append(reporter)
-                continue
+            if c['level'] in ['just met', 'already known', 'recovery']:
+                users[u]['connected'].add(seed_group['_key'])
+                already_connected = seed_group['_key'] in users[u]['connected']
+                ignore_quota = c['initTimestamp'] < IGNORE_QUOTA_BEFORE
+                if not (already_connected or ignore_quota):
+                    quota -= 1
+            elif c['level'] == 'reported':
+                users[u]['reported'].add(seed_group['_key'])
 
-            if seed_group in verifieds[neighbor]['seed_groups']:
-                continue
-
-            seed = conn['_from'].replace('users/', '')
-            if seed in verifieds[neighbor]['seeds']:
-                continue
-
-            if unused < 1:
-                continue
-
-            verifieds[neighbor]['seed_groups'].append(seed_group)
-            verifieds[neighbor]['seeds'].append(seed)
-            verifieds[neighbor]['rank'] += 1
-            unused -= 1
-
-        # if quota doesn't set yet
-        # set the number of users connected to this group as quota
-        # we can remove this in the next release
-        if seed_groups_quota[seed_group] == DEFAULT_QUOTA:
-            db['groups'].update({
-                '_key': seed_group,
-                'quota': DEFAULT_QUOTA - unused
-            })
-
-    for verified in verifieds:
+    for u, d in users.items():
+        # penalizing users that are reported by seeds
+        rank = len(d['connected']) - len(d['reported'])*PENALTY
         db['verifications'].insert({
             'name': 'SeedConnected',
-            'user': verified,
-            'rank': verifieds[verified]['rank'],
-            'seeds': verifieds[verified]['seeds'],
-            'seedGroups': verifieds[verified]['seed_groups'],
-            'reporters': verifieds[verified]['reporters'],
+            'user': u,
+            'rank': rank,
+            'connected': list(d['connected']),
+            'reported': list(d['reported']),
             'block': block,
             'timestamp': int(time.time() * 1000),
-            'hash': utils.hash('SeedConnected', verified, verifieds[verified]['rank'])
+            'hash': utils.hash('SeedConnected', u, rank)
         })
 
     verifiedCount = db.aql.execute('''
@@ -97,4 +65,4 @@ def verify(block):
                 AND v.block == @block
             RETURN v
     ''', bind_vars={'block': block}, count=True).count()
-    print('verifieds: {}\n'.format(verifiedCount))
+    print('verifications: {}\n'.format(verifiedCount))

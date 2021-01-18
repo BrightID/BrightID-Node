@@ -31,6 +31,7 @@ const deprecated = [
 const indexes = [
   {'collection': 'verifications', 'fields': ['user'], 'type': 'persistent'},
   {'collection': 'verifications', 'fields': ['name'], 'type': 'persistent'},
+  {'collection': 'verifications', 'fields': ['block'], 'type': 'persistent'},
   {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0},
   {'collection': 'sponsorships', 'fields': ['contextId'], 'type': 'persistent'},
   {'collection': 'connections', 'fields': ['level'], 'type': 'persistent'},
@@ -271,28 +272,16 @@ function v5_8() {
     verificationsColl.removeByExample({ name: verificationName });
   }
 
-  console.log("add 'hash' and 'block' to the verifications and update SeedConnected verifications");
-  const verification_block = variablesColl.document('VERIFICATION_BLOCK').value;
-  const verifications = verificationsColl.all().toArray();
-  for (let verification of verifications) {
-    if (verification.name == 'SeedConnected') {
-      verificationsColl.replace(verification, {
-        'name': verification.name,
-        'user': verification.user,
-        'seeds': [verification.seed],
-        'seedGroups': [verification.seedGroup.replace('groups/', '')],
-        'rank': 1,
-        'block': verification_block,
-        'timestamp': verification.timestamp,
-        'hash': hash(verification.name + verification.user + (verification.rank || ''))
-      });
-    } else {
-      verificationsColl.update(verification, {
-        'block': verification_block,
-        'hash': hash(verification.name + verification.user + (verification.rank || ''))
-      });
-    }
-  }
+  console.log("adding initTimestamp to connections");
+  query`
+    FOR c in connections
+      UPDATE { _key: c._key, initTimestamp: (
+        FOR ch in connectionsHistory
+          FILTER ch._from == c._from AND ch._to == c._to
+          SORT ch.timestamp
+          LIMIT 1
+          RETURN ch.timestamp
+    )[0] } IN connections`;
 }
 
 const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8'];
