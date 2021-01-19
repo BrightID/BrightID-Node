@@ -3,17 +3,14 @@
 const db = require('../db.js');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
+const chai = require('chai');
 
 let contextIdsColl;
 const usersColl = arango._collection('users');
 const contextsColl = arango._collection('contexts');
 const appsColl = arango._collection('apps');
 const sponsorshipsColl = arango._collection('sponsorships');
-
-const chai = require('chai');
 const should = chai.should();
-
-const { baseUrl } = module.context;
 
 describe('links & sponsorships', function () {
   before(function(){
@@ -78,7 +75,7 @@ describe('links & sponsorships', function () {
       db.linkContextId('3', 'testContext', 'testContextId3', 20);
       (() => {
         db.linkContextId('3', 'testContext', 'testContextId4', 25);
-      }).should.throw('only three contextIds can be linked every 24 hours');
+      }).should.throw('Only three contextIds can be linked every 24 hours');
     });
     it('should be able to link new contextId after 24 hours', function(){
       db.linkContextId('3', 'testContext', 'testContextId4', 24*3600*1000 + 25);
