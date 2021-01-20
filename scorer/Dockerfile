@@ -16,7 +16,7 @@ FROM python:3.7-slim as runner
 ADD . /code
 WORKDIR /code/
 ADD https://download.arangodb.com/arangodb37/Community/Linux/arangodb3-client_3.7.5-1_amd64.deb ./
-RUN dpkg -i arangodb3-client_3.7.5-1_amd64.deb
+RUN dpkg -i arangodb3-client_3.7.5-1_amd64.deb && rm arangodb3-client_3.7.5-1_amd64.deb
 # Copy installed packages from 1st stage
 COPY --from=builder /root/.local /root/.local
 # Make sure scripts in .local are usable:
