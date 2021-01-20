@@ -62,7 +62,7 @@ def save_snapshot(block):
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, 'collections.json')
     os.system(
-        f'arangodump --overwrite true --compress-output false --server.password "" --output-directory {dir_name} --maskings {collections_file}')
+        f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
     shutil.move(dir_name, fnl_dir_name)
 
 

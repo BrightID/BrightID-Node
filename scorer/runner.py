@@ -101,7 +101,7 @@ def process(snapshot):
     print(f'{get_time()} - processing {snapshot} started ...')
     # restore snapshot
     fname = os.path.join(config.SNAPSHOTS_PATH, snapshot)
-    os.system(f"arangorestore --server.username 'root' --server.password '' --server.database snapshot --create-database true --create-collection true --import-data true --input-directory {fname}")
+    os.system(f"arangorestore --server.username 'root' --server.password '' --server.endpoint 'tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}' --server.database snapshot --create-database true --create-collection true --import-data true --input-directory {fname}")
 
     block = get_block(snapshot)
     for v in verifiers:
