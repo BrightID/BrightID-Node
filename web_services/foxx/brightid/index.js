@@ -64,8 +64,8 @@ const handlers = {
     }
 
     // allow 60 operations in 15 minutes window by default
-    const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
-    const limit = module.context.configuration.operationsLimit || 60;
+    const timeWindow = (module.context.configuration.operationsTimeWindow || process.env.BN_WS_OPERATIONS_TIME_WINDOW) * 1000;
+    const limit = module.context.configuration.operationsLimit || process.env.BN_WS_OPERATIONS_LIMIT;
     try {
       operations.checkLimits(op, timeWindow, limit);
     } catch (e) {
