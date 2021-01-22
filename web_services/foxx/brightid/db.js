@@ -12,6 +12,7 @@ const {
   b64ToUint8Array,
   hash
 } = require('./encoding');
+const errors = require('./errors');
 
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
@@ -74,7 +75,7 @@ function connect(op) {
     replacedWith = null;
   }
   if (replacedWith && ! loadUser(replacedWith)) {
-    throw 'the new brightid replaced with the reported brightid not found';
+    throw new errors.UserNotFoundError(replacedWith);
   }
   if (! level) {
     // Set 'just met' as confidence level when old addConnection is called
@@ -294,20 +295,20 @@ function userInvitedGroups(userId) {
 
 function invite(inviter, invitee, groupId, data, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw 'invalid group id';
+    throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(inviter)) {
-    throw 'inviter is not admin of group';
+    throw new errors.NotAdminError();
   }
   if (! isEligible(groupId, invitee)) {
-    throw 'invitee is not eligible to join this group';
+    throw new errors.IneligibleNewUserError();
   }
   if (group.type == 'primary' && hasPrimaryGroup(invitee)) {
-    throw 'user already has a primary group';
+    throw new errors.AlreadyHasPrimaryGroupError();
   }
   if (group.isNew && ! group.founders.includes(invitee)) {
-    throw 'new members can not be invited before founders join the group'
+    throw new errors.NewUserBeforeFoundersJoinError();
   }
   invitationsColl.removeByExample({
     _from: 'users/' + invitee,
@@ -324,11 +325,11 @@ function invite(inviter, invitee, groupId, data, timestamp) {
 
 function dismiss(dismisser, dismissee, groupId, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw 'invalid group id';
+    throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(dismisser)) {
-    throw 'dismisser is not admin of group';
+    throw new errors.NotAdminError();
   }
   deleteMembership(groupId, dismissee, timestamp);
 }
@@ -371,23 +372,23 @@ function hasPrimaryGroup(key) {
 
 function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp) {
   if (! ['general', 'primary'].includes(type)) {
-    throw 'invalid type';
+    throw new errors.InvalidGroupTypeError(type);
   }
 
   if (groupsColl.exists(groupId)) {
-    throw 'duplicate group';
+    throw new errors.DuplicateGroupError();
   }
 
   const conns = connectionsColl.byExample({
     _to: 'users/' + key1
   }).toArray().map(u => u._from.replace("users/", ""));
   if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
-    throw "One or both of the co-founders are not connected to the founder!";
+    throw new errors.InvalidCoFoundersError();
   }
 
   const founders = [key1, key2, key3].sort()
   if (type == 'primary' && founders.some(hasPrimaryGroup)) {
-    throw 'some of founders already have primary groups';
+    throw new errors.AlreadyHasPrimaryGroupError();
   }
 
   groupsColl.insert({
@@ -410,17 +411,17 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
 
 function addAdmin(key, admin, groupId) {
   if (! groupsColl.exists(groupId)) {
-    throw 'group not found';
+    throw new errors.GroupNotFoundError(groupId);
   }
   if (! usersInGroupsColl.firstExample({
     _from: 'users/' + admin,
     _to: 'groups/' + groupId
   })) {
-    throw 'new admin is not member of the group';
+    throw new errors.IneligibleNewAdminError();
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(key)) {
-    throw 'only admins can add new admins';
+    throw new errors.NotAdminError();
   }
   group.admins.push(admin);
   groupsColl.update(group, { admins: group.admins });
@@ -448,20 +449,20 @@ function addUserToGroup(groupId, key, timestamp) {
 
 function addMembership(groupId, key, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw 'Group not found';
+    throw new errors.GroupNotFoundError(groupId);
   }
 
   const group = groupsColl.document(groupId);
   if (group.isNew && ! group.founders.includes(key)) {
-    throw 'Access denied';
+    throw new errors.NewUserBeforeFoundersJoinError();
   }
 
   if (group.type == 'primary' && hasPrimaryGroup(key)) {
-    throw 'user already has a primary group';
+    throw new errors.AlreadyHasPrimaryGroupError();
   }
 
   if (! isEligible(groupId, key)) {
-    throw 'Not eligible to join this group';
+    throw new errors.IneligibleNewUserError();
   }
 
   const invite = invitationsColl.firstExample({
@@ -470,7 +471,7 @@ function addMembership(groupId, key, timestamp) {
   });
   // invites will expire after 24 hours
   if (!invite || timestamp - invite.timestamp >= 86400000) {
-    throw 'not invited to join this group';
+    throw new errors.NotInvitedError();
   }
   // remove invite after joining to not allow reusing that
   invitationsColl.remove(invite);
@@ -485,12 +486,12 @@ function addMembership(groupId, key, timestamp) {
 
 function deleteGroup(groupId, key, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw 'Group not found';
+    throw new errors.GroupNotFoundError(groupId);
   }
 
   const group = groupsColl.document(groupId);
   if (group.admins.indexOf(key) < 0) {
-    throw 'Access Denied';
+    throw new errors.NotAdminError();
   }
 
   invitationsColl.removeByExample({ _to: 'groups/' + groupId });
@@ -500,13 +501,14 @@ function deleteGroup(groupId, key, timestamp) {
 
 function deleteMembership(groupId, key, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw 'group not found';
+    throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
   if (group.admins && group.admins.includes(key)) {
     const admins = group.admins.filter(admin => key != admin);
-    if (admins.length == 0) {
-      throw 'last admin can not leave the group';
+    const members = groupMembers(groupId);
+    if (admins.length == 0 && members.length > 1) {
+      throw new errors.LeaveGroupError();
     }
     groupsColl.update(group, { admins });
   }
@@ -517,11 +519,17 @@ function deleteMembership(groupId, key, timestamp) {
 }
 
 function getContext(context) {
-  return contextsColl.exists(context) ? contextsColl.document(context) : null;
+  if (! contextsColl.exists(context)) {
+    throw new errors.ContextNotFoundError(context);
+  }
+  return contextsColl.document(context);
 }
 
 function getApp(app) {
-  return appsColl.exists(app) ? appsColl.document(app) : null;
+  if (! appsColl.exists(app)) {
+    throw new errors.AppNotFoundError(app);
+  }
+  return appsColl.document(app);
 }
 
 function getApps() {
@@ -600,7 +608,7 @@ function linkContextId(id, context, contextId, timestamp) {
 
   let user = getUserByContextId(coll, contextId);
   if (user && user != id) {
-    throw 'contextId is duplicate';
+    throw new errors.DuplicateContextIdError(contextId);
   }
 
   const links = coll.byExample({user: id}).toArray();
@@ -608,7 +616,7 @@ function linkContextId(id, context, contextId, timestamp) {
     link => timestamp - link.timestamp < 24*3600*1000
   );
   if (recentLinks.length >= 3) {
-    throw 'only three contextIds can be linked every 24 hours';
+    throw new errors.TooManyLinkRequestError();
   }
 
   // accept link if the contextId is used by the same user before
@@ -732,13 +740,13 @@ function unusedSponsorships(app) {
 //    a contextId that was sponsored temporarily before linking
 function sponsor(op) {
   if (unusedSponsorships(op.app) < 1) {
-    throw "app does not have unused sponsorships";
+    throw new errors.UnusedSponsorshipsError(op.app);
   }
 
   // if 2) Sponsor operation with user id is sent to the apply service
   if (op.id) {
     if (isSponsored(op.id)) {
-      throw "sponsored before";
+      throw new errors.SponsoredBeforeError();
     }
     sponsorshipsColl.insert({
       _from: 'users/' + op.id,
@@ -751,8 +759,8 @@ function sponsor(op) {
   // if we have user contextId
   const app = getApp(op.app);
   const context = getContext(app.context);
-  if (!app.sponsorPrivateKey || !context) {
-    throw 'can not relay sponsor requests for this app';
+  if (!app.sponsorPrivateKey) {
+    throw new errors.SponsorNotSupportedError(op.app);
   }
 
   const coll = db._collection(context.collection);
@@ -778,7 +786,7 @@ function sponsor(op) {
   }
 
   if (isSponsored(id)) {
-    throw "sponsored before";
+    throw new errors.SponsoredBeforeError();
   }
 
   // if 1-a or 3
@@ -898,11 +906,11 @@ function removePasscode(contextKey) {
 
 function updateGroup(admin, groupId, url, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw 'group not found';
+    throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(admin)) {
-    throw 'only admins can update the group';
+    throw new errors.NotAdminError();
   }
   groupsColl.update(group, {
     url,

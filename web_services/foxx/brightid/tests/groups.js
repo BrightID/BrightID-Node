@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
+const errors = require('../errors.js');
 const arango = require('@arangodb').db;
 const { hash } = require('../encoding');
 
@@ -111,7 +112,7 @@ describe('groups', function () {
     it('admins should not be able to invite non-eligible users to the group', function (){
       (() => {
         db.invite('a', 'g', 'g3', 'data', Date.now());
-      }).should.throw('invitee is not eligible to join this group');
+      }).should.throw('The new user is not eligible to join this group');
     });
     it('admins should be able to invite eligible users to the group', function (){
       db.invite('b', 'd', 'g3', 'data', Date.now());
@@ -125,7 +126,7 @@ describe('groups', function () {
     it('non-admins should not be able to invite others to the group', function (){
       (() => {
         db.invite('d', 'e', 'g3', 'data', Date.now());
-      }).should.throw('inviter is not admin of group');
+      }).should.throw(errors.NotAdminError);
     });
   });
 
@@ -145,7 +146,7 @@ describe('groups', function () {
     it('non-admins should not be able to dismiss others from the group', function (){
       (() => {
         db.dismiss('d', 'e', 'g3', Date.now());
-      }).should.throw('dismisser is not admin of group');
+      }).should.throw(errors.NotAdminError);
     });
     it('admins should be able to dismiss others from the group', function (){
       db.dismiss('b', 'd', 'g3', Date.now());
@@ -161,7 +162,7 @@ describe('groups', function () {
     it('non-admins should not be able to add new admins', function (){
       (() => {
         db.addAdmin('e', 'd', 'g3', Date.now());
-      }).should.throw('only admins can add new admins');
+      }).should.throw(errors.NotAdminError);
     });
     it('admins should be able to add new admins', function (){
       db.addAdmin('b', 'd', 'g3', Date.now());
@@ -194,7 +195,7 @@ describe('groups', function () {
     it('users that have primary groups should not be able to create new primary groups', function (){
       (() => {
         db.createGroup('g5', 'a', 'd', 'data', 'e', 'data', url, 'primary', Date.now());
-      }).should.throw('some of founders already have primary groups');
+      }).should.throw(errors.AlreadyHasPrimaryGroupError);
     });
     it('users with no primary group should be able to join a primary group', function (){
       db.invite('a', 'd', 'g4', 'data', Date.now());
@@ -209,7 +210,7 @@ describe('groups', function () {
       db.addMembership('g6', 'g', Date.now());
       (() => {
         db.invite('a', 'e', 'g4', 'data', Date.now());
-      }).should.throw('user already has a primary group');
+      }).should.throw(errors.AlreadyHasPrimaryGroupError);
 
     });
   });
