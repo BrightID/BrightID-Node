@@ -3,6 +3,7 @@
 const db = require('../db.js');
 const _ = require('lodash');
 const { getMessage } = require('../operations');
+const errors = require('../errors');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
 const request = require("@arangodb/request");
@@ -78,7 +79,7 @@ describe('errors', function() {
     operationsColl.truncate();
   });
 
-  it('should throw "Invalid signature" when operation signed by wrong user', function() {
+  it('should throw INVALID_SIGNATURE when operation signed by wrong user', function() {
     const timestamp = Date.now();
     let op = {
       'v': 5,
@@ -95,12 +96,11 @@ describe('errors', function() {
       Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
     );
     const resp = apply(op);
-    resp.json.code.should.equal(403);
-    resp.json.errorNum.should.equal(19);
-    resp.json.errorMessage.should.equal('Invalid signature');
+    resp.json.code.should.equal(401);
+    resp.json.errorNum.should.equal(errors.INVALID_SIGNATURE);
   });
 
-  it('should throw "One or both of the co-founders are not connected to the founder" when try to create group by not connected users', function() {
+  it('should throw INVALID_COFOUNDERS when try to create group by not connected users', function() {
     const timestamp = Date.now();
     const type = 'general';
     const url = 'http://url.com/dummy';
@@ -124,22 +124,22 @@ describe('errors', function() {
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     const resp = apply(op);
-    resp.json.result.message.should.equal('One or both of the co-founders are not connected to the founder');
+    resp.json.result.errorNum.should.equal(errors.INVALID_COFOUNDERS);
   });
 
-  it('should throw "The operation represented by operationHash: ${operationsHash} is not found" when the operation does not exist', function() {
-    const operationsHash = 'testHash'
-    const resp = request.get(`${baseUrl}/operations/${operationsHash}`);
+  it('should throw OperationNotFoundError when the operation does not exist', function() {
+    const hash = 'testHash';
+    const resp = request.get(`${baseUrl}/operations/${hash}`);
     resp.json.code.should.equal(404);
-    resp.json.errorNum.should.equal(9);
-    resp.json.errorMessage.should.equal(`The operation represented by operationHash: ${operationsHash} is not found`);
+    resp.json.errorNum.should.equal(errors.OPERATION_NOT_FOUND);
+    resp.json.errorMessage.should.equal(`The operation ${hash} is not found.`);
   });
 
-  it('should throw "The user: ${id} is not found" when the user does not exist', function() {
-    const id = 'testId'
+  it('should throw UserNotFoundError when the user does not exist', function() {
+    const id = 'testId';
     const resp = request.get(`${baseUrl}/users/${id}`);
     resp.json.code.should.equal(404);
-    resp.json.errorNum.should.equal(10);
-    resp.json.errorMessage.should.equal(`The user: ${id} is not found`);
+    resp.json.errorNum.should.equal(errors.USER_NOT_FOUND);
+    resp.json.errorMessage.should.equal(`The user ${id} is not found.`);
   });
 });

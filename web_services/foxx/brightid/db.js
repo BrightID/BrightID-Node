@@ -75,7 +75,7 @@ function connect(op) {
     replacedWith = null;
   }
   if (replacedWith && ! loadUser(replacedWith)) {
-    throw new errors.ReplacedBrightidError();
+    throw new errors.UserNotFoundError(replacedWith);
   }
   if (! level) {
     // Set 'just met' as confidence level when old addConnection is called
@@ -295,11 +295,11 @@ function userInvitedGroups(userId) {
 
 function invite(inviter, invitee, groupId, data, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw new errors.InvalidGroupIdError(groupId);
+    throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(inviter)) {
-    throw new errors.InvalidInviterError();
+    throw new errors.NotAdminError();
   }
   if (! isEligible(groupId, invitee)) {
     throw new errors.IneligibleNewUserError();
@@ -325,11 +325,11 @@ function invite(inviter, invitee, groupId, data, timestamp) {
 
 function dismiss(dismisser, dismissee, groupId, timestamp) {
   if (! groupsColl.exists(groupId)) {
-    throw new errors.InvalidGroupIdError(groupId);
+    throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(dismisser)) {
-    throw new errors.InvalidDismisserError();
+    throw new errors.NotAdminError();
   }
   deleteMembership(groupId, dismissee, timestamp);
 }
@@ -372,7 +372,7 @@ function hasPrimaryGroup(key) {
 
 function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp) {
   if (! ['general', 'primary'].includes(type)) {
-    throw new errors.InvalidGroupTypeError();
+    throw new errors.InvalidGroupTypeError(type);
   }
 
   if (groupsColl.exists(groupId)) {
@@ -388,7 +388,7 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
 
   const founders = [key1, key2, key3].sort()
   if (type == 'primary' && founders.some(hasPrimaryGroup)) {
-    throw new errors.FoundersPrimaryGroupError();
+    throw new errors.AlreadyHasPrimaryGroupError();
   }
 
   groupsColl.insert({
@@ -421,7 +421,7 @@ function addAdmin(key, admin, groupId) {
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(key)) {
-    throw new errors.AddAdminPermissionError();
+    throw new errors.NotAdminError();
   }
   group.admins.push(admin);
   groupsColl.update(group, { admins: group.admins });
@@ -491,7 +491,7 @@ function deleteGroup(groupId, key, timestamp) {
 
   const group = groupsColl.document(groupId);
   if (group.admins.indexOf(key) < 0) {
-    throw new errors.DeleteGroupPermissionError();
+    throw new errors.NotAdminError();
   }
 
   invitationsColl.removeByExample({ _to: 'groups/' + groupId });
@@ -506,7 +506,8 @@ function deleteMembership(groupId, key, timestamp) {
   const group = groupsColl.document(groupId);
   if (group.admins && group.admins.includes(key)) {
     const admins = group.admins.filter(admin => key != admin);
-    if (admins.length == 0) {
+    const members = groupMembers(groupId);
+    if (admins.length == 0 && members.length > 1) {
       throw new errors.LeaveGroupError();
     }
     groupsColl.update(group, { admins });
@@ -518,11 +519,17 @@ function deleteMembership(groupId, key, timestamp) {
 }
 
 function getContext(context) {
-  return contextsColl.exists(context) ? contextsColl.document(context) : null;
+  if (! contextsColl.exists(context)) {
+    throw new errors.ContextNotFoundError(context);
+  }
+  return contextsColl.document(context);
 }
 
 function getApp(app) {
-  return appsColl.exists(app) ? appsColl.document(app) : null;
+  if (! appsColl.exists(app)) {
+    throw new errors.AppNotFoundError(app);
+  }
+  return appsColl.document(app);
 }
 
 function getApps() {
@@ -752,8 +759,8 @@ function sponsor(op) {
   // if we have user contextId
   const app = getApp(op.app);
   const context = getContext(app.context);
-  if (!app.sponsorPrivateKey || !context) {
-    throw new errors.ForbiddenSponsorError(op.app);
+  if (!app.sponsorPrivateKey) {
+    throw new errors.SponsorNotSupportedError(op.app);
   }
 
   const coll = db._collection(context.collection);
@@ -901,7 +908,7 @@ function updateGroup(admin, groupId, url, timestamp) {
   }
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(admin)) {
-    throw new errors.UpdateGroupPermissionError();
+    throw new errors.NotAdminError();
   }
   groupsColl.update(group, {
     url,

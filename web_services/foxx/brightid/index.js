@@ -4,7 +4,7 @@ const createKeccakHash = require('keccak');
 const createRouter = require('@arangodb/foxx/router');
 const _ = require('lodash');
 const joi = require('joi');
-const arango = require('@arangodb').db;
+const { db: arango, ArangoError } = require('@arangodb');
 const nacl = require('tweetnacl');
 const db = require('./db');
 const schemas = require('./schemas').schemas;
@@ -25,6 +25,7 @@ module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
+const MAX_OP_SIZE = 2000;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -34,8 +35,8 @@ const handlers = {
 
     if (operationsHashesColl.exists(op.hash)) {
       throw new errors.OperationAppliedBeforeError(op.hash);
-    } else if (JSON.stringify(op).length > 2000) {
-      throw new errors.TooBigOperationError();
+    } else if (JSON.stringify(op).length > MAX_OP_SIZE) {
+      throw new errors.TooBigOperationError(MAX_OP_SIZE);
     }
 
     // verify signature
@@ -196,15 +197,7 @@ const handlers = {
     const appKey = req.param('app');
     const count_only = 'count_only' in req.queryParams;
     const app = db.getApp(appKey);
-    if (! app) {
-      throw new errors.AppNotFoundError(appKey);
-    }
-
     const context = db.getContext(app.context);
-    if (! context) {
-      throw new errors.ContextNotFoundError(app.context);
-    }
-
     const coll = arango._collection(context.collection);
     let contextIds = db.getLastContextIds(coll, app._key);
     let data = {
@@ -225,15 +218,7 @@ const handlers = {
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
     const app = db.getApp(appKey);
-    if (! app) {
-      throw new errors.AppNotFoundError(appKey);
-    }
-
     const context = db.getContext(app.context);
-    if (! context) {
-      throw new errors.ContextNotFoundError(app.context);
-    }
-
     const testblocks = db.getTestblocks(appKey, contextId);
     if (testblocks.includes('link')) {
       throw new errors.ContextIdNotFoundError(contextId);
@@ -269,7 +254,7 @@ const handlers = {
       }
       verified = expr.evaluate(verifications);
     } catch (err) {
-      throw new errors.InvalidExpressionError();
+      throw new errors.InvalidExpressionError(app.name, app.verification, err);
     }
     if (! verified) {
       throw new errors.CanNotBeVerifiedError(contextId, appKey);
@@ -360,13 +345,9 @@ const handlers = {
   appGet: function(req, res){
     const appKey = req.param('app');
     let app = db.getApp(appKey);
-    if (! app) {
-      throw new errors.AppNotFoundError(appKey);
-    } else {
-      res.send({
-        "data": db.appToDic(app)
-      });
-    }
+    res.send({
+      "data": db.appToDic(app)
+    });
   },
 
   allAppsGet: function(req, res){
@@ -398,9 +379,6 @@ const handlers = {
     const testingKey = req.param('testingKey');
 
     const app = db.getApp(appKey);
-    if (! app) {
-      throw new errors.AppNotFoundError(appKey);
-    }
     if (app.testingKey != testingKey) {
       throw new errors.InvalidTestingKeyError();
     }
@@ -415,9 +393,6 @@ const handlers = {
     const testingKey = req.param('testingKey');
 
     const app = db.getApp(appKey);
-    if (! app) {
-      throw new errors.AppNotFoundError(appKey);
-    }
     if (app.testingKey != testingKey) {
       throw new errors.InvalidTestingKeyError();
     }
@@ -429,12 +404,9 @@ const handlers = {
     const contextKey = req.param('context');
     const passcode = req.queryParams['passcode'];
     const context = db.getContext(contextKey);
-    if (! context) {
-      throw new errors.ContextNotFoundError(contextKey);
-    }
 
     if (! context.passcode) {
-      throw new errors.PasscodeNotSetError();
+      throw new errors.PasscodeNotSetError(contextKey);
     }
     if (context.passcode != passcode) {
       throw new errors.InvalidPasscodeError();
@@ -596,15 +568,19 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
-    const notLogMessages = [2, 3];
-    if (! notLogMessages.includes(e.errorNum)){
+    if (! e instanceof errors.NotFoundError){
       console.group("Error returned");
       console.log('url:', req._raw.requestType, req._raw.url);
       console.log('error:', e);
       console.log('body:', req.body);
       console.groupEnd();
     }
-    res.throw(e.code, e);
+    let options = undefined;
+    if (e instanceof ArangoError) {
+      options = { extra: { arangoErrorNum: e.errorNum }};
+      e.errorNum = errors.ARANGO_ERROR;
+    }
+    res.throw(e.code || 500, e, options);
   }
 });
 

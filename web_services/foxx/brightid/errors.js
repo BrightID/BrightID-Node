@@ -1,8 +1,7 @@
 const CONTEXT_NOT_FOUND = 1;
 const CONTEXTID_NOT_FOUND = 2;
-const CAN_NOT_BE_VERIFIED = 3;
+const NOT_VERIFIED = 3;
 const NOT_SPONSORED = 4;
-const OLD_ACCOUNT = 5;
 const KEYPAIR_NOT_SET = 6;
 const ETHPRIVATEKEY_NOT_SET = 7;
 const OPERATION_NOT_FOUND = 9;
@@ -19,32 +18,26 @@ const INVALID_SIGNATURE = 19;
 const TOO_MANY_OPERATIONS = 20;
 const INVALID_OPERATION_VERSION = 21;
 const INVALID_TIMESTAMP = 22;
-const INVALID_RECOVERY_CONNECTIONS = 23;
+const NOT_RECOVERY_CONNECTIONS = 23;
 const INVALID_HASH = 24;
 const OPERATION_APPLIED_BEFORE = 25;
 const TOO_BIG_OPERATION = 26;
-const INVALID_GROUP_ID = 27;
-const INVALID_INVITER = 28;
-const INELIGIBLE_NEW_USER = 29;
-const ALREADY_HAS_PRIMARY_GROUP = 30;
-const NEW_USER_BEFORE_FOUNDERS_JOIN = 31;
-const INVALID_DISMISSER = 32;
-const INVALID_GROUP_TYPE = 33;
-const DUPLICATE_GROUP = 34;
-const INVALID_COFOUNDERS = 35;
-const FOUNDERS_PRIMARY_GROUP = 36;
-const INELIGIBLE_NEW_ADMIN = 37;
-const ADD_ADMIN_PERMISSION = 38;
-const NOT_INVITED = 39;
-const DELETE_GROUP_PERMISSION = 40;
-const LEAVE_GROUP = 41;
-const DUPLICATE_CONTEXTID = 42;
-const TOO_MANY_LINK_REQUEST = 43;
-const UNUSED_SPONSORSHIPS = 44;
-const SPONSORED_BEFORE = 45;
-const FORBIDDEN_SPONSOR_REQUEST = 46;
-const UPDATE_GROUP_PERMISSION = 47;
-const REPLACED_BRIGHTID = 48;
+const INELIGIBLE_NEW_USER = 27;
+const ALREADY_HAS_PRIMARY_GROUP = 28;
+const NEW_USER_BEFORE_FOUNDERS_JOIN = 29;
+const INVALID_GROUP_TYPE = 30;
+const DUPLICATE_GROUP = 31;
+const INVALID_COFOUNDERS = 32;
+const INELIGIBLE_NEW_ADMIN = 33;
+const NOT_INVITED = 34;
+const LEAVE_GROUP = 35;
+const DUPLICATE_CONTEXTID = 36;
+const TOO_MANY_LINK_REQUEST = 37;
+const UNUSED_SPONSORSHIPS = 38;
+const SPONSORED_BEFORE = 39;
+const SPONSOR_NOT_SUPPORTED = 40;
+const NOT_ADMIN = 41;
+const ARANGO_ERROR = 42;
 
 class BrightIDError extends Error {
   constructor() {
@@ -82,7 +75,7 @@ class NotFoundError extends BrightIDError {
   constructor() {
     super();
     this.code = 404;
-    this.message = 'not found';
+    this.message = 'Not Found';
   }
 }
 
@@ -102,11 +95,11 @@ class InternalServerError extends BrightIDError {
   }
 }
 
-class InvalidSignatureError extends ForbiddenError {
+class InvalidSignatureError extends UnauthorizedError {
   constructor() {
     super();
     this.errorNum = INVALID_SIGNATURE;
-    this.message = 'Invalid signature';
+    this.message = 'Signature is not valid.';
   }
 }
 
@@ -114,40 +107,47 @@ class AppNotFoundError extends NotFoundError {
   constructor(app) {
     super();
     this.errorNum = APP_NOT_FOUND;
-    this.message = `The app: ${app} is not found`;
+    this.message = `${app} app is not found.`;
     this.app = app;
   }
 }
 
 class TooManyOperationsError extends TooManyRequestsError {
-  constructor() {
+  constructor(senders, waitingTime, timeWindow, limit) {
     super();
     this.errorNum = TOO_MANY_OPERATIONS;
-    this.message = 'Too many operations';
+    this.message = `More than ${limit} operations sent from ${senders.join(', ')} in ${parseInt(timeWindow / 1000)} seconds. Try again after ${parseInt(waitingTime / 1000)} seconds.`;
+    this.senders = senders;
+    this.waitingTime = waitingTime;
+    this.timeWindow = timeWindow;
+    this.limit = limit;
   }
 }
 
 class InvalidOperationNameError extends BadRequestError {
-  constructor() {
+  constructor(name) {
     super();
     this.errorNum = INVALID_OPERATION_NAME;
-    this.message = 'Invalid operation name';
+    this.message = `${name} is not a valid operation name.`;
+    this.name = name;
   }
 }
 
 class InvalidOperationVersionError extends BadRequestError {
-  constructor() {
+  constructor(v) {
     super();
     this.errorNum = INVALID_OPERATION_VERSION;
-    this.message = 'Invalid operation version';
+    this.message = `${v} is not a valid operation version.`;
+    this.v = v;
   }
 }
 
-class InvalidOperationTimestampError extends BadRequestError {
-  constructor() {
+class InvalidOperationTimestampError extends ForbiddenError {
+  constructor(timestamp) {
     super();
     this.errorNum = INVALID_TIMESTAMP;
-    this.message = "Timestamp can't be in the future";
+    this.message = `The timestamp (${timestamp}) is in the future.`;
+    this.timestamp = timestamp;
   }
 }
 
@@ -155,41 +155,42 @@ class InvalidOperationHashError extends BadRequestError {
   constructor() {
     super();
     this.errorNum = INVALID_HASH;
-    this.message = 'Invalid operation hash';
+    this.message = 'Operation hash is not valid.';
   }
 }
 
-class InvalidRecoveryConnectionsError extends BadRequestError {
+class NotRecoveryConnectionsError extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = INVALID_RECOVERY_CONNECTIONS;
-    this.message = 'Request should be signed by 2 different recovery connections';
+    this.errorNum = NOT_RECOVERY_CONNECTIONS;
+    this.message = 'Signers of the request are not recovery connections.';
   }
 }
 
 class OperationNotFoundError extends NotFoundError {
-  constructor(operationHash) {
+  constructor(hash) {
     super();
     this.errorNum = OPERATION_NOT_FOUND;
-    this.message = `The operation represented by operationHash: ${operationHash} is not found`;
-    this.operationHash = operationHash;
+    this.message = `The operation ${hash} is not found.`;
+    this.hash = hash;
   }
 }
 
-class OperationAppliedBeforeError extends BadRequestError {
-  constructor(operationHash) {
+class OperationAppliedBeforeError extends ForbiddenError {
+  constructor(hash) {
     super();
     this.errorNum = OPERATION_APPLIED_BEFORE;
-    this.message = `The operation represented by operationHash: ${operationHash} was applied before`;
-    this.operationHash = operationHash;
+    this.message = `The Operation ${hash} was applied before.`;
+    this.hash = hash;
   }
 }
 
-class TooBigOperationError extends BadRequestError {
-  constructor() {
+class TooBigOperationError extends ForbiddenError {
+  constructor(limit) {
     super();
     this.errorNum = TOO_BIG_OPERATION;
-    this.message = 'Operation is too big';
+    this.message = `The Operation is bigger than ${limit} bytes limit.`;
+    this.limit = limit;
   }
 }
 
@@ -197,7 +198,7 @@ class UserNotFoundError extends NotFoundError {
   constructor(user) {
     super();
     this.errorNum = USER_NOT_FOUND;
-    this.message = `The user: ${user} is not found`;
+    this.message = `The user ${user} is not found.`;
     this.user = user;
   }
 }
@@ -206,7 +207,7 @@ class ContextNotFoundError extends NotFoundError {
   constructor(context) {
     super();
     this.errorNum = CONTEXT_NOT_FOUND;
-    this.message = `The context: ${context} is not found`;
+    this.message = `The context ${context} is not found.`;
     this.context = context;
   }
 }
@@ -215,7 +216,7 @@ class ContextIdNotFoundError extends NotFoundError {
   constructor(contextId) {
     super();
     this.errorNum = CONTEXTID_NOT_FOUND;
-    this.message = `The contextId: ${contextId} is not linked`;
+    this.message = `The contextId ${contextId} is not linked.`;
     this.contextId = contextId;
   }
 }
@@ -224,7 +225,7 @@ class GroupNotFoundError extends NotFoundError {
   constructor(group) {
     super();
     this.errorNum = GROUP_NOT_FOUND;
-    this.message = `The group: ${group} is not found`;
+    this.message = `The group ${group} is not found.`;
     this.group = group;
   }
 }
@@ -233,26 +234,26 @@ class NotSponsoredError extends ForbiddenError {
   constructor(contextId) {
     super();
     this.errorNum = NOT_SPONSORED;
-    this.message = `The user represented by contextId: ${contextId} is not sponsored`;
+    this.message = `The user linked to the contextId ${contextId} is not sponsored.`;
     this.contextId = contextId;
   }
 }
 
-class CanNotBeVerifiedError extends NotFoundError {
+class NotVerifiedError extends ForbiddenError {
   constructor(contextId, app) {
     super();
-    this.errorNum = CAN_NOT_BE_VERIFIED;
-    this.message = `The user represented by contextId: ${contextId} is not verified for app: ${app}`;
+    this.errorNum = NOT_VERIFIED;
+    this.message = `The user linked to contextId ${contextId} is not verified for ${app} app.`;
     this.contextId = contextId;
     this.app = app;
   }
 }
 
-class InvalidExpressionError extends NotFoundError {
-  constructor() {
+class InvalidExpressionError extends InternalServerError {
+  constructor(app, expression, err) {
     super();
     this.errorNum = INVALID_EXPRESSION;
-    this.message = 'Invalid verification expression';
+    this.message = `Evaluating verification expression for ${app} app failed. Expression: "${expression}", Error: ${err}`;
   }
 }
 
@@ -260,7 +261,7 @@ class KeypairNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = KEYPAIR_NOT_SET;
-    this.message = 'Server setting key pair not set';
+    this.message = 'BN_WS_PUBLIC_KEY or BN_WS_PRIVATE_KEY are not set in config.env.';
   }
 }
 
@@ -268,7 +269,7 @@ class EthPrivatekeyNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = ETHPRIVATEKEY_NOT_SET;
-    this.message = 'Server setting "ethPrivateKey" not set';
+    this.message = 'BN_WS_ETH_PRIVATE_KEY is not set.';
   }
 }
 
@@ -276,7 +277,7 @@ class IpNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = IP_NOT_SET;
-    this.message = 'Server setting "IP" not set';
+    this.message = 'BN_WS_IP variable is not set in config.env and is not automatically loaded for an unknown reason.';
   }
 }
 
@@ -284,15 +285,16 @@ class InvalidTestingKeyError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_TESTING_KEY;
-    this.message = 'Invalid testing key';
+    this.message = 'Invalid testing key.';
   }
 }
 
 class PasscodeNotSetError extends ForbiddenError {
-  constructor() {
+  constructor(context) {
     super();
     this.errorNum = PASSCODE_NOT_SET;
-    this.message = 'Passcode not set';
+    this.message = `Passcode is not set on the remote node for the ${context} context.`;
+    this.context = context;
   }
 }
 
@@ -300,24 +302,15 @@ class InvalidPasscodeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_PASSCODE;
-    this.message = 'Invalid passcode';
+    this.message = 'Invalid passcode.';
   }
 }
 
-class InvalidGroupIdError extends BadRequestError {
-  constructor(groupId) {
-    super();
-    this.errorNum = INVALID_GROUP_ID;
-    this.message = `Invalid group id: ${groupId}`;
-    this.groupId = groupId;
-  }
-}
-
-class InvalidInviterError extends ForbiddenError {
+class NotAdminError extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = INVALID_INVITER;
-    this.message = 'Inviter is not admin of group';
+    this.errorNum = NOT_ADMIN;
+    this.message = 'Requstor is not admin of the group.';
   }
 }
 
@@ -325,7 +318,7 @@ class IneligibleNewUserError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_NEW_USER;
-    this.message = 'The new user is not eligible to join this group';
+    this.message = 'The new user is not eligible to join this group.';
   }
 }
 
@@ -333,7 +326,7 @@ class AlreadyHasPrimaryGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = ALREADY_HAS_PRIMARY_GROUP;
-    this.message = 'User already has a primary group';
+    this.message = 'The user already has a primary group.';
   }
 }
 
@@ -341,23 +334,16 @@ class NewUserBeforeFoundersJoinError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NEW_USER_BEFORE_FOUNDERS_JOIN;
-    this.message = 'New members can not be joined before founders join the group';
-  }
-}
-
-class InvalidDismisserError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = INVALID_DISMISSER;
-    this.message = 'Dismisser is not admin of group';
+    this.message = 'New members can not join before founders join the group.';
   }
 }
 
 class InvalidGroupTypeError extends ForbiddenError {
-  constructor() {
+  constructor(type) {
     super();
     this.errorNum = INVALID_GROUP_TYPE;
-    this.message = 'Invalid group type';
+    this.message = `${type} is not a valid group type.`;
+    this.type = type;
   }
 }
 
@@ -365,7 +351,7 @@ class DuplicateGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = DUPLICATE_GROUP;
-    this.message = 'Duplicate group';
+    this.message = 'Group with this id already exists.';
   }
 }
 
@@ -373,15 +359,7 @@ class InvalidCoFoundersError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_COFOUNDERS;
-    this.message = 'One or both of the co-founders are not connected to the founder';
-  }
-}
-
-class FoundersPrimaryGroupError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = FOUNDERS_PRIMARY_GROUP;
-    this.message = 'Some of founders already have primary groups';
+    this.message = 'One or both of the co-founders are not connected to the founder.';
   }
 }
 
@@ -389,15 +367,7 @@ class IneligibleNewAdminError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_NEW_ADMIN;
-    this.message = 'New admin is not member of the group';
-  }
-}
-
-class AddAdminPermissionError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = ADD_ADMIN_PERMISSION;
-    this.message = 'Only admins can add new admins';
+    this.message = 'New admin is not member of the group.';
   }
 }
 
@@ -405,15 +375,7 @@ class NotInvitedError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_INVITED;
-    this.message = 'The user not invited to join this group';
-  }
-}
-
-class DeleteGroupPermissionError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = DELETE_GROUP_PERMISSION;
-    this.message = 'Only admins can delete a group';
+    this.message = 'The user is not invited to join this group.';
   }
 }
 
@@ -421,7 +383,7 @@ class LeaveGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = LEAVE_GROUP;
-    this.message = 'Last admin can not leave the group';
+    this.message = 'Last admin can not leave the group when it still has other members.';
   }
 }
 
@@ -429,7 +391,7 @@ class DuplicateContextIdError extends ForbiddenError {
   constructor(contextId) {
     super();
     this.errorNum = DUPLICATE_CONTEXTID;
-    this.message = `ContextId: ${contextId} is duplicate`;
+    this.message = `The contextId ${contextId} is used by another user before.`;
     this.contextId = contextId;
   }
 }
@@ -438,7 +400,7 @@ class TooManyLinkRequestError extends TooManyRequestsError {
   constructor() {
     super();
     this.errorNum = TOO_MANY_LINK_REQUEST;
-    this.message = 'Only three contextIds can be linked every 24 hours';
+    this.message = 'Only three contextIds can be linked every 24 hours.';
   }
 }
 
@@ -446,7 +408,7 @@ class UnusedSponsorshipsError extends ForbiddenError {
   constructor(app) {
     super();
     this.errorNum = UNUSED_SPONSORSHIPS;
-    this.message = `The app: ${app} does not have unused sponsorships`;
+    this.message = `${app} app does not have unused sponsorships.`;
     this.app = app;
   }
 }
@@ -455,36 +417,67 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = 'The user is sponsored before';
+    this.message = 'The user is sponsored before.';
   }
 }
 
-class ForbiddenSponsorError extends ForbiddenError {
+class SponsorNotSupportedError extends ForbiddenError {
   constructor(app) {
     super();
-    this.errorNum = FORBIDDEN_SPONSOR_REQUEST;
-    this.message = `Can not relay sponsor requests for this app: ${app}`;
-    this.contextId = contextId;
-  }
-}
-
-class UpdateGroupPermissionError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = UPDATE_GROUP_PERMISSION;
-    this.message = 'Only admins can update the group';
-  }
-}
-
-class ReplacedBrightidError extends NotFoundError {
-  constructor() {
-    super();
-    this.errorNum = REPLACED_BRIGHTID;
-    this.message = 'The new brightid replaced with the reported brightid not found';
+    this.errorNum = SPONSOR_NOT_SUPPORTED;
+    this.message = `This node can not relay sponsor requests for ${app} app.`;
+    this.app = app;
   }
 }
 
 module.exports = {
+  CONTEXT_NOT_FOUND,
+  CONTEXTID_NOT_FOUND,
+  NOT_VERIFIED,
+  NOT_SPONSORED,
+  KEYPAIR_NOT_SET,
+  ETHPRIVATEKEY_NOT_SET,
+  OPERATION_NOT_FOUND,
+  USER_NOT_FOUND,
+  IP_NOT_SET,
+  APP_NOT_FOUND,
+  INVALID_EXPRESSION,
+  INVALID_TESTING_KEY,
+  INVALID_PASSCODE,
+  PASSCODE_NOT_SET,
+  GROUP_NOT_FOUND,
+  INVALID_OPERATION_NAME,
+  INVALID_SIGNATURE,
+  TOO_MANY_OPERATIONS,
+  INVALID_OPERATION_VERSION,
+  INVALID_TIMESTAMP,
+  NOT_RECOVERY_CONNECTIONS,
+  INVALID_HASH,
+  OPERATION_APPLIED_BEFORE,
+  TOO_BIG_OPERATION,
+  INELIGIBLE_NEW_USER,
+  ALREADY_HAS_PRIMARY_GROUP,
+  NEW_USER_BEFORE_FOUNDERS_JOIN,
+  INVALID_GROUP_TYPE,
+  DUPLICATE_GROUP,
+  INVALID_COFOUNDERS,
+  INELIGIBLE_NEW_ADMIN,
+  NOT_INVITED,
+  LEAVE_GROUP,
+  DUPLICATE_CONTEXTID,
+  TOO_MANY_LINK_REQUEST,
+  UNUSED_SPONSORSHIPS,
+  SPONSORED_BEFORE,
+  SPONSOR_NOT_SUPPORTED,
+  NOT_ADMIN,
+  ARANGO_ERROR,
+  BrightIDError,
+  BadRequestError,
+  InternalServerError,
+  TooManyRequestsError,
+  UnauthorizedError,
+  NotFoundError,
+  ForbiddenError,
   InvalidSignatureError,
   AppNotFoundError,
   TooManyOperationsError,
@@ -492,7 +485,7 @@ module.exports = {
   InvalidOperationVersionError,
   InvalidOperationTimestampError,
   InvalidOperationHashError,
-  InvalidRecoveryConnectionsError,
+  NotRecoveryConnectionsError,
   OperationNotFoundError,
   OperationAppliedBeforeError,
   TooBigOperationError,
@@ -501,7 +494,7 @@ module.exports = {
   ContextIdNotFoundError,
   GroupNotFoundError,
   NotSponsoredError,
-  CanNotBeVerifiedError,
+  NotVerifiedError,
   InvalidExpressionError,
   KeypairNotSetError,
   EthPrivatekeyNotSetError,
@@ -509,26 +502,19 @@ module.exports = {
   InvalidTestingKeyError,
   PasscodeNotSetError,
   InvalidPasscodeError,
-  InvalidGroupIdError,
-  InvalidInviterError,
   IneligibleNewUserError,
+  NotAdminError,
   AlreadyHasPrimaryGroupError,
   NewUserBeforeFoundersJoinError,
-  InvalidDismisserError,
   InvalidGroupTypeError,
   DuplicateGroupError,
   InvalidCoFoundersError,
-  FoundersPrimaryGroupError,
   IneligibleNewAdminError,
-  AddAdminPermissionError,
   NotInvitedError,
-  DeleteGroupPermissionError,
   LeaveGroupError,
   DuplicateContextIdError,
   TooManyLinkRequestError,
   UnusedSponsorshipsError,
   SponsoredBeforeError,
-  ForbiddenSponsorError,
-  UpdateGroupPermissionError,
-  ReplacedBrightidError,
+  SponsorNotSupportedError,
 }

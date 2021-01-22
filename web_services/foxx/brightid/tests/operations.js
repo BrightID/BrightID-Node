@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
+const errors = require('../errors.js');
 const _ = require('lodash');
 const { getMessage } = require('../operations');
 const arango = require('@arangodb').db;
@@ -439,7 +440,7 @@ describe('operations', function(){
       body: op,
       json: true
     });
-    resp.json.result.message.should.equal('The user is sponsored before');
+    resp.json.result.errorNum.should.equal(errors.SPONSORED_BEFORE);
   });
 
   it('should be able to "Sponsor" before linking', function () {

@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require('../db.js');
+const errors = require('../errors.js');
 const arango = require('@arangodb').db;
 const query = require('@arangodb').query;
 const chai = require('chai');
@@ -56,11 +57,11 @@ describe('links & sponsorships', function () {
     sponsorshipsColl.truncate();
   });
   context('linkContextId()', function() {
-    it('should throw "ContextId: {contextId} is duplicate" for used contextId', function(){
+    it('should throw DuplicateContextIdError for used contextId', function(){
       db.linkContextId('2', 'testContext', 'used', 5);
       (() => {
         db.linkContextId('3', 'testContext', 'used', 10);
-      }).should.throw('ContextId: used is duplicate');
+      }).should.throw(errors.DuplicateContextIdError);
     });
     it('should allow same user to relink used contextIds', function(){
       db.linkContextId('2', 'testContext', 'second', 11);
@@ -75,7 +76,7 @@ describe('links & sponsorships', function () {
       db.linkContextId('3', 'testContext', 'testContextId3', 20);
       (() => {
         db.linkContextId('3', 'testContext', 'testContextId4', 25);
-      }).should.throw('Only three contextIds can be linked every 24 hours');
+      }).should.throw(errors.TooManyLinkRequestError);
     });
     it('should be able to link new contextId after 24 hours', function(){
       db.linkContextId('3', 'testContext', 'testContextId4', 24*3600*1000 + 25);
@@ -85,10 +86,10 @@ describe('links & sponsorships', function () {
     it('should be able to sponsor a user if app has unused sponsorships and user is not sponsored before', function() {
       db.sponsor({ id: '2', app: 'testApp', timestamp: 0 });
     });
-    it('should throw "The app: {app} does not have unused sponsorships" if app has no unused sponsorship', function(){
+    it('should throw UnusedSponsorshipsError if app has no unused sponsorship', function(){
       (() => {
         db.sponsor({ id: '3', app: 'testApp', timestamp: 0 });
-      }).should.throw('The app: testApp does not have unused sponsorships');
+      }).should.throw(errors.UnusedSponsorshipsError);
     });
   });
 });

@@ -42,6 +42,7 @@ def process(data, block_timestamp):
         print('error in parsing operation')
         print('data', data_str)
         print('error', e)
+        return
 
     r = requests.put(url, json=op)
     resp = r.json()

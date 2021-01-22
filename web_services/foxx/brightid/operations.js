@@ -30,9 +30,6 @@ const verifyUserSig = function(message, id, sig) {
 
 const verifyAppSig = function(message, app, sig) {
   app = db.getApp(app);
-  if (!app) {
-    throw new errors.AppNotFoundError();
-  }
   if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(app.sponsorPublicKey))) {
     throw new errors.InvalidSignatureError();
   }
@@ -62,9 +59,10 @@ const senderAttrs = {
 let operationsCount = {};
 let resetTime = 0;
 function checkLimits(op, timeWindow, limit) {
-  if (Date.now() > resetTime) {
+  const now = Date.now();
+  if (now > resetTime) {
     operationsCount = {};
-    resetTime =  Date.now() + timeWindow;
+    resetTime = now + timeWindow;
   }
   const senders = senderAttrs[op.name].map(attr => op[attr]);
   const usersColl = arango._collection('users');
@@ -99,7 +97,8 @@ function checkLimits(op, timeWindow, limit) {
       return;
     }
   }
-  throw new errors.TooManyOperationsError();
+  throw new errors.TooManyOperationsError(
+    senders, resetTime - now, timeWindow, limit);
 }
 
 const signerAndSigs = {
@@ -121,10 +120,10 @@ const signerAndSigs = {
 
 function verify(op) {
   if (op.v != 5) {
-    throw new errors.InvalidOperationVersionError();
+    throw new errors.InvalidOperationVersionError(op.v);
   }
   if (op.timestamp > Date.now() + TIME_FUDGE) {
-    throw new errors.InvalidOperationTimestampError();
+    throw new errors.InvalidOperationTimestampError(op.timestamp);
   }
 
   let message = getMessage(op);
@@ -135,7 +134,7 @@ function verify(op) {
     if (op.id1 == op.id2 ||
         !recoveryConnections.includes(op.id1) ||
         !recoveryConnections.includes(op.id2)) {
-      throw new errors.InvalidRecoveryConnectionsError();
+      throw new errors.NotRecoveryConnectionsError();
     }
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
@@ -210,7 +209,7 @@ function apply(op) {
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else {
-    throw new errors.InvalidOperationNameError();
+    throw new errors.InvalidOperationNameError(op['name']);
   }
 }
 

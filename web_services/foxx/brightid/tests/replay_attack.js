@@ -3,6 +3,7 @@
 const stringify = require('fast-json-stable-stringify');
 const arango = require('@arangodb').db;
 const { getMessage } = require('../operations');
+const errors = require('../errors');
 const request = require("@arangodb/request");
 const nacl = require('tweetnacl');
 nacl.setPRNG(function(x, n) {
@@ -101,15 +102,14 @@ describe('replay attack on operations', function () {
       body: op,
       json: true
     });
-    resp3.status.should.equal(400);
-    resp3.json.errorMessage.should.equal(`The operation represented by operationHash: ${h} was applied before`);
+    resp3.status.should.equal(403);
+    resp3.json.errorNum.should.equal(errors.OPERATION_APPLIED_BEFORE);
     op.blockTime = op.timestamp;
 
     const resp4 = request.put(`${applyBaseUrl}/operations/${h}`, {
       body: op,
       json: true
     });
-    resp4.json.success.should.equal(true);
-    resp4.json.state.should.equal('duplicate');
+    resp4.json.result.errorNum.should.equal(errors.OPERATION_APPLIED_BEFORE);
   });
 });
