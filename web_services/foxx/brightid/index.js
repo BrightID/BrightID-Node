@@ -42,9 +42,9 @@ const handlers = {
     // verify signature
     operations.verify(op);
 
-    // allow 60 operations in 15 minutes window by default
-    const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
-    const limit = module.context.configuration.operationsLimit || 60;
+    // allow limited number of operations to be posted in defined time window
+    const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
+    const limit = module.context.configuration.operationsLimit;
     operations.checkLimits(op, timeWindow, limit);
 
     if (op.name == 'Link ContextId') {

@@ -1,34 +1,41 @@
 ### release a new version
  
 #### Build from git repo
-- install dappnode SDK: `npm install -g @dappnode/dappnodesdk`
-- Build the package using compose file for DAppNode: 
-  `dappnodesdk build --compose_file_name docker-compose_Dappnode.yml`
+Precondition: install dappnode SDK: `npm install -g @dappnode/dappnodesdk`
+
+**When dappnodesdk supports the `--compose_file_name` paremeter:**
+  > dappnodesdk build --compose_file_name docker-compose_Dappnode.yml
   
-### publish package
-**TODO**
+**Without `--compose_file_name` parameter**
 
-## URLs:
- - ArangoDB WebUI: http://db.brightid-node.public.dappnode:8529/
- - BrightID node API: http://web.brightid-node.public.dappnode/brightid/v5/
- - Profile service: http://web.brightid-node.public.dappnode/profile/ 
-
-### TODOs:
-- Set upstream version 
-
-#### DONE:
-- Add setup wizard to make sure user sets correct IDChain endpoint, Ethereum mainnet
-  endpoint and private key for consensus packages
-- Add logo
-- Make private key for consensus sender/recevier optional so it's easy to spin up a "read-only" node
-- Use IDChain instance running on DAppNode by default
-- Detect initial run and populate database accordingly
-- Make sure nginx.conf is correct in web container
-  -> DONE (new container "web" based on nginx image)
-- Setup port mapping to access web container (API) from external
-  -> NOT NEEDED - If you connect to DAppNode VPN, you can access at 
-     web.brightid-node.public.dappnode (e.g. API v5: http://web.brightid-node.public.dappnode/brightid/v5/)
-     External access to node API is not required unless you want to run a real public node API
-- Setup network. All containers specified in docker-compose will join a common network.
-    - Update service config to use correct endpoints instead of localhost
+1. Make a backup of `docker-compose.yml`
+1. copy `docker-compose_DAppNode.yml` to `docker-compose.yml`
+1. Execute build command: `dappnodesdk build`
+1. The build process will modify `docker-compose.yml` with updated versions, 
+      so you need to copy it back to `docker_compose_DAppNode.yml` after building!
+1. Restore original docker-compose.yml from step 1
+1. Commit changed files to git
   
+### ipfs pinning
+Use an IPS pinning service to pin all files contained in the `build_<version>` folder.
+
+### Publish package
+**Preconditions**
+- "frame.sh" is installed
+- "hot" (your BDev token holding) account and "Smart" (The BDev agent) account are imported in frame
+- Metamask extension is disabled in your browser
+- Frame extension is enabled in your browser
+
+**Steps**
+1. Prepare publishing: `dappnodesdk publish <major|minor|patch>`
+1. Open the pre-filled publish link (The last line of dappnodeSDK publish command)
+1. Double-check that your "smart" BDEV agent account is selected in Frame
+1. Click "Connect" Button. This will actually connect the page with web3 from the Frame extension.
+   If this is the first time you use frame with dappnode, approve the connection request from my.dappnode in frame
+1. Click "Publish" button 
+1. Approve the transaction in Frame
+   
+Now a new vote should be created in BDEV Aragon! 
+
+Once the vote gets enacted, the BDEV agent will execute the publish transaction.
+

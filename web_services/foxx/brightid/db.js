@@ -87,7 +87,7 @@ function connect(op) {
   connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
 
   if (! conn) {
-    connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
+    connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp, initTimestamp: timestamp });
   } else {
     connectionsColl.update(conn, { level, reportReason, replacedWith, requestProof, timestamp });
   }
@@ -835,13 +835,15 @@ function upsertOperation(op) {
 function getState() {
   const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
-  const initOp = operationsColl.byExample({'state': 'init'}).toArray().length;
-  const sentOp = operationsColl.byExample({'state': 'sent'}).toArray().length;
+  const initOp = operationsColl.byExample({'state': 'init'}).count();
+  const sentOp = operationsColl.byExample({'state': 'sent'}).count();
+  const verificationsHashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
   return {
     lastProcessedBlock,
     verificationsBlock,
     initOp,
-    sentOp
+    sentOp,
+    verificationsHashes
   }
 }
 

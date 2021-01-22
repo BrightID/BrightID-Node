@@ -1,0 +1,17 @@
+{
+  "users": {
+    "type": "full"
+  },
+  "connections": {
+    "type": "full"
+  },
+  "groups": {
+    "type": "full"
+  },
+  "usersInGroups": {
+    "type": "full"
+  },
+  "verifications": {
+    "type": "full"
+  }
+}

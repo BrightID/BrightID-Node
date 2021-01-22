@@ -1,23 +1,39 @@
 import time
 from arango import ArangoClient
+from . import utils
 import config
 
+SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 
-def verify(fname):
+
+def verify(block):
     print('DOLLAR FOR EVERYONE')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-    for admin in db['users'].find({'dfeAdmin': True}):
-        conns1 = [c['_to'] for c in db['connections'].find({'_from': admin['_id']}) if c['timestamp'] > 1564600000000]
-        conns2 = [c['_from'] for c in db['connections'].find({'_to': admin['_id']}) if c['timestamp'] > 1564600000000]
-        for u in conns1 + conns2:
-            u = u.replace('users/', '')
-            verifications = set([v['name'] for v in db['verifications'].find({'user': u})])
-            if 'DollarForEveryone' not in verifications:
-                db['verifications'].insert({
-                    'name': 'DollarForEveryone',
-                    'user': u,
-                    'timestamp': int(time.time() * 1000)
-                })
-                print('user: {}\tverification: DollarForEveryone'.format(u))
-    verifiedCount = db['verifications'].find({'name': 'DollarForEveryone'}).count()
+    snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
+
+    admins = [u['_id'] for u in snapshot_db['users'].find({'dfeAdmin': True})]
+    verifieds = snapshot_db.aql.execute('''
+        FOR c IN connections
+            FILTER c._from IN @admins
+                AND c.level IN @levels
+                AND c.timestamp > @time_limit
+                RETURN c._to
+    ''', bind_vars={
+        'admins': admins,
+        'levels': SEED_CONNECTION_LEVELS,
+        'time_limit': 1564600000000
+    })
+
+    for verified in verifieds:
+        verified = verified.replace('users/', '')
+        db['verifications'].insert({
+            'name': 'DollarForEveryone',
+            'user': verified,
+            'block': block,
+            'timestamp': int(time.time() * 1000),
+            'hash': utils.hash('DollarForEveryone', verified)
+        })
+
+    verifiedCount = db['verifications'].find(
+        {'name': 'DollarForEveryone', 'block': block}).count()
     print('verifieds: {}\n'.format(verifiedCount))
