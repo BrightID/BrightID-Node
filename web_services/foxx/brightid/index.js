@@ -511,6 +511,7 @@ router.get('/verifications/:app', handlers.allVerificationsGet)
   .response(schemas.allVerificationsGetResponse)
   .error(404, 'context not found');
 
+// this route is deprecated and will be removed on v6
 router.get('/ip', handlers.ipGet)
   .summary("Get this server's IPv4 address")
   .response(schemas.ipGetResponse);
