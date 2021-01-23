@@ -226,7 +226,7 @@ const handlers = {
     } else if (testblocks.includes('sponsorship')) {
       throw new errors.NotSponsoredError(contextId);
     } else if (testblocks.includes('verification')) {
-      throw new errors.CanNotBeVerifiedError(contextId, appKey);
+      throw new errors.NotVerifiedError(contextId, appKey);
     }
 
     if (context.idsAsHex) {
@@ -258,7 +258,7 @@ const handlers = {
       throw new errors.InvalidExpressionError(app.name, app.verification, err);
     }
     if (! verified) {
-      throw new errors.CanNotBeVerifiedError(contextId, appKey);
+      throw new errors.NotVerifiedError(contextId, appKey);
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
