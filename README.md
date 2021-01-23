@@ -10,11 +10,11 @@ Many issues have [bounties assigned](https://github.com/orgs/BrightID/projects/2
 
 ## Dev Setup
 
-Use the [development guide](https://github.com/BrightID/BrightID-Node/wiki/Development-Guide) to setup a development environment and workflow.
+* [Development guide](https://github.com/BrightID/BrightID-Node/wiki/Development-Guide) for setting up a development environment and workflow.
 
 ## Running a Node
 
-[Running a node wiki page.](https://github.com/BrightID/BrightID-Node/wiki/Installation-Guide)
+* [Running a node wiki page.](https://github.com/BrightID/BrightID-Node/wiki/Installation-Guide)
 
 ## Integration
 
