@@ -71,11 +71,6 @@ describe('groups', function () {
     it('should have three connections', function(){
       db.userConnections('a').length.should.equal(3);
     });
-    it('should be eligible to join the group', function (){
-      const eligibleGroups = usersColl.document('a').eligible_groups;
-      eligibleGroups.should.not.be.empty;
-      eligibleGroups[0].should.equal('g2');
-    });
     it('should not be able to join the group without invitation', function (){
       (() => {
         db.addMembership('g2', 'a', Date.now());
@@ -109,12 +104,7 @@ describe('groups', function () {
         db.addMembership('g3', 'd', Date.now());
       }).should.throw('not invited to join this group');
     });
-    it('admins should not be able to invite non-eligible users to the group', function (){
-      (() => {
-        db.invite('a', 'g', 'g3', 'data', Date.now());
-      }).should.throw('The new user is not eligible to join this group');
-    });
-    it('admins should be able to invite eligible users to the group', function (){
+    it('admins should be able to invite any users to the group', function (){
       db.invite('b', 'd', 'g3', 'data', Date.now());
       db.userInvitedGroups('d').map(group => group.id).should.deep.equal(['g3']);
     });

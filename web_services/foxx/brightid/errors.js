@@ -314,14 +314,6 @@ class NotAdminError extends ForbiddenError {
   }
 }
 
-class IneligibleNewUserError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = INELIGIBLE_NEW_USER;
-    this.message = 'The new user is not eligible to join this group.';
-  }
-}
-
 class AlreadyHasPrimaryGroupError extends ForbiddenError {
   constructor() {
     super();
@@ -455,7 +447,6 @@ module.exports = {
   INVALID_HASH,
   OPERATION_APPLIED_BEFORE,
   TOO_BIG_OPERATION,
-  INELIGIBLE_NEW_USER,
   ALREADY_HAS_PRIMARY_GROUP,
   NEW_USER_BEFORE_FOUNDERS_JOIN,
   INVALID_GROUP_TYPE,
@@ -502,7 +493,6 @@ module.exports = {
   InvalidTestingKeyError,
   PasscodeNotSetError,
   InvalidPasscodeError,
-  IneligibleNewUserError,
   NotAdminError,
   AlreadyHasPrimaryGroupError,
   NewUserBeforeFoundersJoinError,

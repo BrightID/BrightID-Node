@@ -138,7 +138,7 @@ function userToDic(userId) {
     // flaggers is deprecated and will be replaced by reporters on v6
     flaggers: getReporters(u._key),
     createdAt: u.createdAt,
-    // eligible_groups is deprecated and will be replaced by eligibleGroups on v6
+    // eligible_groups is deprecated and will be removed on v6
     eligible_groups: u.eligible_groups || []
   }
 }
@@ -160,15 +160,7 @@ function groupMembers(groupId) {
   }).toArray().map(e => e._from.replace('users/', ''));
 }
 
-function isEligible(groupId, userId) {
-  const conns = connectionsColl.byExample({
-    _to: 'users/' + userId
-  }).toArray().map(u => u._from.replace("users/", ""));
-  const members = groupMembers(groupId);
-  const count = _.intersection(conns, members).length;
-  return count >= members.length / 2;
-}
-
+// this function is deprecated and will be removed on v6
 // storing eligible groups on users documents and updating them
 // from this route will be removed when clients updated to use
 // new GET /groups/{id} result to show eligibles in invite list
@@ -214,6 +206,7 @@ function updateEligibleGroups(userId, connections, currentGroups) {
   return eligible_groups;
 }
 
+// this function is deprecated and will be removed on v6
 function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
@@ -300,9 +293,6 @@ function invite(inviter, invitee, groupId, data, timestamp) {
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(inviter)) {
     throw new errors.NotAdminError();
-  }
-  if (! isEligible(groupId, invitee)) {
-    throw new errors.IneligibleNewUserError();
   }
   if (group.type == 'primary' && hasPrimaryGroup(invitee)) {
     throw new errors.AlreadyHasPrimaryGroupError();
@@ -459,10 +449,6 @@ function addMembership(groupId, key, timestamp) {
 
   if (group.type == 'primary' && hasPrimaryGroup(key)) {
     throw new errors.AlreadyHasPrimaryGroupError();
-  }
-
-  if (! isEligible(groupId, key)) {
-    throw new errors.IneligibleNewUserError();
   }
 
   const invite = invitationsColl.firstExample({

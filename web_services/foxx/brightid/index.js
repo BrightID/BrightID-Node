@@ -106,6 +106,7 @@ const handlers = {
     });
 
     const invites = db.userInvitedGroups(id);
+    // this is deprecated and will be removed on v6
     db.updateEligibleGroups(id, connections, groups);
 
     res.send({
@@ -436,6 +437,7 @@ const handlers = {
       data: {
         members: db.groupMembers(id),
         invites: db.groupInvites(id),
+        // the eligibles is deprecated and will be removed on v6
         eligibles: db.updateEligibles(id),
         admins: group.admins,
         founders: group.founders,
