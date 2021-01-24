@@ -62,8 +62,8 @@ def save_snapshot(block):
     fnl_dir_name = f'{dir_name}_fnl'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, 'collections.json')
-    os.system(
-        f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
+    res = os.system(f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
+    assert res == 0, "dumping snapshot failed"
     shutil.move(dir_name, fnl_dir_name)
 
 
@@ -113,9 +113,11 @@ def wait():
         if result != 0:
             print('db is not running yet')
             continue
-        services = [service['mount'] for service in db.foxx.services()]
-        if '/apply5' not in services:
-            print('apply5 is not installed yet')
+        # wait for ws to start upgrading foxx services and running setup script
+        time.sleep(10)
+        services = [service['name'] for service in db.foxx.services()]
+        if 'apply' not in services or 'BrightID-Node' not in services:
+            print('foxx services are not running yet')
             continue
         collections = [c['name'] for c in db.collections()]
         if 'apps' not in collections:

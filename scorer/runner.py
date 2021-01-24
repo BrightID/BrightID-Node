@@ -1,7 +1,7 @@
 import os
+import socket
 import time
 import shutil
-import socket
 import traceback
 from arango import ArangoClient
 from py_expression_eval import Parser
@@ -101,7 +101,8 @@ def process(snapshot):
     print(f'{get_time()} - processing {snapshot} started ...')
     # restore snapshot
     fname = os.path.join(config.SNAPSHOTS_PATH, snapshot)
-    os.system(f"arangorestore --server.username 'root' --server.password '' --server.endpoint 'tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}' --server.database snapshot --create-database true --create-collection true --import-data true --input-directory {fname}")
+    res = os.system(f"arangorestore --server.username 'root' --server.password '' --server.endpoint 'tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}' --server.database snapshot --create-database true --create-collection true --import-data true --input-directory {fname}")
+    assert res == 0, "restoring snapshot failed"
 
     block = get_block(snapshot)
     for v in verifiers:
@@ -143,6 +144,12 @@ def wait():
         sock.close()
         if result != 0:
             print('db is not running yet')
+            continue
+        # wait for ws to start upgrading foxx services and running setup script
+        time.sleep(10)
+        services = [service['name'] for service in db.foxx.services()]
+        if 'apply' not in services or 'BrightID-Node' not in services:
+            print('foxx services are not running yet')
             continue
         return
 
