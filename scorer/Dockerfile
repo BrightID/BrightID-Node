@@ -5,10 +5,10 @@ ADD . /code
 WORKDIR /code/
 RUN apt-get update
 RUN apt-get install -y --no-install-recommends build-essential gcc
-ADD https://github.com/BrightID/BrightID-AntiSybil/archive/v1.2.0.tar.gz ./
-RUN tar -xzf v1.2.0.tar.gz && rm v1.2.0.tar.gz
+ADD https://github.com/BrightID/BrightID-AntiSybil/archive/v1.2.1.tar.gz ./
+RUN tar -xzf v1.2.1.tar.gz && rm v1.2.1.tar.gz
 # Install with --user prefix so all installed packages are easy to copy in next stage
-RUN pip3 install --user BrightID-AntiSybil-1.2.0/.
+RUN pip3 install --user BrightID-AntiSybil-1.2.1/.
 RUN pip3 install --user -r requirements.txt
 
 # 2nd stage
