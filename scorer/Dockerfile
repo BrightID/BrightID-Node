@@ -1,10 +1,8 @@
 #1st stage
-FROM python:3.7-slim as builder
+FROM python:3.7 as builder
 
 ADD . /code
 WORKDIR /code/
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends build-essential gcc
 ADD https://github.com/BrightID/BrightID-AntiSybil/archive/v1.2.1.tar.gz ./
 RUN tar -xzf v1.2.1.tar.gz && rm v1.2.1.tar.gz
 # Install with --user prefix so all installed packages are easy to copy in next stage

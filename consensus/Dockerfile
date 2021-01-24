@@ -1,7 +1,5 @@
 # 1st stage
-FROM python:3.7-slim as builder
-RUN apt-get update
-RUN apt-get install -y --no-install-recommends build-essential gcc
+FROM python:3.7 as builder
 
 ADD . /code
 WORKDIR /code/
