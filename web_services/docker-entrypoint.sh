@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -eo pipefail
 /wait-for.sh $BN_ARANGO_HOST:$BN_ARANGO_PORT
 
