@@ -44,7 +44,6 @@ services:
       BN_CONSENSUS_SNAPSHOTS_PERIOD: "240"
       BN_CONSENSUS_APPLY_URL: "/_db/_system/apply{v}/operations/{hash}"
       BN_CONSENSUS_DUMP_URL: /_api/replication/dump
-      BN_CONSENSUS_MAX_COLLECTION_SIZE: "1000000000"
       BN_CONSENSUS_PRIVATE_KEY: ""
       BN_CONSENSUS_GAS: "200000"
       BN_CONSENSUS_GAS_PRICE: "10000000000"
@@ -64,7 +63,6 @@ services:
       BN_CONSENSUS_SNAPSHOTS_PERIOD: "240"
       BN_CONSENSUS_APPLY_URL: "/_db/_system/apply{v}/operations/{hash}"
       BN_CONSENSUS_DUMP_URL: /_api/replication/dump
-      BN_CONSENSUS_MAX_COLLECTION_SIZE: "1000000000"
       BN_CONSENSUS_PRIVATE_KEY: ""
       BN_CONSENSUS_GAS: "200000"
       BN_CONSENSUS_GAS_PRICE: "10000000000"
