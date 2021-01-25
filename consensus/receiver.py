@@ -49,7 +49,7 @@ def process(data, block_timestamp):
     print(resp)
     # resp is returned from PUT /operations handler
     if resp.get('state') == 'failed':
-        if resp['result'].get('errorNum') == errno.CONFLICT:
+        if resp['result'].get('arangoErrorNum') == errno.CONFLICT:
             print('retry on conflict')
             return process(data, block_timestamp)
     # resp is returned from arango not PUT /operations handler
