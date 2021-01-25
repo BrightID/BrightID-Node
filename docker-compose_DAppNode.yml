@@ -10,6 +10,8 @@ services:
       BN_WS_PUBLIC_KEY: ""
       BN_WS_PRIVATE_KEY: ""
       BN_WS_ETH_PRIVATE_KEY: ""
+      BN_WS_OPERATIONS_TIME_WINDOW: "900"
+      BN_WS_OPERATIONS_LIMIT: "60"
       BN_ARANGO_PROTOCOL: http
       BN_ARANGO_HOST: db.brightid-node.public.dappnode
       BN_ARANGO_PORT: "8529"
