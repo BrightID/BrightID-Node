@@ -44,6 +44,7 @@ const variables = [
   { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
   {'_key': 'VERIFICATIONS_HASHES', 'hashes': []},
   {'_key': 'VERIFICATION_BLOCK', 'value': 0},
+  {'_key': 'LAST_BLOCK_TIME', 'value': 0},
 ]
 
 function createCollections() {
@@ -272,6 +273,12 @@ function v5_8() {
   for (let verificationName of ['Yekta_0', 'Yekta_1', 'Yekta_2', 'Yekta_3', 'Yekta_4', 'Yekta_5']) {
     verificationsColl.removeByExample({ name: verificationName });
   }
+
+  console.log("adding block to verifications");
+  block = variablesColl.document('VERIFICATION_BLOCK').value;
+  query`
+    FOR v in verifications
+      UPDATE { _key: v._key, block: ${block} } IN verifications`;
 
   console.log("adding initTimestamp to connections");
   query`

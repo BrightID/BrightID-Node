@@ -69,14 +69,7 @@ def save_snapshot(block):
 
 def main():
     variables = db.collection('variables')
-    if variables.has('LAST_BLOCK'):
-        last_block = variables.get('LAST_BLOCK')['value']
-    else:
-        last_block = w3.eth.getBlock('latest').number
-        variables.insert({
-            '_key': 'LAST_BLOCK',
-            'value': last_block
-        })
+    last_block = variables.get('LAST_BLOCK')['value']
 
     while True:
         # This sleep is for not calling the ethereum node endpoint
@@ -97,10 +90,11 @@ def main():
             for i, tx in enumerate(block['transactions']):
                 if tx['to'] and tx['to'].lower() in (config.TO_ADDRESS.lower(), config.DEPRECATED_TO_ADDRESS.lower()):
                     process(tx['input'], block.timestamp)
+            variables.update({'_key': 'LAST_BLOCK', 'value': block_number})
+            variables.update({'_key': 'LAST_BLOCK_TIME', 'value': block['timestamp']})
             if block_number % config.SNAPSHOTS_PERIOD == 0:
                 save_snapshot(block_number)
             last_block = block_number
-            variables.update({'_key': 'LAST_BLOCK', 'value': last_block})
 
 
 def wait():

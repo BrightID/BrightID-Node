@@ -13,5 +13,8 @@
   },
   "verifications": {
     "type": "full"
+  },
+  "variables": {
+    "type": "full"
   }
 }
