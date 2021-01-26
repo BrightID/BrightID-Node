@@ -30,19 +30,25 @@ def verify(block):
     for seed_group in seed_groups:
         connections = seed_connections(seed_group['_id'])
         quota = seed_group.get('quota', 0)
+        exceeded_counter = 0
         for c in connections:
             u = c['_to'].replace('users/', '')
             if u not in users:
                 users[u] = {'connected': set(), 'reported': set()}
 
             if c['level'] in ['just met', 'already known', 'recovery']:
-                users[u]['connected'].add(seed_group['_key'])
                 already_connected = seed_group['_key'] in users[u]['connected']
                 ignore_quota = c['initTimestamp'] < IGNORE_QUOTA_BEFORE
                 if not (already_connected or ignore_quota):
                     quota -= 1
+                if quota >= 0:
+                    users[u]['connected'].add(seed_group['_key'])
+                else:
+                    exceeded_counter += 1
+
             elif c['level'] == 'reported':
                 users[u]['reported'].add(seed_group['_key'])
+        print(f'exceeded from quota, region: {seed_group.get("region")}, count: {exceeded_counter}')
 
     for u, d in users.items():
         # penalizing users that are reported by seeds
