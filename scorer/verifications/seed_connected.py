@@ -56,7 +56,7 @@ def verify(block):
         # load connection that members of this se
         connections = seed_connections(seed_group['_id'], last_block_time * 1000)
         quota = seed_group.get('quota', 0)
-        counter = counts.get(seed_group['_key'])
+        counter = counts.get(seed_group['_key'], 0)
         for c in connections:
             u = c['_to'].replace('users/', '')
             if u not in users:
