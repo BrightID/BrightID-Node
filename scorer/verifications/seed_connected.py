@@ -54,7 +54,7 @@ def verify(block):
     seed_groups = list(snapshot_db['groups'].find({'seed': True}))
     for seed_group in seed_groups:
         # load connection that members of this se
-        connections = seed_connections(seed_group['_id'], last_block_time)
+        connections = seed_connections(seed_group['_id'], last_block_time * 1000)
         quota = seed_group.get('quota', 0)
         counter = counts.get(seed_group['_key'])
         for c in connections:
