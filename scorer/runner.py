@@ -87,6 +87,7 @@ def update_verifications_hashes(block):
 
 
 def remove_verifications_before(block):
+    print(f'Removing verifications with block smaller than {block}')
     db.aql.execute('''
         FOR v IN verifications
             FILTER  v.block < @remove_border
@@ -114,10 +115,11 @@ def process(snapshot):
 
     update_apps_verifications(block)
     update_verifications_hashes(block)
-    variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
 
-    # remove verifications older than 2 blocks
-    remove_verifications_before(block - 2)
+    # only keep verifications for this snapshot and previous one
+    last_block = variables.get('VERIFICATION_BLOCK')['value']
+    remove_verifications_before(last_block)
+    variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
     # remove the snapshot file
     shutil.rmtree(fname, ignore_errors=True)
     print(f'{get_time()} - processing {fname} completed')
