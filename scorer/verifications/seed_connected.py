@@ -14,8 +14,8 @@ def seed_connections(group_id, after):
     members = [ug['_from'] for ug in cursor]
     return snapshot_db.aql.execute('''
         FOR c in connections
-            FILTER c.timestamp > @after
-                AND c._from IN @members
+            FILTER c._from IN @members
+                AND (c.timestamp > @after OR c.level == 'reported')
             SORT c.timestamp, c._from, c._to ASC
             RETURN c
     ''', bind_vars={'after': after, 'members': members})
