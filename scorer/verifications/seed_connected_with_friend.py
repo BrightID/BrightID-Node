@@ -27,6 +27,7 @@ def add_verification_to(user, friend, block):
     })
     verifieds.add(user)
 
+
 def get_seeds():
     seeds = set()
     for seed_group in snapshot_db['groups'].find({'seed': True}):
@@ -59,7 +60,7 @@ def verify(block):
     for seed in seeds:
         # seeds get verified by default
         add_verification_to(seed, None, block)
-        #find users that seed connected to them recently
+        # find users that seed connected to them recently
         conns = snapshot_db.aql.execute('''
             FOR c IN connections
                 FILTER c._from == @seed

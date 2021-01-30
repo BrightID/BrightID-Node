@@ -33,4 +33,4 @@ def verify(block):
 
     verifiedCount = db['verifications'].find({
         'name': 'BrightID', 'block': block}).count()
-    print('verifieds: {}\n'.format(verifiedCount))
+    print(f'verifieds: {verifiedCount}\n')

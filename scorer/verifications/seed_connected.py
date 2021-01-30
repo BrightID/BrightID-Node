@@ -51,10 +51,11 @@ def verify(block):
             counts[g] = counts.get(g, 0) + 1
 
     last_block_time = snapshot_db['variables'].get('LAST_BLOCK_TIME')['value']
-    seed_groups = list(snapshot_db['groups'].find({'seed': True}))
+    seed_groups = snapshot_db['groups'].find({'seed': True})
     for seed_group in seed_groups:
         # load connection that members of this se
-        connections = seed_connections(seed_group['_id'], last_block_time * 1000)
+        connections = seed_connections(
+            seed_group['_id'], last_block_time * 1000)
         quota = seed_group.get('quota', 0)
         counter = counts.get(seed_group['_key'], 0)
         for c in connections:
@@ -69,7 +70,6 @@ def verify(block):
                     if counter <= quota:
                         users[u]['connected'].append(seed_group['_key'])
             elif c['level'] == 'reported':
-                already_reported = seed_group['_key'] in users[u]['reported']
                 users[u]['reported'].append(seed_group['_key'])
 
         spent = min(counter, quota)
@@ -79,7 +79,7 @@ def verify(block):
 
     for u, d in users.items():
         # penalizing users that are reported by seeds
-        rank = len(d['connected']) - len(d['reported'])*PENALTY
+        rank = len(d['connected']) - len(d['reported']) * PENALTY
         db['verifications'].insert({
             'name': 'SeedConnected',
             'user': u,
@@ -98,5 +98,4 @@ def verify(block):
                 AND v.block == @block
             RETURN v
     ''', bind_vars={'block': block}, count=True).count()
-
-    print('verifications: {}\n'.format(verifiedCount))
+    print(f'verifications: {verifiedCount}')
