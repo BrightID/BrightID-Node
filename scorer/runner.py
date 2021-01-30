@@ -106,12 +106,13 @@ def process(snapshot):
     assert res == 0, "restoring snapshot failed"
 
     block = get_block(snapshot)
+    db.aql.execute('''
+        FOR v IN verifications
+            FILTER  v.block == @block
+            REMOVE { _key: v._key } IN verifications
+        ''', bind_vars={'block': block})
     for v in verifiers:
-        try:
-            verifiers[v].verify(block)
-        except Exception as e:
-            print(f'Error in verifier: {e}')
-            traceback.print_exc()
+        verifiers[v].verify(block)
 
     update_apps_verifications(block)
     update_verifications_hashes(block)
