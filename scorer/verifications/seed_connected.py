@@ -70,7 +70,9 @@ def verify(block):
                     if counter <= quota:
                         users[u]['connected'].append(seed_group['_key'])
             elif c['level'] == 'reported':
-                users[u]['reported'].append(seed_group['_key'])
+                already_reported = seed_group['_key'] in users[u]['reported']
+                if not already_reported:
+                    users[u]['reported'].append(seed_group['_key'])
 
         spent = min(counter, quota)
         exceeded = max(counter - quota, 0)
