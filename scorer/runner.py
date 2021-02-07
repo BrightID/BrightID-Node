@@ -13,6 +13,7 @@ from verifications import brightid
 from verifications import seed_connected
 from verifications import dollar_for_everyone
 from verifications import seed_connected_with_friend
+from verifications import has_recovery_connections
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
@@ -22,7 +23,8 @@ verifiers = {
     'SeedConnectedWithFriend': seed_connected_with_friend,
     'Yekta': yekta,
     'BrightID': brightid,
-    'DollarForEveryone': dollar_for_everyone
+    'DollarForEveryone': dollar_for_everyone,
+    'HasRecoveryConnections': has_recovery_connections
 }
 
 
