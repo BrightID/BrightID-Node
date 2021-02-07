@@ -44,6 +44,16 @@ function connect(op) {
     requestProof,
     timestamp
   } = op;
+
+  const _from = 'users/' + key1;
+  const _to = 'users/' + key2;
+  if (level == 'recovery') {
+    const tf = connectionsColl.firstExample({ '_from': _to, '_to': _from });
+    if (!tf || !['already known', 'recovery'].includes(tf.level)) {
+      throw new errors.IneligibleRecoveryConnection();
+    }
+  }
+
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
   let u1 = loadUser(key1);
@@ -61,8 +71,6 @@ function connect(op) {
     usersColl.update(u2, { parent: key1 });
   }
 
-  const _from = 'users/' + key1;
-  const _to = 'users/' + key2;
   const conn = connectionsColl.firstExample({ _from, _to });
 
   if (level != 'reported') {

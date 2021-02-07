@@ -351,7 +351,31 @@ describe('operations', function(){
     groupsColl.document(groupId).url.should.equal(newUrl);
   });
 
+  it("should not be able to make a recovery connection when the other side connection is not equal to 'recovery' or 'already known'", function () {
+    const timestamp = Date.now();
+
+    let op = {
+      'v': 5,
+      'name': 'Connect',
+      'id1': u1.id,
+      'id2': u2.id,
+      'level': 'recovery',
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    apply(op);
+    connectionsColl.firstExample({
+      '_from': 'users/' + u1.id,
+      '_to': 'users/' + u2.id,
+    }).level.should.equal('just met');
+  });
+
   it('should be able to "Set Trusted Connections"', function () {
+    db.connect({id1: u2.id, id2: u1.id, level: 'already known'});
+    db.connect({id1: u3.id, id2: u1.id, level: 'already known'});
     const timestamp = Date.now();
     const op = {
       'v': 5,
@@ -365,13 +389,14 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
+
     connectionsColl.firstExample({
       '_from': 'users/' + u1.id,
       '_to': 'users/' + u2.id,
     }).level.should.equal('recovery');
     connectionsColl.firstExample({
       '_from': 'users/' + u1.id,
-      '_to': 'users/' + u2.id,
+      '_to': 'users/' + u3.id,
     }).level.should.equal('recovery');
   });
 

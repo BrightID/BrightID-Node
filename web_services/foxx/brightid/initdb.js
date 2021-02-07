@@ -292,7 +292,19 @@ function v5_8() {
     )[0] } IN connections`;
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8'];
+function v5_9() {
+  console.log("removing the recovery connections which another side connection's level is not 'already known' or 'recovery'");
+  query`
+    FOR c IN connections
+      FILTER c.level == 'recovery'
+      UPDATE { _key: c._key, level: (
+        FOR ch IN connections
+          FILTER ch._from == c._to AND ch._to == c._from
+          RETURN ch.level IN ['already known', 'recovery'] ? 'recovery' : 'just met'
+    )[0] } IN connections`;
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9'];
 
 function initdb() {
   createCollections();

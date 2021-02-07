@@ -53,6 +53,7 @@ describe('connections', function () {
     (conn1.reportReason === null).should.equal(true);
   });
   it('should be able to use "setRecoveryConnections" to set "recovery" as confidence level', function() {
+    db.connect({id1: 'b', id2: 'a', level: 'already known', timestamp});
     db.setRecoveryConnections(['b'], 'a', timestamp);
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
@@ -87,6 +88,7 @@ describe('connections', function () {
   });
 
   it('should be able to use "setSigningKey" to reset "signingKey" with "recovery" connections', function() {
+    db.connect({id1: 'c', id2: 'a', level: 'already known', timestamp});
     db.connect({id1: 'a', id2: 'c', level: 'recovery', timestamp});
     db.setSigningKey('newSigningKey', 'a', ['b', 'c'], timestamp);
     usersColl.document('a').signingKeys.should.deep.equal(['newSigningKey']);
@@ -124,11 +126,17 @@ describe('recovery connections', function () {
     connectionsColl.truncate();
     connectionsHistoryColl.truncate();
   });
+
   it('users should be able add or remove recovery connections', function() {
+    db.connect({id1: 'b', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'b', level: 'recovery', 'timestamp': 1});
+    db.connect({id1: 'c', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'c', level: 'recovery', 'timestamp': 1});
+    db.connect({id1: 'd', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'd', level: 'recovery', 'timestamp': 1});
+    db.connect({id1: 'e', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'e', level: 'recovery', 'timestamp': 2});
+    db.connect({id1: 'f', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'f', level: 'recovery', 'timestamp': 3});
     db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate', 'timestamp': 4});
 
@@ -144,6 +152,7 @@ describe('recovery connections', function () {
   });
 
   it("don't allow a recovery connection to be used for recovery if it is too new", function() {
+    db.connect({id1: 'g', id2: 'a', level: 'already known', 'timestamp': Date.now()});
     db.connect({id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now()});
 
     const recoveryConnections = db.getRecoveryConnections('a');
@@ -154,9 +163,13 @@ describe('recovery connections', function () {
     connectionsColl.truncate();
     connectionsHistoryColl.truncate();
     const firstConnTime = Date.now() - 4*24*60*60*1000;
+    db.connect({id1: 'b', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'b', level: 'recovery', 'timestamp': firstConnTime});
+    db.connect({id1: 'c', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'c', level: 'recovery', 'timestamp': firstConnTime + (5*60*60*1000)});
+    db.connect({id1: 'd', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'd', level: 'recovery', 'timestamp': firstConnTime + (22*60*60*1000)});
+    db.connect({id1: 'e', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'e', level: 'recovery', 'timestamp': firstConnTime + (30*60*60*1000)});
     const recoveryConnections = db.getRecoveryConnections('a');
     recoveryConnections.should.deep.equal(['b', 'c', 'd']);
