@@ -4,75 +4,28 @@ import time
 import shutil
 import traceback
 from arango import ArangoClient
-from py_expression_eval import Parser
 from hashlib import sha256
 import base64
 import config
-from verifications import yekta
-from verifications import brightid
-from verifications import seed_connected
-from verifications import dollar_for_everyone
-from verifications import seed_connected_with_friend
+import verifications
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 variables = db.collection('variables')
 verifiers = {
-    'SeedConnected': seed_connected,
-    'SeedConnectedWithFriend': seed_connected_with_friend,
-    'Yekta': yekta,
-    'BrightID': brightid,
-    'DollarForEveryone': dollar_for_everyone
+    'SeedConnected': verifications.seed_connected,
+    'SeedConnectedWithFriend': verifications.seed_connected_with_friend,
+    'Yekta': verifications.yekta,
+    'BrightID': verifications.brightid,
+    'DollarForEveryone': verifications.dollar_for_everyone,
+    'apps': verifications.apps,
 }
-
-
-def update_apps_verifications(block):
-    print('Update verifications for apps')
-    parser = Parser()
-    apps = {app["_key"]: app['verification']
-            for app in db['apps'] if app.get('verification')}
-    batch_db = db.begin_batch_execution(return_result=True)
-    batch_col = batch_db.collection('verifications')
-    counter = 0
-    for user in db['users']:
-        verifications = {}
-        for v in db['verifications'].find({'block': block, 'user': user['_key']}):
-            verifications[v['name']] = True
-            for k in v:
-                if k in ['_key', '_id', '_rev', 'user', 'name']:
-                    continue
-                verifications[f'{v["name"]}.{k}'] = v[k]
-
-        for app in apps:
-            try:
-                expr = parser.parse(apps[app])
-                variables = expr.variables()
-                verifications.update(
-                    {k: False for k in variables if k not in verifications})
-                verified = expr.evaluate(verifications)
-            except:
-                print('invalid verification expression')
-                continue
-            if verified:
-                batch_col.insert({
-                    'app': True,
-                    'name': app,
-                    'user': user,
-                    'block': block,
-                    'timestamp': int(time.time() * 1000)
-                })
-                counter += 1
-                if counter % 1000 == 0:
-                    batch_db.commit()
-                    batch_db = db.begin_batch_execution(return_result=True)
-                    batch_col = batch_db.collection('verifications')
-    batch_db.commit()
 
 
 def update_verifications_hashes(block):
     new_hash = {'block': block}
-    for v in verifiers:
-        verifications = db['verifications'].find({'name': v})
+    verifications_names = [v for v in verifiers if v != 'apps']
+    for v in verifications_names:
+        verifications = db['verifications'].find({'name': v, 'block': block})
         hashes = [v.get('hash', '') for v in verifications]
         message = ''.join(sorted(hashes)).encode('ascii')
         h = base64.b64encode(sha256(message).digest()).decode("ascii")
@@ -114,7 +67,6 @@ def process(snapshot):
     for v in verifiers:
         verifiers[v].verify(block)
 
-    update_apps_verifications(block)
     update_verifications_hashes(block)
 
     # only keep verifications for this snapshot and previous one
