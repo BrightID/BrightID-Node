@@ -1,7 +1,6 @@
 const arango = require('@arangodb').db;
 const db = require('./db');
 const { query } = require('@arangodb');
-const { hash } = require('./encoding');
 
 const collections = {
   'connections': 'edge',

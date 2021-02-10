@@ -32,11 +32,9 @@ def update_verifications_hashes(block):
         new_hash[v] = h.replace(
             '/', '_').replace('+', '-').replace('=', '')
     hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
-    hashes.sort(key=lambda h: h['block'])
     hashes.append(new_hash)
-    if len(hashes) > 2:
-        hashes.pop(0)
-    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes})
+    # store hashes for only last 2 blocks
+    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes[-2:]})
 
 
 def remove_verifications_before(block):
@@ -59,6 +57,10 @@ def process(snapshot):
     assert res == 0, "restoring snapshot failed"
 
     block = get_block(snapshot)
+    # If there are verifications for current block, it means there was
+    # an error resulted in retrying the block. Remvoing these verifications
+    # helps not filling database and preventing unknown problems that
+    # having duplicate verifications for same block may result in
     db.aql.execute('''
         FOR v IN verifications
             FILTER  v.block == @block
@@ -68,9 +70,8 @@ def process(snapshot):
         verifiers[v].verify(block)
 
     update_verifications_hashes(block)
-
-    # only keep verifications for this snapshot and previous one
     last_block = variables.get('VERIFICATION_BLOCK')['value']
+    # only keep verifications for this snapshot and previous one
     remove_verifications_before(last_block)
     variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
     # remove the snapshot file

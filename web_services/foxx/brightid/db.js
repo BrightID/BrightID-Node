@@ -161,9 +161,6 @@ function groupMembers(groupId) {
 }
 
 // this function is deprecated and will be removed on v6
-// storing eligible groups on users documents and updating them
-// from this route will be removed when clients updated to use
-// new GET /groups/{id} result to show eligibles in invite list
 function updateEligibleGroups(userId, connections, currentGroups) {
   connections = connections.map(uId => 'users/' + uId);
   currentGroups = currentGroups.map(gId => 'groups/' + gId);
