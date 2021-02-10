@@ -44,7 +44,7 @@ const variables = [
   { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
   {'_key': 'VERIFICATIONS_HASHES', 'hashes': []},
   {'_key': 'VERIFICATION_BLOCK', 'value': 0},
-  {'_key': 'LAST_BLOCK_TIME', 'value': 0},
+  {'_key': 'PREV_SNAPSHOT_TIME', 'value': 0},
 ]
 
 function createCollections() {
