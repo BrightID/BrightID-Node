@@ -44,7 +44,8 @@ const variables = [
   { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
   {'_key': 'VERIFICATIONS_HASHES', 'hashes': []},
   {'_key': 'VERIFICATION_BLOCK', 'value': 0},
-  {'_key': 'PREV_SNAPSHOT_TIME', 'value': 0},
+  // 2021/02/09 as starting point for applying new seed connected
+  {'_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000},
 ]
 
 function createCollections() {
