@@ -31,11 +31,12 @@ def verify(block):
             except:
                 print('invalid verification expression')
                 continue
+
             if verified:
                 batch_col.insert({
                     'app': True,
                     'name': app,
-                    'user': user,
+                    'user': user['_key'],
                     'block': block,
                     'timestamp': int(time.time() * 1000)
                 })
