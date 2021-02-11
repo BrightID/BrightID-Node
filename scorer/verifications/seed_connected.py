@@ -1,72 +1,104 @@
 from arango import ArangoClient
 import time
+from . import utils
 import config
 
-SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
-DEFAULT_QUOTA = 50
+PENALTY = 3
+
+db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
+snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 
 
-def verify(fname):
+def seed_connections(group_id, after):
+    cursor = snapshot_db['usersInGroups'].find({'_to': group_id})
+    members = [ug['_from'] for ug in cursor]
+    return snapshot_db.aql.execute('''
+        FOR c in connections
+            FILTER c._from IN @members
+                AND (c.timestamp > @after OR c.level == 'reported')
+            SORT c.timestamp, c._from, c._to ASC
+            RETURN c
+    ''', bind_vars={'after': after, 'members': members})
+
+
+def last_verifications():
+    last_block = db['variables'].get('VERIFICATION_BLOCK')['value']
+    cursor = db.aql.execute('''
+        FOR v in verifications
+            FILTER v.name == 'SeedConnected'
+                AND v.block == @block
+            RETURN v
+    ''', bind_vars={'block': last_block})
+    verifications = {v['user']: v for v in cursor}
+    # update old SeedConnected verifications
+    # this block of code can be removed after all brightid nodes updated
+    for v in verifications.values():
+        if 'seedGroup' in v:
+            v['connected'] = [v['seedGroup'].replace('groups/', '')]
+            v['reported'] = []
+            del v['seedGroup']
+    return verifications
+
+
+def verify(block):
     print('SEED CONNECTED')
-    db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-    seed_groups = list(db['groups'].find({'seed': True}))
-    seed_groups.sort(key=lambda s: s['timestamp'])
-    seed_groups_members = {}
-    all_seeds = set()
-    seed_group_quota = {}
+    users = last_verifications()
+
+    # find number of users each seed group verified
+    counts = {}
+    for u, v in users.items():
+        for g in v['connected']:
+            counts[g] = counts.get(g, 0) + 1
+
+    prev_snapshot_time = snapshot_db['variables'].get('PREV_SNAPSHOT_TIME')['value']
+    seed_groups = snapshot_db['groups'].find({'seed': True})
     for seed_group in seed_groups:
-        userInGroups = list(db['usersInGroups'].find({'_to': seed_group['_id']}))
-        userInGroups.sort(key=lambda ug: ug['timestamp'])
-        seeds = [ug['_from'] for ug in userInGroups]
-        all_seeds.update(seeds)
-        seed_groups_members[seed_group['_id']] = seeds
-        seed_group_quota[seed_group['_id']] = seed_group.get('quota', DEFAULT_QUOTA)
+        # load connection that members of this seed group made after
+        # previous snapshot
+        connections = seed_connections(
+            seed_group['_id'], prev_snapshot_time * 1000)
+        quota = seed_group.get('quota', 0)
+        counter = counts.get(seed_group['_key'], 0)
+        for c in connections:
+            u = c['_to'].replace('users/', '')
+            if u not in users:
+                users[u] = {'connected': [], 'reported': []}
 
-    for seed_group in seed_groups_members:
-        members = seed_groups_members[seed_group]
-        used = db['verifications'].find(
-            {'name': 'SeedConnected', 'seedGroup': seed_group}).count()
-        unused = seed_group_quota[seed_group] - used
-        if unused < 1:
-            continue
-        conns = db.aql.execute(
-            '''FOR d IN connections
-                SORT d.timestamp
-                FILTER d._from IN @members
-                    AND d.level IN @levels
-                RETURN d''',
-            bind_vars={'members': list(members), 'levels': SEED_CONNECTION_LEVELS}
-        )
-        seed_neighbors = []
-        for conn in conns:
-            # skip duplicate members
-            if conn['_from'] not in seed_neighbors:
-                seed_neighbors.append(conn['_from'])
+            if c['level'] in ['just met', 'already known', 'recovery']:
+                already_connected = seed_group['_key'] in users[u]['connected']
+                if not already_connected:
+                    counter += 1
+                    if counter <= quota:
+                        users[u]['connected'].append(seed_group['_key'])
+            elif c['level'] == 'reported':
+                already_reported = seed_group['_key'] in users[u]['reported']
+                if not already_reported:
+                    users[u]['reported'].append(seed_group['_key'])
 
-            # filter neighbors that are seeds but are not member of this seed group
-            # to allow each seed group maximize the number of non-seeds that verify
-            # and postpone the verification of those filtered seeds to their seed groups
-            if conn['_to'] in all_seeds:
-                continue
+        spent = min(counter, quota)
+        exceeded = max(counter - quota, 0)
+        region = seed_group.get('region')
+        print(f'{region}, quota: {quota}, spent: {spent}, exceeded: {exceeded}')
 
-            # skip duplicate members
-            if conn['_to'] not in seed_neighbors:
-                seed_neighbors.append(conn['_to'])
+    for u, d in users.items():
+        # penalizing users that are reported by seeds
+        rank = len(d['connected']) - len(d['reported']) * PENALTY
+        db['verifications'].insert({
+            'name': 'SeedConnected',
+            'user': u,
+            'rank': rank,
+            'connected': d['connected'],
+            'reported': d['reported'],
+            'block': block,
+            'timestamp': int(time.time() * 1000),
+            'hash': utils.hash('SeedConnected', u, rank)
+        })
 
-        for neighbor in seed_neighbors:
-            neighbor = neighbor.replace('users/', '')
-            verifications = set(
-                [v['name'] for v in db['verifications'].find({'user': neighbor})])
-            if 'SeedConnected' not in verifications:
-                db['verifications'].insert({
-                    'name': 'SeedConnected',
-                    'user': neighbor,
-                    'seedGroup': seed_group,
-                    'timestamp': int(time.time() * 1000)
-                })
-                print('user: {}\tverification: SeedConnected'.format(neighbor))
-                unused -= 1
-                if unused < 1:
-                    break
-    verifiedCount = db['verifications'].find({'name': 'SeedConnected'}).count()
-    print('verifieds: {}\n'.format(verifiedCount))
+    verifiedCount = db.aql.execute('''
+        FOR v in verifications
+            FILTER v.name == 'SeedConnected'
+                AND v.rank > 0
+                AND v.block == @block
+            RETURN v
+    ''', bind_vars={'block': block}, count=True).count()
+    print(f'verifications: {verifiedCount}')

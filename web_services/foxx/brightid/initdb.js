@@ -30,11 +30,21 @@ const deprecated = [
 const indexes = [
   {'collection': 'verifications', 'fields': ['user'], 'type': 'persistent'},
   {'collection': 'verifications', 'fields': ['name'], 'type': 'persistent'},
+  {'collection': 'verifications', 'fields': ['block'], 'type': 'persistent'},
   {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0},
   {'collection': 'sponsorships', 'fields': ['contextId'], 'type': 'persistent'},
   {'collection': 'connections', 'fields': ['level'], 'type': 'persistent'},
+  {'collection': 'connectionsHistory', 'fields': ['timestamp'], 'type': 'persistent'},
   {'collection': 'groups', 'fields': ['seed'], 'type': 'persistent'},
   {'collection': 'operations', 'fields': ['state'], 'type': 'persistent'},
+]
+
+const variables = [
+  { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
+  {'_key': 'VERIFICATIONS_HASHES', 'hashes': []},
+  {'_key': 'VERIFICATION_BLOCK', 'value': 0},
+  // 2021/02/09 as starting point for applying new seed connected
+  {'_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000},
 ]
 
 function createCollections() {
@@ -70,6 +80,15 @@ function removeDeprecatedCollections() {
       console.log(`${collection} dropped`);
     } else {
       console.log(`${collection} dropped before`);
+    }
+  }
+}
+
+function initializeVariables() {
+  console.log("initialize variables ...");
+  for (let variable of variables) {
+    if (! variablesColl.exists(variable._key)) {
+      variablesColl.insert(variable);
     }
   }
 }
@@ -248,19 +267,44 @@ function v5_7() {
       REPLACE UNSET(u, 'signingKey') IN users`;
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7'];
+function v5_8() {
+  console.log("removing 'Yekta_0', 'Yekta_1', 'Yekta_2', 'Yekta_3', 'Yekta_4', 'Yekta_5' documents form verifications collection");
+  const verificationsColl = arango._collection('verifications');
+  for (let verificationName of ['Yekta_0', 'Yekta_1', 'Yekta_2', 'Yekta_3', 'Yekta_4', 'Yekta_5']) {
+    verificationsColl.removeByExample({ name: verificationName });
+  }
+
+  console.log("adding block to verifications");
+  block = variablesColl.document('VERIFICATION_BLOCK').value;
+  query`
+    FOR v in verifications
+      UPDATE { _key: v._key, block: ${block} } IN verifications`;
+
+  console.log("adding initTimestamp to connections");
+  query`
+    FOR c in connections
+      UPDATE { _key: c._key, initTimestamp: (
+        FOR ch in connectionsHistory
+          FILTER ch._from == c._from AND ch._to == c._to
+          SORT ch.timestamp
+          LIMIT 1
+          RETURN ch.timestamp
+    )[0] } IN connections`;
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8'];
 
 function initdb() {
   createCollections();
   createIndexes();
   removeDeprecatedCollections();
   variablesColl = arango._collection('variables');
+  initializeVariables();
   let index;
   if (variablesColl.exists('LAST_DB_UPGRADE')) {
     upgrade = variablesColl.document('LAST_DB_UPGRADE').value;
     index = upgrades.indexOf(upgrade) + 1;
   } else {
-    variablesColl.insert({ _key: 'LAST_DB_UPGRADE', value: -1 });
     index = 0;
   }
   while (upgrades[index]) {

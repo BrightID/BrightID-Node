@@ -295,6 +295,9 @@ schemas = Object.assign({
     data: joi.object({
       lastProcessedBlock: joi.number().integer().required().description('last block that consensus receiver service processed'),
       verificationsBlock: joi.number().integer().required().description('the block that scorer service updated verifications based on operations got applied before that block'),
+      initOp: joi.number().integer().required().description('number of operations in the init state'),
+      sentOp: joi.number().integer().required().description('number of operations in the sent state'),
+      verificationsHashes: joi.array().items(joi.object()).required().description("different verifications' hashes for last 2 snapshots"),
     })
   }),
 

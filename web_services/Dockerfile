@@ -1,14 +1,18 @@
-FROM node:8
+FROM mhart/alpine-node:8
+
 ADD . /code
 WORKDIR /code/profile/
-RUN npm install
-RUN npm install foxx-cli@1.3.0 -g
 
-RUN apt-get update && apt-get install -y netcat
+# added "npm config set unsafe-perm true && \"
+# because of following error in some docker configuration:
+#   https://stackoverflow.com/a/52196681
+RUN npm install &&\
+ npm config set unsafe-perm true && \
+ npm install foxx-cli@1.3.0 -g &&\
+ npm cache clean --force &&\
+ apk add --update --no-cache netcat-openbsd curl
 
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY wait-for.sh /wait-for.sh
 
-CMD /entrypoint.sh && nodejs server.js
-
-
+CMD /entrypoint.sh && node server.js

@@ -1,121 +1,128 @@
-import time
-import socket
-import traceback
 import os
-from datetime import datetime
+import socket
+import time
+import shutil
+import traceback
 from arango import ArangoClient
+from hashlib import sha256
+import base64
 import config
-from verifications import seed_connected
-from verifications import brightid
-from verifications import dollar_for_everyone
-from verifications import yekta
-from verifications import seed_connected_with_friend
-from py_expression_eval import Parser
+import verifications
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
+variables = db.collection('variables')
+verifiers = {
+    'SeedConnected': verifications.seed_connected,
+    'SeedConnectedWithFriend': verifications.seed_connected_with_friend,
+    'Yekta': verifications.yekta,
+    'BrightID': verifications.brightid,
+    'DollarForEveryone': verifications.dollar_for_everyone,
+    'apps': verifications.apps,
+}
 
 
-def process(fname):
-    for verifier in [seed_connected, seed_connected_with_friend, yekta, brightid, dollar_for_everyone]:
-        try:
-            verifier.verify(fname)
-        except Exception as e:
-            print(f'Error in verifier: {e}')
-            traceback.print_exc()
+def update_verifications_hashes(block):
+    new_hash = {'block': block}
+    verifications_names = [v for v in verifiers if v != 'apps']
+    for v in verifications_names:
+        verifications = db['verifications'].find({'name': v, 'block': block})
+        hashes = [v.get('hash', '') for v in verifications]
+        message = ''.join(sorted(hashes)).encode('ascii')
+        h = base64.b64encode(sha256(message).digest()).decode("ascii")
+        new_hash[v] = h.replace(
+            '/', '_').replace('+', '-').replace('=', '')
+    hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
+    hashes.append(new_hash)
+    # store hashes for only last 2 blocks
+    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes[-2:]})
 
 
-def main():
-    variables = db.collection('variables')
-    if not variables.has('VERIFICATION_BLOCK'):
-        variables.insert({
-            '_key': 'VERIFICATION_BLOCK',
-            'value': 0
-        })
+def remove_verifications_before(block):
+    print(f'Removing verifications with block smaller than {block}')
+    db.aql.execute('''
+        FOR v IN verifications
+            FILTER  v.block < @remove_border
+            REMOVE { _key: v._key } IN verifications
+        ''', bind_vars={'remove_border': block})
+
+
+def process(snapshot):
+    get_time = lambda: time.strftime('%Y-%m-%d %H:%M:%S')
+    get_block = lambda snapshot: int(snapshot.strip('dump_').strip('_fnl'))
+
+    print(f'{get_time()} - processing {snapshot} started ...')
+    # restore snapshot
+    fname = os.path.join(config.SNAPSHOTS_PATH, snapshot)
+    res = os.system(f"arangorestore --server.username 'root' --server.password '' --server.endpoint 'tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}' --server.database snapshot --create-database true --create-collection true --import-data true --input-directory {fname}")
+    assert res == 0, "restoring snapshot failed"
+
+    block = get_block(snapshot)
+    # If there are verifications for current block, it means there was
+    # an error resulted in retrying the block. Remvoing these verifications
+    # helps not filling database and preventing unknown problems that
+    # having duplicate verifications for same block may result in
+    db.aql.execute('''
+        FOR v IN verifications
+            FILTER  v.block == @block
+            REMOVE { _key: v._key } IN verifications
+        ''', bind_vars={'block': block})
+    for v in verifiers:
+        verifiers[v].verify(block)
+
+    update_verifications_hashes(block)
+    last_block = variables.get('VERIFICATION_BLOCK')['value']
+    # only keep verifications for this snapshot and previous one
+    remove_verifications_before(last_block)
+    variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
+    # remove the snapshot file
+    shutil.rmtree(fname, ignore_errors=True)
+    print(f'{get_time()} - processing {fname} completed')
+
+
+def next_snapshot():
+    is_final = lambda snapshot: snapshot.endswith('_fnl')
+    get_block = lambda snapshot: int(snapshot.strip('dump_').strip('_fnl'))
     while True:
-        snapshots = [fname for fname in os.listdir(
-            config.SNAPSHOTS_PATH) if fname.endswith('.zip')]
-        if len(snapshots) == 0:
-            time.sleep(1)
-            continue
-        snapshots.sort(key=lambda fname: int(
-            fname.strip('dump_').strip('.zip')))
-        fname = os.path.join(config.SNAPSHOTS_PATH, snapshots[0])
-        print(
-            '{} - processing {} started ...'.format(str(datetime.now()).split('.')[0], fname))
-        process(fname)
-        update_apps_verification()
-        block = int(snapshots[0].strip('dump_').strip('.zip'))
-        variables.update({'_key': 'VERIFICATION_BLOCK', 'value': block})
-        if os.path.exists(fname):
-            os.remove(fname)
-        else:
-            print(f'{fname} does not exist')
-        print(
-            '{} - processing {} completed'.format(str(datetime.now()).split('.')[0], fname))
-
-
-def update_apps_verification():
-    print('Check the users are verified for the apps')
-    parser = Parser()
-    apps = {app["_key"]: app['verification']
-            for app in db['apps'] if app.get('verification')}
-    for user in db['users']:
-        verifications = get_user_verification(user['_key'])
-        for app in apps:
-            try:
-                expr = parser.parse(apps[app])
-                variables = expr.variables()
-                verifications.update(
-                    {k: False for k in variables if k not in verifications})
-                verified = expr.evaluate(verifications)
-            except:
-                print('invalid verification expression')
-                continue
-            if verified and app not in verifications:
-                db['verifications'].insert({
-                    'app': True,
-                    'name': app,
-                    'user': user['_key'],
-                    'timestamp': int(time.time() * 1000)
-                })
-            elif not verified and app in verifications:
-                db['verifications'].delete_match({
-                    'app': True,
-                    'name': app,
-                    'user': user['_key']
-                })
-
-
-def get_user_verification(user):
-    verifications = {}
-    for v in db['verifications'].find({'user': user}):
-        verifications[v['name']] = True
-        for k in v:
-            if k in ['_key', '_id', '_rev', 'user', 'name']:
-                continue
-            verifications[f'{v["name"]}.{k}'] = v[k]
-    return verifications
+        snapshots = os.listdir(config.SNAPSHOTS_PATH)
+        snapshots.sort(key=get_block)
+        snapshot = next(filter(is_final, snapshots), None)
+        if snapshot:
+            return snapshot
+        time.sleep(1)
 
 
 def wait():
     while True:
         time.sleep(5)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        result = sock.connect_ex((config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
+        result = sock.connect_ex(
+            (config.BN_ARANGO_HOST, config.BN_ARANGO_PORT))
         sock.close()
         if result != 0:
             print('db is not running yet')
             continue
+        # wait for ws to start upgrading foxx services and running setup script
+        time.sleep(10)
+        services = [service['name'] for service in db.foxx.services()]
+        if 'apply' not in services or 'BrightID-Node' not in services:
+            print('foxx services are not running yet')
+            continue
         return
 
-if __name__ == '__main__':
+
+def main():
     print('waiting for db ...')
     wait()
     print('db started')
     while True:
+        snapshot = next_snapshot()
         try:
-            main()
+            process(snapshot)
         except Exception as e:
             print(f'Error: {e}')
             traceback.print_exc()
             time.sleep(10)
+
+
+if __name__ == '__main__':
+    main()

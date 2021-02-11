@@ -1,11 +1,10 @@
 'use strict';
 const secp256k1 = require('secp256k1');
 const createKeccakHash = require('keccak');
-
 const createRouter = require('@arangodb/foxx/router');
 const _ = require('lodash');
 const joi = require('joi');
-const arango = require('@arangodb').db;
+const { db: arango, ArangoError } = require('@arangodb');
 const nacl = require('tweetnacl');
 const db = require('./db');
 const schemas = require('./schemas').schemas;
@@ -19,30 +18,14 @@ const {
   addressToBytes32,
 } = require('./encoding');
 const parser = require('expr-eval').Parser;
+const errors = require('./errors');
 
 const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
-// error numbers
-const CONTEXT_NOT_FOUND = 1;
-const CONTEXTID_NOT_FOUND = 2;
-const CAN_NOT_BE_VERIFIED = 3;
-const NOT_SPONSORED = 4;
-const OLD_ACCOUNT = 5;
-const KEYPAIR_NOT_SET = 6;
-const ETHPRIVATEKEY_NOT_SET = 7;
-const OPERATION_NOT_FOUND = 9;
-const USER_NOT_FOUND = 10;
-const IP_NOT_SET = 11;
-const APP_NOT_FOUND = 12;
-const INVALID_EXPRESSION = 13;
-const INVALID_TESTING_KEY = 14;
-const INCORRECT_PASSCODE = 15;
-const PASSCODE_NOT_SET = 16;
-const GROUP_NOT_FOUND = 17;
-
+const MAX_OP_SIZE = 2000;
 
 const handlers = {
   operationsPost: function(req, res){
@@ -51,37 +34,25 @@ const handlers = {
     op.hash = hash(message);
 
     if (operationsHashesColl.exists(op.hash)) {
-      res.throw(400, 'operation was applied before');
-    } else if (JSON.stringify(op).length > 2000) {
-      res.throw(400, 'operation is too big');
+      throw new errors.OperationAppliedBeforeError(op.hash);
+    } else if (JSON.stringify(op).length > MAX_OP_SIZE) {
+      throw new errors.TooBigOperationError(MAX_OP_SIZE);
     }
 
     // verify signature
-    try {
-      operations.verify(op);
-    } catch (e) {
-      res.throw(403, e);
-    }
+    operations.verify(op);
 
-    // allow 60 operations in 15 minutes window by default
-    const timeWindow = (module.context.configuration.operationsTimeWindow || 15 * 60) * 1000;
-    const limit = module.context.configuration.operationsLimit || 60;
-    try {
-      operations.checkLimits(op, timeWindow, limit);
-    } catch (e) {
-      res.throw(429, e);
-    }
+    // allow limited number of operations to be posted in defined time window
+    const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
+    const limit = module.context.configuration.operationsLimit;
+    operations.checkLimits(op, timeWindow, limit);
 
     if (op.name == 'Link ContextId') {
       operations.encrypt(op);
     }
 
     if (op.name == 'Sponsor') {
-      try {
-        db.sponsor(op);
-      } catch (e) {
-        res.throw(400, e);
-      }
+      db.sponsor(op);
     } else {
       op.state = 'init';
       db.upsertOperation(op);
@@ -105,7 +76,7 @@ const handlers = {
         }
       });
     } else {
-      res.throw(404, "Operation not found", {errorNum: OPERATION_NOT_FOUND});
+      throw new errors.OperationNotFoundError(hash);
     }
   },
 
@@ -113,7 +84,7 @@ const handlers = {
     const id = req.param('id');
     const user = db.loadUser(id);
     if (! user) {
-      res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
+      throw new errors.UserNotFoundError(id);
     }
 
     const verifications = db.userVerifications(id).map(v => v.name);
@@ -135,6 +106,7 @@ const handlers = {
     });
 
     const invites = db.userInvitedGroups(id);
+    // this is deprecated and will be removed on v6
     db.updateEligibleGroups(id, connections, groups);
 
     res.send({
@@ -151,7 +123,6 @@ const handlers = {
         signingKeys: user.signingKeys
       }
     });
-
   },
 
   userConnectionsGet: function(req, res) {
@@ -178,7 +149,7 @@ const handlers = {
     const requestor = req.param('requestor');
     const user = db.loadUser(id);
     if (! user) {
-      res.throw(404, "User not found", {errorNum: USER_NOT_FOUND});
+      throw new errors.UserNotFoundError(id);
     }
 
     const verifications = db.userVerifications(id);
@@ -227,15 +198,7 @@ const handlers = {
     const appKey = req.param('app');
     const count_only = 'count_only' in req.queryParams;
     const app = db.getApp(appKey);
-    if (! app) {
-      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
-    }
-
     const context = db.getContext(app.context);
-    if (! context) {
-      res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
-    }
-
     const coll = arango._collection(context.collection);
     let contextIds = db.getLastContextIds(coll, app._key);
     let data = {
@@ -256,22 +219,14 @@ const handlers = {
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
     const app = db.getApp(appKey);
-    if (! app) {
-      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
-    }
-
     const context = db.getContext(app.context);
-    if (! context) {
-      res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
-    }
-
     const testblocks = db.getTestblocks(appKey, contextId);
     if (testblocks.includes('link')) {
-      res.throw(404, 'contextId not found', {errorNum: CONTEXTID_NOT_FOUND});
+      throw new errors.ContextIdNotFoundError(contextId);
     } else if (testblocks.includes('sponsorship')) {
-      res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
+      throw new errors.NotSponsoredError(contextId);
     } else if (testblocks.includes('verification')) {
-      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
+      throw new errors.NotVerifiedError(contextId, appKey);
     }
 
     if (context.idsAsHex) {
@@ -281,11 +236,11 @@ const handlers = {
     const coll = arango._collection(context.collection);
     const user = db.getUserByContextId(coll, contextId);
     if (! user) {
-      res.throw(404, 'contextId not found', {errorNum: CONTEXTID_NOT_FOUND});
+      throw new errors.ContextIdNotFoundError(contextId);
     }
 
     if (! db.isSponsored(user)) {
-      res.throw(403, 'user is not sponsored', {errorNum: NOT_SPONSORED});
+      throw new errors.NotSponsoredError(contextId);
     }
 
     let verifications = db.userVerifications(user);
@@ -300,10 +255,10 @@ const handlers = {
       }
       verified = expr.evaluate(verifications);
     } catch (err) {
-      res.throw(404, 'invalid verification expression', {errorNum: INVALID_EXPRESSION});
+      throw new errors.InvalidExpressionError(app.name, app.verification, err);
     }
     if (! verified) {
-      res.throw(404, 'user can not be verified for this app', {errorNum: CAN_NOT_BE_VERIFIED});
+      throw new errors.NotVerifiedError(contextId, appKey);
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
@@ -323,7 +278,7 @@ const handlers = {
     let sig, publicKey;
     if (signed == 'nacl') {
       if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-        res.throw(500, 'Server setting key pair not set', {errorNum: KEYPAIR_NOT_SET});
+        throw new errors.KeypairNotSetError();
       }
 
       let message = appKey + ',' + contextIds.join(',');
@@ -337,7 +292,7 @@ const handlers = {
       );
     } else if (signed == 'eth') {
       if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
-        res.throw(500, 'Server setting "ethPrivateKey" not set', {errorNum: ETHPRIVATEKEY_NOT_SET});
+        throw new errors.EthPrivatekeyNotSetError();
       }
 
       let message, h;
@@ -384,20 +339,16 @@ const handlers = {
         }
       });
     } else {
-      res.throw(500, 'Server setting "ip" not set', {errorNum: IP_NOT_SET});
+      throw new errors.IpNotSetError();
     }
   },
 
   appGet: function(req, res){
     const appKey = req.param('app');
     let app = db.getApp(appKey);
-    if (! app) {
-      res.throw(404, 'App not found', {errorNum: APP_NOT_FOUND} );
-    } else {
-      res.send({
-        "data": db.appToDic(app)
-      });
-    }
+    res.send({
+      "data": db.appToDic(app)
+    });
   },
 
   allAppsGet: function(req, res){
@@ -429,11 +380,8 @@ const handlers = {
     const testingKey = req.param('testingKey');
 
     const app = db.getApp(appKey);
-    if (! app) {
-      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
-    }
     if (app.testingKey != testingKey) {
-      res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
+      throw new errors.InvalidTestingKeyError();
     }
 
     return db.addTestblock(contextId, action, appKey);
@@ -446,11 +394,8 @@ const handlers = {
     const testingKey = req.param('testingKey');
 
     const app = db.getApp(appKey);
-    if (! app) {
-      res.throw(404, 'app not found', {errorNum: APP_NOT_FOUND});
-    }
     if (app.testingKey != testingKey) {
-      res.throw(404, 'invalid testingKey', {errorNum: INVALID_TESTING_KEY});
+      throw new errors.InvalidTestingKeyError();
     }
 
     return db.removeTestblock(contextId, action, appKey);
@@ -460,15 +405,12 @@ const handlers = {
     const contextKey = req.param('context');
     const passcode = req.queryParams['passcode'];
     const context = db.getContext(contextKey);
-    if (! context) {
-      res.throw(404, 'context not found', {errorNum: CONTEXT_NOT_FOUND});
-    }
 
     if (! context.passcode) {
-      res.throw(403, 'passcode not set', {errorNum: PASSCODE_NOT_SET});
+      throw new errors.PasscodeNotSetError(contextKey);
     }
     if (context.passcode != passcode) {
-      res.throw(403, 'incorrect passcode', {errorNum: INCORRECT_PASSCODE});
+      throw new errors.InvalidPasscodeError();
     }
 
     const coll = arango._collection(context.collection);
@@ -488,13 +430,14 @@ const handlers = {
     const id = req.param('id');
     const group = db.loadGroup(id);
     if (! group) {
-      res.throw(404, "Group not found", {errorNum: GROUP_NOT_FOUND});
+      throw new errors.GroupNotFoundError(id);
     }
 
     res.send({
       data: {
         members: db.groupMembers(id),
         invites: db.groupInvites(id),
+        // the eligibles is deprecated and will be removed on v6
         eligibles: db.updateEligibles(id),
         admins: group.admins,
         founders: group.founders,
@@ -570,6 +513,7 @@ router.get('/verifications/:app', handlers.allVerificationsGet)
   .response(schemas.allVerificationsGetResponse)
   .error(404, 'context not found');
 
+// this route is deprecated and will be removed on v6
 router.get('/ip', handlers.ipGet)
   .summary("Get this server's IPv4 address")
   .response(schemas.ipGetResponse);
@@ -627,19 +571,19 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
-    const notLogMessages = [
-      "user can not be verified for this context",
-      "contextId not found"
-    ];
-    if (notLogMessages.includes(e.message)){
-      throw e;
+    if (! e instanceof errors.NotFoundError){
+      console.group("Error returned");
+      console.log('url:', req._raw.requestType, req._raw.url);
+      console.log('error:', e);
+      console.log('body:', req.body);
+      console.groupEnd();
     }
-    console.group("Error returned");
-    console.log('url:', req._raw.requestType, req._raw.url);
-    console.log('error:', e);
-    console.log('body:', req.body);
-    console.groupEnd();
-    throw e;
+    let options = undefined;
+    if (e instanceof ArangoError) {
+      options = { extra: { arangoErrorNum: e.errorNum }};
+      e.errorNum = errors.ARANGO_ERROR;
+    }
+    res.throw(e.code || 500, e, options);
   }
 });
 
