@@ -11,6 +11,9 @@
   "usersInGroups": {
     "type": "full"
   },
+  "verifications": {
+    "type": "full"
+  },
   "variables": {
     "type": "full"
   }
