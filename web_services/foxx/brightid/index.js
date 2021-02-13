@@ -571,7 +571,7 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
-    if (! e instanceof errors.NotFoundError){
+    if (! (e instanceof errors.NotFoundError)){
       console.group("Error returned");
       console.log('url:', req._raw.requestType, req._raw.url);
       console.log('error:', e);
