@@ -76,6 +76,8 @@ def main():
         # for getting the last block number more than once per second
         time.sleep(1)
         current_block = w3.eth.getBlock('latest').number
+        variables.update(
+            {'_key': 'LAST_IDCHAIN_BLOCK', 'value': current_block})
 
         if current_block > last_block:
             # Here we should go to process the block imediately, but there seems
@@ -96,7 +98,8 @@ def main():
                 # PREV_SNAPSHOT_TIME is used by some verification
                 # algorithms to filter connections that are made
                 # after previous processed snapshot
-                variables.update({'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
+                variables.update(
+                    {'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
             last_block = block_number
 
 
