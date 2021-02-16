@@ -567,8 +567,10 @@ function getLastContextIds(coll, appKey) {
 }
 
 function userVerifications(user) {
+  const verificationBlock = variablesColl.document('VERIFICATION_BLOCK').value;
   const verifications = verificationsColl.byExample({
-    user
+    user,
+    'block': verificationBlock
   }).toArray();
   verifications.forEach(v => {
     delete v._key;

@@ -45,7 +45,7 @@ const variables = [
   { '_key': 'VERIFICATION_BLOCK', 'value': 0 },
   // 2021/02/09 as starting point for applying new seed connected
   { '_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000 },
-  { '_key': 'LAST_IDCHAIN_BLOCK', 'value': 0 },
+  { '_key': 'VERIFICATION_BLOCK', 'value': 0 },
 ]
 
 function createCollections() {

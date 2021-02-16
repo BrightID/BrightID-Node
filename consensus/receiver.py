@@ -62,7 +62,8 @@ def save_snapshot(block):
     fnl_dir_name = f'{dir_name}_fnl'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, 'collections.json')
-    res = os.system(f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
+    res = os.system(
+        f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
     assert res == 0, "dumping snapshot failed"
     shutil.move(dir_name, fnl_dir_name)
 
@@ -76,8 +77,6 @@ def main():
         # for getting the last block number more than once per second
         time.sleep(1)
         current_block = w3.eth.getBlock('latest').number
-        variables.update(
-            {'_key': 'LAST_IDCHAIN_BLOCK', 'value': current_block})
 
         if current_block > last_block:
             # Here we should go to process the block imediately, but there seems
@@ -85,6 +84,9 @@ def main():
             # instantly. This delay is added to avoid that error.
             # When error is raised, the file will run again and no bad problem occur.
             time.sleep(3)
+
+        variables.update(
+            {'_key': 'VERIFICATION_BLOCK', 'value': current_block - (config.SNAPSHOTS_PERIOD + current_block % config.SNAPSHOTS_PERIOD)})
 
         for block_number in range(last_block + 1, current_block + 1):
             print('processing block {}'.format(block_number))
