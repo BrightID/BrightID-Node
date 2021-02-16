@@ -292,7 +292,20 @@ function v5_8() {
     )[0] } IN connections`;
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8'];
+function v5_9() {
+  console.log("removing invalid contextIds form contexts' collection");
+  const invalidContextIds = [null, undefined, 'null', 'undefined'];
+  const contextsColl = arango._collection('contexts');
+  contextsColl.all().toArray().map(context => {
+    const contextColl = arango._collection(context.collection);
+    query`
+      FOR d in ${contextColl}
+          FILTER d.contextId IN ${invalidContextIds}
+          REMOVE d._key IN ${contextColl}`;
+  });;
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9'];
 
 function initdb() {
   createCollections();

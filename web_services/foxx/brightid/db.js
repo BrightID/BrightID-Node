@@ -582,6 +582,13 @@ function userVerifications(user) {
 function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex } = getContext(context);
   const coll = db._collection(collection);
+  if (!contextId || ['null', 'undefined'].includes(contextId)) {
+    throw new errors.InvalidContextIdError(contextId);
+  }
+  if (!loadUser(id)) {
+    throw new errors.UserNotFoundError(id);
+  }
+
   if (idsAsHex) {
     contextId = contextId.toLowerCase();
   }
