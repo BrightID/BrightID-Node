@@ -584,7 +584,7 @@ function userVerifications(user) {
 function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex } = getContext(context);
   const coll = db._collection(collection);
-  if (!contextId || ['null', 'undefined'].includes(contextId)) {
+  if (!contextId) {
     throw new errors.InvalidContextIdError(contextId);
   }
   if (!loadUser(id)) {
@@ -592,6 +592,10 @@ function linkContextId(id, context, contextId, timestamp) {
   }
 
   if (idsAsHex) {
+    const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+    if(!re.test(contextId)) {
+      throw new errors.InvalidContextIdError(contextId);
+    }
     contextId = contextId.toLowerCase();
   }
 
