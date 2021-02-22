@@ -3,6 +3,7 @@ from arango import ArangoClient
 from py_expression_eval import Parser
 import config
 
+
 def verify(block):
     print('Update verifications for apps')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
