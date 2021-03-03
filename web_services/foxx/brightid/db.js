@@ -567,9 +567,11 @@ function getLastContextIds(coll, appKey) {
 }
 
 function userVerifications(user) {
-  const verifications = verificationsColl.byExample({
-    user
-  }).toArray();
+  const hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
+  const lastBlock = variablesColl.document('LAST_BLOCK').value;
+  const block = lastBlock - (lastBlock % snapshotPeriod) - snapshotPeriod
+  const verifications = verificationsColl.byExample({ user, block }).toArray();
   verifications.forEach(v => {
     delete v._key;
     delete v._id;
@@ -582,7 +584,18 @@ function userVerifications(user) {
 function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex } = getContext(context);
   const coll = db._collection(collection);
+  if (!contextId) {
+    throw new errors.InvalidContextIdError(contextId);
+  }
+  if (!loadUser(id)) {
+    throw new errors.UserNotFoundError(id);
+  }
+
   if (idsAsHex) {
+    const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+    if(!re.test(contextId)) {
+      throw new errors.InvalidContextIdError(contextId);
+    }
     contextId = contextId.toLowerCase();
   }
 
