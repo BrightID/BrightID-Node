@@ -567,11 +567,11 @@ function getLastContextIds(coll, appKey) {
 }
 
 function userVerifications(user) {
-  const verificationBlock = variablesColl.document('VERIFICATION_BLOCK').value;
-  const verifications = verificationsColl.byExample({
-    user,
-    'block': verificationBlock
-  }).toArray();
+  const hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
+  const lastBlock = variablesColl.document('LAST_BLOCK').value;
+  const block = lastBlock - (lastBlock % snapshotPeriod) - snapshotPeriod
+  const verifications = verificationsColl.byExample({ user, block }).toArray();
   verifications.forEach(v => {
     delete v._key;
     delete v._id;

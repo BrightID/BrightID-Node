@@ -62,8 +62,7 @@ def save_snapshot(block):
     fnl_dir_name = f'{dir_name}_fnl'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, 'collections.json')
-    res = os.system(
-        f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
+    res = os.system(f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
     assert res == 0, "dumping snapshot failed"
     shutil.move(dir_name, fnl_dir_name)
 
@@ -85,9 +84,6 @@ def main():
             # When error is raised, the file will run again and no bad problem occur.
             time.sleep(3)
 
-        variables.update(
-            {'_key': 'VERIFICATION_BLOCK', 'value': current_block - (config.SNAPSHOTS_PERIOD + current_block % config.SNAPSHOTS_PERIOD)})
-
         for block_number in range(last_block + 1, current_block + 1):
             print('processing block {}'.format(block_number))
             block = w3.eth.getBlock(block_number, True)
@@ -100,8 +96,7 @@ def main():
                 # PREV_SNAPSHOT_TIME is used by some verification
                 # algorithms to filter connections that are made
                 # after previous processed snapshot
-                variables.update(
-                    {'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
+                variables.update({'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
             last_block = block_number
 
 
