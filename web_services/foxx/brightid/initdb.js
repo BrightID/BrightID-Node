@@ -297,11 +297,11 @@ function v5_10() {
   query`
     FOR c IN connections
       FILTER c.level == 'recovery'
-      UPDATE { _key: c._key, level: (
+      UPDATE { _key: c._key, level: ((
         FOR ch IN connections
           FILTER ch._from == c._to AND ch._to == c._from
-          RETURN ch.level IN ['already known', 'recovery'] ? 'recovery' : 'just met'
-    )[0] } IN connections`;
+          RETURN ch.level IN ["already known", "recovery"] ? "recovery" : "just met"
+    )[0] || "just met") } IN connections`;
 
   console.log("removing invalid contextIds form contexts' collection");
   const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
