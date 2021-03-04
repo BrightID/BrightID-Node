@@ -38,7 +38,8 @@ const SPONSORED_BEFORE = 39;
 const SPONSOR_NOT_SUPPORTED = 40;
 const NOT_ADMIN = 41;
 const ARANGO_ERROR = 42;
-const INVALID_CONTEXTID = 43;
+const INELIGIBLE_RECOVERY_CONNECTION = 43;
+const INVALID_CONTEXTID = 44;
 
 class BrightIDError extends Error {
   constructor() {
@@ -423,6 +424,14 @@ class SponsorNotSupportedError extends ForbiddenError {
   }
 }
 
+class IneligibleRecoveryConnection extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_RECOVERY_CONNECTION;
+    this.message = 'Recovery level can only be selected for connections that already know you or trust you as their recovery connection.';
+  }
+}
+
 class InvalidContextIdError extends NotFoundError {
   constructor(contextId) {
     super();
@@ -472,6 +481,7 @@ module.exports = {
   SPONSOR_NOT_SUPPORTED,
   NOT_ADMIN,
   ARANGO_ERROR,
+  INELIGIBLE_RECOVERY_CONNECTION,
   INVALID_CONTEXTID,
   BrightIDError,
   BadRequestError,
@@ -518,5 +528,6 @@ module.exports = {
   UnusedSponsorshipsError,
   SponsoredBeforeError,
   SponsorNotSupportedError,
+  IneligibleRecoveryConnection,
   InvalidContextIdError,
 }

@@ -17,6 +17,7 @@ verifiers = {
     'Yekta': verifications.yekta,
     'BrightID': verifications.brightid,
     'DollarForEveryone': verifications.dollar_for_everyone,
+    'SocialRecoverySetup': verifications.social_recovery_setup,
     'apps': verifications.apps,
 }
 
