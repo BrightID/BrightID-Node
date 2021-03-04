@@ -70,6 +70,7 @@ function apply(op) {
     json: true
   });
   resp.json.success.should.equal(true);
+  return resp;
 }
 
 describe('operations', function(){
@@ -366,7 +367,8 @@ describe('operations', function(){
     op.sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
-    apply(op);
+    const resp = apply(op);
+    resp.json.result.errorNum.should.equal(errors.INELIGIBLE_RECOVERY_CONNECTION);
     connectionsColl.firstExample({
       '_from': 'users/' + u1.id,
       '_to': 'users/' + u2.id,

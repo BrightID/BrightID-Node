@@ -7,10 +7,9 @@ SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 
 
 def verify(block):
-    print('HAS RECOVERY CONNECTIONS')
+    print('SOCIAL RECOVERY SETUP')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
-
     verifieds = snapshot_db.aql.execute('''
         FOR u IN users
             LET recoveryConnections = LENGTH(
@@ -21,15 +20,23 @@ def verify(block):
             FILTER recoveryConnections > 2
             RETURN u._key
     ''')
-    for verified in verifieds:
-        db['verifications'].insert({
-            'name': 'HasRecoveryConnections',
+
+    batch_db = db.begin_batch_execution(return_result=True)
+    verifications = batch_db.collection('verifications')
+    for i, verified in enumerate(verifieds):
+        verifications.insert({
+            'name': 'SocialRecoverySetup',
             'user': verified,
             'block': block,
             'timestamp': int(time.time() * 1000),
-            'hash': utils.hash('HasRecoveryConnections', verified)
+            'hash': utils.hash('SocialRecoverySetup', verified)
         })
+        if i % 1000 == 0:
+            batch_db.commit()
+            batch_db = db.begin_batch_execution(return_result=True)
+            verifications = batch_db.collection('verifications')
+    batch_db.commit()
 
     verifiedCount = db['verifications'].find(
-        {'name': 'HasRecoveryConnections', 'block': block}).count()
+        {'name': 'SocialRecoverySetup', 'block': block}).count()
     print(f'verifieds: {verifiedCount}\n')

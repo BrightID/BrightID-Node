@@ -427,7 +427,7 @@ class IneligibleRecoveryConnection extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_RECOVERY_CONNECTION;
-    this.message = 'The new connection is not eligible to set as a recovery connection.';
+    this.message = 'Recovery level can only be selected for connections that already know you or trust you as their recovery connection.';
   }
 }
 
