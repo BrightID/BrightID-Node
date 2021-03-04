@@ -308,6 +308,9 @@ function v5_10() {
   const contextsColl = arango._collection('contexts');
   contextsColl.all().toArray().map(context => {
     const contextColl = arango._collection(context.collection);
+    if (!contextColl) {
+      return;
+    }
     const docs = contextColl.all().toArray();
     for (let doc of docs) {
       if (!doc.contextId || (context.idsAsHex && !re.test(doc.contextId))) {
