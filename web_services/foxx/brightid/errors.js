@@ -39,6 +39,7 @@ const SPONSOR_NOT_SUPPORTED = 40;
 const NOT_ADMIN = 41;
 const ARANGO_ERROR = 42;
 const INELIGIBLE_RECOVERY_CONNECTION = 43;
+const INVALID_CONTEXTID = 44;
 
 class BrightIDError extends Error {
   constructor() {
@@ -431,6 +432,15 @@ class IneligibleRecoveryConnection extends ForbiddenError {
   }
 }
 
+class InvalidContextIdError extends NotFoundError {
+  constructor(contextId) {
+    super();
+    this.errorNum = INVALID_CONTEXTID;
+    this.message = `The contextId ${contextId} is not valid.`;
+    this.contextId = contextId;
+  }
+}
+
 module.exports = {
   CONTEXT_NOT_FOUND,
   CONTEXTID_NOT_FOUND,
@@ -472,6 +482,7 @@ module.exports = {
   NOT_ADMIN,
   ARANGO_ERROR,
   INELIGIBLE_RECOVERY_CONNECTION,
+  INVALID_CONTEXTID,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -518,4 +529,5 @@ module.exports = {
   SponsoredBeforeError,
   SponsorNotSupportedError,
   IneligibleRecoveryConnection,
+  InvalidContextIdError,
 }

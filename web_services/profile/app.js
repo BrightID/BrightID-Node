@@ -1,7 +1,6 @@
 // app.js
 const express = require("express");
 const app = express();
-const axios = require("axios");
 const NodeCache = require("node-cache");
 const config = require("./config");
 
@@ -40,35 +39,33 @@ app.post("/upload/:channel", function (req, res) {
 
   const current_data = dataCache.get(channel)
   if (current_data) {
-    // provided data is a responder profile. Add to existing channel.
-
-    const isRecoveryChannel = (uuid) =>
-      uuid.startsWith('connection_') ||
-      uuid.startsWith('group_') ||
-      uuid.startsWith('sig_');
-
-    // Bail out if group connection channel is full
-    // and ignore the limit if it's a recovery channel
-    if (current_data.length >= config.channel_entry_limit && !isRecoveryChannel(uuid)) {
-      res.status(config.channel_limit_response_code).json({error: config.channel_limit_message});
-      return;
-    }
-
     // Check if there is already a profile with the provided uuid to prevent duplicates
     const existingProfile = current_data.find(entry => (entry.uuid === uuid))
     if (existingProfile) {
       if (existingProfile.data === profile.data) {
-        // uploading the same profile multiple times is not a problem in itself. But create
-        // log entry as this might indicate a client issue.
         console.log(`Received duplicate profile ${uuid} for channel ${channel}`)
+        // restart TTL counter of channel
+        dataCache.ttl(channel)
         res.status(201).json({ success: true });
       } else {
         // Same UUID but different content? This is scary. Likely client bug. Bail out.
         res.status(500).json({error: `Profile ${uuid} already exists in channel ${channel} with different data.`});
       }
-      // Since the profile is already known there is no need to update anything
       return;
     }
+
+    const isRecoveryChannel = (uuid) =>
+        uuid.startsWith('connection_') ||
+        uuid.startsWith('group_') ||
+        uuid.startsWith('sig_');
+
+    // Bail out if channel is full but ignore the limit if it's a recovery channel
+    if (current_data.length >= config.channel_entry_limit && !isRecoveryChannel(uuid)) {
+      res.status(config.channel_limit_response_code).json({error: config.channel_limit_message});
+      return;
+    }
+
+    // add data to channel
     cacheEntry = current_data.concat([profile]);
   } else {
     // this is an initial profile upload. Create new channel.

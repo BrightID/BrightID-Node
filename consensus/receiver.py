@@ -91,9 +91,12 @@ def main():
                 if tx['to'] and tx['to'].lower() in (config.TO_ADDRESS.lower(), config.DEPRECATED_TO_ADDRESS.lower()):
                     process(tx['input'], block.timestamp)
             variables.update({'_key': 'LAST_BLOCK', 'value': block_number})
-            variables.update({'_key': 'LAST_BLOCK_TIME', 'value': block['timestamp']})
             if block_number % config.SNAPSHOTS_PERIOD == 0:
                 save_snapshot(block_number)
+                # PREV_SNAPSHOT_TIME is used by some verification
+                # algorithms to filter connections that are made
+                # after previous processed snapshot
+                variables.update({'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
             last_block = block_number
 
 

@@ -352,7 +352,9 @@ const handlers = {
   },
 
   allAppsGet: function(req, res){
-    const apps = db.getApps().map(app => db.appToDic(app));
+    const apps = db.getApps().filter(
+      app => !app.testing
+    ).map(app =>  db.appToDic(app));
     apps.sort((app1, app2) => {
       const used1 = app1.assignedSponsorships - app1.unusedSponsorships;
       const unused1 = app1.unusedSponsorships;
@@ -571,7 +573,7 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
-    if (! e instanceof errors.NotFoundError){
+    if (! (e instanceof errors.NotFoundError)){
       console.group("Error returned");
       console.log('url:', req._raw.requestType, req._raw.url);
       console.log('error:', e);

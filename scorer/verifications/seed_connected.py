@@ -31,7 +31,7 @@ def last_verifications():
     ''', bind_vars={'block': last_block})
     verifications = {v['user']: v for v in cursor}
     # update old SeedConnected verifications
-    # this block can be removed after all nodes updated
+    # this block of code can be removed after all brightid nodes updated
     for v in verifications.values():
         if 'seedGroup' in v:
             v['connected'] = [v['seedGroup'].replace('groups/', '')]
@@ -50,12 +50,13 @@ def verify(block):
         for g in v['connected']:
             counts[g] = counts.get(g, 0) + 1
 
-    last_block_time = snapshot_db['variables'].get('LAST_BLOCK_TIME')['value']
+    prev_snapshot_time = snapshot_db['variables'].get('PREV_SNAPSHOT_TIME')['value']
     seed_groups = snapshot_db['groups'].find({'seed': True})
     for seed_group in seed_groups:
-        # load connection that members of this se
+        # load connection that members of this seed group made after
+        # previous snapshot
         connections = seed_connections(
-            seed_group['_id'], last_block_time * 1000)
+            seed_group['_id'], prev_snapshot_time * 1000)
         quota = seed_group.get('quota', 0)
         counter = counts.get(seed_group['_key'], 0)
         for c in connections:
@@ -100,4 +101,4 @@ def verify(block):
                 AND v.block == @block
             RETURN v
     ''', bind_vars={'block': block}, count=True).count()
-    print(f'verifications: {verifiedCount}')
+    print(f'verifications: {verifiedCount}\n')

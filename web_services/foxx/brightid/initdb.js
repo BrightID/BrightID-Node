@@ -1,7 +1,6 @@
 const arango = require('@arangodb').db;
 const db = require('./db');
 const { query } = require('@arangodb');
-const { hash } = require('./encoding');
 
 const collections = {
   'connections': 'edge',
@@ -42,9 +41,10 @@ const indexes = [
 
 const variables = [
   { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
-  {'_key': 'VERIFICATIONS_HASHES', 'hashes': []},
-  {'_key': 'VERIFICATION_BLOCK', 'value': 0},
-  {'_key': 'LAST_BLOCK_TIME', 'value': 0},
+  { '_key': 'VERIFICATIONS_HASHES', 'hashes': [] },
+  { '_key': 'VERIFICATION_BLOCK', 'value': 0 },
+  // 2021/02/09 as starting point for applying new seed connected
+  { '_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000 },
 ]
 
 function createCollections() {
@@ -302,6 +302,19 @@ function v5_10() {
           FILTER ch._from == c._to AND ch._to == c._from
           RETURN ch.level IN ['already known', 'recovery'] ? 'recovery' : 'just met'
     )[0] } IN connections`;
+
+  console.log("removing invalid contextIds form contexts' collection");
+  const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+  const contextsColl = arango._collection('contexts');
+  contextsColl.all().toArray().map(context => {
+    const contextColl = arango._collection(context.collection);
+    const docs = contextColl.all().toArray();
+    for (let doc of docs) {
+      if (!doc.contextId || (context.idsAsHex && !re.test(doc.contextId))) {
+        contextColl.removeByExample(doc);
+      }
+    }
+  });
 }
 
 const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_10'];

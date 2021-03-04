@@ -3,8 +3,6 @@ from arango import ArangoClient
 from . import utils
 import config
 
-SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
-
 
 def verify(block):
     print('DOLLAR FOR EVERYONE')
@@ -20,7 +18,7 @@ def verify(block):
                 RETURN c._to
     ''', bind_vars={
         'admins': admins,
-        'levels': SEED_CONNECTION_LEVELS,
+        'levels': ['just met', 'already known', 'recovery'],
         'time_limit': 1564600000000
     })
 
