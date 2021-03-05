@@ -293,15 +293,26 @@ function v5_8() {
 }
 
 function v5_10() {
-  console.log("removing recovery connections which another side connection's level is not 'already known' or 'recovery'");
-  query`
-    FOR c IN connections
-      FILTER c.level == 'recovery'
-      UPDATE { _key: c._key, level: ((
-        FOR ch IN connections
-          FILTER ch._from == c._to AND ch._to == c._from
-          RETURN ch.level IN ["already known", "recovery"] ? "recovery" : "just met"
-    )[0] || "just met") } IN connections`;
+  console.log("reducing 'recovery' level to 'just met' for connections that another side is not 'already known' or 'recovery'");
+  const connectionsColl = arango._collection('connections');
+  const connectionsHistoryColl = arango._collection('connectionsHistory');
+  const now = Date.now();
+  connectionsColl.byExample({
+      level: 'recovery'
+  }).toArray().forEach(ft => {
+    const tf = connectionsColl.firstExample({
+        _from: ft._to,
+        _to: ft._from
+    });
+    if (!tf || !['already known', 'recovery'].includes(tf.level)) {
+      db.connect({
+        id1: ft._from.replace('users/', ''),
+        id2: ft._to.replace('users/', ''),
+        level: 'just met',
+        timestamp: now
+      });
+    }
+  });
 
   console.log("removing invalid contextIds form contexts' collection");
   const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
