@@ -292,7 +292,7 @@ function v5_8() {
     )[0] } IN connections`;
 }
 
-function v5_10() {
+function v5_9() {
   console.log("reducing 'recovery' level to 'just met' for connections that another side is not 'already known' or 'recovery'");
   const connectionsColl = arango._collection('connections');
   const connectionsHistoryColl = arango._collection('connectionsHistory');
@@ -331,7 +331,7 @@ function v5_10() {
   });
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_10'];
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9'];
 
 function initdb() {
   createCollections();
