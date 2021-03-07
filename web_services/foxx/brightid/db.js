@@ -578,6 +578,12 @@ function userVerifications(user) {
   const hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
   const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
   const lastBlock = variablesColl.document('LAST_BLOCK').value;
+  // We want verifications from the second-most recently finished snapshot
+  // prior to LAST_BLOCK. For example if
+  //   last last processed block by consensus service (lastBlock) is 520
+  //   and we create and process a new snapshot (snapshotPeriod) every 100 blocks
+  // we want verifications from block 400 and not 500, to ensure all nodes
+  // had enough time (at least equal time to one snapshot period) to calculate them.
   const block = lastBlock - (lastBlock % snapshotPeriod) - snapshotPeriod
   const verifications = verificationsColl.byExample({ user, block }).toArray();
   verifications.forEach(v => {
