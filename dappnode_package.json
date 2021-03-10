@@ -1,6 +1,6 @@
 {
   "name": "brightid-node.public.dappnode.eth",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "upstreamVersion": "5.8.0-1",
   "shortDescription": "BrightID Node and API",
   "description": "A BrightID Node stores the social graph and provides an API for public access. This package contains the Arango Database with the BrightID graph and provides a public API for BrightID clients.",
