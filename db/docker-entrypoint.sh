@@ -2,6 +2,8 @@
 # Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.6.4/docker-entrypoint.sh
 set -e
 
+echo "BN_ARANGO_EXTRA_OPTS: $BN_ARANGO_EXTRA_OPTS"
+
 if [ "$INIT_BRIGHTID_DB" == "1" ] || [ ! -f /var/lib/arangodb3/ENGINE ]; then
     INIT_BRIGHTID_DB=1
     echo "Loading brightid dump for initial start..."
@@ -195,7 +197,7 @@ if [ "$1" = 'arangod' ]; then
         AUTHENTICATION="false"
     fi
 
-    set -- arangod "$@" --server.endpoint=$BN_ARANGO_SERVER_ENDPOINT --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf
+    set -- arangod "$@" --server.endpoint=$BN_ARANGO_SERVER_ENDPOINT --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf $BN_ARANGO_EXTRA_OPTS
 else
     NUMACTL=""
 fi
