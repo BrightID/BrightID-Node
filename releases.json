@@ -5,5 +5,12 @@
     },
     "hash": "/ipfs/QmXgmKmQ8gM2fyydwvavo6cZmpphCsFWWVa2K8dtNqxLpf",
     "link": "https://dappnode.github.io/sdk-publish/?r=brightid-node.public.dappnode.eth&v=1.0.0&h=%2Fipfs%2FQmXgmKmQ8gM2fyydwvavo6cZmpphCsFWWVa2K8dtNqxLpf&d=0x8eB38a926C096c5d99e71D84973b8E9C690B99A9"
+  },
+  "1.1.0": {
+    "hash": "/ipfs/QmeSM2xqW2CVSRdbDsmPfy1QCw6h9tAN1FsuUQ9if9VBkT",
+    "uploadedTo": {
+      "dappnode": "Wed, 10 Mar 2021 08:49:00 GMT"
+    },
+    "link": "https://dappnode.github.io/sdk-publish/?r=brightid-node.public.dappnode.eth&v=1.1.0&h=%2Fipfs%2FQmYsNDryg5DfLTefZuhJiu5Xz72P8Mwsci8eRigLNJ2cFq"
   }
 }
