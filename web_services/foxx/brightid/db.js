@@ -605,9 +605,6 @@ function linkContextId(id, context, contextId, timestamp) {
   if (!contextId) {
     throw new errors.InvalidContextIdError(contextId);
   }
-  if (!loadUser(id)) {
-    throw new errors.UserNotFoundError(id);
-  }
 
   if (idsAsHex) {
     const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
