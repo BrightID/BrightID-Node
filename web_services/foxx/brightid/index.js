@@ -218,6 +218,7 @@ const handlers = {
     let appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
+    const verification = req.param('verification');
     const app = db.getApp(appKey);
     const context = db.getContext(app.context);
     const testblocks = db.getTestblocks(appKey, contextId);
@@ -247,7 +248,7 @@ const handlers = {
     verifications = _.keyBy(verifications, v => v.name);
     let verified;
     try {
-      let expr = parser.parse(app.verification);
+      let expr = parser.parse(verification || app.verification);
       for(let v of expr.variables()) {
         if (!verifications[v]) {
           verifications[v] = false;
@@ -352,7 +353,9 @@ const handlers = {
   },
 
   allAppsGet: function(req, res){
-    const apps = db.getApps().map(app => db.appToDic(app));
+    const apps = db.getApps().filter(
+      app => !app.testing
+    ).map(app =>  db.appToDic(app));
     apps.sort((app1, app2) => {
       const used1 = app1.assignedSponsorships - app1.unusedSponsorships;
       const unused1 = app1.unusedSponsorships;
@@ -498,6 +501,7 @@ router.get('/operations/:hash', handlers.operationGet)
 router.get('/verifications/:app/:contextId', handlers.verificationGet)
   .pathParam('app', joi.string().required().description('the app that user is verified for'))
   .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
+  .queryParam('verification', joi.string().description('the verification expression'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .summary('Gets a signed verification')
@@ -571,7 +575,7 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
-    if (! e instanceof errors.NotFoundError){
+    if (! (e instanceof errors.NotFoundError)){
       console.group("Error returned");
       console.log('url:', req._raw.requestType, req._raw.url);
       console.log('error:', e);

@@ -44,6 +44,16 @@ function connect(op) {
     requestProof,
     timestamp
   } = op;
+
+  const _from = 'users/' + key1;
+  const _to = 'users/' + key2;
+  if (level == 'recovery') {
+    const tf = connectionsColl.firstExample({ '_from': _to, '_to': _from });
+    if (!tf || !['already known', 'recovery'].includes(tf.level)) {
+      throw new errors.IneligibleRecoveryConnection();
+    }
+  }
+
   // create user by adding connection if it's not created
   // todo: we should prevent non-verified users from creating new users by making connections.
   let u1 = loadUser(key1);
@@ -61,8 +71,6 @@ function connect(op) {
     usersColl.update(u2, { parent: key1 });
   }
 
-  const _from = 'users/' + key1;
-  const _to = 'users/' + key2;
   const conn = connectionsColl.firstExample({ _from, _to });
 
   if (level != 'reported') {
@@ -567,9 +575,21 @@ function getLastContextIds(coll, appKey) {
 }
 
 function userVerifications(user) {
-  const verifications = verificationsColl.byExample({
-    user
-  }).toArray();
+  const hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
+  const lastBlock = variablesColl.document('LAST_BLOCK').value;
+  // We want verifications from the second-most recently generated snapshot
+  // prior to LAST_BLOCK. We use this approach to ensure all synced nodes return
+  // verifications from same block regardless of how fast they are in processing
+  // new generated snapshots and adding new verifications to database.
+  let block;
+  if (lastBlock > hashes[1]['block'] + snapshotPeriod) {
+    block = hashes[1]['block'];
+  } else {
+    block = hashes[0]['block'];
+  }
+
+  const verifications = verificationsColl.byExample({ user, block }).toArray();
   verifications.forEach(v => {
     delete v._key;
     delete v._id;
@@ -582,7 +602,15 @@ function userVerifications(user) {
 function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex } = getContext(context);
   const coll = db._collection(collection);
+  if (!contextId) {
+    throw new errors.InvalidContextIdError(contextId);
+  }
+
   if (idsAsHex) {
+    const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+    if(!re.test(contextId)) {
+      throw new errors.InvalidContextIdError(contextId);
+    }
     contextId = contextId.toLowerCase();
   }
 

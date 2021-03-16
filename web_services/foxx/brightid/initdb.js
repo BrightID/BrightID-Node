@@ -41,10 +41,10 @@ const indexes = [
 
 const variables = [
   { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
-  {'_key': 'VERIFICATIONS_HASHES', 'hashes': []},
-  {'_key': 'VERIFICATION_BLOCK', 'value': 0},
+  { '_key': 'VERIFICATIONS_HASHES', 'hashes': [] },
+  { '_key': 'VERIFICATION_BLOCK', 'value': 0 },
   // 2021/02/09 as starting point for applying new seed connected
-  {'_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000},
+  { '_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000 },
 ]
 
 function createCollections() {
@@ -292,7 +292,46 @@ function v5_8() {
     )[0] } IN connections`;
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8'];
+function v5_9() {
+  console.log("reducing 'recovery' level to 'just met' for connections that another side is not 'already known' or 'recovery'");
+  const connectionsColl = arango._collection('connections');
+  const connectionsHistoryColl = arango._collection('connectionsHistory');
+  const now = Date.now();
+  connectionsColl.byExample({
+      level: 'recovery'
+  }).toArray().forEach(ft => {
+    const tf = connectionsColl.firstExample({
+        _from: ft._to,
+        _to: ft._from
+    });
+    if (!tf || !['already known', 'recovery'].includes(tf.level)) {
+      db.connect({
+        id1: ft._from.replace('users/', ''),
+        id2: ft._to.replace('users/', ''),
+        level: 'just met',
+        timestamp: now
+      });
+    }
+  });
+
+  console.log("removing invalid contextIds form contexts' collection");
+  const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+  const contextsColl = arango._collection('contexts');
+  contextsColl.all().toArray().map(context => {
+    const contextColl = arango._collection(context.collection);
+    if (!contextColl) {
+      return;
+    }
+    const docs = contextColl.all().toArray();
+    for (let doc of docs) {
+      if (!doc.contextId || (context.idsAsHex && !re.test(doc.contextId))) {
+        contextColl.removeByExample(doc);
+      }
+    }
+  });
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9'];
 
 function initdb() {
   createCollections();

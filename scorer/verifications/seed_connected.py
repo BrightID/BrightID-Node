@@ -101,4 +101,4 @@ def verify(block):
                 AND v.block == @block
             RETURN v
     ''', bind_vars={'block': block}, count=True).count()
-    print(f'verifications: {verifiedCount}')
+    print(f'verifications: {verifiedCount}\n')
