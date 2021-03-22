@@ -47,6 +47,8 @@ const variables = [
   { '_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000 },
 ]
 
+const variablesColl = arango._collection('variables');
+
 function createCollections() {
   console.log("creating collections if they do not exist ...");
   for (let collection in collections) {
@@ -331,13 +333,22 @@ function v5_9() {
   });
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9'];
+function v5_9_1() {
+  let hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  new_hashes = {}
+  for (let item of hashes) {
+    new_hashes[item['block']] = item;
+    delete item['block'];
+  }
+  variablesColl.update('VERIFICATIONS_HASHES', { hashes: new_hashes });
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9', 'v5_9_1'];
 
 function initdb() {
   createCollections();
   createIndexes();
   removeDeprecatedCollections();
-  variablesColl = arango._collection('variables');
   initializeVariables();
   let index;
   if (variablesColl.exists('LAST_DB_UPGRADE')) {

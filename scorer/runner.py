@@ -23,19 +23,22 @@ verifiers = {
 
 
 def update_verifications_hashes(block):
-    new_hash = {'block': block}
+    new_hashes = {}
     verifications_names = [v for v in verifiers if v != 'apps']
     for v in verifications_names:
         verifications = db['verifications'].find({'name': v, 'block': block})
         hashes = [v.get('hash', '') for v in verifications]
         message = ''.join(sorted(hashes)).encode('ascii')
         h = base64.b64encode(sha256(message).digest()).decode("ascii")
-        new_hash[v] = h.replace(
+        new_hashes[v] = h.replace(
             '/', '_').replace('+', '-').replace('=', '')
-    hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
-    hashes.append(new_hash)
+
     # store hashes for only last 2 blocks
-    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes[-2:]})
+    hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
+    # arangodb save keys (block numbers) as strings
+    last_block = str(max(map(int, hashes.keys())))
+    hashes = { block: new_hashes, last_block: hashes[last_block] }
+    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes})
 
 
 def remove_verifications_before(block):
