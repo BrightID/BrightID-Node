@@ -32,11 +32,12 @@ def update_verifications_hashes(block):
         h = base64.b64encode(sha256(message).digest()).decode("ascii")
         new_hashes[v] = h.replace(
             '/', '_').replace('+', '-').replace('=', '')
-    hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
-    hashes[block] = new_hashes
+
     # store hashes for only last 2 blocks
-    to_keep = sorted(hashes.keys())[-2:]
-    hashes = {block: hashes[block] for block in hashes if block in to_keep}
+    hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
+    # arangodb save keys (block numbers) as strings
+    last_block = str(max(map(int, hashes.keys())))
+    hashes = { block: new_hashes, last_block: hashes[last_block] }
     variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes})
 
 
