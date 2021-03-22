@@ -590,7 +590,7 @@ function userVerifications(user) {
   // }
 
   // rollback consneus based block selection consneus temporarily to ensure faster verification
-  block = max(hashes.keys());
+  block = Math.max(...Object.keys(hashes));
 
   const verifications = verificationsColl.byExample({ user, block }).toArray();
   verifications.forEach(v => {
