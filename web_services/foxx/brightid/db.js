@@ -852,7 +852,7 @@ function getState() {
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
   const initOp = operationsColl.byExample({'state': 'init'}).count();
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
-  const verificationsHashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
   return {
     lastProcessedBlock,
     verificationsBlock,
