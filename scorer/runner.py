@@ -23,19 +23,21 @@ verifiers = {
 
 
 def update_verifications_hashes(block):
-    new_hash = {'block': block}
+    new_hashes = {}
     verifications_names = [v for v in verifiers if v != 'apps']
     for v in verifications_names:
         verifications = db['verifications'].find({'name': v, 'block': block})
         hashes = [v.get('hash', '') for v in verifications]
         message = ''.join(sorted(hashes)).encode('ascii')
         h = base64.b64encode(sha256(message).digest()).decode("ascii")
-        new_hash[v] = h.replace(
+        new_hashes[v] = h.replace(
             '/', '_').replace('+', '-').replace('=', '')
     hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
-    hashes.append(new_hash)
+    hashes[block] = new_hashes
     # store hashes for only last 2 blocks
-    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes[-2:]})
+    to_keep = sorted(hashes.keys())[-2:]
+    hashes = {block: hashes[block] for block in hashes if block in to_keep}
+    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes})
 
 
 def remove_verifications_before(block):
