@@ -41,7 +41,7 @@ const indexes = [
 
 const variables = [
   { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
-  { '_key': 'VERIFICATIONS_HASHES', 'hashes': [] },
+  { '_key': 'VERIFICATIONS_HASHES', 'hashes': '{}' },
   { '_key': 'VERIFICATION_BLOCK', 'value': 0 },
   // 2021/02/09 as starting point for applying new seed connected
   { '_key': 'PREV_SNAPSHOT_TIME', 'value': 1612900000 },
@@ -343,7 +343,12 @@ function v5_9_1() {
   variablesColl.update('VERIFICATIONS_HASHES', { hashes: new_hashes });
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9', 'v5_9_1'];
+function v5_9_2() {
+  let hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  variablesColl.update('VERIFICATIONS_HASHES', { hashes: JSON.stringify(hashes) });
+}
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9', 'v5_9_1', 'v5_9_2'];
 
 function initdb() {
   createCollections();

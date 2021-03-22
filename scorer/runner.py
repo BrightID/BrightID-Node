@@ -1,5 +1,6 @@
 import os
 import socket
+import json
 import time
 import shutil
 import traceback
@@ -35,10 +36,11 @@ def update_verifications_hashes(block):
 
     # store hashes for only last 2 blocks
     hashes = variables.get('VERIFICATIONS_HASHES')['hashes']
-    # arangodb save keys (block numbers) as strings
+    hashes = json.loads(hashes)
+    # json save keys (block numbers) as strings
     last_block = str(max(map(int, hashes.keys())))
     hashes = { block: new_hashes, last_block: hashes[last_block] }
-    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': hashes})
+    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': json.dumps(hashes)})
 
 
 def remove_verifications_before(block):

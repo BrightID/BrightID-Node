@@ -575,7 +575,8 @@ function getLastContextIds(coll, appKey) {
 }
 
 function userVerifications(user) {
-  const hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  let hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  hashes = JSON.parse(hashes);
   // const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
   // const lastBlock = variablesColl.document('LAST_BLOCK').value;
   // // We want verifications from the second-most recently generated snapshot
@@ -851,7 +852,7 @@ function getState() {
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
   const initOp = operationsColl.byExample({'state': 'init'}).count();
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
-  const verificationsHashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
   return {
     lastProcessedBlock,
     verificationsBlock,
