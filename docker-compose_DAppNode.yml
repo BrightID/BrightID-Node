@@ -4,7 +4,7 @@ services:
     build: web_services
     depends_on:
       - db
-    image: "ws.brightid-node.public.dappnode.eth:1.1.0"
+    image: "ws.brightid-node.public.dappnode.eth:1.2.0"
     environment:
       BN_WS_IP: ""
       BN_WS_PUBLIC_KEY: ""
@@ -20,7 +20,7 @@ services:
     depends_on:
       - ws
       - db
-    image: "scorer.brightid-node.public.dappnode.eth:1.1.0"
+    image: "scorer.brightid-node.public.dappnode.eth:1.2.0"
     volumes:
       - "snapshots:/snapshots"
     environment:
@@ -32,7 +32,7 @@ services:
     depends_on:
       - ws
       - db
-    image: "consensus_receiver.brightid-node.public.dappnode.eth:1.1.0"
+    image: "consensus_receiver.brightid-node.public.dappnode.eth:1.2.0"
     volumes:
       - "snapshots:/snapshots"
     environment:
@@ -53,7 +53,7 @@ services:
     depends_on:
       - ws
       - db
-    image: "consensus_sender.brightid-node.public.dappnode.eth:1.1.0"
+    image: "consensus_sender.brightid-node.public.dappnode.eth:1.2.0"
     environment:
       BN_ARANGO_PROTOCOL: http
       BN_ARANGO_HOST: db.brightid-node.public.dappnode
@@ -71,7 +71,7 @@ services:
     build: updater
     depends_on:
       - db
-    image: "updater.brightid-node.public.dappnode.eth:1.1.0"
+    image: "updater.brightid-node.public.dappnode.eth:1.2.0"
     environment:
       BN_UPDATER_SEED_VOTING_ADDRESS: "0x56741DbC203648983c359A48aaf68f25f5550B6a"
       BN_UPDATER_SP_ADDRESS: "0x0aB346a16ceA1B1363b20430C414eAB7bC179324"
@@ -82,7 +82,7 @@ services:
       BN_ARANGO_PORT: "8529"
   db:
     build: db
-    image: "db.brightid-node.public.dappnode.eth:1.1.0"
+    image: "db.brightid-node.public.dappnode.eth:1.2.0"
     environment:
       BN_ARANGO_SERVER_ENDPOINT: "tcp://0.0.0.0:8529"
       BN_ARANGO_EXTRA_OPTS: ""
@@ -91,7 +91,7 @@ services:
       - "apps:/var/lib/arangodb3-apps"
   web:
     build: web
-    image: "web.brightid-node.public.dappnode.eth:1.1.0"
+    image: "web.brightid-node.public.dappnode.eth:1.2.0"
     ports:
       - "80:80"
 volumes:
