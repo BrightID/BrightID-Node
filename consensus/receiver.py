@@ -31,19 +31,27 @@ def hash(op):
 
 
 def process(data, block_timestamp):
+    data_bytes = bytes.fromhex(data.strip('0x'))
+    data_str = data_bytes.decode('utf-8', 'ignore')
     try:
-        data_bytes = bytes.fromhex(data.strip('0x'))
-        data_str = data_bytes.decode('utf-8', 'ignore')
-        op = json.loads(data_str)
-        op['blockTime'] = block_timestamp * 1000
-        print(op)
-        url = config.APPLY_URL.format(v=op['v'], hash=hash(op))
-    except Exception as e:
-        print('error in parsing operation')
-        print('data', data_str)
-        print('error', e)
+        operations = json.loads(data_str)
+    except ValueError as e:
+        print('error in parsing operations', data_str)
         return
+    if type(operations) != list:
+        # old operation tx format
+        operations = [operations]
+    for op in operations:
+        if type(op) != dict or op.get('v') != 5 or 'name' not in op:
+            print('invalid operation', op)
+            continue
+        op['blockTime'] = block_timestamp * 1000
+        process_op(op)
 
+
+def process_op(op):
+    print(op)
+    url = config.APPLY_URL.format(v=op['v'], hash=hash(op))
     r = requests.put(url, json=op)
     resp = r.json()
     print(resp)
@@ -51,7 +59,7 @@ def process(data, block_timestamp):
     if resp.get('state') == 'failed':
         if resp['result'].get('arangoErrorNum') == errno.CONFLICT:
             print('retry on conflict')
-            return process(data, block_timestamp)
+            return process_op(op)
     # resp is returned from arango not PUT /operations handler
     if resp.get('error'):
         raise Exception('Error from apply service')
