@@ -27,20 +27,34 @@ def sendTransaction(data):
     return tx
 
 def main():
+    operations = []
+    hashes = []
     for op in db.collection('operations').find({'state': 'init'}):
-        d = copy.deepcopy(op)
-        del d['_id']
-        del d['_rev']
-        del d['state']
-        if op['v'] == 5:
-            del d['_key']
-            del d['hash']
-
+        ignore = ['_id', '_rev', 'state', '_key', 'hash']
+        d = {k: op[k] for k in op if k not in ignore}
+        if len(json.dumps(operations)) + len(json.dumps(d)) > config.MAX_DATA_SIZE:
+            break
+        hashes.append(op['hash'])
+        operations.append(d)
         print(d)
-        data = '0x'+binascii.hexlify(json.dumps(d).encode('utf-8')).decode('utf-8')
+
+    if not operations:
+        return
+
+    # Monday, April 5, 2021 5:00:00 UTC
+    if time.time() > 1617598800:
+        data = json.dumps(operations).encode('utf-8')
+        data = '0x'+binascii.hexlify(data).decode('utf-8')
         sendTransaction(data)
-        op['state'] = 'sent'
-        db.update_document(op)
+        for i, op in enumerate(operations):
+            db.collection('operations').update({'_key': hashes[i], 'state': 'sent'}, merge=True)
+    else:
+        # Above if and this else block can be removed on next version when all nodes upgraded to 5.9.4.
+        op = operations[0]
+        data = json.dumps(op).encode('utf-8')
+        data = '0x'+binascii.hexlify(data).decode('utf-8')
+        sendTransaction(data)
+        db.collection('operations').update({'_key': hashes[0], 'state': 'sent'}, merge=True)
 
 def wait():
     while True:

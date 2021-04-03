@@ -8,7 +8,7 @@ ADDRESS = keys.PrivateKey(
     decode_hex(PRIVATE_KEY)
 ).public_key.to_checksum_address() if PRIVATE_KEY else ''
 
-
+MAX_DATA_SIZE = int(os.environ['BN_CONSENSUS_MAX_DATA_SIZE'])
 GAS = int(os.environ['BN_CONSENSUS_GAS'])
 GAS_PRICE = int(os.environ['BN_CONSENSUS_GAS_PRICE'])
 TO_ADDRESS = os.environ['BN_CONSENSUS_TO_ADDRESS']
