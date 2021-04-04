@@ -89,7 +89,7 @@ const handlers = {
 
     const verifications = db.userVerifications(id).map(v => v.name);
 
-    let connections = db.userConnections(id);
+    let connections = db.userConnections(id, 'all');
     const connectionsMap = _.keyBy(connections, conn => conn.id);
     connections = connections.map(conn => {
       const u = db.userToDic(conn.id);

@@ -113,17 +113,26 @@ function removeConnection(reporter, reported, reportReason, timestamp) {
 }
 
 function userConnections(userId, direction = 'outbound') {
-  let query, resIdAttr;
-  if (direction == 'outbound') {
-    query = { _from: 'users/' + userId };
-    resIdAttr = '_to';
+  let _from, _to;
+  if (direction == 'all') {
+    _from = `users/${userId}`;
+    _to = `users/${userId}`;
+  } else if (direction == 'outbound') {
+    _from = `users/${userId}`;
+    _to = null;
   } else {
-    query = { _to: 'users/' + userId };
-    resIdAttr = '_from';
+    _from = null;
+    _to = `users/${userId}`;
   }
-  return connectionsColl.byExample(query).toArray().map(conn => {
+
+  return query`
+    FOR conn in ${connectionsColl}
+      FILTER conn._from == ${_from}
+        OR conn._to == ${_to}
+      RETURN conn
+  `.toArray().map(conn => {
     return {
-      id: conn[resIdAttr].replace('users/', ''),
+      id: conn._from == `users/${userId}` ? conn._to.replace('users/', '') : conn._from.replace('users/', ''),
       level: conn.level,
       reportReason: conn.reportReason || undefined,
       timestamp: conn.timestamp
