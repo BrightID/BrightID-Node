@@ -142,6 +142,7 @@ function userConnections(userId, direction = 'outbound') {
 
 function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
+  const recoveryConnections = getRecoveryConnections(u._key);
   return {
     id: u._key,
     // all signing keys will be returned on v6
@@ -151,7 +152,7 @@ function userToDic(userId) {
     verifications: userVerifications(u._key).map(v => v.name),
     hasPrimaryGroup: hasPrimaryGroup(u._key),
     // trusted is deprecated and will be replaced by recoveryConnections on v6
-    trusted: getRecoveryConnections(u._key),
+    trusted: Object.keys(recoveryConnections).filter(k => recoveryConnections[k] == 0),
     // flaggers is deprecated and will be replaced by reporters on v6
     flaggers: getReporters(u._key),
     createdAt: u.createdAt,
@@ -702,14 +703,14 @@ function getRecoveryConnections(user) {
   const borderTime = Date.now() - (7*24*60*60*1000);
   // when users set their recovery connections for the first time
   let initTimeBorder;
-  const res = [];
+  const res = {};
   for (let conn of allConnections) {
     // ignore not recovery connections
     if (conn.level != 'recovery') {
       continue;
     }
     // ignore connections to users that are already added to result
-    if (res.includes(conn._to)) {
+    if (conn._to in res) {
       continue;
     }
     // init the initTimeBorder with first recovery connection timestamp plus 24 hours
@@ -722,14 +723,16 @@ function getRecoveryConnections(user) {
     if (currentLevel == 'recovery') {
       if (conn.timestamp < borderTime || conn.timestamp < initTimeBorder) {
         // if recovery level set more than 7 days ago or on the first day
-        res.push(conn._to);
+        res[conn._to] = 0;
+      } else {
+        res[conn._to] = conn.timestamp - borderTime;
       }
     } else {
       // find the first connection that removed the recovery level
       const index = _.findIndex(history, conn) + 1;
       // if recovery level removed less than 7 days ago
       if (history[index]['timestamp'] > borderTime) {
-        res.push(conn._to);
+        res[conn._to] = 0;
       }
     }
   }

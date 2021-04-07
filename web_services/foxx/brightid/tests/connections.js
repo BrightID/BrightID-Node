@@ -141,14 +141,16 @@ describe('recovery connections', function () {
     db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate', 'timestamp': 4});
 
     const recoveryConnections = db.getRecoveryConnections('a');
-    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+    const res = Object.keys(recoveryConnections).filter(k => recoveryConnections[k] == 0);
+    res.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
   it('remove recovery connection should take one week to take effect to protect against takeover', function() {
     db.connect({id1: 'a', id2: 'c', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now()});
 
     const recoveryConnections = db.getRecoveryConnections('a');
-    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+    const res = Object.keys(recoveryConnections).filter(k => recoveryConnections[k] == 0);
+    res.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
   it("don't allow a recovery connection to be used for recovery if it is too new", function() {
@@ -156,7 +158,8 @@ describe('recovery connections', function () {
     db.connect({id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now()});
 
     const recoveryConnections = db.getRecoveryConnections('a');
-    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+    const res = Object.keys(recoveryConnections).filter(k => recoveryConnections[k] == 0);
+    res.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
   it("ignore cooling period from recovery connections set in the first day", function() {
@@ -172,7 +175,8 @@ describe('recovery connections', function () {
     db.connect({id1: 'e', id2: 'a', level: 'already known', 'timestamp': 1});
     db.connect({id1: 'a', id2: 'e', level: 'recovery', 'timestamp': firstConnTime + (30*60*60*1000)});
     const recoveryConnections = db.getRecoveryConnections('a');
-    recoveryConnections.should.deep.equal(['b', 'c', 'd']);
+    const res = Object.keys(recoveryConnections).filter(k => recoveryConnections[k] == 0);
+    res.should.deep.equal(['b', 'c', 'd']);
   });
 
 });

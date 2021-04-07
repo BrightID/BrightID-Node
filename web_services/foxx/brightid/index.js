@@ -109,12 +109,14 @@ const handlers = {
     // this is deprecated and will be removed on v6
     db.updateEligibleGroups(id, connections, groups);
 
+    const recoveryConnections = db.getRecoveryConnections(id);
+
     res.send({
       data: {
         score: user.score,
         createdAt: user.createdAt,
         flaggers: db.getReporters(id),
-        trusted: db.getRecoveryConnections(id),
+        trusted: Object.keys(recoveryConnections).filter(k => recoveryConnections[k] == 0),
         invites,
         groups,
         connections,
@@ -189,7 +191,8 @@ const handlers = {
         createdAt: user.createdAt,
         reports,
         verifications,
-        signingKeys: user.signingKeys
+        signingKeys: user.signingKeys,
+        trusted: db.getRecoveryConnections(id)
       }
     });
   },

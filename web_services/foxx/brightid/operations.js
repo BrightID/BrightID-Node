@@ -132,8 +132,8 @@ function verify(op) {
   } else if (op.name == 'Set Signing Key') {
     const recoveryConnections = db.getRecoveryConnections(op.id);
     if (op.id1 == op.id2 ||
-        !recoveryConnections.includes(op.id1) ||
-        !recoveryConnections.includes(op.id2)) {
+        !op.id1 in recoveryConnections ||
+        !op.id2 in recoveryConnections) {
       throw new errors.NotRecoveryConnectionsError();
     }
     verifyUserSig(message, op.id1, op.sig1);
