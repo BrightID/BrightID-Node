@@ -77,18 +77,26 @@ def apps_data():
 
 def apps_balance():
     print("Updating sponsorships balance of the apps", time.ctime())
-    w3 = Web3(Web3.WebsocketProvider(
-        config.INFURA_URL, websocket_kwargs={'timeout': 60}))
-    if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
-        w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-    sp_contract = w3.eth.contract(
-        address=config.SP_ADDRESS,
+    w3_mainnet = Web3(Web3.WebsocketProvider(
+        config.MAINNET_RPC_URL, websocket_kwargs={'timeout': 60}))
+    sp_contract_mainnet = w3_mainnet.eth.contract(
+        address=config.MAINNET_SP_ADDRESS,
+        abi=config.SP_ABI)
+
+    w3_idchain = Web3(Web3.WebsocketProvider(
+        config.IDCHAIN_RPC_URL, websocket_kwargs={'timeout': 60}))
+    w3_idchain.middleware_onion.inject(geth_poa_middleware, layer=0)
+    sp_contract_idchain = w3_idchain.eth.contract(
+        address=config.IDCHAIN_SP_ADDRESS,
         abi=config.SP_ABI)
 
     for app in db['apps']:
         app_bytes = str2bytes32(app['_key'])
-        app['totalSponsorships'] = sp_contract.functions.totalContextBalance(
+        mainnet_balance = sp_contract_mainnet.functions.totalContextBalance(
             app_bytes).call()
+        idchain_balance = sp_contract_idchain.functions.totalContextBalance(
+            app_bytes).call()
+        app['totalSponsorships'] = mainnet_balance + idchain_balance
         print(app['_key'], app['totalSponsorships'])
         db['apps'].update(app)
 
