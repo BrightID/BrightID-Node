@@ -10,8 +10,8 @@ SP_ABI = '[{"inputs": [], "constant": true, "name": "name", "outputs": [{"type":
 
 SPONSOR_EVENT_CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"}]'
 
-MAINNET_RPC_URL = os.environ['BN_UPDATER_SP_INFURA_URL']
-IDCHAIN_RPC_URL = os.environ['BN_CONSENSUS_INFURA_URL']
+MAINNET_WSS = os.environ['BN_UPDATER_MAINNET_WSS']
+IDCHAIN_WSS = os.environ['BN_UPDATER_IDCHAIN_WSS']
 SEED_GROUPS_WS_URL = os.environ['BN_UPDATER_SEED_GROUPS_WS_URL']
 
 CHUNK = 10000

@@ -78,13 +78,13 @@ def apps_data():
 def apps_balance():
     print("Updating sponsorships balance of the apps", time.ctime())
     w3_mainnet = Web3(Web3.WebsocketProvider(
-        config.MAINNET_RPC_URL, websocket_kwargs={'timeout': 60}))
+        config.MAINNET_WSS, websocket_kwargs={'timeout': 60}))
     sp_contract_mainnet = w3_mainnet.eth.contract(
         address=config.MAINNET_SP_ADDRESS,
         abi=config.SP_ABI)
 
     w3_idchain = Web3(Web3.WebsocketProvider(
-        config.IDCHAIN_RPC_URL, websocket_kwargs={'timeout': 60}))
+        config.IDCHAIN_WSS, websocket_kwargs={'timeout': 60}))
     w3_idchain.middleware_onion.inject(geth_poa_middleware, layer=0)
     sp_contract_idchain = w3_idchain.eth.contract(
         address=config.IDCHAIN_SP_ADDRESS,
