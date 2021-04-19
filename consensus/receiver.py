@@ -39,7 +39,7 @@ def process(data, block_timestamp):
         print('error in parsing operations', data_str)
         return
     if type(operations) != list:
-        # old operation tx format
+        # Old operation tx format. This if block can be removed on next version when all nodes upgraded to 5.9.4.
         operations = [operations]
     for op in operations:
         if type(op) != dict or op.get('v') != 5 or 'name' not in op:
