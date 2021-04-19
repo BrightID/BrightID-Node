@@ -30,13 +30,6 @@ def last_verifications():
             RETURN v
     ''', bind_vars={'block': last_block})
     verifications = {v['user']: v for v in cursor}
-    # update old SeedConnected verifications
-    # this block of code can be removed after all brightid nodes updated
-    for v in verifications.values():
-        if 'seedGroup' in v:
-            v['connected'] = [v['seedGroup'].replace('groups/', '')]
-            v['reported'] = []
-            del v['seedGroup']
     return verifications
 
 
@@ -47,6 +40,7 @@ def verify(block):
     # find number of users each seed group verified
     counts = {}
     for u, v in users.items():
+        v['reported'] = []
         for g in v['connected']:
             counts[g] = counts.get(g, 0) + 1
 
