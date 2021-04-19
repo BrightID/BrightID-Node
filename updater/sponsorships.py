@@ -6,7 +6,7 @@ import traceback
 from web3 import Web3
 from hashlib import sha256
 from arango import ArangoClient
-from web3.middleware import geth_poa_middleware
+from web3.middleware import geth_poa_middleware, local_filter_middleware
 import config
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
@@ -20,7 +20,8 @@ def get_events(app):
         app['wsProvider'], websocket_kwargs={'timeout': 60}))
     if app['wsProvider'].count('rinkeby') > 0 or app['wsProvider'].count('idchain') > 0:
         w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-
+    if app.get('localFilter'):
+        w3.middleware_onion.add(local_filter_middleware)
     if variables.has('LAST_BLOCK_LOG_{}'.format(app['_key'])):
         fb = variables['LAST_BLOCK_LOG_{}'.format(app['_key'])]['value']
     else:
