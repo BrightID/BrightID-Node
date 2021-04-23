@@ -1,5 +1,5 @@
 #!/bin/sh
-# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.6.4/docker-entrypoint.sh
+# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.7.10/docker-entrypoint.sh
 set -e
 
 echo "BN_ARANGO_EXTRA_OPTS: $BN_ARANGO_EXTRA_OPTS"
@@ -20,7 +20,6 @@ if [ -z "$ARANGO_INIT_PORT" ] ; then
 fi
 
 AUTHENTICATION="true"
-export GLIBCXX_FORCE_NEW=1
 
 # if command starts with an option, prepend arangod
 case "$1" in
@@ -56,20 +55,10 @@ if [ "$1" = 'arangod' ]; then
     # must work regardless under which user we run:
     cp /etc/arangodb3/arangod.conf /tmp/arangod.conf
 
+    ARANGO_STORAGE_ENGINE=rocksdb
     if [ ! -z "$ARANGO_ENCRYPTION_KEYFILE" ]; then
         echo "Using encrypted database"
         sed -i /tmp/arangod.conf -e "s;^.*encryption-keyfile.*;encryption-keyfile=$ARANGO_ENCRYPTION_KEYFILE;"
-        ARANGO_STORAGE_ENGINE=rocksdb
-    fi
-
-    if [ "$ARANGO_STORAGE_ENGINE" == "rocksdb" ]; then
-        echo "choosing RocksDB storage engine"
-        sed -i /tmp/arangod.conf -e "s;storage-engine = auto;storage-engine = rocksdb;"
-    elif [ "$ARANGO_STORAGE_ENGINE" == "mmfiles" ]; then
-        echo "choosing MMFiles storage engine"
-        sed -i /tmp/arangod.conf -e "s;storage-engine = auto;storage-engine = mmfiles;"
-    else
-        echo "automatically choosing storage engine"
     fi
     if [ "$INIT_BRIGHTID_DB" == "1" ] || ([ ! -f /var/lib/arangodb3/SERVER ] && [ "$SKIP_DATABASE_INIT" != "1" ]); then
         if [ ! -z "$ARANGO_ROOT_PASSWORD_FILE" ]; then
@@ -112,8 +101,8 @@ if [ "$1" = 'arangod' ]; then
         $NUMACTL arangod --config /tmp/arangod.conf \
                 --server.endpoint tcp://127.0.0.1:$ARANGO_INIT_PORT \
                 --server.authentication false \
-        --log.file /tmp/init-log \
-        --log.foreground-tty false &
+                --log.file /tmp/init-log \
+                --log.foreground-tty false &
         pid="$!"
 
         counter=0
