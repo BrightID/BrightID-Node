@@ -40,6 +40,8 @@ const NOT_ADMIN = 41;
 const ARANGO_ERROR = 42;
 const INELIGIBLE_RECOVERY_CONNECTION = 43;
 const INVALID_CONTEXTID = 44;
+const WAIT_FOR_COOLDOWN = 45;
+const DUPLICATE_SIGNERS = 46;
 
 class BrightIDError extends Error {
   constructor() {
@@ -441,6 +443,23 @@ class InvalidContextIdError extends NotFoundError {
   }
 }
 
+class WaitForCooldownError extends ForbiddenError {
+  constructor(signer) {
+    super();
+    this.errorNum = WAIT_FOR_COOLDOWN;
+    this.message = `${signer} is still in cooldown period.`;
+    this.signer = signer;
+  }
+}
+
+class DuplicateSignersError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = DUPLICATE_SIGNERS;
+    this.message = 'Signers of the request are duplicates.';
+  }
+}
+
 module.exports = {
   CONTEXT_NOT_FOUND,
   CONTEXTID_NOT_FOUND,
@@ -483,6 +502,8 @@ module.exports = {
   ARANGO_ERROR,
   INELIGIBLE_RECOVERY_CONNECTION,
   INVALID_CONTEXTID,
+  WAIT_FOR_COOLDOWN,
+  DUPLICATE_SIGNERS,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -530,4 +551,6 @@ module.exports = {
   SponsorNotSupportedError,
   IneligibleRecoveryConnection,
   InvalidContextIdError,
+  WaitForCooldownError,
+  DuplicateSignersError,
 }
