@@ -135,10 +135,10 @@ function verify(op) {
       throw new errors.DuplicateSignersError();
     } else if (!op.id1 in recoveryConnections || !op.id2 in recoveryConnections) {
       throw new errors.NotRecoveryConnectionsError();
-    } else if (recoveryConnections[id1] != 0) {
-      throw new errors.WaitForCooldownError(id1);
-    } else if (recoveryConnections[id2] != 0) {
-      throw new errors.WaitForCooldownError(id2);
+    } else if (recoveryConnections[op.id1] != 0) {
+      throw new errors.WaitForCooldownError(op.id1);
+    } else if (recoveryConnections[op.id2] != 0) {
+      throw new errors.WaitForCooldownError(op.id2);
     }
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);
