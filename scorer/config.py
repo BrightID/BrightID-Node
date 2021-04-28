@@ -1,10 +1,13 @@
-import os
+import os, shutil
 
 SNAPSHOTS_PATH = "/snapshots"
 if 'INIT_BRIGHTID_DB' in os.environ:
     for fname in os.listdir(SNAPSHOTS_PATH):
         fpath = os.path.join(SNAPSHOTS_PATH, fname)
-        os.remove(fpath)
+        if os.path.isfile(fpath) or os.path.islink(fpath):
+            os.unlink(fpath)
+        elif os.path.isdir(fpath):
+            shutil.rmtree(fpath)
 
 BN_ARANGO_PROTOCOL = os.environ['BN_ARANGO_PROTOCOL']
 BN_ARANGO_HOST = os.environ['BN_ARANGO_HOST']
