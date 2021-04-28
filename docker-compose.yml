@@ -24,6 +24,8 @@ services:
         target: /snapshots
     env_file:
       - config.env
+    environment:
+      - INIT_BRIGHTID_DB
 
   consensus_receiver:
     build: consensus
