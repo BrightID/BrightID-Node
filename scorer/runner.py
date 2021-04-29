@@ -20,6 +20,7 @@ verifiers = {
     'DollarForEveryone': verifications.dollar_for_everyone,
     'SocialRecoverySetup': verifications.social_recovery_setup,
     'apps': verifications.apps,
+    'recoveryLevel2': verifications.recovery_level2,
 }
 
 
