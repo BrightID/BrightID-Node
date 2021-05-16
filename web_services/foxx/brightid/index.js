@@ -1,4 +1,5 @@
 'use strict';
+const stringify = require('fast-json-stable-stringify');
 const secp256k1 = require('secp256k1');
 const createKeccakHash = require('keccak');
 const createRouter = require('@arangodb/foxx/router');
@@ -9,6 +10,7 @@ const nacl = require('tweetnacl');
 const db = require('./db');
 const schemas = require('./schemas').schemas;
 const operations = require('./operations');
+const WISchnorrServer  = require('./WISchnorrServer');
 const {
   strToUint8Array,
   b64ToUint8Array,
@@ -23,6 +25,8 @@ const errors = require('./errors');
 const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
+const signedVerificationsColl = arango._collection('signedVerifications');
+const cachedParamsColl = arango._collection('cachedParams');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 const MAX_OP_SIZE = 2000;
@@ -106,8 +110,6 @@ const handlers = {
     });
 
     const invites = db.userInvitedGroups(id);
-    // this is deprecated and will be removed on v6
-    db.updateEligibleGroups(id, connections, groups);
 
     res.send({
       data: {
@@ -194,61 +196,60 @@ const handlers = {
     });
   },
 
-  allVerificationsGet: function(req, res){
+  verificationPublicGet: function(req, res){
     const appKey = req.param('app');
-    const count_only = 'count_only' in req.queryParams;
     const app = db.getApp(appKey);
-    const context = db.getContext(app.context);
-    const coll = arango._collection(context.collection);
-    let contextIds = db.getLastContextIds(coll, app._key);
-    let data = {
-      count: contextIds.length
+    const roundedTimestamp = req.param('roundedTimestamp');
+    const verification = req.param('verification') || app.verification;
+
+    const tp = app.timestampPrecision;
+    const serverRoundedTimestamp = tp ? parseInt(Date.now() / tp) * tp : 0;
+    if (serverRoundedTimestamp != roundedTimestamp) {
+      throw new errors.InvalidRoundedTimestampError(serverRoundedTimestamp, roundedTimestamp);
     }
-    if (! count_only){
-      data['contextIds'] = contextIds
-    }
+
+    const info = stringify({ app: appKey, roundedTimestamp, verification });
+    const server = new WISchnorrServer();
+    const { public, private } = server.GenerateWISchnorrParams(info);
+    cachedParamsColl.insert({
+      _key: public,
+      private,
+      app: appKey,
+      roundedTimestamp,
+      verification,
+      creationDate: parseInt(Date.now() / 1000);
+    });
     res.send({
-      data
+      data: { public }
     });
   },
 
   verificationGet: function(req, res){
-    let unique = true;
-    let contextId = req.param('contextId');
-    let appKey = req.param('app');
-    const signed = req.param('signed');
-    let timestamp = req.param('timestamp');
-    const verification = req.param('verification');
+    const id = req.param('id');
+    const sig = req.param('sig');
+    const e = req.param('e');
+    const public = req.param('public');
+
+    const {
+      private,
+      app: appKey,
+      roundedTimestamp,
+      verification
+    } = db.getCachedParams(public);
     const app = db.getApp(appKey);
-    const context = db.getContext(app.context);
-    const testblocks = db.getTestblocks(appKey, contextId);
-    if (testblocks.includes('link')) {
-      throw new errors.ContextIdNotFoundError(contextId);
-    } else if (testblocks.includes('sponsorship')) {
-      throw new errors.NotSponsoredError(contextId);
-    } else if (testblocks.includes('verification')) {
-      throw new errors.NotVerifiedError(contextId, appKey);
-    }
 
-    if (context.idsAsHex) {
-      contextId = contextId.toLowerCase();
-    }
+    const msg = stringify({ id, public });
+    operations.verifyUserSig(message, id, sig);
 
-    const coll = arango._collection(context.collection);
-    const user = db.getUserByContextId(coll, contextId);
-    if (! user) {
-      throw new errors.ContextIdNotFoundError(contextId);
-    }
-
-    if (! db.isSponsored(user)) {
-      throw new errors.NotSponsoredError(contextId);
+    if (! db.isSponsored(id)) {
+      throw new errors.NotSponsoredError();
     }
 
     let verifications = db.userVerifications(user);
     verifications = _.keyBy(verifications, v => v.name);
     let verified;
     try {
-      let expr = parser.parse(verification || app.verification);
+      let expr = parser.parse(verification);
       for(let v of expr.variables()) {
         if (!verifications[v]) {
           verifications[v] = false;
@@ -256,92 +257,33 @@ const handlers = {
       }
       verified = expr.evaluate(verifications);
     } catch (err) {
-      throw new errors.InvalidExpressionError(app.name, app.verification, err);
+      throw new errors.InvalidExpressionError(app.name, verification, err);
     }
     if (! verified) {
-      throw new errors.NotVerifiedError(contextId, appKey);
+      throw new errors.NotVerifiedError(appKey);
     }
 
-    let contextIds = db.getContextIdsByUser(coll, user);
-    if (contextId != contextIds[0]) {
-      unique = false;
+    if (! (module.context && module.context.configuration && module.context.configuration.WISchnorrPassword)){
+      throw new errors.WISchnorrPasswordNotSetError();
     }
 
-    if (timestamp == 'seconds') {
-      timestamp = parseInt(Date.now() / 1000);
-    } else if (timestamp == 'milliseconds') {
-      timestamp = Date.now();
-    } else {
-      timestamp = undefined;
+    const password = module.context.configuration.WISchnorrPassword;
+    const server = new WISchnorrServer();
+    server.GenerateSchnorrKeypair(password);
+
+    const q = { _key: id, roundedTimestamp, app: appKey };
+    const sv = signedVerificationsColl.firstExample(q);
+    if (sv) {
+      throw new errors.DuplicateSigRequetError();
     }
+    signedVerificationsColl.insert(q);
 
-    // sign and return the verification
-    let sig, publicKey;
-    if (signed == 'nacl') {
-      if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-        throw new errors.KeypairNotSetError();
-      }
-
-      let message = appKey + ',' + contextIds.join(',');
-      if (timestamp) {
-        message = message + ',' + timestamp;
-      }
-      const privateKey = module.context.configuration.privateKey;
-      publicKey = module.context.configuration.publicKey;
-      sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
-      );
-    } else if (signed == 'eth') {
-      if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
-        throw new errors.EthPrivatekeyNotSetError();
-      }
-
-      let message, h;
-      if (context.idsAsHex) {
-        message = pad32(appKey) + contextIds.map(addressToBytes32).join('');
-      } else {
-        message = pad32(appKey) + contextIds.map(pad32).join('');
-      }
-      message = Buffer.from(message, 'binary').toString('hex');
-      if (timestamp) {
-        const t = timestamp.toString(16);
-        message += ('0'.repeat(64 - t.length) + t);
-      }
-      h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
-      let ethPrivateKey = module.context.configuration.ethPrivateKey;
-      ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
-      publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
-      const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
-      sig = {
-        r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
-        s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
-        v: _sig.recid + 27,
-      }
-    }
+    const response = server.GenerateWISchnorrServerResponse(private, e);
     res.send({
       data: {
-        unique,
-        app: appKey,
-        context: app.context,
-        contextIds: contextIds,
-        sig,
-        timestamp,
-        publicKey
+        response,
       }
     });
-  },
-
-  ipGet: function(req, res){
-    let ip = module.context && module.context.configuration && module.context.configuration.ip;
-    if (ip) {
-      res.send({
-        "data": {
-          ip,
-        }
-      });
-    } else {
-      throw new errors.IpNotSetError();
-    }
   },
 
   appGet: function(req, res){
@@ -376,59 +318,6 @@ const handlers = {
     });
   },
 
-  testblocksPut: function(req, res){
-    const appKey = req.param('app');
-    const action = req.param('action');
-    const contextId = req.param('contextId');
-    const testingKey = req.param('testingKey');
-
-    const app = db.getApp(appKey);
-    if (app.testingKey != testingKey) {
-      throw new errors.InvalidTestingKeyError();
-    }
-
-    return db.addTestblock(contextId, action, appKey);
-  },
-
-  testblocksDelete: function(req, res){
-    const appKey = req.param('app');
-    const action = req.param('action');
-    const contextId = req.param('contextId');
-    const testingKey = req.param('testingKey');
-
-    const app = db.getApp(appKey);
-    if (app.testingKey != testingKey) {
-      throw new errors.InvalidTestingKeyError();
-    }
-
-    return db.removeTestblock(contextId, action, appKey);
-  },
-
-  contextDumpGet: function(req, res){
-    const contextKey = req.param('context');
-    const passcode = req.queryParams['passcode'];
-    const context = db.getContext(contextKey);
-
-    if (! context.passcode) {
-      throw new errors.PasscodeNotSetError(contextKey);
-    }
-    if (context.passcode != passcode) {
-      throw new errors.InvalidPasscodeError();
-    }
-
-    const coll = arango._collection(context.collection);
-    const contextIds = db.getContextIds(coll);
-    db.removePasscode(contextKey);
-    res.send({
-      data: {
-        collection: context.collection,
-        idsAsHex: context.idsAsHex,
-        linkAESKey: context.linkAESKey,
-        contextIds
-      }
-    });
-  },
-
   groupGet: function(req, res){
     const id = req.param('id');
     const group = db.loadGroup(id);
@@ -440,8 +329,6 @@ const handlers = {
       data: {
         members: db.groupMembers(id),
         invites: db.groupInvites(id),
-        // the eligibles is deprecated and will be removed on v6
-        eligibles: db.updateEligibles(id),
         admins: group.admins,
         founders: group.founders,
         isNew: group.isNew,
@@ -468,7 +355,7 @@ router.post('/operations', handlers.operationsPost)
 router.get('/users/:id', handlers.userGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Get information about a user')
-  .description("Gets a user's score, verifications, joining date, lists of connections, groups and eligible groups.")
+  .description("Gets a user's score, verifications, joining date, lists of connections and groups.")
   .response(schemas.userGetResponse)
   .error(404, 'User not found');
 
@@ -488,39 +375,36 @@ router.get('/users/:id/profile/:requestor', handlers.userProfileGet)
 router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .pathParam('direction', joi.string().required().valid('inbound', 'outbound').description('the direction of the connection'))
-  .summary('Get inbound or outbound connections of a user')
+  .summary('Gets inbound or outbound connections of a user')
   .description("Gets list of user's connections with levels and timestamps")
   .response(schemas.userConnectionsGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
-  .summary('Get state and result of an operation')
+  .summary('Gets state and result of an operation')
   .response(schemas.operationGetResponse)
   .error(404, 'Operation not found');
 
-router.get('/verifications/:app/:contextId', handlers.verificationGet)
-  .pathParam('app', joi.string().required().description('the app that user is verified for'))
-  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .queryParam('verification', joi.string().description('the verification expression'))
-  .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
-  .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
-  .summary('Gets a signed verification')
-  .description("Gets a signed verification for the user that is signed by the node")
+router.get('/verifications/public', handlers.verificationPublicGet)
+  .queryParam('app', joi.string().required().description('unique app id'))
+  .queryParam('roundedTimestamp', joi.string().required().description("timestamp that is rounded to app's required precision"))
+  .queryParam('verification', joi.string().description('custom verification expression')
+  .summary('Gets public part of WI-Schnorr params')
+  .description("Gets public part of WI-Schnorr params using deterministic json representation of {app, roundedTimestamp, verification} as info")
+  .response(schemas.verificationPublicGetResponse)
+  .error(404, 'app not found')
+  .error(403, 'invalid rounded timestamp');
+
+router.get('/verifications/:id', handlers.verificationGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user requesting the verification'))
+  .queryParam('public', joi.string().required().description('public part of WI-Schnorr params'))
+  .queryParam('sig', joi.string().description('deterministic json representation of {id, public} signed by the user represented by id')
+  .queryParam('e', joi.string().required().description('the e part of WI-Schnorr challenge generated by client using public provided by node'))
+  .summary('Gets WI-Schnorr server response')
+  .description('Gets WI-Schnorr server response that will be used by client to generate final signature to be shared with the app')
   .response(schemas.verificationGetResponse)
-  .error(403, 'user is not sponsored')
-  .error(404, 'context, contextId or verification not found');
-
-router.get('/verifications/:app', handlers.allVerificationsGet)
-  .pathParam('app', joi.string().required().description('the app for which the user is verified'))
-  .summary('Gets list of all of contextIds verifed for an app')
-  .description("Gets list of all of contextIds in the context that are sponsored and verified for using an app")
-  .response(schemas.allVerificationsGetResponse)
-  .error(404, 'context not found');
-
-// this route is deprecated and will be removed on v6
-router.get('/ip', handlers.ipGet)
-  .summary("Get this server's IPv4 address")
-  .response(schemas.ipGetResponse);
+  .error(404, 'app not found')
+  .error(403, 'invalid rounded timestamp');
 
 router.get('/apps/:app', handlers.appGet)
   .pathParam('app', joi.string().required().description("Unique name of the app"))
@@ -536,38 +420,10 @@ router.get('/state', handlers.stateGet)
   .summary("Get state of this node")
   .response(schemas.stateGetResponse);
 
-router.put('/testblocks/:app/:action/:contextId', handlers.testblocksPut)
-  .pathParam('app', joi.string().required().description("The key of app"))
-  .pathParam('action', joi.string().valid('sponsorship', 'link', 'verification').required().description("The action name"))
-  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .queryParam('testingKey', joi.string().required().description('the secret key for testing the app'))
-  .summary("Block user's verification for testing")
-  .description('Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing')
-  .response(null);
-
-router.delete('/testblocks/:app/:action/:contextId', handlers.testblocksDelete)
-  .pathParam('app', joi.string().required().description("Unique name of the app"))
-  .pathParam('action', joi.string().required().valid('sponsorship', 'link', 'verification').description("The action name"))
-  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
-  .queryParam('testingKey', joi.string().description('the testing private key of the app'))
-  .summary("Remove blocking state applied on user's verification for testing")
-  .description("Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing")
-  .response(null);
-
-router.get('/contexts/:context/dump', handlers.contextDumpGet)
-  .pathParam('context', joi.string().required().description('the context key'))
-  .queryParam('passcode', joi.string().required().description('the one time passcode that authorize access to this endpoint once'))
-  .summary("Get dump of a context")
-  .description('Get all required info to transfer a context to a new node')
-  .response(schemas.contextDumpGetResponse)
-  .error(404, 'context not found')
-  .error(403, 'passcode not set')
-  .error(403, 'incorrect passcode');
-
 router.get('/groups/:id', handlers.groupGet)
   .pathParam('id', joi.string().required().description('the id of the group'))
   .summary('Get information about a group')
-  .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members, invited and eligible members.")
+  .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members and invited list.")
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');
 

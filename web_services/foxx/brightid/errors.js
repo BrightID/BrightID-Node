@@ -1,8 +1,5 @@
-const CONTEXT_NOT_FOUND = 1;
-const CONTEXTID_NOT_FOUND = 2;
 const NOT_VERIFIED = 3;
 const NOT_SPONSORED = 4;
-const KEYPAIR_NOT_SET = 6;
 const ETHPRIVATEKEY_NOT_SET = 7;
 const OPERATION_NOT_FOUND = 9;
 const USER_NOT_FOUND = 10;
@@ -22,7 +19,6 @@ const NOT_RECOVERY_CONNECTIONS = 23;
 const INVALID_HASH = 24;
 const OPERATION_APPLIED_BEFORE = 25;
 const TOO_BIG_OPERATION = 26;
-const INELIGIBLE_NEW_USER = 27;
 const ALREADY_HAS_PRIMARY_GROUP = 28;
 const NEW_USER_BEFORE_FOUNDERS_JOIN = 29;
 const INVALID_GROUP_TYPE = 30;
@@ -31,7 +27,6 @@ const INVALID_COFOUNDERS = 32;
 const INELIGIBLE_NEW_ADMIN = 33;
 const NOT_INVITED = 34;
 const LEAVE_GROUP = 35;
-const DUPLICATE_CONTEXTID = 36;
 const TOO_MANY_LINK_REQUEST = 37;
 const UNUSED_SPONSORSHIPS = 38;
 const SPONSORED_BEFORE = 39;
@@ -39,7 +34,9 @@ const SPONSOR_NOT_SUPPORTED = 40;
 const NOT_ADMIN = 41;
 const ARANGO_ERROR = 42;
 const INELIGIBLE_RECOVERY_CONNECTION = 43;
-const INVALID_CONTEXTID = 44;
+const WISCHNORR_PASSWORD_NOT_SET = 45;
+const INVALID_ROUNDED_TIMESTAMP = 46;
+const DUPLICATE_SIG_REQUEST_ERROR = 47;
 
 class BrightIDError extends Error {
   constructor() {
@@ -205,24 +202,6 @@ class UserNotFoundError extends NotFoundError {
   }
 }
 
-class ContextNotFoundError extends NotFoundError {
-  constructor(context) {
-    super();
-    this.errorNum = CONTEXT_NOT_FOUND;
-    this.message = `The context ${context} is not found.`;
-    this.context = context;
-  }
-}
-
-class ContextIdNotFoundError extends NotFoundError {
-  constructor(contextId) {
-    super();
-    this.errorNum = CONTEXTID_NOT_FOUND;
-    this.message = `The contextId ${contextId} is not linked.`;
-    this.contextId = contextId;
-  }
-}
-
 class GroupNotFoundError extends NotFoundError {
   constructor(group) {
     super();
@@ -233,20 +212,18 @@ class GroupNotFoundError extends NotFoundError {
 }
 
 class NotSponsoredError extends ForbiddenError {
-  constructor(contextId) {
+  constructor() {
     super();
     this.errorNum = NOT_SPONSORED;
-    this.message = `The user linked to the contextId ${contextId} is not sponsored.`;
-    this.contextId = contextId;
+    this.message = `The user is not sponsored.`;
   }
 }
 
 class NotVerifiedError extends ForbiddenError {
-  constructor(contextId, app) {
+  constructor(app) {
     super();
     this.errorNum = NOT_VERIFIED;
-    this.message = `The user linked to contextId ${contextId} is not verified for ${app} app.`;
-    this.contextId = contextId;
+    this.message = `The user is not verified for ${app} app.`;
     this.app = app;
   }
 }
@@ -256,14 +233,6 @@ class InvalidExpressionError extends InternalServerError {
     super();
     this.errorNum = INVALID_EXPRESSION;
     this.message = `Evaluating verification expression for ${app} app failed. Expression: "${expression}", Error: ${err}`;
-  }
-}
-
-class KeypairNotSetError extends InternalServerError {
-  constructor() {
-    super();
-    this.errorNum = KEYPAIR_NOT_SET;
-    this.message = 'BN_WS_PUBLIC_KEY or BN_WS_PRIVATE_KEY are not set in config.env.';
   }
 }
 
@@ -288,23 +257,6 @@ class InvalidTestingKeyError extends ForbiddenError {
     super();
     this.errorNum = INVALID_TESTING_KEY;
     this.message = 'Invalid testing key.';
-  }
-}
-
-class PasscodeNotSetError extends ForbiddenError {
-  constructor(context) {
-    super();
-    this.errorNum = PASSCODE_NOT_SET;
-    this.message = `Passcode is not set on the remote node for the ${context} context.`;
-    this.context = context;
-  }
-}
-
-class InvalidPasscodeError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = INVALID_PASSCODE;
-    this.message = 'Invalid passcode.';
   }
 }
 
@@ -381,23 +333,6 @@ class LeaveGroupError extends ForbiddenError {
   }
 }
 
-class DuplicateContextIdError extends ForbiddenError {
-  constructor(contextId) {
-    super();
-    this.errorNum = DUPLICATE_CONTEXTID;
-    this.message = `The contextId ${contextId} is used by another user before.`;
-    this.contextId = contextId;
-  }
-}
-
-class TooManyLinkRequestError extends TooManyRequestsError {
-  constructor() {
-    super();
-    this.errorNum = TOO_MANY_LINK_REQUEST;
-    this.message = 'Only three contextIds can be linked every 24 hours.';
-  }
-}
-
 class UnusedSponsorshipsError extends ForbiddenError {
   constructor(app) {
     super();
@@ -424,7 +359,7 @@ class SponsorNotSupportedError extends ForbiddenError {
   }
 }
 
-class IneligibleRecoveryConnection extends ForbiddenError {
+class IneligibleRecoveryConnectionError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_RECOVERY_CONNECTION;
@@ -432,18 +367,31 @@ class IneligibleRecoveryConnection extends ForbiddenError {
   }
 }
 
-class InvalidContextIdError extends NotFoundError {
-  constructor(contextId) {
+class WISchnorrPasswordNotSetError extends InternalServerError {
+  constructor() {
     super();
-    this.errorNum = INVALID_CONTEXTID;
-    this.message = `The contextId ${contextId} is not valid.`;
-    this.contextId = contextId;
+    this.errorNum = WISCHNORR_PASSWORD_NOT_SET;
+    this.message = 'WISCHNORR_PASSWORD is not set in config.env.';
+  }
+}
+
+class InvalidRoundedTimestampError extends ForbiddenError {
+  constructor(serverRoundedTimestamp, roundedTimestamp) {
+    super();
+    this.errorNum = INVALID_ROUNDED_TIMESTAMP;
+    this.message = `Server calculated rounded timestamp is ${serverRoundedTimestamp}, but client sent ${roundedTimestamp}.`;
+  }
+}
+
+class DuplicateSigRequetError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = DUPLICATE_SIG_REQUEST_ERROR;
+    this.message = 'Only one signature request per app in each expiration period is allowed.';
   }
 }
 
 module.exports = {
-  CONTEXT_NOT_FOUND,
-  CONTEXTID_NOT_FOUND,
   NOT_VERIFIED,
   NOT_SPONSORED,
   KEYPAIR_NOT_SET,
@@ -474,15 +422,15 @@ module.exports = {
   INELIGIBLE_NEW_ADMIN,
   NOT_INVITED,
   LEAVE_GROUP,
-  DUPLICATE_CONTEXTID,
-  TOO_MANY_LINK_REQUEST,
   UNUSED_SPONSORSHIPS,
   SPONSORED_BEFORE,
   SPONSOR_NOT_SUPPORTED,
   NOT_ADMIN,
   ARANGO_ERROR,
   INELIGIBLE_RECOVERY_CONNECTION,
-  INVALID_CONTEXTID,
+  WISCHNORR_PASSWORD_NOT_SET,
+  INVALID_ROUNDED_TIMESTAMP,
+  DUPLICATE_SIG_REQUEST_ERROR,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -502,13 +450,10 @@ module.exports = {
   OperationAppliedBeforeError,
   TooBigOperationError,
   UserNotFoundError,
-  ContextNotFoundError,
-  ContextIdNotFoundError,
   GroupNotFoundError,
   NotSponsoredError,
   NotVerifiedError,
   InvalidExpressionError,
-  KeypairNotSetError,
   EthPrivatekeyNotSetError,
   IpNotSetError,
   InvalidTestingKeyError,
@@ -523,11 +468,11 @@ module.exports = {
   IneligibleNewAdminError,
   NotInvitedError,
   LeaveGroupError,
-  DuplicateContextIdError,
-  TooManyLinkRequestError,
   UnusedSponsorshipsError,
   SponsoredBeforeError,
   SponsorNotSupportedError,
-  IneligibleRecoveryConnection,
-  InvalidContextIdError,
+  IneligibleRecoveryConnectionError,
+  InvalidRoundedTimestampError,
+  WISchnorrPasswordNotSetError,
+  DuplicateSigRequetError
 }

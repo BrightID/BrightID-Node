@@ -22,7 +22,7 @@ const {
 const chai = require('chai');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid5', '/apply5');
+const applyBaseUrl = baseUrl.replace('/brightid6', '/apply6');
 
 const usersColl = arango._collection('users');
 const operationsColl = arango._collection('operations');
@@ -35,9 +35,6 @@ const u3 = nacl.sign.keyPair();
 
 let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } = nacl.sign.keyPair();
 let { secretKey: linkAESKey } = nacl.sign.keyPair();
-
-const contextId = '0x636D49c1D76ff8E04767C68fe75eC9900719464b'.toLowerCase();
-const contextName = "ethereum";
 
 function apply(op) {
   let resp = request.post(`${baseUrl}/operations`, {
@@ -82,18 +79,16 @@ describe('errors', function() {
   it('should throw INVALID_SIGNATURE when operation signed by wrong user', function() {
     const timestamp = Date.now();
     let op = {
-      'v': 5,
-      'name': 'Add Connection',
-      'id1': u1.id,
-      'id2': u2.id,
+      v: 6,
+      name: 'Connect',
+      id1: u1.id,
+      id2: u2.id,
+      level: 'already known',
       timestamp
     }
     const message = getMessage(op);
     op.sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
-    op.sig2 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
     );
     const resp = apply(op);
     resp.json.code.should.equal(401);
@@ -107,7 +102,7 @@ describe('errors', function() {
     const groupId = hash('randomstr');
 
     const op = {
-      'v': 5,
+      'v': 6,
       'name': 'Add Group',
       'group': groupId,
       'id1': u1.id,

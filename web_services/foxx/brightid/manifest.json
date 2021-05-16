@@ -3,7 +3,7 @@
   "name": "BrightID-Node",
   "description": "Read and update the anonymous social graph stored on BrightID nodes.",
   "license": "ISC",
-  "version": "5.9.6",
+  "version": "6.0.0",
   "tests": [
     "tests/*.js"
   ],
@@ -15,7 +15,7 @@
       "description": "IPv4 address of the server hosting this service",
       "type": "string"
     },
-    "publicKey": {
+    "WISchnorrPassword": {
       "description": "Public key of this server node (base64 encoded)",
       "type": "string",
       "required": false

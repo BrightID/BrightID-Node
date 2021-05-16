@@ -41,20 +41,11 @@ def main():
     if not operations:
         return
 
-    # Monday, April 5, 2021 5:00:00 UTC
-    if time.time() > 1617598800:
-        data = json.dumps(operations).encode('utf-8')
-        data = '0x'+binascii.hexlify(data).decode('utf-8')
-        sendTransaction(data)
-        for i, op in enumerate(operations):
-            db.collection('operations').update({'_key': hashes[i], 'state': 'sent'}, merge=True)
-    else:
-        # Above if and this else block can be removed on next version when all nodes upgraded to 5.9.4.
-        op = operations[0]
-        data = json.dumps(op).encode('utf-8')
-        data = '0x'+binascii.hexlify(data).decode('utf-8')
-        sendTransaction(data)
-        db.collection('operations').update({'_key': hashes[0], 'state': 'sent'}, merge=True)
+    data = json.dumps(operations).encode('utf-8')
+    data = '0x'+binascii.hexlify(data).decode('utf-8')
+    sendTransaction(data)
+    for i, op in enumerate(operations):
+        db.collection('operations').update({'_key': hashes[i], 'state': 'sent'}, merge=True)
 
 def wait():
     while True:

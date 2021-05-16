@@ -13,26 +13,20 @@ const {
   hash
 } = require('./encoding');
 const errors = require('./errors');
+const wISchnorrServer  = require('./WISchnorrServer');
 
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
 const groupsColl = db._collection('groups');
 const usersInGroupsColl = db._collection('usersInGroups');
 const usersColl = db._collection('users');
-const contextsColl = db._collection('contexts');
 const appsColl = db._collection('apps');
 const sponsorshipsColl = db._collection('sponsorships');
 const operationsColl = db._collection('operations');
 const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
-const testblocksColl = db._collection('testblocks');
-
-function addConnection(key1, key2, timestamp) {
-  // this function is deprecated and will be removed on v6
-  connect({id1: key1, id2: key2, timestamp});
-  connect({id1: key2, id2: key1, timestamp});
-}
+const cachedParamsColl = db._collection('cachedParams');
 
 function connect(op) {
   let {
@@ -50,7 +44,7 @@ function connect(op) {
   if (level == 'recovery') {
     const tf = connectionsColl.firstExample({ '_from': _to, '_to': _from });
     if (!tf || !['already known', 'recovery'].includes(tf.level)) {
-      throw new errors.IneligibleRecoveryConnection();
+      throw new errors.IneligibleRecoveryConnectionError();
     }
   }
 
@@ -85,12 +79,6 @@ function connect(op) {
   if (replacedWith && ! loadUser(replacedWith)) {
     throw new errors.UserNotFoundError(replacedWith);
   }
-  if (! level) {
-    // Set 'just met' as confidence level when old addConnection is called
-    // and there was no other level set directly using Connect
-    // this if should be removed when v5 dropped and "Add Connection" operation removed
-    level = conn ? conn.level : 'just met';
-  }
 
   connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
 
@@ -99,17 +87,6 @@ function connect(op) {
   } else {
     connectionsColl.update(conn, { level, reportReason, replacedWith, requestProof, timestamp });
   }
-}
-
-function removeConnection(reporter, reported, reportReason, timestamp) {
-  // this function is deprecated and will be removed on v6
-  connect({
-    id1: reporter,
-    id2: reported,
-    level: 'reported',
-    reportReason,
-    timestamp
-  });
 }
 
 function userConnections(userId, direction = 'outbound') {
@@ -135,19 +112,12 @@ function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
   return {
     id: u._key,
-    // all signing keys will be returned on v6
-    signingKey: u.signingKeys[0],
-    // score is deprecated and will be removed on v6
-    score: u.score,
+    signingKeys: u.signingKeys,
     verifications: userVerifications(u._key).map(v => v.name),
     hasPrimaryGroup: hasPrimaryGroup(u._key),
-    // trusted is deprecated and will be replaced by recoveryConnections on v6
-    trusted: getRecoveryConnections(u._key),
-    // flaggers is deprecated and will be replaced by reporters on v6
-    flaggers: getReporters(u._key),
+    recoveryConnections: getRecoveryConnections(u._key),
+    reporters: getReporters(u._key),
     createdAt: u.createdAt,
-    // eligible_groups is deprecated and will be removed on v6
-    eligible_groups: u.eligible_groups || []
   }
 }
 
@@ -168,87 +138,6 @@ function groupMembers(groupId) {
   }).toArray().map(e => e._from.replace('users/', ''));
 }
 
-// this function is deprecated and will be removed on v6
-function updateEligibleGroups(userId, connections, currentGroups) {
-  connections = connections.map(uId => 'users/' + uId);
-  currentGroups = currentGroups.map(gId => 'groups/' + gId);
-  const user = "users/" + userId;
-  const candidates = query`
-      FOR edge in ${usersInGroupsColl}
-          FILTER edge._from in ${connections}
-          FILTER edge._to NOT IN ${currentGroups}
-          COLLECT group=edge._to WITH COUNT INTO count
-          SORT count DESC
-          RETURN {
-              group,
-              count
-          }
-  `.toArray();
-  const groupIds = candidates.map(x => x.group);
-  const groupCounts = query`
-    FOR ug in ${usersInGroupsColl}
-      FILTER ug._to in ${groupIds}
-      COLLECT id=ug._to WITH COUNT INTO count
-      return {
-        id,
-        count
-      }
-  `.toArray();
-
-  const groupCountsDic = {};
-
-  groupCounts.map(function(row) {
-    groupCountsDic[row.id] = row.count;
-  });
-
-  const eligible_groups = candidates
-    .filter(g => g.count * 2 >= groupCountsDic[g.group])
-    .map(g => g.group.replace('groups/', ''));
-  usersColl.update(userId, {
-    eligible_groups,
-    eligible_timestamp: Date.now()
-  });
-  return eligible_groups;
-}
-
-// this function is deprecated and will be removed on v6
-function updateEligibles(groupId) {
-  const members = groupMembers(groupId);
-  const neighbors = [];
-  const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
-
-  members.forEach(member => {
-    const conns = connectionsColl.byExample({
-      _from: 'users/' + member
-    }).toArray().filter(isKnown).map(
-      c => c._to.replace("users/", "")
-    ).filter(u => !members.includes(u));
-    neighbors.push(...conns);
-  });
-
-  const counts = {};
-  for (let neighbor of neighbors) {
-    counts[neighbor] = (counts[neighbor] || 0) + 1;
-  }
-  const eligibles = Object.keys(counts).filter(neighbor => {
-    return counts[neighbor] >= members.length / 2;
-  });
-  // storing eligible groups on users documents and updating them
-  // from this route will be removed when clients updated to use
-  // new GET /groups/{id} result to show eligibles in invite list
-  eligibles.forEach(neighbor => {
-    let { eligible_groups } = usersColl.document(neighbor);
-    eligible_groups = eligible_groups || [];
-    if (eligible_groups.indexOf(groupId) == -1) {
-      eligible_groups.push(groupId);
-      usersColl.update(neighbor, {
-        eligible_groups
-      });
-    }
-  });
-  return eligibles;
-}
-
 function groupToDic(groupId) {
   const group = groupsColl.document('groups/' + groupId);
   return {
@@ -258,8 +147,6 @@ function groupToDic(groupId) {
     founders: group.founders.map(founder => founder.replace('users/', '')),
     admins: group.admins || group.founders,
     isNew: group.isNew,
-    // score on group is deprecated and will be removed on v6
-    score: 0,
     url: group.url,
     timestamp: group.timestamp,
   }
@@ -472,7 +359,6 @@ function addMembership(groupId, key, timestamp) {
   if (groupMembers(groupId).length == group.founders.length) {
     groupsColl.update(group, { isNew: false });
   }
-  updateEligibles(groupId);
 }
 
 function deleteGroup(groupId, key, timestamp) {
@@ -509,11 +395,11 @@ function deleteMembership(groupId, key, timestamp) {
   });
 }
 
-function getContext(context) {
-  if (! contextsColl.exists(context)) {
-    throw new errors.ContextNotFoundError(context);
+function getCachedParams(public) {
+  if (! cachedParamsColl.exists(public)) {
+    throw new errors.CachedParamsNotFound();
   }
-  return contextsColl.document(context);
+  return cachedParamsColl.document(public);
 }
 
 function getApp(app) {
@@ -531,7 +417,6 @@ function appToDic(app) {
   return {
     id: app._key,
     name: app.name,
-    context: app.context,
     verification: app.verification,
     verificationUrl: app.verificationUrl,
     logo: app.logo,
@@ -539,39 +424,6 @@ function appToDic(app) {
     assignedSponsorships: app.totalSponsorships,
     unusedSponsorships: unusedSponsorships(app._key)
   };
-}
-
-function getUserByContextId(coll, contextId) {
-  return query`
-    FOR l in ${coll}
-      FILTER l.contextId == ${contextId}
-      RETURN l.user
-  `.toArray()[0];
-}
-
-function getContextIdsByUser(coll, id) {
-  return query`
-    FOR u in ${coll}
-      FILTER u.user == ${id}
-      SORT u.timestamp DESC
-      RETURN u.contextId
-  `.toArray();
-}
-
-function getLastContextIds(coll, appKey) {
-  return query`
-    FOR c IN ${coll}
-      FOR u in ${usersColl}
-        FILTER c.user == u._key
-        FOR v in verifications
-          FILTER v.user == u._key
-          FILTER ${appKey} == v.name
-          FOR s IN ${sponsorshipsColl}
-            FILTER s._from == u._id
-            SORT c.timestamp DESC
-            COLLECT user = c.user INTO contextIds = c.contextId
-            RETURN contextIds[0]
-  `.toArray();
 }
 
 function userVerifications(user) {
@@ -601,76 +453,6 @@ function userVerifications(user) {
     delete v.user;
   });
   return verifications;
-}
-
-function linkContextId(id, context, contextId, timestamp) {
-  const { collection, idsAsHex } = getContext(context);
-  const coll = db._collection(collection);
-  if (!contextId) {
-    throw new errors.InvalidContextIdError(contextId);
-  }
-
-  if (idsAsHex) {
-    const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
-    if(!re.test(contextId)) {
-      throw new errors.InvalidContextIdError(contextId);
-    }
-    contextId = contextId.toLowerCase();
-  }
-
-  // remove testblocks if exists
-  removeTestblock(contextId, 'link');
-
-  let user = getUserByContextId(coll, contextId);
-  if (user && user != id) {
-    throw new errors.DuplicateContextIdError(contextId);
-  }
-
-  const links = coll.byExample({user: id}).toArray();
-  const recentLinks = links.filter(
-    link => timestamp - link.timestamp < 24*3600*1000
-  );
-  if (recentLinks.length >= 3) {
-    throw new errors.TooManyLinkRequestError();
-  }
-
-  // accept link if the contextId is used by the same user before
-  for (let link of links) {
-    if (link.contextId === contextId) {
-      if (timestamp > link.timestamp) {
-        coll.update(link, { timestamp });
-      }
-      return;
-    }
-  }
-
-  coll.insert({
-    user: id,
-    contextId,
-    timestamp
-  });
-
-  // sponsor the user if contextId is temporarily sponsored
-  const tempSponsorship = sponsorshipsColl.firstExample({ contextId });
-  if (tempSponsorship) {
-    const app = tempSponsorship._to.replace('apps/', '');
-    sponsorshipsColl.remove( tempSponsorship._key );
-    // pass contextId instead of id to broadcast sponsor operation
-    sponsor({ contextId, app, timestamp });
-
-  }
-}
-
-function setRecoveryConnections(conns, key, timestamp) {
-  // this function is deprecated and will be removed on v6
-  conns.forEach(conn => {
-    connect({
-      id1: key,
-      id2: conn,
-      level: 'recovery',
-      timestamp
-    });
-  });
 }
 
 function getRecoveryConnections(user) {
@@ -746,89 +528,17 @@ function unusedSponsorships(app) {
   return totalSponsorships - usedSponsorships;
 }
 
-// this method is called in different situations:
-// 1) Sponsor operation with contextId is posted to the brightid service.
-//    a) contextId may already be linked to a brightid
-//    b) or it may not be linked yet
-// 2) Sponsor operation with user id is sent to the apply service
-// 3) Link ContextId operation is sent to the apply service for
-//    a contextId that was sponsored temporarily before linking
 function sponsor(op) {
   if (unusedSponsorships(op.app) < 1) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
-  // if 2) Sponsor operation with user id is sent to the apply service
-  if (op.id) {
-    if (isSponsored(op.id)) {
-      throw new errors.SponsoredBeforeError();
-    }
-    sponsorshipsColl.insert({
-      _from: 'users/' + op.id,
-      _to: 'apps/' + op.app,
-      timestamp: op.timestamp,
-    });
-    return;
-  }
-
-  // if we have user contextId
-  const app = getApp(op.app);
-  const context = getContext(app.context);
-  if (!app.sponsorPrivateKey) {
-    throw new errors.SponsorNotSupportedError(op.app);
-  }
-
-  const coll = db._collection(context.collection);
-  if (context.idsAsHex) {
-    op.contextId = op.contextId.toLowerCase();
-  }
-  // remove testblocks if exists
-  removeTestblock(op.contextId, 'sponsorship', op.app);
-  const id = getUserByContextId(coll, op.contextId);
-
-  // if 1-b) Sponsor operation with contextId is posted to the brightid service
-  // but contextId is not linked to a brightid yet
-  // add a temporary sponsorship to be applied after user linked contextId
-  if (!id) {
-    sponsorshipsColl.insert({
-      _from: 'users/0',
-      _to: 'apps/' + op.app,
-      // it will expire after one hour
-      expireDate: Math.ceil((Date.now() / 1000) + 3600),
-      contextId: op.contextId
-    });
-    return;
-  }
-
-  if (isSponsored(id)) {
+  if (isSponsored(op.id)) {
     throw new errors.SponsoredBeforeError();
   }
 
-  // if 1-a or 3
-
-  // broadcast sponsor operation with user brightid that can be applied
-  // by all nodes including those that not support sponsor app's context
-  const sponsorUserOp = {
-    name: 'Sponsor',
-    app: op.app,
-    id,
-    timestamp: op.timestamp,
-    v: 5
-  }
-  const message = stringify(sponsorUserOp);
-  sponsorUserOp.sig = uInt8ArrayToB64(Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(app.sponsorPrivateKey))));
-  sponsorUserOp.hash = hash(message);
-  sponsorUserOp.state = 'init';
-  upsertOperation(sponsorUserOp);
-
-  // sponsor user instantly instead of waiting for applying sponsor operation
-  // with user brightid, to prevent apps getting not sponsored error for users
-  // that are sponsored before linking, when link operation applied but
-  // broadcasted sponsor operation not arrived yet.
-  // this approach may result in loosing consensus in sponsorships but
-  // seems not to be important
   sponsorshipsColl.insert({
-    _from: 'users/' + id,
+    _from: 'users/' + op.id,
     _to: 'apps/' + op.app,
     timestamp: op.timestamp,
   });
@@ -853,44 +563,22 @@ function getState() {
   const initOp = operationsColl.byExample({'state': 'init'}).count();
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
   const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
+  let WISchnorrPublic = null;
+  if (module.context && module.context.configuration && module.context.configuration.wISchnorrPassword){
+    const password = module.context.configuration.wISchnorrPassword;
+    const server = new wISchnorrServer();
+    server.GenerateSchnorrKeypair(password);
+    wISchnorrPublic = server.ExtractPublicKey();
+  }
+
   return {
     lastProcessedBlock,
     verificationsBlock,
     initOp,
     sentOp,
-    verificationsHashes
+    verificationsHashes,
+    wISchnorrPublic
   }
-}
-
-function addTestblock(contextId, action, app) {
-  testblocksColl.insert({app, contextId, action,"timestamp": Date.now()});
-}
-
-function removeTestblock(contextId, action, app) {
-  let query;
-  if (app) {
-    query = {app, contextId, action};
-  } else {
-    query = {contextId, action};
-  }
-  testblocksColl.removeByExample(query);
-}
-
-function getTestblocks(app, contextId) {
-  return testblocksColl.byExample({
-    "app": app,
-    "contextId": contextId,
-  }).toArray().map(b => b.action);
-}
-
-function getContextIds(coll) {
-  return coll.all().toArray().map(c => {
-    return {
-      user: c.user,
-      contextId: c.contextId,
-      timestamp: c.timestamp
-    }
-  });
 }
 
 function loadGroup(groupId) {
@@ -910,12 +598,6 @@ function groupInvites(groupId) {
       data: invite.data,
       timestamp: invite.timestamp
     }
-  });
-}
-
-function removePasscode(contextKey) {
-  contextsColl.update(contextKey, {
-    passcode: null
   });
 }
 
@@ -962,7 +644,6 @@ module.exports = {
   addAdmin,
   addMembership,
   deleteMembership,
-  updateEligibleGroups,
   invite,
   dismiss,
   userConnections,
@@ -972,21 +653,16 @@ module.exports = {
   createUser,
   groupMembers,
   userScore,
-  getContext,
   getApp,
   getApps,
   appToDic,
   userVerifications,
-  getUserByContextId,
-  getContextIdsByUser,
   sponsor,
   isSponsored,
-  linkContextId,
   loadOperation,
   upsertOperation,
   setRecoveryConnections,
   setSigningKey,
-  getLastContextIds,
   unusedSponsorships,
   getState,
   getReporters,
@@ -999,10 +675,8 @@ module.exports = {
   addSigningKey,
   removeSigningKey,
   removeAllSigningKeys,
-  getContextIds,
-  removePasscode,
   loadGroup,
   groupInvites,
-  updateEligibles,
-  updateGroup
+  updateGroup,
+  getCachedParams
 };

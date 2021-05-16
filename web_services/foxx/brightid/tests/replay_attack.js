@@ -20,7 +20,7 @@ const {
 const db = require('../db.js');
 
 const { baseUrl } = module.context;
-const applyBaseUrl = baseUrl.replace('/brightid5', '/apply5');
+const applyBaseUrl = baseUrl.replace('/brightid6', '/apply6');
 
 const connectionsColl = arango._collection('connections');
 const groupsColl = arango._collection('groups');
@@ -60,20 +60,17 @@ describe('replay attack on operations', function () {
 
   it('should not be able to add an operation twice', function () {
     const timestamp = Date.now();
-
     let op = {
-      name: 'Add Connection',
+      name: 'Connect',
       id1: u1.id,
       id2: u2.id,
+      level: 'already known',
       timestamp,
-      v: 5
+      v: 6
     }
     const message = getMessage(op);
     op.sig1 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
-    op.sig2 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     const resp1 = request.post(`${baseUrl}/operations`, {
       body: op,
