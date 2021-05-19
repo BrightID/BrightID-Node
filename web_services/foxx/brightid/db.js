@@ -395,11 +395,11 @@ function deleteMembership(groupId, key, timestamp) {
   });
 }
 
-function getCachedParams(public) {
-  if (! cachedParamsColl.exists(public)) {
+function getCachedParams(pub) {
+  if (! cachedParamsColl.exists(pub)) {
     throw new errors.CachedParamsNotFound();
   }
-  return cachedParamsColl.document(public);
+  return cachedParamsColl.document(pub);
 }
 
 function getApp(app) {
@@ -637,8 +637,6 @@ function removeAllSigningKeys(id, signingKey) {
 
 module.exports = {
   connect,
-  addConnection,
-  removeConnection,
   createGroup,
   deleteGroup,
   addAdmin,
@@ -661,7 +659,6 @@ module.exports = {
   isSponsored,
   loadOperation,
   upsertOperation,
-  setRecoveryConnections,
   setSigningKey,
   unusedSponsorships,
   getState,
@@ -669,9 +666,6 @@ module.exports = {
   getRecoveryConnections,
   userToDic,
   groupToDic,
-  addTestblock,
-  removeTestblock,
-  getTestblocks,
   addSigningKey,
   removeSigningKey,
   removeAllSigningKeys,

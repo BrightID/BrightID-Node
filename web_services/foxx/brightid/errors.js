@@ -7,8 +7,6 @@ const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
-const INVALID_PASSCODE = 15;
-const PASSCODE_NOT_SET = 16;
 const GROUP_NOT_FOUND = 17;
 const INVALID_OPERATION_NAME = 18;
 const INVALID_SIGNATURE = 19;
@@ -394,7 +392,6 @@ class DuplicateSigRequetError extends ForbiddenError {
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
-  KEYPAIR_NOT_SET,
   ETHPRIVATEKEY_NOT_SET,
   OPERATION_NOT_FOUND,
   USER_NOT_FOUND,
@@ -402,8 +399,6 @@ module.exports = {
   APP_NOT_FOUND,
   INVALID_EXPRESSION,
   INVALID_TESTING_KEY,
-  INVALID_PASSCODE,
-  PASSCODE_NOT_SET,
   GROUP_NOT_FOUND,
   INVALID_OPERATION_NAME,
   INVALID_SIGNATURE,
@@ -457,8 +452,6 @@ module.exports = {
   EthPrivatekeyNotSetError,
   IpNotSetError,
   InvalidTestingKeyError,
-  PasscodeNotSetError,
-  InvalidPasscodeError,
   NotAdminError,
   AlreadyHasPrimaryGroupError,
   NewUserBeforeFoundersJoinError,
