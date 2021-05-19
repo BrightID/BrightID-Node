@@ -258,11 +258,11 @@ const handlers = {
       throw new errors.NotVerifiedError(params.app);
     }
 
-    if (! (module.context && module.context.configuration && module.context.configuration.WISchnorrPassword)){
+    if (! (module.context && module.context.configuration && module.context.configuration.wISchnorrPassword)){
       throw new errors.WISchnorrPasswordNotSetError();
     }
 
-    const password = module.context.configuration.WISchnorrPassword;
+    const password = module.context.configuration.wISchnorrPassword;
     const server = new WISchnorrServer();
     server.GenerateSchnorrKeypair(password);
 

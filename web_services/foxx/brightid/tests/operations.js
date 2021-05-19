@@ -67,13 +67,12 @@ function apply(op) {
 function connect(u1, u2, level) {
 
   const timestamp = Date.now();
-
   let op = {
     'v': 6,
     'name': 'Connect',
     'id1': u1.id,
     'id2': u2.id,
-    'level': level,
+    level,
     timestamp,
   }
   const message = getMessage(op);
@@ -84,7 +83,7 @@ function connect(u1, u2, level) {
   connectionsColl.firstExample({
     '_from': 'users/' + u1.id,
     '_to': 'users/' + u2.id,
-  }).level.should.equal('just met');
+  }).level.should.equal(level);
 }
 
 describe('operations', function(){
@@ -120,11 +119,13 @@ describe('operations', function(){
   });
 
   it('should be able to "Connect"', function () {
-    connect(u1, u2);
-    connect(u1, u3);
-    connect(u2, u3);
-    connect(u2, u4);
-    connect(u3, u4);
+    connect(u1, u2, 'just met');
+    connect(u2, u1, 'just met');
+    connect(u1, u3, 'just met');
+    connect(u3, u1, 'just met');
+    connect(u2, u3, 'just met');
+    connect(u2, u4, 'just met');
+    connect(u3, u4, 'just met');
   });
 
   it('should be able to report using "Connect" by providing requestProof', function () {
@@ -343,9 +344,10 @@ describe('operations', function(){
   });
 
   it('should be able to "Social Recovery"', function () {
-    connect(u2.id, u1.id, 'recovery');
-    connect(u3.id, u1.id, 'recovery');
-
+    connect(u2, u1, 'already known');
+    connect(u3, u1, 'already known');
+    connect(u1, u2, 'recovery');
+    connect(u1, u3, 'recovery');
     const timestamp = Date.now();
     const op = {
       'v': 6,
@@ -413,7 +415,8 @@ describe('operations', function(){
       'name': 'Connect',
       'id1': u2.id,
       'id2': u3.id,
-      'level': 'recovery',
+      'level': 'reported',
+      'reportReason': 'duplicate',
       timestamp,
     }
     const message = getMessage(op);
@@ -423,7 +426,7 @@ describe('operations', function(){
     apply(op);
     db.userConnections(u2.id).filter(
       u => u.id == u3.id
-    )[0].level.should.equal('recovery');
+    )[0].level.should.equal('reported');
   });
 
   it('should be able to "Remove All Signing Keys"', function () {

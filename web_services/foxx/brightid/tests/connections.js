@@ -21,8 +21,9 @@ describe('connections', function () {
     connectionsColl.truncate();
     connectionsHistoryColl.truncate();
   });
-  it('should be able to use "addConnection" to set "just met" as confidence level', function() {
-    db.addConnection('a', 'b', timestamp);
+  it('should be able to "connect" using "just met" as confidence level', function() {
+    db.connect({id1: 'a', id2: 'b', level: 'just met', timestamp});
+    db.connect({id1: 'b', id2: 'a', level: 'just met', timestamp});
     connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     }).level.should.equal('just met');
@@ -36,8 +37,8 @@ describe('connections', function () {
       '_from': 'users/b', '_to': 'users/a'
     }).level.should.equal('already known');
   });
-  it('should be able to use "removeConnection" to report a connection that already knows the reporter', function() {
-    db.removeConnection('a', 'b', 'duplicate', timestamp);
+  it('should be able to use "connect" to report a connection that already knows the reporter', function() {
+    db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: "duplicate", timestamp});
     const conn = connectionsColl.firstExample({
       '_from': 'users/a', '_to': 'users/b'
     });
@@ -51,22 +52,6 @@ describe('connections', function () {
     });
     conn1.level.should.equal('just met');
     (conn1.reportReason === null).should.equal(true);
-  });
-  it('should be able to use "setRecoveryConnections" to set "recovery" as confidence level', function() {
-    db.connect({id1: 'b', id2: 'a', level: 'already known', timestamp});
-    db.setRecoveryConnections(['b'], 'a', timestamp);
-    connectionsColl.firstExample({
-      '_from': 'users/a', '_to': 'users/b'
-    }).level.should.equal('recovery');
-  });
-  it('should not reset "recovery" confidence level to "just met" when calling "addConnection"', function() {
-    db.addConnection('a', 'b', timestamp);
-    connectionsColl.firstExample({
-      '_from': 'users/a', '_to': 'users/b'
-    }).level.should.equal('recovery');
-    connectionsColl.firstExample({
-      '_from': 'users/b', '_to': 'users/a'
-    }).level.should.equal('already known');
   });
   it('should be able to use "connect" to set different confidence levels', function() {
     db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate', timestamp});

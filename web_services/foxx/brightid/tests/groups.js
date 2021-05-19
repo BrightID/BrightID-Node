@@ -29,11 +29,13 @@ describe('groups', function () {
     db.createUser('d');
     db.createUser('e');
     db.createUser('f');
-    db.addConnection('b', 'c', 0);
-    db.addConnection('b', 'd', 0);
-    db.addConnection('a', 'b', 0);
-    db.addConnection('a', 'c', 0);
-    db.addConnection('a', 'd', 0);
+    db.connect({id1: 'b', id2: 'c', level: 'just met', timestamp: 1});
+    db.connect({id1: 'c', id2: 'b', level: 'just met', timestamp: 1});
+    db.connect({id1: 'b', id2: 'd', level: 'just met', timestamp: 1});
+    db.connect({id1: 'd', id2: 'b', level: 'just met', timestamp: 1});
+    db.connect({id1: 'a', id2: 'b', level: 'just met', timestamp: 1});
+    db.connect({id1: 'a', id2: 'c', level: 'just met', timestamp: 1});
+    db.connect({id1: 'a', id2: 'd', level: 'just met', timestamp: 1});
   });
   after(function(){
     usersColl.truncate();
@@ -90,11 +92,11 @@ describe('groups', function () {
   describe('inviting', function() {
     before(function() {
       db.createUser('g');
-      db.addConnection('a', 'b', 0);
-      db.addConnection('a', 'c', 0);
-      db.addConnection('a', 'd', 0);
-      db.addConnection('b', 'd', 0);
-      db.addConnection('c', 'd', 0);
+      db.connect({id1: 'b', id2: 'a', level: 'just met', timestamp: 1});
+      db.connect({id1: 'c', id2: 'a', level: 'just met', timestamp: 1});
+      db.connect({id1: 'a', id2: 'd', level: 'just met', timestamp: 1});
+      db.connect({id1: 'b', id2: 'd', level: 'just met', timestamp: 1});;
+      db.connect({id1: 'c', id2: 'd', level: 'just met', timestamp: 1});
       db.createGroup('g3', 'a', 'b', 'data', 'c', 'data', url, 'general', Date.now());
       db.addMembership('g3', 'b', Date.now());
       db.addMembership('g3', 'c', Date.now());
@@ -122,12 +124,12 @@ describe('groups', function () {
 
   describe('dismissing', function() {
     before(function() {
-      db.addConnection('a', 'd', 0);
-      db.addConnection('b', 'd', 0);
-      db.addConnection('c', 'd', 0);
-      db.addConnection('a', 'e', 0);
-      db.addConnection('b', 'e', 0);
-      db.addConnection('c', 'e', 0);
+      db.connect({id1: 'a', id2: 'd', level: 'just met', timestamp: 1});
+      db.connect({id1: 'b', id2: 'd', level: 'just met', timestamp: 1});
+      db.connect({id1: 'c', id2: 'd', level: 'just met', timestamp: 1});
+      db.connect({id1: 'a', id2: 'e', level: 'just met', timestamp: 1});
+      db.connect({id1: 'b', id2: 'e', level: 'just met', timestamp: 1});
+      db.connect({id1: 'c', id2: 'e', level: 'just met', timestamp: 1});
       db.invite('b', 'd', 'g3', 'data', Date.now());
       db.invite('b', 'e', 'g3', 'data',  Date.now());
       db.addMembership('g3', 'd', Date.now());
@@ -174,10 +176,10 @@ describe('groups', function () {
       groupsColl.truncate();
       groupsColl.truncate();
       usersInGroupsColl.truncate();
-      db.addConnection('a', 'd', 0);
-      db.addConnection('a', 'e', 0);
-      db.addConnection('e', 'c', 0);
-      db.addConnection('e', 'b', 0);
+      db.connect({id1: 'd', id2: 'a', level: 'just met', timestamp: 1});
+      db.connect({id1: 'e', id2: 'a', level: 'just met', timestamp: 1});
+      db.connect({id1: 'c', id2: 'e', level: 'just met', timestamp: 1});
+      db.connect({id1: 'b', id2: 'e', level: 'just met', timestamp: 1});
       db.createGroup('g4', 'a', 'b', 'data', 'c', 'data', url, 'primary', Date.now());
       db.addMembership('g4', 'b', Date.now());
       db.addMembership('g4', 'c', Date.now());
@@ -193,8 +195,8 @@ describe('groups', function () {
       db.userGroups('d').map(group => group.id).should.deep.equal(['g4']);
     });
     it('users that have primary groups should not be able to invited to other primary groups', function (){
-      db.addConnection('e', 'f', Date.now());
-      db.addConnection('e', 'g', Date.now());
+      db.connect({id1: 'f', id2: 'e', level: 'just met', timestamp: 1});
+      db.connect({id1: 'g', id2: 'e', level: 'just met', timestamp: 1});
       db.createGroup('g6', 'e', 'f', 'data', 'g', 'data', url, 'primary', Date.now());
       db.addMembership('g6', 'f', Date.now());
       db.addMembership('g6', 'g', Date.now());

@@ -81,8 +81,8 @@ describe('errors', function() {
     let op = {
       v: 6,
       name: 'Connect',
-      id1: u1.id,
-      id2: u2.id,
+      id1: u2.id,
+      id2: u1.id,
       level: 'already known',
       timestamp
     }

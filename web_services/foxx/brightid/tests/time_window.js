@@ -49,7 +49,7 @@ describe('', function () {
     }).should.throw(errors.TooManyOperationsError);
   });
   it('connecting to first verified user should set parent', function() {
-    db.addConnection('a', 'c', 1);
+    db.connect({id1: 'a', id2: 'c', level: 'just met', timestamp: 1});
     usersColl.document('c').parent.should.equal('a');
   });
   it('unverified users with parent should have different limit', function() {
