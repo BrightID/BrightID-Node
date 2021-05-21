@@ -396,10 +396,11 @@ function deleteMembership(groupId, key, timestamp) {
 }
 
 function getCachedParams(pub) {
-  if (! cachedParamsColl.exists(pub)) {
+  const d = cachedParamsColl.firstExample({ public: pub })
+  if (! d) {
     throw new errors.CachedParamsNotFound();
   }
-  return cachedParamsColl.document(pub);
+  return d;
 }
 
 function getApp(app) {
@@ -563,14 +564,13 @@ function getState() {
   const initOp = operationsColl.byExample({'state': 'init'}).count();
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
   const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
-  let WISchnorrPublic = null;
+  let wISchnorrPublic = null;
   if (module.context && module.context.configuration && module.context.configuration.wISchnorrPassword){
     const password = module.context.configuration.wISchnorrPassword;
     const server = new wISchnorrServer();
     server.GenerateSchnorrKeypair(password);
     wISchnorrPublic = server.ExtractPublicKey();
   }
-
   return {
     lastProcessedBlock,
     verificationsBlock,

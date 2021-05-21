@@ -2,6 +2,7 @@
 const stringify = require('fast-json-stable-stringify');
 const secp256k1 = require('secp256k1');
 const createKeccakHash = require('keccak');
+const BigInteger = require('node-jsbn');
 const createRouter = require('@arangodb/foxx/router');
 const _ = require('lodash');
 const joi = require('joi');
@@ -51,16 +52,8 @@ const handlers = {
     const limit = module.context.configuration.operationsLimit;
     operations.checkLimits(op, timeWindow, limit);
 
-    if (op.name == 'Link ContextId') {
-      operations.encrypt(op);
-    }
-
-    if (op.name == 'Sponsor') {
-      db.sponsor(op);
-    } else {
-      op.state = 'init';
-      db.upsertOperation(op);
-    }
+    op.state = 'init';
+    db.upsertOperation(op);
 
     res.send({
       data: {
@@ -211,9 +204,10 @@ const handlers = {
     const info = stringify({ app: appKey, roundedTimestamp, verification });
     const server = new WISchnorrServer();
     const params = server.GenerateWISchnorrParams(info);
+    const p = params.private;
     cachedParamsColl.insert({
-      _key: params.public,
-      private: params.private,
+      public: stringify(params.public),
+      private: { u: p.u.toString(), s: p.s.toString(), d: p.d.toString() },
       app: appKey,
       roundedTimestamp,
       verification,
@@ -229,18 +223,17 @@ const handlers = {
     const sig = req.param('sig');
     const e = req.param('e');
     const pub = req.param('public');
-
     const params = db.getCachedParams(pub);
     const app = db.getApp(params.app);
 
-    const msg = stringify({ id, 'public': pub });
-    operations.verifyUserSig(message, id, sig);
+    const msg = stringify({ id, 'public': JSON.parse(pub) });
+    operations.verifyUserSig(msg, id, sig);
 
     if (! db.isSponsored(id)) {
       throw new errors.NotSponsoredError();
     }
 
-    let verifications = db.userVerifications(user);
+    let verifications = db.userVerifications(id);
     verifications = _.keyBy(verifications, v => v.name);
     let verified;
     try {
@@ -273,7 +266,13 @@ const handlers = {
     }
     signedVerificationsColl.insert(q);
 
-    const response = server.GenerateWISchnorrServerResponse(params.private, e);
+    let priv = params.private;
+    priv = {
+      u: new BigInteger(priv.u),
+      s: new BigInteger(priv.u),
+      d: new BigInteger(priv.u),
+    };
+    const response = server.GenerateWISchnorrServerResponse(priv, e);
     res.send({
       data: {
         response

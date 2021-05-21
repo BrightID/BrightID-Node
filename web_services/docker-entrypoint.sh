@@ -30,8 +30,8 @@ foxx config /brightid6 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
 foxx config /brightid6 operationsTimeWindow=$BN_WS_OPERATIONS_TIME_WINDOW
 foxx config /brightid6 operationsLimit=$BN_WS_OPERATIONS_LIMIT
 
-foxx upgrade /apply6 /code/foxx/apply5.zip ||
-foxx install /apply6 /code/foxx/apply5.zip
+foxx upgrade /apply6 /code/foxx/apply6.zip ||
+foxx install /apply6 /code/foxx/apply6.zip
 
 foxx uninstall /brightid4
 foxx uninstall /apply4

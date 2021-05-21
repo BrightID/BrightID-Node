@@ -16,16 +16,6 @@
       "type": "string",
       "required": false
     },
-    "privateKey": {
-      "description": "Private key of this server node; used for signing verifications (base64 encoded)",
-      "type": "string",
-      "required": false
-    },
-    "ethPrivateKey": {
-      "description": "Ethereum private key of this server node; used for signing verifications (hex representation without 0x)",
-      "type": "string",
-      "required": false
-    },
     "operationsTimeWindow": {
       "description": "The time in seconds after which the limits for sending operations will reset",
       "type": "int",

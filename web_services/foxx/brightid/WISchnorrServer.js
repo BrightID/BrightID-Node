@@ -4,6 +4,7 @@
   Date   : September 2016
 **/
 
+var crypto = require('@arangodb/crypto');
 var BigInteger = require('node-jsbn');
 
 /* Initializes the WISchnorServer */
@@ -33,11 +34,11 @@ function WISchnorrServer() {
 /* Generates a Schnorr keypair: y = g^x mod q */
 WISchnorrServer.prototype.GenerateSchnorrKeypair = function(password) {
     // Hashed password (SHA-256)
-	var hash = require('crypto').createHash('sha256').update(password);
+	var hash = Buffer.from(crypto.sha256(password), 'hex');
 	
 	// Private key
 	// x = hash mod q
-	this.x = new BigInteger(hash.digest()).mod(this.q);
+	this.x = new BigInteger(hash).mod(this.q);
 	
 	// Public key
 	// y = g^x mod p
@@ -54,7 +55,7 @@ WISchnorrServer.prototype.ExtractPublicKey = function() {
 /* Generates a cryptographically secure random number modulo q */
 WISchnorrServer.prototype.GenerateRandomNumber = function() {
 	var bytes = Math.floor(Math.random() * ((this.q.bitLength()/8) - 1 + 1)) + 1;
-	return new BigInteger(require('crypto').randomBytes(bytes)).mod(this.q);
+	return new BigInteger(crypto.genRandomBytes(bytes)).mod(this.q);
 };
 
 /* Generates the serverside private parameters and the serverside public 
@@ -64,9 +65,9 @@ WISchnorrServer.prototype.GenerateWISchnorrParams = function(info) {
 	var s = this.GenerateRandomNumber();
 	var d = this.GenerateRandomNumber();
 	
-	var F = require('crypto').createHash('sha256').update(info);
+	var F = Buffer.from(crypto.sha256(info), 'hex');
 	// z = F^((p-1)/q) mod p
-	var z = new BigInteger(F.digest()).modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
+	var z = new BigInteger(F).modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 	
 	// a = g^u mod p
 	var a = this.g.modPow(u, this.p);
@@ -92,9 +93,9 @@ WISchnorrServer.prototype.GenerateWISchnorrServerResponse = function(params, e) 
 
 /* Verifies a WISchnorr partially blind signature */
 WISchnorrServer.prototype.VerifyWISchnorrBlindSignature = function(signature, info, msg) {
-	var F = require('crypto').createHash('sha256').update(info);
+	var F = Buffer.from(crypto.sha256(info), 'hex');
 	// z = F^((p-1)/q) mod p
-	var z = new BigInteger(F.digest()).modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
+	var z = new BigInteger(F).modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 	
 	// g^rho mod p
 	var gp = this.g.modPow(new BigInteger(signature.rho), this.p);
@@ -110,9 +111,9 @@ WISchnorrServer.prototype.VerifyWISchnorrBlindSignature = function(signature, in
 	// g^sigma * z^delta mod p
 	var gszd = gs.multiply(zd).mod(this.p);
 
-	var H = require('crypto').createHash('sha256').update(gpyw.toString()+gszd.toString()+z.toString()+msg);
+	var H = Buffer.from(crypto.sha256(gpyw.toString()+gszd.toString()+z.toString()+msg), 'hex');
 	// hsig = H mod q
-	var hsig = new BigInteger(H.digest()).mod(this.q);
+	var hsig = new BigInteger(H).mod(this.q);
 
 	// vsig = omega + delta mod q
 	var vsig = new BigInteger(signature.omega).add(new BigInteger(signature.delta)).mod(this.q);

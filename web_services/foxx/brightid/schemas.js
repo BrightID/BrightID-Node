@@ -100,7 +100,7 @@ Object.keys(operations).forEach(name => {
     name: joi.string().valid(name).required().description('operation name'),
   }, operations[name], {
     timestamp: joi.number().required().description('milliseconds since epoch when the operation created'),
-    v: joi.number().required().valid(5).description('version of API')
+    v: joi.number().required().valid(6).description('version of API')
   });
 });
 
