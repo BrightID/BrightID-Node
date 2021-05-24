@@ -192,7 +192,7 @@ const handlers = {
   verificationPublicGet: function(req, res){
     const appKey = req.param('app');
     const app = db.getApp(appKey);
-    const roundedTimestamp = req.param('roundedTimestamp');
+    const roundedTimestamp = parseInt(req.param('roundedTimestamp'));
     const verification = req.param('verification') || app.verification;
 
     const tp = app.timestampPrecision;
@@ -269,8 +269,8 @@ const handlers = {
     let priv = params.private;
     priv = {
       u: new BigInteger(priv.u),
-      s: new BigInteger(priv.u),
-      d: new BigInteger(priv.u),
+      s: new BigInteger(priv.s),
+      d: new BigInteger(priv.d),
     };
     const response = server.GenerateWISchnorrServerResponse(priv, e);
     res.send({
