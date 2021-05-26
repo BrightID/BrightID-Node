@@ -1,9 +1,10 @@
+const BigInteger = require('node-jsbn');
 const stringify = require('fast-json-stable-stringify');
 const db = require('./db');
 const arango = require('@arangodb').db;
-var CryptoJS = require("crypto-js");
+const CryptoJS = require('crypto-js');
 const nacl = require('tweetnacl');
-const BlindSignature = require('blind-signatures');
+const BlindSignature = require('./rsablind');
 
 const {
   strToUint8Array,
@@ -33,7 +34,7 @@ const verifyUserSig = function(message, id, sig) {
 const verifyAppSig = function(message, app, sig) {
   app = db.getApp(app);
   const result = BlindSignature.verify({
-    unblinded: sig,
+    unblinded: new BigInteger(sig),
     N: app.keypair.n,
     E: app.keypair.e,
     message: message,

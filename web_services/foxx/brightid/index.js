@@ -192,7 +192,7 @@ const handlers = {
   verificationPublicGet: function(req, res){
     const appKey = req.param('app');
     const app = db.getApp(appKey);
-    const roundedTimestamp = parseInt(req.param('roundedTimestamp'));
+    const roundedTimestamp = req.param('roundedTimestamp');
     const verification = req.param('verification') || app.verification;
 
     const tp = app.timestampPrecision;
@@ -381,7 +381,7 @@ router.get('/operations/:hash', handlers.operationGet)
 
 router.get('/verifications/public', handlers.verificationPublicGet)
   .queryParam('app', joi.string().required().description('unique app id'))
-  .queryParam('roundedTimestamp', joi.string().required().description("timestamp that is rounded to app's required precision"))
+  .queryParam('roundedTimestamp', joi.number().integer().required().description("timestamp that is rounded to app's required precision"))
   .queryParam('verification', joi.string().description('custom verification expression'))
   .summary('Gets public part of WI-Schnorr params')
   .description("Gets public part of WI-Schnorr params using deterministic json representation of {app, roundedTimestamp, verification} as info")

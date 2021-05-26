@@ -50,7 +50,7 @@ const operations = {
     sig2: joi.string().required().description('deterministic json representation of operation object signed by the recovery connection represented by id2'),
   },
   'Sponsor': {
-    id: joi.string().description('the brightid of the user that is being sponsored'),
+    id: joi.string().required().description('the brightid of the user that is being sponsored'),
     app: joi.string().required().description('the app name that user is being sponsored by'),
     sig: joi.string().required().description("unblinded signature of Chaum's blind signature schema using deterministic json representation of {id, app} as message"),
   },
