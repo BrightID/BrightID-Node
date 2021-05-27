@@ -1,6 +1,13 @@
 import os
-os.environ['BN_UPDATER_SP_ADDRESS'] = '0xFB32926d0A1e2082D12426B2854cb0c945AAF7c6'
-os.environ['BN_UPDATER_SP_INFURA_URL'] = ''
+os.environ['BN_UPDATER_MAINNET_WSS'] = ''
+os.environ['BN_UPDATER_IDCHAIN_WSS'] = 'wss://idchain.one/ws/'
+os.environ['BN_UPDATER_SEED_VOTING_ADDRESS'] = '0x56741DbC203648983c359A48aaf68f25f5550B6a'
+os.environ['BN_UPDATER_SP_ADDRESS_MAINNET'] = '0x0aB346a16ceA1B1363b20430C414eAB7bC179324'
+os.environ['BN_UPDATER_SP_ADDRESS_IDCHAIN'] = '0x183C5D2d1E43A3aCC8a977023796996f8AFd2327'
+os.environ['BN_UPDATER_SEED_GROUPS_WS_URL'] = 'wss://idchain.one/ws/'
+os.environ['BN_ARANGO_PROTOCOL'] = 'http'
+os.environ['BN_ARANGO_HOST'] = 'localhost'
+os.environ['BN_ARANGO_PORT'] = '8529'
 
 from eth_keys import keys
 import unittest
@@ -10,6 +17,8 @@ import string
 import time
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
+import ed25519
+import base64
 
 
 class TestUpdate(unittest.TestCase):
@@ -19,12 +28,15 @@ class TestUpdate(unittest.TestCase):
         self.IDS_AS_HEX = True
         self.GAS = 500 * 10**3
         self.GAS_PRICE = 5 * 10**9
-        self.SPONSOR_EVENT_CONTRACT = '0xE8572C106662F7Da8D6734F99bADE6BAE33c5DB8'
+        self.SPONSOR_EVENT_CONTRACT = ''
         self.CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"},{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"}]'
-        self.PRIVATE_KEY = 'EEBED6AE74B73BE44F4706222344E1D90363F64DA2C31B58B29F7A39EB6BFB43'
+        self.PRIVATE_KEY = ''
         self.APP = ''.join(random.choices(string.ascii_uppercase, k=5))
-        self.USER = 'v7vS3jEqXazNUWj-5QXmrBL8x5XCp3EksF7uVGlijll'
-        self.WS_PROVIDER = 'wss://rinkeby.infura.io/ws/v3/588bb93634084be69f62f302a279d76f'
+        private, public = ed25519.create_keypair()
+        public = base64.b64encode(public.to_bytes()).decode('ascii')
+        private = base64.b64encode(private.to_bytes()).decode('ascii')
+        self.USER = public.strip('=').replace('/', '_').replace('+', '-')
+        self.WS_PROVIDER = ''
         self.w3 = Web3(Web3.WebsocketProvider(
             self.WS_PROVIDER, websocket_kwargs={'timeout': 60}))
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -48,6 +60,8 @@ class TestUpdate(unittest.TestCase):
             'verification': self.APP,
             'wsProvider': self.WS_PROVIDER,
             'sponsorEventContract': self.SPONSOR_EVENT_CONTRACT,
+            'sponsorPublicKey': public,
+            'sponsorPrivateKey': private,
             'totalSponsorships': 2,
             'idsAsHex': self.IDS_AS_HEX
         }
@@ -123,7 +137,7 @@ class TestUpdate(unittest.TestCase):
         raw_transaction = signed.rawTransaction.hex()
         tx_hash = self.w3.eth.sendRawTransaction(raw_transaction).hex()
         rec = self.w3.eth.waitForTransactionReceipt(tx_hash)
-        return {'status': rec['status'], 'tx_hash': tx_hash}
+        print(f"Sponsor Transaction: status: {rec['status']}\ttx_hash: {tx_hash}")
 
     def sponsor(self, context_id):
         func = self.contract.functions.sponsor(context_id)
@@ -141,10 +155,13 @@ class TestUpdate(unittest.TestCase):
             'value': lb - 1
         })
         sponsorships.update()
+        # wait for the operation
+        time.sleep(60)
         self.assertFalse(self.sponsorships.find(
             {'_from': 'users/{}'.format(self.USER)}).empty())
         self.assertTrue(self.testblocks.find(
             {'contextId': self.CONTEXT_ID}).empty())
+
 
 if __name__ == '__main__':
     unittest.main()
