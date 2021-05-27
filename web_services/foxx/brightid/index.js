@@ -221,17 +221,17 @@ const handlers = {
     const verification = req.param('verification');
     const app = db.getApp(appKey);
     const context = db.getContext(app.context);
+    if (context.idsAsHex) {
+      contextId = contextId.toLowerCase();
+    }
     const testblocks = db.getTestblocks(appKey, contextId);
+
     if (testblocks.includes('link')) {
       throw new errors.ContextIdNotFoundError(contextId);
     } else if (testblocks.includes('sponsorship')) {
       throw new errors.NotSponsoredError(contextId);
     } else if (testblocks.includes('verification')) {
       throw new errors.NotVerifiedError(contextId, appKey);
-    }
-
-    if (context.idsAsHex) {
-      contextId = contextId.toLowerCase();
     }
 
     const coll = arango._collection(context.collection);
@@ -377,12 +377,20 @@ const handlers = {
   testblocksPut: function(req, res){
     const appKey = req.param('app');
     const action = req.param('action');
-    const contextId = req.param('contextId');
+    let contextId = req.param('contextId');
     const testingKey = req.param('testingKey');
 
     const app = db.getApp(appKey);
     if (app.testingKey != testingKey) {
       throw new errors.InvalidTestingKeyError();
+    }
+    const context = db.getContext(app.context);
+    if (context.idsAsHex) {
+      const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+      if(!re.test(contextId)) {
+        throw new errors.InvalidContextIdError(contextId);
+      }
+      contextId = contextId.toLowerCase();
     }
 
     return db.addTestblock(contextId, action, appKey);
@@ -391,14 +399,21 @@ const handlers = {
   testblocksDelete: function(req, res){
     const appKey = req.param('app');
     const action = req.param('action');
-    const contextId = req.param('contextId');
+    let contextId = req.param('contextId');
     const testingKey = req.param('testingKey');
 
     const app = db.getApp(appKey);
     if (app.testingKey != testingKey) {
       throw new errors.InvalidTestingKeyError();
     }
-
+    const context = db.getContext(app.context);
+    if (context.idsAsHex) {
+      const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+      if(!re.test(contextId)) {
+        throw new errors.InvalidContextIdError(contextId);
+      }
+      contextId = contextId.toLowerCase();
+    }
     return db.removeTestblock(contextId, action, appKey);
   },
 
