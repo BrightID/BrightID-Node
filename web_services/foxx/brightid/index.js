@@ -195,10 +195,12 @@ const handlers = {
     const roundedTimestamp = req.param('roundedTimestamp');
     const verification = req.param('verification') || app.verification;
 
-    const tp = app.timestampPrecision;
-    const serverRoundedTimestamp = tp ? parseInt(Date.now() / tp) * tp : 0;
-    if (serverRoundedTimestamp != roundedTimestamp) {
-      throw new errors.InvalidRoundedTimestampError(serverRoundedTimestamp, roundedTimestamp);
+    const vel = app.verificationExpirationLength;
+    if (vel) {
+      const serverRoundedTimestamp = parseInt(Date.now() / vel) * vel;
+      if (serverRoundedTimestamp != roundedTimestamp) {
+        throw new errors.InvalidRoundedTimestampError(serverRoundedTimestamp, roundedTimestamp);
+      }
     }
 
     const info = stringify({ app: appKey, roundedTimestamp, verification });
@@ -259,10 +261,10 @@ const handlers = {
     const server = new WISchnorrServer();
     server.GenerateSchnorrKeypair(password);
 
-    const q = { _key: id, roundedTimestamp: params.roundedTimestamp, app: params.app };
+    const q = { id, roundedTimestamp: params.roundedTimestamp, app: params.app };
     const sv = signedVerificationsColl.firstExample(q);
     if (sv) {
-      throw new errors.DuplicateSigRequetError();
+      throw new errors.DuplicateSigRequestError();
     }
     signedVerificationsColl.insert(q);
 

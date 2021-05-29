@@ -35,7 +35,7 @@ const cachedParamsColl = arango._collection('cachedParams');
 const u = nacl.sign.keyPair();
 u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
 u.id = b64ToUrlSafeB64(u.signingKey);
-const tp = 1000000;
+const verificationExpirationLength = 1000000;
 
 const key = new NodeRSA();
 key.importKey({
@@ -62,7 +62,7 @@ describe('verifications', function() {
     appsColl.insert({
       _key: 'idchain',
       keypair: { n: N, e: E },
-      timestampPrecision: tp
+      verificationExpirationLength
     });
     variablesColl.insert({
       _key: 'LAST_BLOCK',

@@ -381,7 +381,7 @@ class InvalidRoundedTimestampError extends ForbiddenError {
   }
 }
 
-class DuplicateSigRequetError extends ForbiddenError {
+class DuplicateSigRequestError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = DUPLICATE_SIG_REQUEST_ERROR;
@@ -467,5 +467,5 @@ module.exports = {
   IneligibleRecoveryConnectionError,
   InvalidRoundedTimestampError,
   WISchnorrPasswordNotSetError,
-  DuplicateSigRequetError
+  DuplicateSigRequestError
 }
