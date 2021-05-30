@@ -13,6 +13,7 @@ db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 variables = db['variables']
 contexts = db['contexts']
 sponsorships = db['sponsorships']
+testblocks = db['testblocks']
 
 
 def get_events(app):
@@ -58,6 +59,15 @@ def update():
             context_id = sponsored['args']['addr'].lower()
             print('checking sponsored\tapp_name: {0}, context_id: {1}'.format(
                 app['_key'], context_id))
+
+            # remove testblocks if exists
+            tblocks = testblocks.find({
+                'contextId': context_id,
+                'action': 'sponsorship',
+                'app': app['_key']
+            }).batch()
+            for tblock in tblocks:
+                testblocks.delete(tblock)
 
             tsponsorships = app['totalSponsorships']
             usponsorships = sponsorships.find(
