@@ -120,7 +120,7 @@ describe('verifications', function() {
     const client = new WISchnorrClient(db.getState().wISchnorrPublic);
     const info = {
       app: 'idchain',
-      roundedTimestamp: parseInt(Date.now() / tp) * tp,
+      roundedTimestamp: parseInt(Date.now() / verificationExpirationLength) * verificationExpirationLength,
       verification: 'BrightID'  
     };
     let resp = request.get(`${baseUrl}/verifications/public`, { qs: info });

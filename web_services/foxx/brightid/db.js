@@ -428,25 +428,29 @@ function appToDic(app) {
 }
 
 function userVerifications(user) {
-  let hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
-  hashes = JSON.parse(hashes);
-  // const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
-  // const lastBlock = variablesColl.document('LAST_BLOCK').value;
-  // // We want verifications from the second-most recently generated snapshot
-  // // prior to LAST_BLOCK. We use this approach to ensure all synced nodes return
-  // // verifications from same block regardless of how fast they are in processing
-  // // new generated snapshots and adding new verifications to database.
-  // let block;
-  // if (lastBlock > hashes[1]['block'] + snapshotPeriod) {
-  //   block = hashes[1]['block'];
-  // } else {
-  //   block = hashes[0]['block'];
-  // }
+  let verifications;
+  if (variablesColl.exists('VERIFICATIONS_HASHES')) {
+    let hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+    hashes = JSON.parse(hashes);
+    // const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
+    // const lastBlock = variablesColl.document('LAST_BLOCK').value;
+    // // We want verifications from the second-most recently generated snapshot
+    // // prior to LAST_BLOCK. We use this approach to ensure all synced nodes return
+    // // verifications from same block regardless of how fast they are in processing
+    // // new generated snapshots and adding new verifications to database.
+    // let block;
+    // if (lastBlock > hashes[1]['block'] + snapshotPeriod) {
+    //   block = hashes[1]['block'];
+    // } else {
+    //   block = hashes[0]['block'];
+    // }
 
-  // rollback consneus based block selection consneus temporarily to ensure faster verification
-  let block = Math.max(...Object.keys(hashes));
-
-  const verifications = verificationsColl.byExample({ user, block }).toArray();
+    // rollback consneus based block selection consneus temporarily to ensure faster verification
+    const block = Math.max(...Object.keys(hashes).map(block => parseInt(block)));
+    verifications = verificationsColl.byExample({ user, block }).toArray();
+  } else {
+    verifications = verificationsColl.byExample({ user }).toArray();
+  }
   verifications.forEach(v => {
     delete v._key;
     delete v._id;

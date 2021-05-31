@@ -11,7 +11,9 @@
     "lodash": "^4.17.11",
     "secp256k1": "^4.0.0",
     "tweetnacl": "^1.0.0",
-    "blind-signatures": "^1.0.7",
-    "node-jsbn": "^0.1.1"
+    "node-jsbn": "^0.1.1",
+    "js-sha256": "0.9.0",
+    "jsbn": "1.1.0",
+    "node-rsa": "1.0.8"
   }
 }
