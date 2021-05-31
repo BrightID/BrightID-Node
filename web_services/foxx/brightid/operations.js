@@ -54,6 +54,7 @@ const senderAttrs = {
   'Remove Signing Key': ['id'],
   'Remove All Signing Keys': ['id'],
   'Update Group': ['id'],
+  'Vouch Family Group': ['id'],
 };
 
 let operationsCount = {};
@@ -116,6 +117,7 @@ const signerAndSigs = {
   'Add Signing Key': ['id', 'sig'],
   'Remove Signing Key': ['id', 'sig'],
   'Remove All Signing Keys': ['id', 'sig'],
+  'Vouch Family Group': ['id', 'sig']
 }
 
 function verify(op) {
@@ -208,6 +210,8 @@ function apply(op) {
     return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
+  } else if (op['name'] == 'Vouch Family Group') {
+    return db.vouchFamilyGroup(op.id, op.group, op.timestamp);
   } else {
     throw new errors.InvalidOperationNameError(op['name']);
   }

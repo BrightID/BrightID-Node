@@ -144,6 +144,15 @@ const handlers = {
     });
   },
 
+  userEligibleGroupsToVouchGet: function(req, res) {
+    const id = req.param('id');
+    res.send({
+      data: {
+        groups: db.userEligibleGroupsToVouch(id)
+      }
+    });
+  },
+
   userProfileGet: function(req, res) {
     const id = req.param('id');
     const requestor = req.param('requestor');
@@ -489,6 +498,12 @@ router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
   .summary('Get inbound or outbound connections of a user')
   .description("Gets list of user's connections with levels and timestamps")
   .response(schemas.userConnectionsGetResponse);
+
+router.get('/users/:id/eligibleGroupsToVouch', handlers.userEligibleGroupsToVouchGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .summary('Get a list of the family groups')
+  .description("Get the list of family groups which the user can evaluate them")
+  .response(schemas.userEligibleGroupsToVouchGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))

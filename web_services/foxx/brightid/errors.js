@@ -40,6 +40,13 @@ const NOT_ADMIN = 41;
 const ARANGO_ERROR = 42;
 const INELIGIBLE_RECOVERY_CONNECTION = 43;
 const INVALID_CONTEXTID = 44;
+const ALREADY_IS_FAMILY_GROUP_HEAD = 45;
+const ALREADY_IS_FAMILY_GROUP_MEMBER = 46;
+const INELIGIBLE_FAMILY_GROUP_MEMBER = 47;
+const NOT_FAMILY_GROUP = 48;
+const INELIGIBLE_TO_VOUCH = 49;
+const INELIGIBLE_TO_VOUCH_FOR = 50;
+const INELIGIBLE_FAMILY_GROUP_FOUNDERS = 51;
 
 class BrightIDError extends Error {
   constructor() {
@@ -441,6 +448,62 @@ class InvalidContextIdError extends NotFoundError {
   }
 }
 
+class AlreadyIsFamilyGroupHead extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = ALREADY_IS_FAMILY_GROUP_HEAD;
+    this.message = 'The user already is head of a family group.';
+  }
+}
+
+class AlreadyIsFamilyGroupMember extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = ALREADY_IS_FAMILY_GROUP_MEMBER;
+    this.message = 'The user already is member of a family group.';
+  }
+}
+
+class IneligibleFamilyGroupMember extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_FAMILY_GROUP_MEMBER;
+    this.message = 'The user is not eligible to join this family group.';
+  }
+}
+
+class NotFamilyGroupError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = NOT_FAMILY_GROUP;
+    this.message = 'Requstor is not admin of the group.';
+  }
+}
+
+class IneligibleToVouch extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_TO_VOUCH;
+    this.message = 'This group is not eligible to vouch for.';
+  }
+}
+
+class IneligibleToVouchFor extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_TO_VOUCH_FOR;
+    this.message = 'This user is not eligible to vouch for this group.';
+  }
+}
+
+class IneligibleFamilyGroupFounders extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_FAMILY_GROUP_FOUNDERS;
+    this.message = 'Founders are not eligible to create a family group.';
+  }
+}
+
 module.exports = {
   CONTEXT_NOT_FOUND,
   CONTEXTID_NOT_FOUND,
@@ -483,6 +546,13 @@ module.exports = {
   ARANGO_ERROR,
   INELIGIBLE_RECOVERY_CONNECTION,
   INVALID_CONTEXTID,
+  ALREADY_IS_FAMILY_GROUP_HEAD,
+  ALREADY_IS_FAMILY_GROUP_MEMBER,
+  INELIGIBLE_FAMILY_GROUP_MEMBER,
+  NOT_FAMILY_GROUP,
+  INELIGIBLE_TO_VOUCH,
+  INELIGIBLE_TO_VOUCH_FOR,
+  INELIGIBLE_FAMILY_GROUP_FOUNDERS,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -530,4 +600,11 @@ module.exports = {
   SponsorNotSupportedError,
   IneligibleRecoveryConnection,
   InvalidContextIdError,
+  AlreadyIsFamilyGroupHead,
+  AlreadyIsFamilyGroupMember,
+  IneligibleFamilyGroupMember,
+  NotFamilyGroupError,
+  IneligibleToVouch,
+  IneligibleToVouchFor,
+  IneligibleFamilyGroupFounders,
 }

@@ -125,6 +125,7 @@ function userConnections(userId, direction = 'outbound') {
     return {
       id: conn[resIdAttr].replace('users/', ''),
       level: conn.level,
+      familyVouchConnection: conn.familyVouchConnection || false,
       reportReason: conn.reportReason || undefined,
       timestamp: conn.timestamp
     }
@@ -133,6 +134,10 @@ function userConnections(userId, direction = 'outbound') {
 
 function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
+  let {
+    isFamilyGroupHead: isHead,
+    isFamilyGroupMember: isMember
+  } = hasFamilyGroup(userId);
   return {
     id: u._key,
     // all signing keys will be returned on v6
@@ -140,14 +145,15 @@ function userToDic(userId) {
     // score is deprecated and will be removed on v6
     score: u.score,
     verifications: userVerifications(u._key).map(v => v.name),
-    hasPrimaryGroup: hasPrimaryGroup(u._key),
     // trusted is deprecated and will be replaced by recoveryConnections on v6
     trusted: getRecoveryConnections(u._key),
     // flaggers is deprecated and will be replaced by reporters on v6
     flaggers: getReporters(u._key),
     createdAt: u.createdAt,
     // eligible_groups is deprecated and will be removed on v6
-    eligible_groups: u.eligible_groups || []
+    eligible_groups: u.eligible_groups || [],
+    isFamilyGroupHead,
+    isFamilyGroupMember,
   }
 }
 
@@ -262,6 +268,7 @@ function groupToDic(groupId) {
     score: 0,
     url: group.url,
     timestamp: group.timestamp,
+    head: group.head || '',
   }
 }
 
@@ -295,16 +302,40 @@ function invite(inviter, invitee, groupId, data, timestamp) {
   if (! groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
+
   const group = groupsColl.document(groupId);
   if (! group.admins || ! group.admins.includes(inviter)) {
     throw new errors.NotAdminError();
   }
-  if (group.type == 'primary' && hasPrimaryGroup(invitee)) {
-    throw new errors.AlreadyHasPrimaryGroupError();
-  }
+
   if (group.isNew && ! group.founders.includes(invitee)) {
     throw new errors.NewUserBeforeFoundersJoinError();
   }
+
+  if (group.type == 'family') {
+    if (hasFamilyGroup(invitee)['isMember']) {
+      throw new errors.AlreadyIsFamilyGroupMember();
+    }
+    let members = usersInGroupsColl.byExample({
+      _to: "groups/" + group._key,
+    }).toArray().map(e => e._from);
+    const toMemberConnections = query`
+      FOR conn in ${connectionsColl}
+        FILTER conn._from == ${'users/' + invitee}
+        FILTER conn._to IN ${members}
+        FILTER conn.level IN ['already known', 'recovery']
+        FOR conn2 in ${connectionsColl}
+          FILTER conn2._from == conn._to
+          FILTER conn2._to == conn._from
+          FILTER conn2.level IN ['already known', 'recovery']
+        RETURN conn
+    `.toArray();
+    const conectedMembers = toMemberConnections.map(c => c._to);
+    if (! _.isEqual(members.sort(), conectedMembers.sort())) {
+      throw new errors.IneligibleFamilyGroupMember();
+    }
+  }
+
   invitationsColl.removeByExample({
     _from: 'users/' + invitee,
     _to: 'groups/' + groupId
@@ -357,16 +388,24 @@ function createUser(key, timestamp) {
   }
 }
 
-function hasPrimaryGroup(key) {
+function hasFamilyGroup(key) {
+  const res = { isHead: false, isMember: false };
   const groupIds = usersInGroupsColl.byExample({
     _from: 'users/' + key
   }).toArray().map(ug => ug._to.replace('groups/', ''));
   const groups = groupsColl.documents(groupIds).documents;
-  return groups.filter(group => group.type == 'primary').length > 0;
+  groups.filter(group => group.type == 'family').forEach(g => {
+    if (g.head == key) {
+      res.isHead = true;
+    } else {
+      res.isMember = true;
+    }
+  });
+  return res;
 }
 
 function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp) {
-  if (! ['general', 'primary'].includes(type)) {
+  if (! ['general', 'family'].includes(type)) {
     throw new errors.InvalidGroupTypeError(type);
   }
 
@@ -382,11 +421,7 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
   }
 
   const founders = [key1, key2, key3].sort()
-  if (type == 'primary' && founders.some(hasPrimaryGroup)) {
-    throw new errors.AlreadyHasPrimaryGroupError();
-  }
-
-  groupsColl.insert({
+  const group = {
     _key: groupId,
     score: 0,
     isNew: true,
@@ -395,8 +430,33 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     type,
     timestamp,
     founders
-  });
+  }
 
+  if (type == 'family') {
+    const ids = [key1, key2, key3].map(u => 'users/' + u);
+    const inGroupConnections = query`
+      FOR conn in ${connectionsColl}
+        FILTER conn._from IN ${ids}
+        FILTER conn._to IN ${ids}
+        FILTER conn.level IN ['already known', 'recovery']
+        RETURN conn
+    `.toArray();
+
+    if (inGroupConnections.length != 6) {
+      throw new errors.IneligibleFamilyGroupFounders();
+    }
+
+    if (hasFamilyGroup(key1)['isHead']) {
+      throw new errors.AlreadyIsFamilyGroupHead();
+    }
+
+    if (hasFamilyGroup(key2)['isMember'] || hasFamilyGroup(key3)['isMember']) {
+      throw new errors.AlreadyIsFamilyGroupMember();
+    }
+    group['head'] = key1;
+  }
+
+  groupsColl.insert(group);
   // Add the creator and invite other cofounders to the group now.
   // The other two "co-founders" have to join using /membership
   addUserToGroup(groupId, key1, timestamp);
@@ -409,9 +469,9 @@ function addAdmin(key, admin, groupId) {
     throw new errors.GroupNotFoundError(groupId);
   }
   if (! usersInGroupsColl.firstExample({
-    _from: 'users/' + admin,
-    _to: 'groups/' + groupId
-  })) {
+      _from: 'users/' + admin,
+      _to: 'groups/' + groupId
+    })) {
     throw new errors.IneligibleNewAdminError();
   }
   const group = groupsColl.document(groupId);
@@ -452,8 +512,29 @@ function addMembership(groupId, key, timestamp) {
     throw new errors.NewUserBeforeFoundersJoinError();
   }
 
-  if (group.type == 'primary' && hasPrimaryGroup(key)) {
-    throw new errors.AlreadyHasPrimaryGroupError();
+  if (group.type == 'family') {
+    if (hasFamilyGroup(groupId)['isMember']) {
+      throw new errors.AlreadyIsFamilyGroupMember();
+    }
+
+    let members = usersInGroupsColl.byExample({
+      _to: "groups/" + group._key,
+    }).toArray().map(e => e._from);
+
+    const connections = query`
+      FOR conn in ${connectionsColl}
+        FILTER conn._from == ${'users/' + key}
+        FILTER conn._to IN ${members}
+        FILTER conn.level IN ['already known', 'recovery']
+        FOR conn2 in ${connectionsColl}
+          FILTER conn2._from == conn._to
+          FILTER conn2._to == conn._from
+          FILTER conn2.level IN ['already known', 'recovery']
+        RETURN conn._to
+    `.toArray();
+    if (! _.isEqual(members.sort(), connections.sort())) {
+      throw new errors.IneligibleFamilyGroupMember();
+    }
   }
 
   const invite = invitationsColl.firstExample({
@@ -954,6 +1035,76 @@ function removeAllSigningKeys(id, signingKey) {
   usersColl.update(id, { signingKeys });
 }
 
+function vouchFamilyGroup(id, groupId, timestamp) {
+  if (! groupsColl.exists(groupId)) {
+    throw new errors.GroupNotFoundError(groupId);
+  }
+
+  const group = groupsColl.document(groupId);
+  if (group.type != 'family') {
+      throw new errors.NotFamilyGroupError();
+  }
+
+  // user cannot vouch for the new groups or the groups created in the past 24 hours
+  if (group.isNew || group.timestamp > Date.now() - (24*60*60*1000)) {
+    throw new errors.IneligibleToVouch();
+  }
+
+  let members = usersInGroupsColl.byExample({
+    _to: "groups/" + group._key,
+  }).toArray().map(e => e._from);
+
+  const toMemberConnections = query`
+    FOR conn in ${connectionsColl}
+      FILTER conn._from == ${'users/' + id}
+      FILTER conn._to IN ${members}
+      FILTER conn.level IN ['already known', 'recovery']
+      FOR conn2 in ${connectionsColl}
+        FILTER conn2._from == conn._to
+        FILTER conn2._to == conn._from
+        FILTER conn2.level IN ['already known', 'recovery']
+      RETURN conn
+  `.toArray();
+  const conectedMembers = toMemberConnections.map(c => c._to);
+  if (! _.isEqual(members.sort(), conectedMembers.sort())) {
+    throw new errors.IneligibleToVouchFor();
+  }
+
+  toMemberConnections.forEach(conn => {
+    connectionsColl.update(conn, {familyVouchConnection: true});
+  });
+}
+
+function userEligibleGroupsToVouch(userId) {
+  const result = [];
+  const connections = query`
+    FOR conn in ${connectionsColl}
+      FILTER conn._from == ${'users/' + userId}
+      FILTER conn.level IN ['already known', 'recovery']
+      FOR conn2 in ${connectionsColl}
+        FILTER conn2._from == conn._to
+        FILTER conn2._to == conn._from
+        FILTER conn2.level IN ['already known', 'recovery']
+      RETURN conn._to
+  `.toArray();
+  for (let connection of connections) {
+    const groupIds = usersInGroupsColl.byExample({
+      _from: connection
+    }).toArray().map(ug => ug._to.replace('groups/', ''));
+    const groups = groupsColl.documents(groupIds).documents;
+    groups.filter(group => group.type == 'family').forEach(group => {
+      let members = usersInGroupsColl.byExample({
+        _to: "groups/" + group._key,
+      }).toArray().map(e => e._from);
+      const conectedToAll = members.every(m => connections.includes(m));
+      if (conectedToAll && !result.includes(group._key)) {
+        result.push(group._key);
+      }
+    });
+  }
+  return result;
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -1005,5 +1156,8 @@ module.exports = {
   loadGroup,
   groupInvites,
   updateEligibles,
-  updateGroup
+  updateGroup,
+  hasFamilyGroup,
+  vouchFamilyGroup,
+  userEligibleGroupsToVouch,
 };

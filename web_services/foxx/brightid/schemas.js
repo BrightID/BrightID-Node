@@ -36,7 +36,7 @@ const operations = {
     inviteData2: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id2'),
     inviteData3: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id3'),
     url: joi.string().required().description('the url that group data (profile image and name) encrypted by group AES key can be fetched from'),
-    type: joi.string().valid('general', 'primary').required().description('type of the group'),
+    type: joi.string().valid('general', 'family').required().description('type of the group'),
     sig1: joi.string().required().description('deterministic json representation of operation object signed by the creator of group represented by id1'),
   },
   'Remove Group': {
@@ -119,7 +119,12 @@ const operations = {
   'Remove All Signing Keys': {
     id: joi.string().required().description('brightid of the user who is removing all the signingKeys except the one that used to sign this operation'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
-  }
+  },
+  'Vouch Family Group': {
+    id: joi.string().required().description('brightid of the user who is vouching the family group'),
+    group: joi.string().required().description('the unique id of the group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
 };
 
 Object.keys(operations).forEach(name => {
@@ -224,6 +229,12 @@ schemas = Object.assign({
   userConnectionsGetResponse: joi.object({
     data: joi.object({
       connections: joi.array().items(schemas.connection)
+    })
+  }),
+
+  userEligibleGroupsToVouchGetResponse: joi.object({
+    data: joi.object({
+      groups: joi.array().items(joi.string())
     })
   }),
 

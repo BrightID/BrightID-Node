@@ -169,40 +169,115 @@ describe('groups', function () {
     });
   });
 
-  describe('primary groups', function() {
+  describe('family groups', function() {
     before(function() {
-      groupsColl.truncate();
+      usersColl.truncate();
+      connectionsColl.truncate();
       groupsColl.truncate();
       usersInGroupsColl.truncate();
-      db.addConnection('a', 'd', 0);
-      db.addConnection('a', 'e', 0);
-      db.addConnection('e', 'c', 0);
-      db.addConnection('e', 'b', 0);
-      db.createGroup('g4', 'a', 'b', 'data', 'c', 'data', url, 'primary', Date.now());
-      db.addMembership('g4', 'b', Date.now());
-      db.addMembership('g4', 'c', Date.now());
-    });
-    it('users that have primary groups should not be able to create new primary groups', function (){
-      (() => {
-        db.createGroup('g5', 'a', 'd', 'data', 'e', 'data', url, 'primary', Date.now());
-      }).should.throw(errors.AlreadyHasPrimaryGroupError);
-    });
-    it('users with no primary group should be able to join a primary group', function (){
-      db.invite('a', 'd', 'g4', 'data', Date.now());
-      db.addMembership('g4', 'd', Date.now());
-      db.userGroups('d').map(group => group.id).should.deep.equal(['g4']);
-    });
-    it('users that have primary groups should not be able to invited to other primary groups', function (){
-      db.addConnection('e', 'f', Date.now());
-      db.addConnection('e', 'g', Date.now());
-      db.createGroup('g6', 'e', 'f', 'data', 'g', 'data', url, 'primary', Date.now());
-      db.addMembership('g6', 'f', Date.now());
-      db.addMembership('g6', 'g', Date.now());
-      (() => {
-        db.invite('a', 'e', 'g4', 'data', Date.now());
-      }).should.throw(errors.AlreadyHasPrimaryGroupError);
+      invitationsColl.truncate();
+      db.connect({id1: 'a1', id2: 'b1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'b1', id2: 'a1', level: 'recovery', timestamp: Date.now()});
 
+      db.connect({id1: 'a1', id2: 'c1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'c1', id2: 'a1', level: 'already known', timestamp: Date.now()});
+
+      db.connect({id1: 'b1', id2: 'c1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'c1', id2: 'b1', level: 'recovery', timestamp: Date.now()});
+
+
+      db.connect({id1: 'a1', id2: 'd1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'd1', id2: 'a1', level: 'already known', timestamp: Date.now()});
+
+      db.connect({id1: 'a1', id2: 'e1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'e1', id2: 'a1', level: 'already known', timestamp: Date.now()});
+
+      db.connect({id1: 'd1', id2: 'e1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'e1', id2: 'd1', level: 'recovery', timestamp: Date.now()});
+
+
+      db.connect({id1: 'f1', id2: 'a1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'a1', id2: 'f1', level: 'recovery', timestamp: Date.now()});
+
+      db.connect({id1: 'f1', id2: 'b1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'b1', id2: 'f1', level: 'already known', timestamp: Date.now()});
+
+      db.connect({id1: 'f1', id2: 'd1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'd1', id2: 'f1', level: 'already known', timestamp: Date.now()});
+
+      db.connect({id1: 'f1', id2: 'e1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'e1', id2: 'f1', level: 'already known', timestamp: Date.now()});
+
+      db.connect({id1: 'e1', id2: 'b1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'b1', id2: 'e1', level: 'already known', timestamp: Date.now()});
+
+      db.connect({id1: 'e1', id2: 'c1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'c1', id2: 'e1', level: 'already known', timestamp: Date.now()});
+    });
+    it("should not be able to found a family group when founders don't have required connections", function (){
+      (() => {
+        db.createGroup('fg1', 'a1', 'b1', 'data', 'd1', 'data', url, 'family', Date.now());
+      }).should.throw(errors.IneligibleFamilyGroupFounders);
+    });
+    it("should be able to found a family group when founders have required connections", function (){
+      db.createGroup('fg1', 'a1', 'b1', 'data', 'c1', 'data', url, 'family', (Date.now() - 48*60*60*1000));
+      db.addMembership('fg1', 'b1', (Date.now() - 48*60*60*1000));
+      db.addMembership('fg1', 'c1', (Date.now() - 48*60*60*1000));
+      groupsColl.count().should.equal(1);
+    });
+    it('head of a family group should not be able to be head of another family groups', function (){
+      (() => {
+        db.createGroup('fg2', 'a1', 'd1', 'data', 'e1', 'data', url, 'family', Date.now());
+      }).should.throw(errors.AlreadyIsFamilyGroupHead);
+    });
+    it('member of a family group should not be able to be member of another family groups', function (){
+      (() => {
+        db.createGroup('fg2', 'f1', 'a1', 'data', 'b1', 'data', url, 'family', Date.now());
+      }).should.throw(errors.AlreadyIsFamilyGroupMember);
+    });
+    it("head of a family group should be able be member of another family groups", function (){
+      db.createGroup('fg2', 'e1', 'a1', 'data', 'd1', 'data', url, 'family', Date.now());
+      db.addMembership('fg2', 'a1', Date.now());
+      db.addMembership('fg2', 'd1', Date.now());
+      db.userGroups('a1').map(group => group.id).should.deep.equal(['fg1', 'fg2']);
+      groupsColl.count().should.equal(2);
+    });
+    it('users that are member of family groups should not be able to invited to other family groups', function (){
+      (() => {
+        db.invite('a1', 'd1', 'fg1', 'data', Date.now());
+      }).should.throw(errors.AlreadyIsFamilyGroupMember);
+    });
+    it('users that are not connected to all members of the family groups should not be able to invite to the family group', function (){
+      (() => {
+        db.invite('a1', 'f1', 'fg1', 'data', Date.now());
+      }).should.throw(errors.IneligibleFamilyGroupMember);
+    });
+    it('eligible users should be able to join a family group', function (){
+      db.invite('a1', 'f1', 'fg2', 'data', Date.now());
+      db.addMembership('fg2', 'f1', Date.now());
+      db.userGroups('f1').map(group => group.id).should.deep.equal(['fg2']);
+    });
+    it('newly created family groups ineligible  to vouch for', function (){
+      (() => {
+        db.vouchFamilyGroup('f1', 'fg2', Date.now());
+      }).should.throw(errors.IneligibleToVouch);
+    });
+    it('ineligible users should not be able to vouch family groups', function (){
+      (() => {
+        db.userEligibleGroupsToVouch('f1').should.not.include('fg1');
+        db.vouchFamilyGroup('f1', 'fg1', Date.now());
+      }).should.throw(errors.IneligibleToVouchFor);
+    });
+    it('eligible users should be able to vouch family groups', function (){
+      const members = db.groupMembers('fg1');
+      db.connect({id1: 'f1', id2: 'c1', level: 'already known', timestamp: Date.now()});
+      db.connect({id1: 'c1', id2: 'f1', level: 'already known', timestamp: Date.now()});
+      db.userEligibleGroupsToVouch('f1').should.include('fg1');
+      db.vouchFamilyGroup('f1', 'fg1', Date.now());
+      for (const member of members) {
+        const conn = connectionsColl.byExample({ _from: 'users/f1',  _to: `users/${member}`}).next();
+        conn.familyVouchConnection.should.equal(true);
+      }
     });
   });
-
 });
