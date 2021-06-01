@@ -612,8 +612,7 @@ function linkContextId(id, context, contextId, timestamp) {
   }
 
   if (idsAsHex) {
-    const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
-    if(!re.test(contextId)) {
+    if(!isEthereumAddress(contextId)) {
       throw new errors.InvalidContextIdError(contextId);
     }
     contextId = contextId.toLowerCase();
@@ -954,6 +953,11 @@ function removeAllSigningKeys(id, signingKey) {
   usersColl.update(id, { signingKeys });
 }
 
+function isEthereumAddress(address) {
+    const re = new RegExp(/^0[xX][A-Fa-f0-9]{40}$/);
+    return re.test(address);
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -1005,5 +1009,6 @@ module.exports = {
   loadGroup,
   groupInvites,
   updateEligibles,
-  updateGroup
+  updateGroup,
+  isEthereumAddress,
 };
