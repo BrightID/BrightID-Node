@@ -31,10 +31,6 @@ const operations = {
   'Add Group': {
     group: joi.string().required().description('the unique id of the group'),
     id1: joi.string().required().description('brightid of the first founder'),
-    id2: joi.string().required().description('brightid of the second founder'),
-    id3: joi.string().required().description('brightid of the third founder'),
-    inviteData2: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id2'),
-    inviteData3: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id3'),
     url: joi.string().required().description('the url that group data (profile image and name) encrypted by group AES key can be fetched from'),
     type: joi.string().valid('general', 'family').required().description('type of the group'),
     sig1: joi.string().required().description('deterministic json representation of operation object signed by the creator of group represented by id1'),
@@ -125,6 +121,12 @@ const operations = {
     group: joi.string().required().description('the unique id of the group'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
+  'Transfer Family Head': {
+    id: joi.string().required().description('brightid of the current head of the family group'),
+    head: joi.string().required().description('brightid of the member who is being granted the leadership of the family group'),
+    group: joi.string().required().description('the unique id of the family group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the head user represented by id'),
+  },
 };
 
 Object.keys(operations).forEach(name => {
@@ -159,9 +161,7 @@ schemas = Object.assign({
     id: joi.string().required().description('unique identifier of the group'),
     members: joi.array().items(joi.string()).required().description('brightids of group members'),
     type: joi.string().required().description('type of group which is "primary" or "general"'),
-    founders: joi.array().items(joi.string()).required().description('brightids of group founders'),
     admins: joi.array().items(joi.string()).required().description('brightids of group admins'),
-    isNew: joi.boolean().required().description('true if some of founders did not join the group yet and group is still in founding stage'),
     // score on group is deprecated and will be removed on v6
     score: schemas.score,
     url: joi.string().required().description('url of encrypted group data (name and photo)'),
@@ -333,8 +333,6 @@ schemas = Object.assign({
       })).required(),
       eligibles: joi.array().items(joi.string()).required().description('brightids of the users that are eligible to join the group'),
       admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
-      founders: joi.array().items(joi.string()).required().description('brightids of founders of the group'),
-      isNew: joi.boolean().required().description('true if group is new'),
       seed: joi.boolean().required().description('true if group is Seed'),
       region: joi.string().description('region of the group'),
       type: joi.string().required().description('type of the group'),

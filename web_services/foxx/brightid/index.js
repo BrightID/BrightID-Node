@@ -450,8 +450,6 @@ const handlers = {
         // the eligibles is deprecated and will be removed on v6
         eligibles: db.updateEligibles(id),
         admins: group.admins,
-        founders: group.founders,
-        isNew: group.isNew,
         seed: group.seed || false,
         region: group.region,
         type: group.type || 'general',
@@ -580,7 +578,7 @@ router.get('/contexts/:context/dump', handlers.contextDumpGet)
 router.get('/groups/:id', handlers.groupGet)
   .pathParam('id', joi.string().required().description('the id of the group'))
   .summary('Get information about a group')
-  .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members, invited and eligible members.")
+  .description("Gets a group's admins, info, region, seed, type, url, timestamp, members, invited and eligible members.")
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');
 

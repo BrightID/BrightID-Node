@@ -261,9 +261,7 @@ function groupToDic(groupId) {
     id: group._key,
     members: groupMembers(group._key),
     type: group.type || 'general',
-    founders: group.founders.map(founder => founder.replace('users/', '')),
-    admins: group.admins || group.founders,
-    isNew: group.isNew,
+    admins: group.admins,
     // score on group is deprecated and will be removed on v6
     score: 0,
     url: group.url,
@@ -308,10 +306,6 @@ function invite(inviter, invitee, groupId, data, timestamp) {
     throw new errors.NotAdminError();
   }
 
-  if (group.isNew && ! group.founders.includes(invitee)) {
-    throw new errors.NewUserBeforeFoundersJoinError();
-  }
-
   if (group.type == 'family') {
     if (hasFamilyGroup(invitee)['isMember']) {
       throw new errors.AlreadyIsFamilyGroupMember();
@@ -319,7 +313,7 @@ function invite(inviter, invitee, groupId, data, timestamp) {
     let members = usersInGroupsColl.byExample({
       _to: "groups/" + group._key,
     }).toArray().map(e => e._from);
-    const toMemberConnections = query`
+    const conectedMembers = query`
       FOR conn in ${connectionsColl}
         FILTER conn._from == ${'users/' + invitee}
         FILTER conn._to IN ${members}
@@ -328,9 +322,8 @@ function invite(inviter, invitee, groupId, data, timestamp) {
           FILTER conn2._from == conn._to
           FILTER conn2._to == conn._from
           FILTER conn2.level IN ['already known', 'recovery']
-        RETURN conn
+        RETURN conn._to
     `.toArray();
-    const conectedMembers = toMemberConnections.map(c => c._to);
     if (! _.isEqual(members.sort(), conectedMembers.sort())) {
       throw new errors.IneligibleFamilyGroupMember();
     }
@@ -404,7 +397,7 @@ function hasFamilyGroup(key) {
   return res;
 }
 
-function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp) {
+function createGroup(groupId, key1, url, type, timestamp) {
   if (! ['general', 'family'].includes(type)) {
     throw new errors.InvalidGroupTypeError(type);
   }
@@ -413,55 +406,26 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     throw new errors.DuplicateGroupError();
   }
 
-  const conns = connectionsColl.byExample({
-    _to: 'users/' + key1
-  }).toArray().map(u => u._from.replace("users/", ""));
-  if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
-    throw new errors.InvalidCoFoundersError();
-  }
-
-  const founders = [key1, key2, key3].sort()
   const group = {
     _key: groupId,
     score: 0,
-    isNew: true,
-    admins: founders,
+    admins: [key1],
     url,
     type,
     timestamp,
-    founders
   }
 
   if (type == 'family') {
-    const ids = [key1, key2, key3].map(u => 'users/' + u);
-    const inGroupConnections = query`
-      FOR conn in ${connectionsColl}
-        FILTER conn._from IN ${ids}
-        FILTER conn._to IN ${ids}
-        FILTER conn.level IN ['already known', 'recovery']
-        RETURN conn
-    `.toArray();
-
-    if (inGroupConnections.length != 6) {
-      throw new errors.IneligibleFamilyGroupFounders();
-    }
-
     if (hasFamilyGroup(key1)['isHead']) {
       throw new errors.AlreadyIsFamilyGroupHead();
     }
-
-    if (hasFamilyGroup(key2)['isMember'] || hasFamilyGroup(key3)['isMember']) {
-      throw new errors.AlreadyIsFamilyGroupMember();
-    }
-    group['head'] = key1;
+    group.head = key1;
+    group.vouchers = [];
   }
 
   groupsColl.insert(group);
-  // Add the creator and invite other cofounders to the group now.
-  // The other two "co-founders" have to join using /membership
+  // Add the creator to the group now.
   addUserToGroup(groupId, key1, timestamp);
-  invite(key1, key2, groupId, inviteData2, timestamp);
-  invite(key1, key3, groupId, inviteData3, timestamp);
 }
 
 function addAdmin(key, admin, groupId) {
@@ -483,23 +447,20 @@ function addAdmin(key, admin, groupId) {
 }
 
 function addUserToGroup(groupId, key, timestamp) {
-  const user = 'users/' + key;
-  const group = 'groups/' + groupId;
+  const _from = 'users/' + key;
+  const _to = 'groups/' + groupId;
 
-  const edge = usersInGroupsColl.firstExample({
-    _from: user,
-    _to: group
-  });
+  const edge = usersInGroupsColl.firstExample({ _from, _to });
   if (! edge) {
-    usersInGroupsColl.insert({
-      _from: user,
-      _to: group,
-      timestamp
-    });
+    usersInGroupsColl.insert({ _from, _to, timestamp });
   } else {
     usersInGroupsColl.update(edge, { timestamp });
   }
-
+  // empty the group's vouchers after family group member changes
+  const group = groupsColl.document(groupId);
+  if (group.type == 'family') {
+    groupsColl.update(group, { vouchers: [] });
+  }
 }
 
 function addMembership(groupId, key, timestamp) {
@@ -507,11 +468,18 @@ function addMembership(groupId, key, timestamp) {
     throw new errors.GroupNotFoundError(groupId);
   }
 
-  const group = groupsColl.document(groupId);
-  if (group.isNew && ! group.founders.includes(key)) {
-    throw new errors.NewUserBeforeFoundersJoinError();
+  const invite = invitationsColl.firstExample({
+    _from: 'users/' + key,
+    _to: 'groups/' + groupId
+  });
+  // invites will expire after 72 hours
+  if (!invite || timestamp - invite.timestamp >= 259200000) {
+    throw new errors.NotInvitedError();
   }
+  // remove invite after joining to not allow reusing that
+  invitationsColl.remove(invite);
 
+  const group = groupsColl.document(groupId);
   if (group.type == 'family') {
     if (hasFamilyGroup(groupId)['isMember']) {
       throw new errors.AlreadyIsFamilyGroupMember();
@@ -521,7 +489,7 @@ function addMembership(groupId, key, timestamp) {
       _to: "groups/" + group._key,
     }).toArray().map(e => e._from);
 
-    const connections = query`
+    const conectedMembers = query`
       FOR conn in ${connectionsColl}
         FILTER conn._from == ${'users/' + key}
         FILTER conn._to IN ${members}
@@ -532,27 +500,12 @@ function addMembership(groupId, key, timestamp) {
           FILTER conn2.level IN ['already known', 'recovery']
         RETURN conn._to
     `.toArray();
-    if (! _.isEqual(members.sort(), connections.sort())) {
+    if (! _.isEqual(members.sort(), conectedMembers.sort())) {
       throw new errors.IneligibleFamilyGroupMember();
     }
   }
 
-  const invite = invitationsColl.firstExample({
-    _from: 'users/' + key,
-    _to: 'groups/' + groupId
-  });
-  // invites will expire after 24 hours
-  if (!invite || timestamp - invite.timestamp >= 86400000) {
-    throw new errors.NotInvitedError();
-  }
-  // remove invite after joining to not allow reusing that
-  invitationsColl.remove(invite);
-
   addUserToGroup(groupId, key, timestamp);
-
-  if (groupMembers(groupId).length == group.founders.length) {
-    groupsColl.update(group, { isNew: false });
-  }
   updateEligibles(groupId);
 }
 
@@ -588,6 +541,10 @@ function deleteMembership(groupId, key, timestamp) {
     _from: "users/" + key,
     _to: "groups/" + groupId,
   });
+  // empty the group's vouchers after family group member changes
+  if (group.type == 'family') {
+    groupsColl.update(group, { vouchers: [] });
+  }
 }
 
 function getContext(context) {
@@ -983,7 +940,8 @@ function groupInvites(groupId) {
   return invitationsColl.byExample({
     "_to": 'groups/' + groupId,
   }).toArray().filter(invite => {
-    return Date.now() - invite.timestamp < 86400000
+    // invites will expire after 72 hours
+    return Date.now() - invite.timestamp < 259200000
   }).map(invite => {
     return {
       inviter: invite.inviter,
@@ -1042,11 +1000,11 @@ function vouchFamilyGroup(id, groupId, timestamp) {
 
   const group = groupsColl.document(groupId);
   if (group.type != 'family') {
-      throw new errors.NotFamilyGroupError();
+    throw new errors.NotFamilyGroupError();
   }
 
-  // user cannot vouch for the new groups or the groups created in the past 24 hours
-  if (group.isNew || group.timestamp > Date.now() - (24*60*60*1000)) {
+  // user cannot vouch for the groups which waiting for users to join
+  if (groupInvites(groupId).length > 0 || groupMembers(groupId).length < 2) {
     throw new errors.IneligibleToVouch();
   }
 
@@ -1054,7 +1012,7 @@ function vouchFamilyGroup(id, groupId, timestamp) {
     _to: "groups/" + group._key,
   }).toArray().map(e => e._from);
 
-  const toMemberConnections = query`
+  const conectedMembers = query`
     FOR conn in ${connectionsColl}
       FILTER conn._from == ${'users/' + id}
       FILTER conn._to IN ${members}
@@ -1063,16 +1021,13 @@ function vouchFamilyGroup(id, groupId, timestamp) {
         FILTER conn2._from == conn._to
         FILTER conn2._to == conn._from
         FILTER conn2.level IN ['already known', 'recovery']
-      RETURN conn
+      RETURN conn._to
   `.toArray();
-  const conectedMembers = toMemberConnections.map(c => c._to);
   if (! _.isEqual(members.sort(), conectedMembers.sort())) {
     throw new errors.IneligibleToVouchFor();
   }
-
-  toMemberConnections.forEach(conn => {
-    connectionsColl.update(conn, {familyVouchConnection: true});
-  });
+  group.vouchers.push(id);
+  groupsColl.update(group, { vouchers: group.vouchers });
 }
 
 function userEligibleGroupsToVouch(userId) {
@@ -1093,6 +1048,9 @@ function userEligibleGroupsToVouch(userId) {
     }).toArray().map(ug => ug._to.replace('groups/', ''));
     const groups = groupsColl.documents(groupIds).documents;
     groups.filter(group => group.type == 'family').forEach(group => {
+      if (group.vouchers.includes(userId)) {
+        return
+      }
       let members = usersInGroupsColl.byExample({
         _to: "groups/" + group._key,
       }).toArray().map(e => e._from);
@@ -1103,6 +1061,27 @@ function userEligibleGroupsToVouch(userId) {
     });
   }
   return result;
+}
+
+function transferFamilyHead(key, head, groupId) {
+  if (! groupsColl.exists(groupId)) {
+    throw new errors.GroupNotFoundError(groupId);
+  }
+  if (! usersInGroupsColl.firstExample({
+      _from: 'users/' + head,
+      _to: 'groups/' + groupId
+    })) {
+    throw new errors.IneligibleFamilyGroupHead();
+  }
+  if (hasFamilyGroup(key)['isHead']) {
+    throw new errors.AlreadyIsFamilyGroupHead();
+  }
+  const group = groupsColl.document(groupId);
+  if (! group.head == key) {
+    throw new errors.NotHeadError();
+  }
+  groupsColl.update(group, { head });
+  addAdmin(key, head, groupId);
 }
 
 module.exports = {
@@ -1160,4 +1139,5 @@ module.exports = {
   hasFamilyGroup,
   vouchFamilyGroup,
   userEligibleGroupsToVouch,
+  transferFamilyHead,
 };

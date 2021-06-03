@@ -46,7 +46,8 @@ const INELIGIBLE_FAMILY_GROUP_MEMBER = 47;
 const NOT_FAMILY_GROUP = 48;
 const INELIGIBLE_TO_VOUCH = 49;
 const INELIGIBLE_TO_VOUCH_FOR = 50;
-const INELIGIBLE_FAMILY_GROUP_FOUNDERS = 51;
+const INELIGIBLE_FAMILY_GROUP_HEAD = 51;
+const NOT_HEAD = 52;
 
 class BrightIDError extends Error {
   constructor() {
@@ -496,11 +497,19 @@ class IneligibleToVouchFor extends ForbiddenError {
   }
 }
 
-class IneligibleFamilyGroupFounders extends ForbiddenError {
+class IneligibleFamilyGroupHead extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = INELIGIBLE_FAMILY_GROUP_FOUNDERS;
-    this.message = 'Founders are not eligible to create a family group.';
+    this.errorNum = INELIGIBLE_FAMILY_GROUP_HEAD;
+    this.message = 'user is not eligible to be head of the family group.';
+  }
+}
+
+class NotHeadError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = NOT_HEAD;
+    this.message = 'Requstor is not head of the group.';
   }
 }
 
@@ -552,7 +561,8 @@ module.exports = {
   NOT_FAMILY_GROUP,
   INELIGIBLE_TO_VOUCH,
   INELIGIBLE_TO_VOUCH_FOR,
-  INELIGIBLE_FAMILY_GROUP_FOUNDERS,
+  INELIGIBLE_FAMILY_GROUP_HEAD,
+  NOT_HEAD,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -606,5 +616,6 @@ module.exports = {
   NotFamilyGroupError,
   IneligibleToVouch,
   IneligibleToVouchFor,
-  IneligibleFamilyGroupFounders,
+  IneligibleFamilyGroupHead,
+  NotHeadError,
 }
