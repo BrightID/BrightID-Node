@@ -27,6 +27,7 @@ const invitationsColl = db._collection('invitations');
 const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
 const cachedParamsColl = db._collection('cachedParams');
+const appIdsColl = db._collection('appIds');
 
 function connect(op) {
   let {
@@ -562,6 +563,18 @@ function upsertOperation(op) {
   }
 }
 
+function upsertAppId(info) {
+  const d = appIdsColl.firstExample({
+    app: info.app,
+    appId: info.appId,
+  });
+  if (!d) {
+    appIdsColl.insert(info);
+  } else {
+    appIdsColl.replace(d._key, info);
+  }
+}
+
 function getState() {
   const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
@@ -663,6 +676,7 @@ module.exports = {
   isSponsored,
   loadOperation,
   upsertOperation,
+  upsertAppId,
   setSigningKey,
   unusedSponsorships,
   getState,

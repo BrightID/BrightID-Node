@@ -11,6 +11,21 @@
     "setup": "initdb.js"
   },
   "configuration": {
+    "publicKey": {
+      "description": "Public key of this server node (base64 encoded)",
+      "type": "string",
+      "required": false
+    },
+    "privateKey": {
+      "description": "Private key of this server node; used for signing verifications (base64 encoded)",
+      "type": "string",
+      "required": false
+    },
+    "ethPrivateKey": {
+      "description": "Ethereum private key of this server node; used for signing verifications (hex representation without 0x)",
+      "type": "string",
+      "required": false
+    },
     "wISchnorrPassword": {
       "description": "Public key of this server node (base64 encoded)",
       "type": "string",

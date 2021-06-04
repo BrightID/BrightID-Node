@@ -21,6 +21,7 @@ const collections = {
   'testblocks': 'document',
   'cachedParams': 'document',
   'signedVerifications': 'document',
+  'appIds': 'document',
 };
 
 // deprecated collections should be added to this array after releasing
@@ -41,7 +42,9 @@ const indexes = [
   {'collection': 'connectionsHistory', 'fields': ['timestamp'], 'type': 'persistent'},
   {'collection': 'groups', 'fields': ['seed'], 'type': 'persistent'},
   {'collection': 'operations', 'fields': ['state'], 'type': 'persistent'},
-  {'collection': 'cachedParams', fields: ['creationDate'], type: 'ttl', expireAfter: 600}
+  {'collection': 'cachedParams', fields: ['creationDate'], type: 'ttl', expireAfter: 600},
+  {'collection': 'appIds', 'fields': ['app', 'appId'], 'type': 'persistent'},
+  {'collection': 'appIds', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0},
 ]
 
 const variables = [

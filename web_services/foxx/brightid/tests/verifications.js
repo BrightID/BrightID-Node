@@ -36,7 +36,11 @@ const u = nacl.sign.keyPair();
 u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
 u.id = b64ToUrlSafeB64(u.signingKey);
 const verificationExpirationLength = 1000000;
-
+const info = {
+  app: 'idchain',
+  roundedTimestamp: parseInt(Date.now() / verificationExpirationLength) * verificationExpirationLength,
+  verification: 'BrightID'
+};
 const key = new NodeRSA();
 key.importKey({
     n: Buffer.from('00abc6299d6c1b56e0f70982fc20c9e2e81f064560b0a2714cc8c4728574293d4591ada8a64c489c72a6e117a71bf3cf8ee2a5c313ae0fa99981186c4196e7740c3eb8b73b629db5f1a53a929f29052ce307bb0063c2634667da9af67637d3df6e4cc679c05561fa4d04712777e32a990bee7d32fd0edd1297adc6eec55ba90fa0b8f4720de04237662c962a8ade1a2bcc56c7e76d738fd05b630afee115cc0a11c512b0b612d1573af40ac8d5c072cf72c11bbdf9707c7a6f20aecdfbf5ef656c4dc3869c20a69aeec5608c2fba71ccd2224f9e938d58fe47184816e6cb93c4cbd3c9b10ee3cdf5f902c7dcded8247bd805319ec3d132122f13d670850c80856f', 'hex'),
@@ -50,6 +54,7 @@ key.importKey({
 }, 'components');
 const N = key.keyPair.n.toString();
 const E = key.keyPair.e.toString();
+let signature;
 
 describe('verifications', function() {
   before(function() {
@@ -60,9 +65,10 @@ describe('verifications', function() {
     cachedParamsColl.truncate();
     db.createUser(u.id, 0);
     appsColl.insert({
-      _key: 'idchain',
+      _key: info.app,
       keypair: { n: N, e: E },
-      verificationExpirationLength
+      verificationExpirationLength,
+      idsAsHex: false
     });
     variablesColl.insert({
       _key: 'LAST_BLOCK',
@@ -78,11 +84,11 @@ describe('verifications', function() {
     });
     sponsorshipsColl.insert({
       _from: `users/${u.id}`,
-      _to: 'apps/idchain',
+      _to: `apps/${info.app}`,
     });
     verificationsColl.insert({
       user: u.id,
-      name: 'BrightID' 
+      name: info.verification
     });
   });
 
@@ -118,15 +124,10 @@ describe('verifications', function() {
 
   it('apps should be able to get a verification', function() {
     const client = new WISchnorrClient(db.getState().wISchnorrPublic);
-    const info = {
-      app: 'idchain',
-      roundedTimestamp: parseInt(Date.now() / verificationExpirationLength) * verificationExpirationLength,
-      verification: 'BrightID'  
-    };
-    let resp = request.get(`${baseUrl}/verifications/public`, { qs: info });
+    let resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
     const pub = JSON.parse(resp.body).data.public;
-    const msg = "this is a message from the client";
-    const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), msg);
+    const appId = "unblinded_app_id_of_the_user";
+    const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), appId);
     const s = stringify({ id: u.id, public: pub });
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(s), u.secretKey))
@@ -136,11 +137,29 @@ describe('verifications', function() {
       sig,
       e: challenge.e
     }
-    resp = request.get(`${baseUrl}/verifications/${u.id}`, { qs });
+    resp = request.get(`${baseUrl}/verifications/blinded/sig/${u.id}`, { qs });
     const { response } = JSON.parse(resp.body).data;
     const signature = client.GenerateWISchnorrBlindSignature(challenge.t, response);
-    const verified = client.VerifyWISchnorrBlindSignature(signature, stringify(info), msg);
+    const verified = client.VerifyWISchnorrBlindSignature(signature, stringify(info), appId);
     verified.should.equal(true);
-  });
 
+    resp = request.post(`${baseUrl}/verifications/${info.app}/${appId}`, {
+      body: {
+        sig: signature,
+        verification: info.verification,
+        roundedTimestamp: info.roundedTimestamp
+      },
+      json: true
+    });
+    resp.status.should.equal(204);
+
+    resp = request.get(`${baseUrl}/verifications/${info.app}/${appId}`, {
+      qs: {
+        signed: 'eth',
+        timestamp: 'seconds',
+      },
+      json: true
+    });
+    resp.status.should.equal(200);
+  });
 });

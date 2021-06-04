@@ -12,6 +12,7 @@ const db = require('./db');
 const schemas = require('./schemas').schemas;
 const operations = require('./operations');
 const WISchnorrServer  = require('./WISchnorrServer');
+const WISchnorrClient  = require('./WISchnorrClient');
 const {
   strToUint8Array,
   b64ToUint8Array,
@@ -28,6 +29,7 @@ module.context.use(router);
 const operationsHashesColl = arango._collection('operationsHashes');
 const signedVerificationsColl = arango._collection('signedVerifications');
 const cachedParamsColl = arango._collection('cachedParams');
+const appIdsColl = arango._collection('appIds');
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 const MAX_OP_SIZE = 2000;
@@ -220,7 +222,7 @@ const handlers = {
     });
   },
 
-  verificationGet: function(req, res){
+  verificationSigGet: function(req, res){
     const id = req.param('id');
     const sig = req.param('sig');
     const e = req.param('e');
@@ -278,6 +280,99 @@ const handlers = {
     res.send({
       data: {
         response
+      }
+    });
+  },
+
+  verificationAppIdPost: function(req, res){
+    const app = req.param('app');
+    const appId = req.param('appId');
+    const { sig, verification, roundedTimestamp } = req.body;
+    const client = new WISchnorrClient(db.getState().wISchnorrPublic);
+    const info = { app, verification, roundedTimestamp };
+    const result = client.VerifyWISchnorrBlindSignature(sig, stringify(info), appId);
+    if (! result) {
+      throw new errors.InvalidSignatureError();
+    };
+    info.appId = appId;
+    const vel = db.getApp(app).verificationExpirationLength;
+    info.expireDate = (roundedTimestamp + vel) / 1000;
+    db.upsertAppId(info);
+  },
+
+  verificationGet: function(req, res){
+    let unique = true;
+    let appId = req.param('appId');
+    let appKey = req.param('app');
+    const signed = req.param('signed');
+    let timestamp = req.param('timestamp');
+    const app = db.getApp(appKey);
+
+    const doc = appIdsColl.firstExample({ app: appKey, appId });
+    if (! doc) {
+      throw new errors.NotVerifiedError(appKey);
+    }
+
+    if (timestamp == 'seconds' && app.roundedTimestamp) {
+      timestamp = parseInt(app.roundedTimestamp / 1000);
+    } else if (timestamp == 'milliseconds' && app.roundedTimestamp) {
+      timestamp = Date.now();
+    } else {
+      timestamp = undefined;
+    }
+
+    // sign and return the verification
+    let sig, publicKey;
+    if (signed == 'nacl') {
+      if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
+        throw new errors.KeypairNotSetError();
+      }
+
+      let message = appKey + ',' + appId;
+      if (timestamp) {
+        message = message + ',' + timestamp;
+      }
+      const privateKey = module.context.configuration.privateKey;
+      publicKey = module.context.configuration.publicKey;
+      sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
+      );
+    } else if (signed == 'eth') {
+      if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
+        throw new errors.EthPrivatekeyNotSetError();
+      }
+
+      let message, h;
+      if (app.idsAsHex) {
+        message = pad32(appKey) + addressToBytes32(appId);
+      } else {
+        console.log(appId, 44);
+        message = pad32(appKey) + pad32(appId);
+      }
+      message = Buffer.from(message, 'binary').toString('hex');
+      if (timestamp) {
+        const t = timestamp.toString(16);
+        message += ('0'.repeat(64 - t.length) + t);
+      }
+      h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
+      let ethPrivateKey = module.context.configuration.ethPrivateKey;
+      ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
+      publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
+      const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
+      sig = {
+        r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
+        s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
+        v: _sig.recid + 27,
+      }
+    }
+    res.send({
+      data: {
+        unique,
+        app: appKey,
+        appId: appId,
+        sig,
+        timestamp,
+        publicKey
       }
     });
   },
@@ -381,7 +476,7 @@ router.get('/operations/:hash', handlers.operationGet)
   .response(schemas.operationGetResponse)
   .error(404, 'Operation not found');
 
-router.get('/verifications/public', handlers.verificationPublicGet)
+router.get('/verifications/blinded/public', handlers.verificationPublicGet)
   .queryParam('app', joi.string().required().description('unique app id'))
   .queryParam('roundedTimestamp', joi.number().integer().required().description("timestamp that is rounded to app's required precision"))
   .queryParam('verification', joi.string().description('custom verification expression'))
@@ -391,16 +486,36 @@ router.get('/verifications/public', handlers.verificationPublicGet)
   .error(404, 'app not found')
   .error(403, 'invalid rounded timestamp');
 
-router.get('/verifications/:id', handlers.verificationGet)
+router.get('/verifications/blinded/sig/:id', handlers.verificationSigGet)
   .pathParam('id', joi.string().required().description('the brightid of the user requesting the verification'))
   .queryParam('public', joi.string().required().description('public part of WI-Schnorr params'))
   .queryParam('sig', joi.string().description('deterministic json representation of {id, public} signed by the user represented by id'))
   .queryParam('e', joi.string().required().description('the e part of WI-Schnorr challenge generated by client using public provided by node'))
   .summary('Gets WI-Schnorr server response')
   .description('Gets WI-Schnorr server response that will be used by client to generate final signature to be shared with the app')
-  .response(schemas.verificationGetResponse)
+  .response(schemas.verificationSigGetResponse)
+  .error(403, 'user is not sponsored')
   .error(404, 'app not found')
   .error(403, 'invalid rounded timestamp');
+
+router.post('/verifications/:app/:appId', handlers.verificationAppIdPost)
+  .pathParam('app', joi.string().required().description('the app that user is verified for'))
+  .pathParam('appId', joi.string().required().description('the id of the user within the app'))
+  .body(schemas.verificationAppIdPostBody)
+  .summary('Posts an unblinded signature')
+  .description('Clients use this endpoint to add unblinded signature for an appId to the node to be queried by apps')
+  .response(null);
+
+router.get('/verifications/:app/:appId', handlers.verificationGet)
+  .pathParam('app', joi.string().required().description('the app that user is verified for'))
+  .pathParam('appId', joi.string().required().description('the id of user within the app'))
+  .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
+  .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
+  .summary('Gets a signed verification')
+  .description('Apps use this endpoint to query a signed verification for an appId from the node')
+  .response(schemas.verificationGetResponse)
+  .error(403, 'user is not sponsored')
+  .error(404, 'appId not found');
 
 router.get('/apps/:app', handlers.appGet)
   .pathParam('app', joi.string().required().description("Unique name of the app"))
