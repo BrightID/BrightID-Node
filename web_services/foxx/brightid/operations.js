@@ -59,6 +59,8 @@ const senderAttrs = {
   'Remove Signing Key': ['id'],
   'Remove All Signing Keys': ['id'],
   'Update Group': ['id'],
+  'Vouch Family Group': ['id'],
+  'Transfer Family Head': ['id'],
 };
 
 let operationsCount = {};
@@ -118,6 +120,8 @@ const signerAndSigs = {
   'Add Signing Key': ['id', 'sig'],
   'Remove Signing Key': ['id', 'sig'],
   'Remove All Signing Keys': ['id', 'sig'],
+  'Vouch Family Group': ['id', 'sig'],
+  'Transfer Family Head': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -170,7 +174,7 @@ function apply(op) {
   if (op['name'] == 'Connect') {
     return db.connect(op);
   } else if (op['name'] == 'Add Group') {
-    return db.createGroup(op.group, op.id1, op.id2, op.inviteData2, op.id3, op.inviteData3, op.url, op.type, op.timestamp);
+    return db.createGroup(op.group, op.id1, op.url, op.type, op.timestamp);
   } else if (op['name'] == 'Remove Group') {
     return db.deleteGroup(op.group, op.id, op.timestamp);
   } else if (op['name'] == 'Add Membership') {
@@ -193,6 +197,10 @@ function apply(op) {
     return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
+  } else if (op['name'] == 'Vouch Family Group') {
+    return db.vouchFamilyGroup(op.id, op.group, op.timestamp);
+  } else if (op['name'] == 'Transfer Family Head') {
+    return db.transferFamilyHead(op.id, op.head, op.group, op.timestamp);
   } else {
     throw new errors.InvalidOperationNameError(op['name']);
   }

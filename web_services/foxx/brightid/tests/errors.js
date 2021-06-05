@@ -95,33 +95,6 @@ describe('errors', function() {
     resp.json.errorNum.should.equal(errors.INVALID_SIGNATURE);
   });
 
-  it('should throw INVALID_COFOUNDERS when try to create group by not connected users', function() {
-    const timestamp = Date.now();
-    const type = 'general';
-    const url = 'http://url.com/dummy';
-    const groupId = hash('randomstr');
-
-    const op = {
-      'v': 6,
-      'name': 'Add Group',
-      'group': groupId,
-      'id1': u1.id,
-      'id2': u2.id,
-      'inviteData2': 'data',
-      'id3': u3.id,
-      'inviteData3': 'data',
-      url,
-      type,
-      timestamp,
-    }
-    const message = getMessage(op);
-    op.sig1 = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
-    );
-    const resp = apply(op);
-    resp.json.result.errorNum.should.equal(errors.INVALID_COFOUNDERS);
-  });
-
   it('should throw OperationNotFoundError when the operation does not exist', function() {
     const hash = 'testHash';
     const resp = request.get(`${baseUrl}/operations/${hash}`);

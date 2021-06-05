@@ -18,12 +18,8 @@ const operations = {
   'Add Group': {
     group: joi.string().required().description('the unique id of the group'),
     id1: joi.string().required().description('brightid of the first founder'),
-    id2: joi.string().required().description('brightid of the second founder'),
-    id3: joi.string().required().description('brightid of the third founder'),
-    inviteData2: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id2'),
-    inviteData3: joi.string().required().description('the group AES key encrypted for signingKey of the user represented by id3'),
     url: joi.string().required().description('the url that group data (profile image and name) encrypted by group AES key can be fetched from'),
-    type: joi.string().valid('general', 'primary').required().description('type of the group'),
+    type: joi.string().valid('general', 'family').required().description('type of the group'),
     sig1: joi.string().required().description('deterministic json representation of operation object signed by the creator of group represented by id1'),
   },
   'Remove Group': {
@@ -92,7 +88,18 @@ const operations = {
   'Remove All Signing Keys': {
     id: joi.string().required().description('brightid of the user who is removing all the signingKeys except the one that used to sign this operation'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
-  }
+  },
+  'Vouch Family Group': {
+    id: joi.string().required().description('brightid of the user who is vouching the family group'),
+    group: joi.string().required().description('the unique id of the group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
+  },
+  'Transfer Family Head': {
+    id: joi.string().required().description('brightid of the current head of the family group'),
+    head: joi.string().required().description('brightid of the member who is being granted the leadership of the family group'),
+    group: joi.string().required().description('the unique id of the family group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the head user represented by id'),
+  },
 };
 
 Object.keys(operations).forEach(name => {
@@ -125,9 +132,7 @@ schemas = Object.assign({
     id: joi.string().required().description('unique identifier of the group'),
     members: joi.array().items(joi.string()).required().description('brightids of group members'),
     type: joi.string().required().description('type of group which is "primary" or "general"'),
-    founders: joi.array().items(joi.string()).required().description('brightids of group founders'),
     admins: joi.array().items(joi.string()).required().description('brightids of group admins'),
-    isNew: joi.boolean().required().description('true if some of founders did not join the group yet and group is still in founding stage'),
     url: joi.string().required().description('url of encrypted group data (name and photo)'),
     timestamp: schemas.timestamp.required().description('group creation timestamp'),
   }),
@@ -191,6 +196,12 @@ schemas = Object.assign({
   userConnectionsGetResponse: joi.object({
     data: joi.object({
       connections: joi.array().items(schemas.connection)
+    })
+  }),
+
+  userEligibleGroupsToVouchGetResponse: joi.object({
+    data: joi.object({
+      groups: joi.array().items(joi.string())
     })
   }),
 
@@ -261,8 +272,6 @@ schemas = Object.assign({
         timestamp: joi.number().required().description('timestamp of invite'),
       })).required(),
       admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
-      founders: joi.array().items(joi.string()).required().description('brightids of founders of the group'),
-      isNew: joi.boolean().required().description('true if group is new'),
       seed: joi.boolean().required().description('true if group is Seed'),
       region: joi.string().description('region of the group'),
       type: joi.string().required().description('type of the group'),

@@ -44,6 +44,9 @@ const u3 = nacl.sign.keyPair();
 const u4 = nacl.sign.keyPair();
 const u5 = nacl.sign.keyPair();
 const u6 = nacl.sign.keyPair();
+const u7 = nacl.sign.keyPair();
+const u8 = nacl.sign.keyPair();
+const u9 = nacl.sign.keyPair();
 
 function apply(op) {
   let resp = request.post(`${baseUrl}/operations`, {
@@ -169,10 +172,6 @@ describe('operations', function(){
       'name': 'Add Group',
       'group': groupId,
       'id1': u1.id,
-      'id2': u2.id,
-      'inviteData2': 'data',
-      'id3': u3.id,
-      'inviteData3': 'data',
       url,
       type,
       timestamp,
@@ -185,30 +184,26 @@ describe('operations', function(){
 
     const members = db.groupMembers(groupId);
     members.should.include(u1.id);
-    members.should.not.include(u2.id);
-    members.should.not.include(u3.id);
   });
 
   it('should be able to "Add Membership"', function () {
     const groupId = db.userGroups(u1.id)[0].id;
-    [u2, u3].map((u) => {
-      const timestamp = Date.now();
-      const op = {
-        'v': 6,
-        'name': 'Add Membership',
-        'id': u.id,
-        'group': groupId,
-        timestamp,
-      }
-      const message = getMessage(op);
-      op.sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u.secretKey))
-      );
-      apply(op);
-    });
+    const timestamp = Date.now();
+    db.invite(u1.id, u2.id, groupId, 'data', timestamp);
+    const op = {
+      'v': 5,
+      'name': 'Add Membership',
+      'id': u2.id,
+      'group': groupId,
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    apply(op);
     const members = db.groupMembers(groupId);
     members.should.include(u2.id);
-    members.should.include(u3.id);
   });
 
   it('should be able to "Remove Membership"', function () {
@@ -217,7 +212,54 @@ describe('operations', function(){
     const op = {
       'v': 6,
       'name': 'Remove Membership',
-      'id': u1.id,
+      'id': u2.id,
+      'group': groupId,
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    apply(op);
+    const members = db.groupMembers(groupId, false);
+    members.should.not.include(u2.id);
+    members.should.include(u1.id);
+  });
+
+  it('admins should be able to "Invite" someone to the group', function () {
+    const timestamp = Date.now();
+    const groupId = db.userGroups(u1.id)[0].id;
+    const data = 'some data';
+    const op = {
+      'v': 6,
+      'name': 'Invite',
+      'inviter': u1.id,
+      'invitee': u2.id,
+      'group': groupId,
+      data,
+      timestamp,
+    }
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    apply(op);
+    invitationsColl.byExample({
+      '_from': 'users/' + u2.id,
+      '_to': 'groups/' + groupId
+    }).count().should.equal(1);
+  });
+
+  it('admins should be able to "Dismiss" someone from the group', function () {
+    const timestamp = Date.now();
+    const groupId = db.userGroups(u1.id)[0].id;
+    db.addMembership(groupId, u2.id, Date.now());
+    db.groupMembers(groupId).should.include(u2.id);
+    const op = {
+      'v': 6,
+      'name': 'Dismiss',
+      'dismisser': u1.id,
+      'dismissee': u2.id,
       'group': groupId,
       timestamp,
     }
@@ -226,78 +268,29 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
-
-    const members = db.groupMembers(groupId, false);
-    members.should.not.include(u1.id);
-    members.should.include(u2.id);
-    members.should.include(u3.id);
-  });
-
-  it('admins should be able to "Invite" someone to the group', function () {
-    const timestamp = Date.now();
-    const groupId = db.userGroups(u2.id)[0].id;
-    const data = 'some data';
-    const op = {
-      'v': 6,
-      'name': 'Invite',
-      'inviter': u2.id,
-      'invitee': u4.id,
-      'group': groupId,
-      data,
-      timestamp,
-    }
-    const message = getMessage(op);
-    op.sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    apply(op);
-    invitationsColl.byExample({
-      '_from': 'users/' + u4.id,
-      '_to': 'groups/' + groupId
-    }).count().should.equal(1);
-  });
-
-  it('admins should be able to "Dismiss" someone from the group', function () {
-    const timestamp = Date.now();
-    const groupId = db.userGroups(u2.id)[0].id;
-    db.addMembership(groupId, u4.id, Date.now());
-    db.groupMembers(groupId).should.include(u4.id);
-    const op = {
-      'v': 6,
-      'name': 'Dismiss',
-      'dismisser': u2.id,
-      'dismissee': u4.id,
-      'group': groupId,
-      timestamp,
-    }
-    const message = getMessage(op);
-    op.sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
-    );
-    apply(op);
-    db.groupMembers(groupId).should.not.include(u4.id);
+    db.groupMembers(groupId).should.not.include(u2.id);
   });
 
   it('admins should be able to "Add Admin" to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userGroups(u2.id)[0].id;
-    db.invite(u2.id, u4.id, groupId, 'data', Date.now());
-    db.addMembership(groupId, u4.id, Date.now());
-    db.groupMembers(groupId).should.include(u4.id);
+    const groupId = db.userGroups(u1.id)[0].id;
+    db.invite(u1.id, u2.id, groupId, 'data', Date.now());
+    db.addMembership(groupId, u2.id, Date.now());
+    db.groupMembers(groupId).should.include(u2.id);
     const op = {
       'v': 6,
       'name': 'Add Admin',
-      'id': u2.id,
-      'admin': u4.id,
+      'id': u1.id,
+      'admin': u2.id,
       'group': groupId,
       timestamp,
     }
     const message = getMessage(op);
     op.sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
-    groupsColl.document(groupId).admins.should.include(u4.id);
+    groupsColl.document(groupId).admins.should.include(u2.id);
   });
 
   it('admins should be able "Update Group" to edit name and photo for groups', function () {
@@ -445,4 +438,90 @@ describe('operations', function(){
     db.loadUser(u2.id).signingKeys.should.deep.equal([u6.signingKey]);
   });
 
+  describe('family groups', function() {
+    before(function() {
+      usersColl.truncate();
+      connectionsColl.truncate();
+      groupsColl.truncate();
+      usersInGroupsColl.truncate();
+      invitationsColl.truncate();
+
+      [u7, u8, u9].map((u) => {
+        u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
+        u.id = b64ToUrlSafeB64(u.signingKey);
+      });
+
+      const connect = (u1, u2) => {
+        const timestamp = Date.now();
+        let op = {
+          'v': 5,
+          'name': 'Connect',
+          'id1': u1.id,
+          'id2': u2.id,
+          'level': 'already known',
+          timestamp,
+        }
+        const message = getMessage(op);
+        op.sig1 = uInt8ArrayToB64(
+          Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+        );
+        apply(op);
+      }
+      connect(u7, u8);
+      connect(u8, u7);
+
+      connect(u7, u9);
+      connect(u9, u7);
+
+      connect(u8, u9);
+      connect(u9, u8);
+    });
+
+    it('should be able to create a family group by "Add Group"', function () {
+      const timestamp = Date.now();
+      const type = 'family';
+      const url = 'http://url.com/dummy';
+      const groupId = hash('randomstr1');
+      const op = {
+        'v': 5,
+        'name': 'Add Group',
+        'group': groupId,
+        'id1': u7.id,
+        url,
+        type,
+        timestamp,
+      }
+      const message = getMessage(op);
+      op.sig1 = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u7.secretKey))
+      );
+      apply(op);
+
+      db.invite(u7.id, u8.id, groupId, 'data', Date.now());
+      db.addMembership(groupId, u8.id, Date.now());
+
+      const members = db.groupMembers(groupId);
+      members.should.include(u7.id);
+      members.should.include(u8.id);
+    });
+
+    it('eligible users should be able to vouch family groups by "Vouch Family Group"', function () {
+      const timestamp = Date.now();
+      const groupId = hash('randomstr1');
+      db.userEligibleGroupsToVouch(u9.id).should.include(groupId);
+      const op = {
+        'v': 5,
+        'name': 'Vouch Family Group',
+        'group': groupId,
+        'id': u9.id,
+        timestamp,
+      }
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u9.secretKey))
+      );
+      apply(op);
+      groupsColl.document(groupId).vouchers.should.include(u9.id);
+    });
+  });
 });

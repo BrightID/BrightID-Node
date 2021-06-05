@@ -141,6 +141,15 @@ const handlers = {
     });
   },
 
+  userEligibleGroupsToVouchGet: function(req, res) {
+    const id = req.param('id');
+    res.send({
+      data: {
+        groups: db.userEligibleGroupsToVouch(id)
+      }
+    });
+  },
+
   userProfileGet: function(req, res) {
     const id = req.param('id');
     const requestor = req.param('requestor');
@@ -386,9 +395,7 @@ const handlers = {
   },
 
   allAppsGet: function(req, res){
-    const apps = db.getApps().filter(
-      app => !app.testing
-    ).map(app =>  db.appToDic(app));
+    const apps = db.getApps().map(app =>  db.appToDic(app));
     apps.sort((app1, app2) => {
       const used1 = app1.assignedSponsorships - app1.unusedSponsorships;
       const unused1 = app1.unusedSponsorships;
@@ -421,8 +428,6 @@ const handlers = {
         members: db.groupMembers(id),
         invites: db.groupInvites(id),
         admins: group.admins,
-        founders: group.founders,
-        isNew: group.isNew,
         seed: group.seed || false,
         region: group.region,
         type: group.type || 'general',
@@ -469,6 +474,12 @@ router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
   .summary('Gets inbound or outbound connections of a user')
   .description("Gets list of user's connections with levels and timestamps")
   .response(schemas.userConnectionsGetResponse);
+
+router.get('/users/:id/eligibleGroupsToVouch', handlers.userEligibleGroupsToVouchGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .summary('Get a list of the family groups')
+  .description("Get the list of family groups which the user can evaluate them")
+  .response(schemas.userEligibleGroupsToVouchGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
@@ -534,7 +545,7 @@ router.get('/state', handlers.stateGet)
 router.get('/groups/:id', handlers.groupGet)
   .pathParam('id', joi.string().required().description('the id of the group'))
   .summary('Get information about a group')
-  .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members and invited list.")
+  .description("Gets a group's admins, info, region, seed, type, url, timestamp, members and invited list.")
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');
 

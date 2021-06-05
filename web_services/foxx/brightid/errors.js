@@ -35,6 +35,14 @@ const INELIGIBLE_RECOVERY_CONNECTION = 43;
 const WISCHNORR_PASSWORD_NOT_SET = 45;
 const INVALID_ROUNDED_TIMESTAMP = 46;
 const DUPLICATE_SIG_REQUEST_ERROR = 47;
+const ALREADY_IS_FAMILY_GROUP_HEAD = 48;
+const ALREADY_IS_FAMILY_GROUP_MEMBER = 49;
+const INELIGIBLE_FAMILY_GROUP_MEMBER = 50;
+const NOT_FAMILY_GROUP = 51;
+const INELIGIBLE_TO_VOUCH = 52;
+const INELIGIBLE_TO_VOUCH_FOR = 53;
+const INELIGIBLE_FAMILY_GROUP_HEAD = 54;
+const NOT_HEAD = 55;
 
 class BrightIDError extends Error {
   constructor() {
@@ -389,6 +397,70 @@ class DuplicateSigRequestError extends ForbiddenError {
   }
 }
 
+class AlreadyIsFamilyGroupHead extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = ALREADY_IS_FAMILY_GROUP_HEAD;
+    this.message = 'The user already is head of a family group.';
+  }
+}
+
+class AlreadyIsFamilyGroupMember extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = ALREADY_IS_FAMILY_GROUP_MEMBER;
+    this.message = 'The user already is member of a family group.';
+  }
+}
+
+class IneligibleFamilyGroupMember extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_FAMILY_GROUP_MEMBER;
+    this.message = 'The user is not eligible to join this family group.';
+  }
+}
+
+class NotFamilyGroupError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = NOT_FAMILY_GROUP;
+    this.message = 'Requstor is not admin of the group.';
+  }
+}
+
+class IneligibleToVouch extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_TO_VOUCH;
+    this.message = 'This group is not eligible to vouch for.';
+  }
+}
+
+class IneligibleToVouchFor extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_TO_VOUCH_FOR;
+    this.message = 'This user is not eligible to vouch for this group.';
+  }
+}
+
+class IneligibleFamilyGroupHead extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_FAMILY_GROUP_HEAD;
+    this.message = 'user is not eligible to be head of the family group.';
+  }
+}
+
+class NotHeadError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = NOT_HEAD;
+    this.message = 'Requstor is not head of the group.';
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -426,6 +498,14 @@ module.exports = {
   WISCHNORR_PASSWORD_NOT_SET,
   INVALID_ROUNDED_TIMESTAMP,
   DUPLICATE_SIG_REQUEST_ERROR,
+  ALREADY_IS_FAMILY_GROUP_HEAD,
+  ALREADY_IS_FAMILY_GROUP_MEMBER,
+  INELIGIBLE_FAMILY_GROUP_MEMBER,
+  NOT_FAMILY_GROUP,
+  INELIGIBLE_TO_VOUCH,
+  INELIGIBLE_TO_VOUCH_FOR,
+  INELIGIBLE_FAMILY_GROUP_HEAD,
+  NOT_HEAD,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -467,5 +547,13 @@ module.exports = {
   IneligibleRecoveryConnectionError,
   InvalidRoundedTimestampError,
   WISchnorrPasswordNotSetError,
-  DuplicateSigRequestError
+  DuplicateSigRequestError,
+  AlreadyIsFamilyGroupHead,
+  AlreadyIsFamilyGroupMember,
+  IneligibleFamilyGroupMember,
+  NotFamilyGroupError,
+  IneligibleToVouch,
+  IneligibleToVouchFor,
+  IneligibleFamilyGroupHead,
+  NotHeadError,
 }
