@@ -454,7 +454,7 @@ describe('operations', function(){
       const connect = (u1, u2) => {
         const timestamp = Date.now();
         let op = {
-          'v': 5,
+          'v': 6,
           'name': 'Connect',
           'id1': u1.id,
           'id2': u2.id,
@@ -483,7 +483,7 @@ describe('operations', function(){
       const url = 'http://url.com/dummy';
       const groupId = hash('randomstr1');
       const op = {
-        'v': 5,
+        'v': 6,
         'name': 'Add Group',
         'group': groupId,
         'id1': u7.id,
@@ -510,7 +510,7 @@ describe('operations', function(){
       const groupId = hash('randomstr1');
       db.userEligibleGroupsToVouch(u9.id).should.include(groupId);
       const op = {
-        'v': 5,
+        'v': 6,
         'name': 'Vouch Family Group',
         'group': groupId,
         'id': u9.id,
