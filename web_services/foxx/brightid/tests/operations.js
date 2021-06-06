@@ -191,7 +191,7 @@ describe('operations', function(){
     const timestamp = Date.now();
     db.invite(u1.id, u2.id, groupId, 'data', timestamp);
     const op = {
-      'v': 5,
+      'v': 6,
       'name': 'Add Membership',
       'id': u2.id,
       'group': groupId,
