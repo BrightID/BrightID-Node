@@ -740,23 +740,26 @@ function userEligibleGroupsToVouch(userId) {
         FILTER conn2.level IN ['already known', 'recovery']
       RETURN conn._to
   `.toArray();
-  for (let connection of connections) {
-    const groupIds = usersInGroupsColl.byExample({
-      _from: connection
-    }).toArray().map(ug => ug._to.replace('groups/', ''));
-    const groups = groupsColl.documents(groupIds).documents;
-    groups.filter(group => group.type == 'family').forEach(group => {
-      if (group.vouchers.includes(userId)) {
-        return
-      }
-      let members = usersInGroupsColl.byExample({
-        _to: "groups/" + group._key,
-      }).toArray().map(e => e._from);
-      const conectedToAll = members.every(m => connections.includes(m));
-      if (conectedToAll && !result.includes(group._key)) {
-        result.push(group._key);
-      }
-    });
+  const familyGroups = query`
+    FOR conn in ${usersInGroupsColl}
+      FILTER conn._from IN ${connections}
+      FOR group in ${groupsColl}
+        FILTER group._id == conn._to
+        FILTER group.type == 'family'
+      RETURN DISTINCT group
+  `.toArray();
+  for (let group of familyGroups) {
+    const members = groupMembers(group._key);
+    if (group.vouchers.includes(userId) ||
+      members.length < 2 ||
+      groupInvites(group._key).length > 0) {
+      continue;
+    }
+
+    const conectedToAll = members.every(m => connections.includes('users/' + m));
+    if (conectedToAll) {
+      result.push(group._key);
+    }
   }
   return result;
 }
