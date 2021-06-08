@@ -20,7 +20,8 @@ local_to_json = {
     'wsProvider': 'Websocket Endpoint',
     'verification': 'Verification',
     'testing': 'Testing',
-    'idsAsHex': 'Ids As Hex'
+    'idsAsHex': 'Ids As Hex',
+    'usingBlindSig': 'Using Blind Sig',
 }
 
 
