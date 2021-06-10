@@ -603,16 +603,12 @@ function upsertOperation(op) {
   }
 }
 
-function upsertAppId(info) {
-  const d = appIdsColl.firstExample({
-    app: info.app,
-    appId: info.appId,
-  });
-  if (!d) {
-    appIdsColl.insert(info);
-  } else {
-    appIdsColl.replace(d._key, info);
+function insertAppId(info) {
+  const d = appIdsColl.firstExample({ uid: info.uid });
+  if (d) {
+    throw new errors.DuplicateUIDError(info.uid);
   }
+  appIdsColl.insert(info);
 }
 
 function getState() {
@@ -811,7 +807,7 @@ module.exports = {
   isSponsored,
   loadOperation,
   upsertOperation,
-  upsertAppId,
+  insertAppId,
   setSigningKey,
   unusedSponsorships,
   getState,

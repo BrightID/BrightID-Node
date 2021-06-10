@@ -43,6 +43,7 @@ const INELIGIBLE_TO_VOUCH = 52;
 const INELIGIBLE_TO_VOUCH_FOR = 53;
 const INELIGIBLE_FAMILY_GROUP_HEAD = 54;
 const NOT_HEAD = 55;
+const DUPLICATE_UID_ERROR = 56;
 
 class BrightIDError extends Error {
   constructor() {
@@ -461,6 +462,14 @@ class NotHeadError extends ForbiddenError {
   }
 }
 
+class DuplicateUIDError extends ForbiddenError {
+  constructor(uid) {
+    super();
+    this.errorNum = DUPLICATE_UID_ERROR;
+    this.message = `uid ${uid} already exists.`;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -506,6 +515,7 @@ module.exports = {
   INELIGIBLE_TO_VOUCH_FOR,
   INELIGIBLE_FAMILY_GROUP_HEAD,
   NOT_HEAD,
+  DUPLICATE_UID_ERROR,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -556,4 +566,5 @@ module.exports = {
   IneligibleToVouchFor,
   IneligibleFamilyGroupHead,
   NotHeadError,
+  DuplicateUIDError
 }

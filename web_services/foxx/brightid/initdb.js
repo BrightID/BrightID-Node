@@ -43,8 +43,8 @@ const indexes = [
   {'collection': 'groups', 'fields': ['seed'], 'type': 'persistent'},
   {'collection': 'operations', 'fields': ['state'], 'type': 'persistent'},
   {'collection': 'cachedParams', fields: ['creationDate'], type: 'ttl', expireAfter: 600},
+  {'collection': 'appIds', 'fields': ['uid'], 'type': 'persistent'},
   {'collection': 'appIds', 'fields': ['app', 'appId'], 'type': 'persistent'},
-  {'collection': 'appIds', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0},
 ]
 
 const variables = [

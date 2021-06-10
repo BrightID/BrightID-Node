@@ -31,6 +31,7 @@ const variablesColl = arango._collection('variables');
 const sponsorshipsColl = arango._collection('sponsorships');
 const verificationsColl = arango._collection('verifications');
 const cachedParamsColl = arango._collection('cachedParams');
+const appIdsColl = arango._collection('appIds');
 
 const u = nacl.sign.keyPair();
 u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
@@ -63,12 +64,13 @@ describe('verifications', function() {
     variablesColl.truncate();
     sponsorshipsColl.truncate();
     cachedParamsColl.truncate();
+    appIdsColl.truncate();
     db.createUser(u.id, 0);
     appsColl.insert({
       _key: info.app,
       keypair: { n: N, e: E },
       verificationExpirationLength,
-      idsAsHex: false
+      idsAsHex: true
     });
     variablesColl.insert({
       _key: 'LAST_BLOCK',
@@ -98,6 +100,7 @@ describe('verifications', function() {
     variablesColl.truncate();
     sponsorshipsColl.truncate();
     cachedParamsColl.truncate();
+    appIdsColl.truncate();
   });
 
   it('apps should be able to sponsor a user', function() {
@@ -126,8 +129,9 @@ describe('verifications', function() {
     const client = new WISchnorrClient(db.getState().wISchnorrPublic);
     let resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
     const pub = JSON.parse(resp.body).data.public;
-    const appId = "unblinded_app_id_of_the_user";
-    const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), appId);
+    const uid = 'unblinded_uid_of_the_user';
+    const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+    const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
     const s = stringify({ id: u.id, public: pub });
     const sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(s), u.secretKey))
@@ -140,11 +144,12 @@ describe('verifications', function() {
     resp = request.get(`${baseUrl}/verifications/blinded/sig/${u.id}`, { qs });
     const { response } = JSON.parse(resp.body).data;
     const signature = client.GenerateWISchnorrBlindSignature(challenge.t, response);
-    const verified = client.VerifyWISchnorrBlindSignature(signature, stringify(info), appId);
+    const verified = client.VerifyWISchnorrBlindSignature(signature, stringify(info), uid);
     verified.should.equal(true);
 
     resp = request.post(`${baseUrl}/verifications/${info.app}/${appId}`, {
       body: {
+        uid,
         sig: signature,
         verification: info.verification,
         roundedTimestamp: info.roundedTimestamp

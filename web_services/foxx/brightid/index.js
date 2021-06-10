@@ -296,17 +296,16 @@ const handlers = {
   verificationAppIdPost: function(req, res){
     const app = req.param('app');
     const appId = req.param('appId');
-    const { sig, verification, roundedTimestamp } = req.body;
+    const { sig, verification, roundedTimestamp, uid } = req.body;
     const client = new WISchnorrClient(db.getState().wISchnorrPublic);
     const info = { app, verification, roundedTimestamp };
-    const result = client.VerifyWISchnorrBlindSignature(sig, stringify(info), appId);
+    const result = client.VerifyWISchnorrBlindSignature(sig, stringify(info), uid);
     if (! result) {
       throw new errors.InvalidSignatureError();
     };
+    info.uid = uid;
     info.appId = appId;
-    const vel = db.getApp(app).verificationExpirationLength;
-    info.expireDate = (roundedTimestamp + vel) / 1000;
-    db.upsertAppId(info);
+    db.insertAppId(info);
   },
 
   verificationGet: function(req, res){
@@ -355,7 +354,6 @@ const handlers = {
       if (app.idsAsHex) {
         message = pad32(appKey) + addressToBytes32(appId);
       } else {
-        console.log(appId, 44);
         message = pad32(appKey) + pad32(appId);
       }
       message = Buffer.from(message, 'binary').toString('hex');
