@@ -57,7 +57,7 @@ describe('groups', function() {
     it('no one should be able to join a group without invitation', function (){
       (() => {
         db.addMembership('g3', 'd', Date.now());
-      }).should.throw('not invited to join this group');
+      }).should.throw(errors.NotInvitedError);
     });
     it('admins should be able to invite any user to the group', function (){
       db.invite('a', 'd', 'g3', 'data', Date.now());
