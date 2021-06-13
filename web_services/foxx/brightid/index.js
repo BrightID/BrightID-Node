@@ -104,7 +104,7 @@ const handlers = {
       return g;
     });
 
-    const invites = db.userInvitedGroups(id);
+    const invites = db.userInvites(id);
 
     res.send({
       data: {

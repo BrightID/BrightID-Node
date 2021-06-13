@@ -59,14 +59,15 @@ describe('groups', function() {
         db.addMembership('g3', 'd', Date.now());
       }).should.throw('not invited to join this group');
     });
-    it('admins should be able to invite any users to the group', function (){
+    it('admins should be able to invite any user to the group', function (){
       db.invite('a', 'd', 'g3', 'data', Date.now());
-      db.userInvitedGroups('d').map(group => group.id).should.deep.equal(['g3']);
+      console.log(db.userInvites('d').map(group => group.id), 44);
+      db.userInvites('d').map(invite => invite.group).should.deep.equal(['g3']);
     });
     it('invited user should be able to join the group', function (){
       db.addMembership('g3', 'd', Date.now());
       db.groupMembers('g3').should.include('d');
-      db.userInvitedGroups('d').length.should.equal(0);
+      db.userInvites('d').length.should.equal(0);
     });
     it('non-admins should not be able to invite others to the group', function (){
       (() => {

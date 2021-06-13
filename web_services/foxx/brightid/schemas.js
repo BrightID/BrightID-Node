@@ -128,13 +128,24 @@ schemas = Object.assign({
     level: joi.string().required().description('the level of the connection'),
     timestamp: schemas.timestamp.required().description('the timestamp of the connection'),
   }),
-  groupBase: joi.object({
+  group: joi.object({
     id: joi.string().required().description('unique identifier of the group'),
     members: joi.array().items(joi.string()).required().description('brightids of group members'),
     type: joi.string().required().description('type of group which is "primary" or "general"'),
     admins: joi.array().items(joi.string()).required().description('brightids of group admins'),
     url: joi.string().required().description('url of encrypted group data (name and photo)'),
     timestamp: schemas.timestamp.required().description('group creation timestamp'),
+    head: joi.string().description('brightid of the member who is being granted the leadership of the family group'),
+    joined: schemas.timestamp.description('timestamp when the user joined the group'),
+  }),
+  invite: joi.object({
+    id: joi.string().required().description('unique identifier of invite'),
+    group: joi.string().required().description('unique identifier of the group that invitee is invited to'),
+    inviter: joi.string().required().description('brightid of inviter'),
+    invitee: joi.string().required().description('brightid of invitee'),
+    timestamp: schemas.timestamp.required().description('timestamp when the user was invited'),
+    data: joi.string().required().description('encrypted version of the AES key that group name and photo uploaded to `url` encrypted with' + 
+      'invitee should first decrypt this data with his/her signingKey and then fetch data in `url` and decrypt that using the AES key'),
   }),
   app: joi.object({
     id: joi.string().required().description('unique app id'),
@@ -157,21 +168,6 @@ schemas = Object.assign({
       name => joi.object(operations[name]).label(name)
     )
   ).description('Send operations to idchain to be applied to BrightID nodes\' databases after consensus')
-}, schemas);
-
-schemas = Object.assign({
-
-  group: schemas.groupBase.keys({
-    joined: schemas.timestamp.required().description('timestamp when the user joined'),
-  }),
-
-  invite: schemas.groupBase.keys({
-    inviteId: joi.string().required().description('unique identifier of invite'),
-    invited: schemas.timestamp.required().description('timestamp when the user was invited'),
-    inviter: joi.string().required().description('brightid of inviter'),
-    data: joi.string().required().description('encrypted version of the AES key that group name and photo uploaded to `url` encrypted with' + 
-      'invitee should first decrypt this data with his/her signingKey and then fetch data in `url` and decrypt that using the AES key'),
-  }),
 }, schemas);
 
 // extend lower-level schemas with higher-level schemas
@@ -238,12 +234,6 @@ schemas = Object.assign({
     })
   }),
 
-  ipGetResponse: joi.object({
-    data: joi.object({
-      ip: joi.string().description("IPv4 address in dot-decimal notation.")
-    })
-  }),
-
   appGetResponse: joi.object({
     data: schemas.app
   }),
@@ -267,13 +257,7 @@ schemas = Object.assign({
   groupGetResponse: joi.object({
     data: joi.object({
       members: joi.array().items(joi.string()).required().description('brightids of members of the group'),
-      invites: joi.array().items(joi.object({
-        inviter: joi.string().required().description('brightid of inviter'),
-        invitee: joi.string().required().description('brightid of invitee'),
-        id: joi.string().required().description('unique id of invite'),
-        data: joi.string().required().description('AES key of group encrypted for invitee'),
-        timestamp: joi.number().required().description('timestamp of invite'),
-      })).required(),
+      invites: joi.array().items(schemas.invite).required(),
       admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
       seed: joi.boolean().required().description('true if group is Seed'),
       region: joi.string().description('region of the group'),

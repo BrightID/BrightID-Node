@@ -169,18 +169,21 @@ function userGroups(userId) {
   });
 }
 
-function userInvitedGroups(userId) {
+function userInvites(userId) {
   return invitationsColl.byExample({
     _from: 'users/' + userId
   }).toArray().filter(invite => {
     return Date.now() - invite.timestamp < 86400000
   }).map(invite => {
-    let group = groupToDic(invite._to.replace('groups/', ''));
-    group.inviter = invite.inviter;
-    group.inviteId = invite._key;
-    group.data = invite.data;
-    group.invited = invite.timestamp;
-    return group;
+    const groupId = invite._to.replace('groups/', '');
+    return {
+      group: groupId,
+      inviter: invite.inviter,
+      invitee: userId,
+      id: hash(groupId + invite.inviter + userId + invite.timestamp),
+      data: invite.data,
+      timestamp: invite.timestamp
+    };
   });
 }
 
@@ -645,10 +648,12 @@ function groupInvites(groupId) {
     // invites will expire after 72 hours
     return Date.now() - invite.timestamp < 259200000
   }).map(invite => {
+    const invitee = invite._from.replace('users/', '');
     return {
+      group: groupId,
       inviter: invite.inviter,
-      invitee: invite._from.replace('users/', ''),
-      id: invite._key,
+      invitee,
+      id: hash(groupId + invite.inviter + invitee + invite.timestamp),
       data: invite.data,
       timestamp: invite.timestamp
     }
@@ -795,7 +800,7 @@ module.exports = {
   userConnections,
   userGroups,
   loadUser,
-  userInvitedGroups,
+  userInvites,
   createUser,
   groupMembers,
   userScore,
