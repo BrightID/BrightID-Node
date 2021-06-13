@@ -324,7 +324,7 @@ const handlers = {
     if (timestamp == 'seconds' && app.roundedTimestamp) {
       timestamp = parseInt(app.roundedTimestamp / 1000);
     } else if (timestamp == 'milliseconds' && app.roundedTimestamp) {
-      timestamp = Date.now();
+      timestamp = app.roundedTimestamp;
     } else {
       timestamp = undefined;
     }
