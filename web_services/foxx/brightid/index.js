@@ -242,10 +242,6 @@ const handlers = {
     const msg = stringify({ id, 'public': JSON.parse(pub) });
     operations.verifyUserSig(msg, id, sig);
 
-    if (! db.isSponsored(id)) {
-      throw new errors.NotSponsoredError();
-    }
-
     let verifications = db.userVerifications(id);
     verifications = _.keyBy(verifications, v => v.name);
     let verified;
