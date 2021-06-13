@@ -95,7 +95,7 @@ function userConnections(userId, direction = 'outbound') {
   if (direction == 'outbound') {
     query = { _from: 'users/' + userId };
     resIdAttr = '_to';
-  } else {
+  } else if (direction == 'inbound') {
     query = { _to: 'users/' + userId };
     resIdAttr = '_from';
   }
@@ -103,7 +103,6 @@ function userConnections(userId, direction = 'outbound') {
     return {
       id: conn[resIdAttr].replace('users/', ''),
       level: conn.level,
-      familyVouchConnection: conn.familyVouchConnection || false,
       reportReason: conn.reportReason || undefined,
       timestamp: conn.timestamp
     }

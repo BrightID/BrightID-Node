@@ -87,16 +87,18 @@ const handlers = {
     }
 
     const verifications = db.userVerifications(id).map(v => v.name);
-
-    let connections = db.userConnections(id);
-    const connectionsMap = _.keyBy(connections, conn => conn.id);
-    connections = connections.map(conn => {
+    const outboundConnections = db.userConnections(id, 'outbound').map(conn => {
       const u = db.userToDic(conn.id);
-      u.level = connectionsMap[conn.id].level;
-      u.reportReason = connectionsMap[conn.id].reportReason;
+      u.level = conn.level;
+      u.reportReason = conn.reportReason;
       return u;
     });
-
+    const inboundConnections = db.userConnections(id, 'inbound').map(conn => {
+      const u = db.userToDic(conn.id);
+      u.level = conn.level;
+      u.reportReason = conn.reportReason;
+      return u;
+    });
     let groups = db.userGroups(id);
     groups = groups.map(group => {
       const g = db.groupToDic(group.id);
@@ -114,7 +116,8 @@ const handlers = {
         trusted: db.getRecoveryConnections(id),
         invites,
         groups,
-        connections,
+        outboundConnections,
+        inboundConnections,
         verifications,
         isSponsored: db.isSponsored(id),
         signingKeys: user.signingKeys
