@@ -242,10 +242,6 @@ const handlers = {
     const msg = stringify({ id, 'public': JSON.parse(pub) });
     operations.verifyUserSig(msg, id, sig);
 
-    if (! db.isSponsored(id)) {
-      throw new errors.NotSponsoredError();
-    }
-
     let verifications = db.userVerifications(id);
     verifications = _.keyBy(verifications, v => v.name);
     let verified;
@@ -324,7 +320,7 @@ const handlers = {
     if (timestamp == 'seconds' && app.roundedTimestamp) {
       timestamp = parseInt(app.roundedTimestamp / 1000);
     } else if (timestamp == 'milliseconds' && app.roundedTimestamp) {
-      timestamp = Date.now();
+      timestamp = app.roundedTimestamp;
     } else {
       timestamp = undefined;
     }
