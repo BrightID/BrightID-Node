@@ -112,9 +112,9 @@ function userConnections(userId, direction = 'outbound') {
 
 function userToDic(userId) {
   const u = usersColl.document('users/' + userId);
-  let {
-    isFamilyGroupHead: isHead,
-    isFamilyGroupMember: isMember
+  const {
+    isHead: isFamilyGroupHead,
+    isMember: isFamilyGroupMember,
   } = hasFamilyGroup(userId);
   return {
     id: u._key,
