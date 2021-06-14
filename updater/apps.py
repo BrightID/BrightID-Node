@@ -13,8 +13,6 @@ local_to_json = {
     '_key': 'Key',
     'name': 'Name',
     'context': 'Context',
-    'url': 'Links',
-    'logo': 'logo',
     'sponsorPublicKey': 'Sponsor Public Key',
     'sponsorEventContract': 'Contract Address',
     'wsProvider': 'Websocket Endpoint',
@@ -22,6 +20,7 @@ local_to_json = {
     'testing': 'Testing',
     'idsAsHex': 'Ids As Hex',
     'usingBlindSig': 'Using Blind Sig',
+    'localFilter': 'Local Filter',
 }
 
 
@@ -40,7 +39,7 @@ def get_logo(url):
         logo = 'data:image/' + file_format + ';base64,' + \
             base64.b64encode(res.content).decode('ascii')
     except Exception as e:
-        print('Error in getting logo', e)
+        print(f'Error in getting logo: {e}')
         logo = ''
     return logo
 
@@ -52,10 +51,13 @@ def apps_data():
     json_apps = requests.get(config.APPS_JSON_FILE).json()['Applications']
     new_local_apps = []
     for json_app in json_apps:
-        json_app['logo'] = get_logo(json_app['Images'][0])
         new_local_app = {key: json_app[local_to_json[key]]
-                         for key in local_to_json}
-        new_local_app['url'] = new_local_app['url'][0]
+                         for key in local_to_json if local_to_json[key] in json_app}
+        if 'Links' in json_app:
+            new_local_app['url'] = next(iter(json_app['Links'] or []), '')
+        if 'Images' in json_app:
+            new_local_app['logo'] = get_logo(
+                next(iter(json_app['Images'] or []), ''))
         local_app = local_apps.get(json_app['Key'])
         if not local_app:
             print(f"New app: {new_local_app['_key']}")
