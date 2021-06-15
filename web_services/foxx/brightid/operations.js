@@ -138,8 +138,8 @@ function verify(op) {
   } else if (op.name == 'Social Recovery') {
     const recoveryConnections = db.getRecoveryConnections(op.id);
     if (op.id1 == op.id2 ||
-        !recoveryConnections.includes(op.id1) ||
-        !recoveryConnections.includes(op.id2)) {
+        op.id1 in recoveryConnections && recoveryConnections[op.id1].activeAfter != 0 ||
+        op.id2 in recoveryConnections && recoveryConnections[op.id2].activeAfter != 0) {
       throw new errors.NotRecoveryConnectionsError();
     }
     verifyUserSig(message, op.id1, op.sig1);

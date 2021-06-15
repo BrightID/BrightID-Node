@@ -119,7 +119,7 @@ function userToDic(userId) {
     id: u._key,
     signingKeys: u.signingKeys,
     verifications: userVerifications(u._key).map(v => v.name),
-    recoveryConnections: getRecoveryConnections(u._key),
+    recoveryConnections: Object.values(getRecoveryConnections(u._key)),
     reporters: getReporters(u._key),
     createdAt: u.createdAt,
     isFamilyGroupHead,
@@ -523,14 +523,14 @@ function getRecoveryConnections(user) {
   const borderTime = Date.now() - (7*24*60*60*1000);
   // when users set their recovery connections for the first time
   let initTimeBorder;
-  const res = [];
+  const res = {};
   for (let conn of allConnections) {
     // ignore not recovery connections
     if (conn.level != 'recovery') {
       continue;
     }
     // ignore connections to users that are already added to result
-    if (res.includes(conn._to)) {
+    if (conn._to in res) {
       continue;
     }
     // init the initTimeBorder with first recovery connection timestamp plus 24 hours
@@ -543,14 +543,24 @@ function getRecoveryConnections(user) {
     if (currentLevel == 'recovery') {
       if (conn.timestamp < borderTime || conn.timestamp < initTimeBorder) {
         // if recovery level set more than 7 days ago or on the first day
-        res.push(conn._to);
+        res[conn._to] = {id: conn._to, activeAfter: 0, activeBefore: 0};
+      } else {
+        res[conn._to] = {
+          id: conn._to,
+          activeAfter: conn.timestamp - borderTime,
+          activeBefore: 0
+        };
       }
     } else {
       // find the first connection that removed the recovery level
       const index = _.findIndex(history, conn) + 1;
       // if recovery level removed less than 7 days ago
       if (history[index]['timestamp'] > borderTime) {
-        res.push(conn._to);
+        res[conn._to] = {
+          id: conn._to,
+          activeAfter: 0,
+          activeBefore: history[index]['timestamp'] - borderTime
+        };
       }
     }
   }

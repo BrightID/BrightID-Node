@@ -113,7 +113,7 @@ const handlers = {
         score: user.score,
         createdAt: user.createdAt,
         flaggers: db.getReporters(id),
-        trusted: db.getRecoveryConnections(id),
+        recoveryConnections: Object.values(getRecoveryConnections(u._key)),
         invites,
         groups,
         outboundConnections,
@@ -198,7 +198,8 @@ const handlers = {
         createdAt: user.createdAt,
         reports,
         verifications,
-        signingKeys: user.signingKeys
+        signingKeys: user.signingKeys,
+        recoveryConnections: Object.values(getRecoveryConnections(u._key)),
       }
     });
   },
