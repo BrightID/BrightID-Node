@@ -119,7 +119,11 @@ schemas = Object.assign({
     level: joi.string().required().description('the confidence level set on this user'),
     verifications: joi.array().items(joi.string()),
     hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
-    recoveryConnections: joi.array().items(joi.string()).description('list of recovery connections of the user'),
+    recoveryConnections: joi.array().items(joi.object({
+      id: joi.string().required().description('brightid of recovery connection'),
+      activeAfter: joi.number().required().description('milliseconds until activation'),
+      activeBefore: joi.number().required().description('milliseconds until inactivation'),
+    })).description('list of recovery connections for the user specified by id'),
     reporters: joi.object().description('an object containing ids of reporters as key and reason as value'),
     createdAt: schemas.timestamp.required().description('the user creation timestamp'),
   }),
@@ -187,7 +191,11 @@ schemas = Object.assign({
       inboundConnections: joi.array().items(schemas.user),
       verifications: joi.array().items(joi.string()),
       isSponsored: joi.boolean(),
-      recoveryConnections: joi.array().items(joi.string()),
+      recoveryConnections: joi.array().items(joi.object({
+        id: joi.string().required().description('brightid of recovery connection'),
+        activeAfter: joi.number().required().description('milliseconds until activation'),
+        activeBefore: joi.number().required().description('milliseconds until inactivation'),
+      })).description('list of recovery connections for the user'),
       reporters: joi.object().description("an object containing ids of flaggers as key and reason as value"),
       signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
     })
@@ -225,6 +233,11 @@ schemas = Object.assign({
       })).description('list of reports for the user specified by id'),
       verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),
       signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
+      recoveryConnections: joi.array().items(joi.object({
+        id: joi.string().required().description('brightid of recovery connection'),
+        activeAfter: joi.number().required().description('milliseconds until activation'),
+        activeBefore: joi.number().required().description('milliseconds until inactivation'),
+      })).description('list of recovery connections for the user specified by id'),
     })
   }),
 
