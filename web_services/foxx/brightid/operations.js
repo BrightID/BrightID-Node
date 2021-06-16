@@ -137,10 +137,14 @@ function verify(op) {
     verifyAppSig(message, op.app, op.sig);
   } else if (op.name == 'Social Recovery') {
     const recoveryConnections = db.getRecoveryConnections(op.id);
-    if (op.id1 == op.id2 ||
-        op.id1 in recoveryConnections && recoveryConnections[op.id1].activeAfter != 0 ||
-        op.id2 in recoveryConnections && recoveryConnections[op.id2].activeAfter != 0) {
+    if (op.id1 == op.id2) {
+      throw new errors.DuplicateSignersError();
+    } else if (!(op.id1 in recoveryConnections) || !(op.id2 in recoveryConnections)) {
       throw new errors.NotRecoveryConnectionsError();
+    } else if (recoveryConnections[op.id1].activeAfter != 0) {
+      throw new errors.WaitForCooldownError(op.id1);
+    } else if (recoveryConnections[op.id2].activeAfter != 0) {
+      throw new errors.WaitForCooldownError(op.id2);
     }
     verifyUserSig(message, op.id1, op.sig1);
     verifyUserSig(message, op.id2, op.sig2);

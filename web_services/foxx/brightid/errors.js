@@ -44,6 +44,8 @@ const INELIGIBLE_TO_VOUCH_FOR = 53;
 const INELIGIBLE_FAMILY_GROUP_HEAD = 54;
 const NOT_HEAD = 55;
 const DUPLICATE_UID_ERROR = 56;
+const DUPLICATE_SIGNERS = 57;
+const WAIT_FOR_COOLDOWN = 58;
 
 class BrightIDError extends Error {
   constructor() {
@@ -470,6 +472,23 @@ class DuplicateUIDError extends ForbiddenError {
   }
 }
 
+class DuplicateSignersError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = DUPLICATE_SIGNERS;
+    this.message = 'Signers of the request are duplicates.';
+  }
+}
+
+class WaitForCooldownError extends ForbiddenError {
+  constructor(signer) {
+    super();
+    this.errorNum = WAIT_FOR_COOLDOWN;
+    this.message = `${signer} is still in cooling down period.`;
+    this.signer = signer;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -516,6 +535,8 @@ module.exports = {
   INELIGIBLE_FAMILY_GROUP_HEAD,
   NOT_HEAD,
   DUPLICATE_UID_ERROR,
+  DUPLICATE_SIGNERS,
+  WAIT_FOR_COOLDOWN,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -566,5 +587,7 @@ module.exports = {
   IneligibleToVouchFor,
   IneligibleFamilyGroupHead,
   NotHeadError,
-  DuplicateUIDError
+  DuplicateUIDError,
+  DuplicateSignersError,
+  WaitForCooldownError,
 }
