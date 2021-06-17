@@ -1,7 +1,7 @@
 {
   "name": "brightid-node.public.dappnode.eth",
-  "version": "1.2.0",
-  "upstreamVersion": "5.9.4",
+  "version": "1.2.2",
+  "upstreamVersion": "5.9.7",
   "shortDescription": "BrightID Node and API",
   "description": "A BrightID Node stores the social graph and provides an API for public access. This package contains the Arango Database with the BrightID graph and provides a public API for BrightID clients.",
   "type": "service",
@@ -21,5 +21,13 @@
   "bugs": {
     "url": "https://github.com/BrightID/BrightID-Node/issues"
   },
+  "exposable": [
+    {
+      "name": "BrightID node API",
+      "description": "Endpoint for BrightID client",
+      "serviceName": "web",
+      "port": 80
+    }
+  ],
   "license": "ISC"
 }
