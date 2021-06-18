@@ -17,6 +17,7 @@ local_to_json = {
     'sponsorEventContract': 'Contract Address',
     'wsProvider': 'Websocket Endpoint',
     'verification': 'Verification',
+    'verifications': 'Verifications',
     'testing': 'Testing',
     'idsAsHex': 'Ids As Hex',
     'usingBlindSig': 'Using Blind Sig',
