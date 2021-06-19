@@ -229,10 +229,10 @@ class NotSponsoredError extends ForbiddenError {
 }
 
 class NotVerifiedError extends ForbiddenError {
-  constructor(app) {
+  constructor(app, expression) {
     super();
     this.errorNum = NOT_VERIFIED;
-    this.message = `The user is not verified for ${app} app.`;
+    this.message = `The user is not verified for this expression (${expression}) of "${app}" app.`;
     this.app = app;
   }
 }
@@ -396,7 +396,7 @@ class DuplicateSigRequestError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = DUPLICATE_SIG_REQUEST_ERROR;
-    this.message = 'Only one signature request per app in each expiration period is allowed.';
+    this.message = 'Only one signature request per verification of the app in each expiration period is allowed.';
   }
 }
 

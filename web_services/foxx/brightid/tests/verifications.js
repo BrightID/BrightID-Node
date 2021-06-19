@@ -1,8 +1,8 @@
-"use strict";
+'use strict';
 
 const stringify = require('fast-json-stable-stringify');
 const arango = require('@arangodb').db;
-const request = require("@arangodb/request");
+const request = require('@arangodb/request');
 const errors = require('../errors.js');
 const WISchnorrClient = require('../WISchnorrClient');
 const db = require('../db');
@@ -39,11 +39,16 @@ u2.signingKey = uInt8ArrayToB64(Object.values(u2.publicKey));
 u2.id = b64ToUrlSafeB64(u2.signingKey);
 
 const verificationExpirationLength = 1000000;
-const info = {
-  app: 'idchain',
-  roundedTimestamp: parseInt(Date.now() / verificationExpirationLength) * verificationExpirationLength,
-  verification: 'BrightID'
-};
+
+const app = {
+  _key: 'idchain',
+  verificationExpirationLength,
+  verifications: ['BrightID', 'SeedConnected', 'SeedConnectedWithFriend'],
+  usingBlindSig: true,
+  idsAsHex: true,
+}
+
+let info;
 
 describe('verifications', function() {
   before(function() {
@@ -55,11 +60,7 @@ describe('verifications', function() {
     appIdsColl.truncate();
     db.createUser(u1.id, 0);
     db.createUser(u2.id, 0);
-    appsColl.insert({
-      _key: info.app,
-      verificationExpirationLength,
-      idsAsHex: true
-    });
+    appsColl.insert(app);
     variablesColl.insert({
       _key: 'LAST_BLOCK',
       value: 0,
@@ -74,11 +75,16 @@ describe('verifications', function() {
     });
     sponsorshipsColl.insert({
       _from: `users/${u1.id}`,
-      _to: `apps/${info.app}`,
+      _to: `apps/${app._key}`,
     });
     verificationsColl.insert({
       user: u1.id,
-      name: info.verification
+      name: 'BrightID',
+    });
+    verificationsColl.insert({
+      name: 'SeedConnected',
+      user: u1.id,
+      rank: 3,
     });
   });
 
@@ -93,90 +99,101 @@ describe('verifications', function() {
 
   it('should not be able to get WI-Schnorr server response for unverified users', function() {
     const client = new WISchnorrClient(db.getState().wISchnorrPublic);
-    let resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
-    const pub = JSON.parse(resp.body).data.public;
-    const uid = 'unblinded_uid_of_the_user2';
-    const appId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
-    const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
-    const s = stringify({ id: u2.id, public: pub });
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(s), u2.secretKey))
-    );
-    const qs = {
-      public: stringify(pub),
-      sig,
-      e: challenge.e
+    let resp = request.get(`${baseUrl}/apps/${app._key}`);
+    const vel = resp.json.data.verificationExpirationLength;
+    const verifications = resp.json.data.verifications;
+
+    for (const verification of verifications) {
+      const info = {
+        app: app._key,
+        roundedTimestamp: parseInt(Date.now() / vel) * vel,
+        verification
+      };
+      resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
+      const pub = JSON.parse(resp.body).data.public;
+      const uid = 'unblinded_uid_of_the_user2';
+      const appId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
+      const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
+      const s = stringify({ id: u2.id, public: pub });
+      const sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(s), u2.secretKey))
+      );
+      const qs = {
+        public: stringify(pub),
+        sig,
+        e: challenge.e
+      }
+      resp = request.get(`${baseUrl}/verifications/blinded/sig/${u2.id}`, { qs });
+      resp.json.errorNum.should.equal(errors.NOT_VERIFIED);
     }
-    resp = request.get(`${baseUrl}/verifications/blinded/sig/${u2.id}`, { qs });
-    resp.json.errorNum.should.equal(errors.NOT_VERIFIED);
   });
 
-  it('apps should not be able to get WI-Schnorr server response for unverified users', function() {
+  it('if the user is verified, apps should be able to get a verification signature', function() {
+    const client = new WISchnorrClient(db.getState().wISchnorrPublic);
+    let resp = request.get(`${baseUrl}/apps/${app._key}`);
+    const vel = resp.json.data.verificationExpirationLength;
+    const verifications = resp.json.data.verifications;
+
+    for (const verification of verifications) {
+      const info = {
+        app: app._key,
+        roundedTimestamp: parseInt(Date.now() / vel) * vel,
+        verification
+      };
+      resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
+      const pub = JSON.parse(resp.body).data.public;
+      const uid = 'unblinded_uid_of_the_user1';
+      const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+      const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
+      const s = stringify({ id: u1.id, public: pub });
+      const sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(s), u1.secretKey))
+      );
+      const qs = {
+        public: stringify(pub),
+        sig,
+        e: challenge.e
+      }
+      resp = request.get(`${baseUrl}/verifications/blinded/sig/${u1.id}`, { qs });
+      if (verification == 'SeedConnectedWithFriend') {
+        resp.json.errorNum.should.equal(errors.NOT_VERIFIED);
+        continue;
+      }
+      const { response } = JSON.parse(resp.body).data;
+      const signature = client.GenerateWISchnorrBlindSignature(challenge.t, response);
+
+      resp = request.post(`${baseUrl}/verifications/${info.app}/${appId}`, {
+        body: {
+          uid,
+          sig: signature,
+          verification,
+          roundedTimestamp: info.roundedTimestamp
+        },
+        json: true
+      });
+      resp.status.should.equal(204);
+
+      resp = request.get(`${baseUrl}/verifications/${info.app}/${appId}/${verification}`, {
+        qs: {
+          signed: 'eth',
+          timestamp: 'seconds',
+        },
+        json: true
+      });
+      resp.status.should.equal(200);
+    }
+  });
+
+  it('should not be able get more than one signature per verification of the app in each expiration period', function() {
+    const info = {
+      app: app._key,
+      roundedTimestamp: parseInt(Date.now() / verificationExpirationLength) * verificationExpirationLength,
+      verification: 'BrightID'
+    };
     const client = new WISchnorrClient(db.getState().wISchnorrPublic);
     let resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
     const pub = JSON.parse(resp.body).data.public;
-    const uid = 'unblinded_uid_of_the_user2';
-    const appId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
-    const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
-    const s = stringify({ id: u2.id, public: pub });
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(s), u2.secretKey))
-    );
-    const qs = {
-      public: stringify(pub),
-      sig,
-      e: challenge.e
-    }
-    resp = request.get(`${baseUrl}/verifications/blinded/sig/${u2.id}`, { qs });
-    resp.json.errorNum.should.equal(errors.NOT_VERIFIED);
-  });
-
-  it('apps should be able to get a verification', function() {
-    const client = new WISchnorrClient(db.getState().wISchnorrPublic);
-    let resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
-    const pub = JSON.parse(resp.body).data.public;
-    const uid = 'unblinded_uid_of_the_user';
-    const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
-    const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
-    const s = stringify({ id: u1.id, public: pub });
-    const sig = uInt8ArrayToB64(
-      Object.values(nacl.sign.detached(strToUint8Array(s), u1.secretKey))
-    );
-    const qs = {
-      public: stringify(pub),
-      sig,
-      e: challenge.e
-    }
-    resp = request.get(`${baseUrl}/verifications/blinded/sig/${u1.id}`, { qs });
-    const { response } = JSON.parse(resp.body).data;
-    const signature = client.GenerateWISchnorrBlindSignature(challenge.t, response);
-
-    resp = request.post(`${baseUrl}/verifications/${info.app}/${appId}`, {
-      body: {
-        uid,
-        sig: signature,
-        verification: info.verification,
-        roundedTimestamp: info.roundedTimestamp
-      },
-      json: true
-    });
-    resp.status.should.equal(204);
-
-    resp = request.get(`${baseUrl}/verifications/${info.app}/${appId}`, {
-      qs: {
-        signed: 'eth',
-        timestamp: 'seconds',
-      },
-      json: true
-    });
-    resp.status.should.equal(200);
-  });
-
-  it('should not be able get more than one signature per app in each expiration period', function() {
-    const client = new WISchnorrClient(db.getState().wISchnorrPublic);
-    let resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
-    const pub = JSON.parse(resp.body).data.public;
-    const uid = 'unblinded_uid_of_the_user';
+    const uid = 'unblinded_uid_of_the_user1';
     const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
     const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
     const s = stringify({ id: u1.id, public: pub });
@@ -194,7 +211,7 @@ describe('verifications', function() {
 
   it('apps should be able to check an appId verification', function() {
     let appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
-    let resp = request.get(`${baseUrl}/verifications/${info.app}/${appId}`, {
+    let resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}/BrightID`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',
@@ -203,8 +220,8 @@ describe('verifications', function() {
     });
     resp.status.should.equal(200);
 
-    appId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
-    resp = request.get(`${baseUrl}/verifications/${info.app}/${appId}`, {
+    appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}/SeedConnectedWithFriend`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',

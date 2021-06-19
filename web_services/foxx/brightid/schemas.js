@@ -155,6 +155,7 @@ schemas = Object.assign({
     id: joi.string().required().description('unique app id'),
     name: joi.string().required().description('app name'),
     verification: joi.string().required().description('verification required for using the app'),
+    verifications: joi.array().items(joi.string().description('verification required for using the app')),
     verificationUrl: joi.string().required().description('the url to PUT a verification with /:id'),
     logo: joi.string().description('app logo (base64 encoded image)'),
     url: joi.string().description('the base url for the app'),
@@ -163,6 +164,7 @@ schemas = Object.assign({
     testing: joi.boolean().description('true of app is in testing mode'),
     idsAsHex: joi.boolean().description('true if app ids are in ethereum address format'),
     usingBlindSig: joi.boolean().description('true if app is using blind signature integration'),
+    verificationExpirationLength: joi.number().integer().description('app verification expiration length in milliseconds'),
   }),
 }, schemas);
 
@@ -308,9 +310,10 @@ schemas = Object.assign({
 
   verificationGetResponse: joi.object({
     data: joi.object({
-      unique: joi.string().description("true if user is unique under given context"),
-      context: joi.string().description("the context name"),
-      contextIds: joi.array().items(joi.string()).description("list of all contextIds this user linked from most recent to oldest including current active contextId as first member"),
+      unique: joi.string().description("true if user is unique under given app"),
+      app: joi.string().description("unique app id"),
+      appId: joi.string().description("the id of the user within the app"),
+      verificationHash: joi.string().description("sha256 of the verification expiration"),
       timestamp: schemas.timestamp.description("timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter"),
       sig: joi.string().description("verification message signed by the node"),
       publicKey: joi.string().description("the node's public key")

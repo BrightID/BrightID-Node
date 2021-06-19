@@ -13,6 +13,7 @@ const schemas = require('./schemas').schemas;
 const operations = require('./operations');
 const WISchnorrServer  = require('./WISchnorrServer');
 const WISchnorrClient  = require('./WISchnorrClient');
+const crypto = require('@arangodb/crypto');
 const {
   strToUint8Array,
   b64ToUint8Array,
@@ -208,7 +209,7 @@ const handlers = {
     const appKey = req.param('app');
     const app = db.getApp(appKey);
     const roundedTimestamp = req.param('roundedTimestamp');
-    const verification = req.param('verification') || app.verification;
+    const verification = req.param('verification');
 
     const vel = app.verificationExpirationLength;
     if (vel) {
@@ -261,7 +262,7 @@ const handlers = {
       throw new errors.InvalidExpressionError(app.name, params.verification, err);
     }
     if (! verified) {
-      throw new errors.NotVerifiedError(params.app);
+      throw new errors.NotVerifiedError(params.app, params.verification);
     }
 
     if (! (module.context && module.context.configuration && module.context.configuration.wISchnorrPassword)){
@@ -272,7 +273,7 @@ const handlers = {
     const server = new WISchnorrServer();
     server.GenerateSchnorrKeypair(password);
 
-    const q = { id, roundedTimestamp: params.roundedTimestamp, app: params.app };
+    const q = { id, roundedTimestamp: params.roundedTimestamp, app: params.app, verification: params.verification };
     const sv = signedVerificationsColl.firstExample(q);
     if (sv) {
       throw new errors.DuplicateSigRequestError();
@@ -303,22 +304,21 @@ const handlers = {
     if (! result) {
       throw new errors.InvalidSignatureError();
     };
-    info.uid = uid;
-    info.appId = appId;
-    db.insertAppId(info);
+    db.insertAppIdVerification(app, uid, appId, verification, roundedTimestamp);
   },
 
   verificationGet: function(req, res){
     let unique = true;
-    let appId = req.param('appId');
-    let appKey = req.param('app');
+    const appId = req.param('appId');
+    const appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
+    const verification = req.param('verification');
     const app = db.getApp(appKey);
 
     const doc = appIdsColl.firstExample({ app: appKey, appId });
-    if (! doc) {
-      throw new errors.NotVerifiedError(appKey);
+    if (!doc || !doc.verifications.includes(verification)) {
+      throw new errors.NotVerifiedError(appKey, verification);
     }
 
     if (timestamp == 'seconds' && app.roundedTimestamp) {
@@ -330,13 +330,14 @@ const handlers = {
     }
 
     // sign and return the verification
+    const verificationHash = crypto.sha256(verification);
     let sig, publicKey;
     if (signed == 'nacl') {
       if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
         throw new errors.KeypairNotSetError();
       }
 
-      let message = appKey + ',' + appId;
+      let message = appKey + ',' + appId + ',' + verificationHash;
       if (timestamp) {
         message = message + ',' + timestamp;
       }
@@ -357,6 +358,7 @@ const handlers = {
         message = pad32(appKey) + pad32(appId);
       }
       message = Buffer.from(message, 'binary').toString('hex');
+      message += verificationHash;
       if (timestamp) {
         const t = timestamp.toString(16);
         message += ('0'.repeat(64 - t.length) + t);
@@ -377,6 +379,7 @@ const handlers = {
         unique,
         app: appKey,
         appId: appId,
+        verificationHash,
         sig,
         timestamp,
         publicKey
@@ -515,9 +518,10 @@ router.post('/verifications/:app/:appId', handlers.verificationAppIdPost)
   .description('Clients use this endpoint to add unblinded signature for an appId to the node to be queried by apps')
   .response(null);
 
-router.get('/verifications/:app/:appId', handlers.verificationGet)
+router.get('/verifications/:app/:appId/:verification', handlers.verificationGet)
   .pathParam('app', joi.string().required().description('the app that user is verified for'))
   .pathParam('appId', joi.string().required().description('the id of user within the app'))
+  .queryParam('verification', joi.string().description('custom verification expression'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .summary('Gets a signed verification')

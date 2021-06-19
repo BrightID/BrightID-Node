@@ -459,6 +459,7 @@ function appToDic(app) {
     id: app._key,
     name: app.name,
     verification: app.verification,
+    verifications: app.verifications,
     verificationUrl: app.verificationUrl,
     logo: app.logo,
     url: app.url,
@@ -466,7 +467,8 @@ function appToDic(app) {
     unusedSponsorships: unusedSponsorships(app._key),
     testing: app.testing,
     idsAsHex: app.idsAsHex,
-    usingBlindSig: app.usingBlindSig
+    usingBlindSig: app.usingBlindSig,
+    verificationExpirationLength: app.verificationExpirationLength,
   };
 }
 
@@ -615,12 +617,22 @@ function upsertOperation(op) {
   }
 }
 
-function insertAppId(info) {
-  const d = appIdsColl.firstExample({ uid: info.uid });
+function insertAppIdVerification(app, uid, appId, verification, roundedTimestamp) {
+  const d = appIdsColl.firstExample({ uid: uid });
   if (d) {
-    throw new errors.DuplicateUIDError(info.uid);
+    if (verification in d.verifications) {
+      throw new errors.DuplicateUIDError(uid);
+    }
+    appIdsColl.update(d, {verifications: [...d.verifications, verification]})
+  } else {
+    appIdsColl.insert({
+      app,
+      uid,
+      appId,
+      verifications: [verification],
+      roundedTimestamp,
+    });
   }
-  appIdsColl.insert(info);
 }
 
 function getState() {
@@ -821,7 +833,7 @@ module.exports = {
   isSponsored,
   loadOperation,
   upsertOperation,
-  insertAppId,
+  insertAppIdVerification,
   setSigningKey,
   unusedSponsorships,
   getState,
