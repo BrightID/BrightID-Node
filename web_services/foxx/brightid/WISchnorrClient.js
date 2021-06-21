@@ -3,9 +3,12 @@
   Author : Christof Torres <christof.ferreira.001@student.uni.lu>
   Date   : September 2016
 **/
+var CryptoJS = require('crypto-js');
+var BigInteger = require("jsbn").BigInteger;
 
-var crypto = require('@arangodb/crypto');
-var BigInteger = require('node-jsbn');
+function sha256(s) {
+	return new BigInteger(CryptoJS.SHA256(s).toString(CryptoJS.enc.Hex), 16);
+}
 
 /* Initializes the WISchnorClient based on a given public key */
 function WISchnorrClient(publicKey) {
@@ -20,20 +23,21 @@ function WISchnorrClient(publicKey) {
 /* Generates a cryptographically secure random number modulo q */
 WISchnorrClient.prototype.GenerateRandomNumber = function() {
 	var bytes = Math.floor(Math.random() * ((this.q.bitLength()/8) - 1 + 1)) + 1;
-	return new BigInteger(crypto.genRandomBytes(bytes)).mod(this.q);
+	const r = CryptoJS.lib.WordArray.random(bytes);
+	const rhex = CryptoJS.enc.Hex.stringify(r);
+	return new BigInteger(rhex, 16).mod(this.q);
 };
 
 /* Generates a challenge 'e' for the server */
 WISchnorrClient.prototype.GenerateWISchnorrClientChallenge = function(params, info, msg) {
-    var t1 = this.GenerateRandomNumber();
+	var t1 = this.GenerateRandomNumber();
 	var t2 = this.GenerateRandomNumber();
 	var t3 = this.GenerateRandomNumber();
 	var t4 = this.GenerateRandomNumber();
-	
-	var F = Buffer.from(crypto.sha256(info), 'hex');
-    // z = F^((p-1)/q) mod p
-	var z = new BigInteger(F).modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
-	
+
+	var F = sha256(info);
+	// z = F^((p-1)/q) mod p
+	var z = F.modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 	// alpha = a * g^t1 * y^t2
 	var a = new BigInteger(params.a);
 	var alpha = a.multiply(this.g.modPow(t1, this.p)).multiply(this.y.modPow(t2, this.p)).mod(this.p);
@@ -42,9 +46,9 @@ WISchnorrClient.prototype.GenerateWISchnorrClientChallenge = function(params, in
 	var b = new BigInteger(params.b);
 	var beta = b.multiply(this.g.modPow(t3, this.p)).multiply(z.modPow(t4, this.p)).mod(this.p);
 
-	var H = Buffer.from(crypto.sha256(alpha.toString()+beta.toString()+z.toString()+msg), 'hex');
+	var H = sha256(alpha.toString()+beta.toString()+z.toString()+msg);
 	// epsilon = H mod q
-	var epsilon = new BigInteger(H).mod(this.q);
+	var epsilon = H.mod(this.q);
 
 	// e = eplison - t2 - t4 mod q
 	var e = epsilon.subtract(t2).subtract(t4).mod(this.q);
@@ -75,9 +79,9 @@ WISchnorrClient.prototype.GenerateWISchnorrBlindSignature = function(challenge, 
 
 /* Verifies a WISchnorr partially blind signature */
 WISchnorrClient.prototype.VerifyWISchnorrBlindSignature = function(signature, info, msg) {
-	var F = Buffer.from(crypto.sha256(info), 'hex');
+	var F = sha256(info);
 	// z = F^((p-1)/q) mod p
-	var z = new BigInteger(F).modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
+	var z = F.modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 	
 	// g^rho mod p
 	var gp = this.g.modPow(new BigInteger(signature.rho), this.p);
@@ -93,9 +97,9 @@ WISchnorrClient.prototype.VerifyWISchnorrBlindSignature = function(signature, in
 	// g^sigma * z^delta mod p
 	var gszd = gs.multiply(zd).mod(this.p);
 
-	var H = Buffer.from(crypto.sha256(gpyw.toString()+gszd.toString()+z.toString()+msg), 'hex');
+	var H = sha256(gpyw.toString()+gszd.toString()+z.toString()+msg);
 	// hsig = H mod q
-	var hsig = new BigInteger(H).mod(this.q);
+	var hsig = H.mod(this.q);
 
 	// vsig = omega + delta mod q
 	var vsig = new BigInteger(signature.omega).add(new BigInteger(signature.delta)).mod(this.q);

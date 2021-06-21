@@ -1,4 +1,4 @@
-const BigInteger = require('node-jsbn');
+const BigInteger = require('jsbn').BigInteger;
 const stringify = require('fast-json-stable-stringify');
 const db = require('./db');
 const arango = require('@arangodb').db;
