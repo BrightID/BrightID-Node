@@ -505,63 +505,84 @@ function userVerifications(user) {
   return verifications;
 }
 
-function getRecoveryConnections(user) {
-  const allConnections = connectionsHistoryColl.byExample({
-    _from: 'users/' + user
-  }).toArray().map(c => {
+function getRecoveryConnections(user, direction='outbound') {
+  const res = {};
+  let query, resIdAttr;
+  if (direction == 'outbound') {
+    query = { _from: 'users/' + user };
+    resIdAttr = '_to';
+  } else if (direction == 'inbound') {
+    query = { _to: 'users/' + user };
+    resIdAttr = '_from';
+  }
+  const allConnections = connectionsHistoryColl.byExample(query).toArray().map(c => {
     return {
-      _to: c._to.replace('users/', ''),
+      id: c[resIdAttr].replace('users/', ''),
       level: c.level,
       timestamp: c.timestamp
     }
   });
   allConnections.sort((c1, c2) => (c1.timestamp - c2.timestamp));
+  const recoveryConnections = allConnections.filter(conn => conn.level == 'recovery');
+  if (recoveryConnections.length == 0) {
+    return res
+  }
+  const firstDayBorder = recoveryConnections[0].timestamp + (24*60*60*1000);
+  const aWeekBorder = Date.now() - (7*24*60*60*1000);
+  const recoveryIds = new Set(recoveryConnections.map(conn => conn.id));
 
   // 1) New recovery connections can participate in resetting signing key,
   //    one week after being set as recovery connection. This limit is not
   //    applied to recovery connections that users set for the first time.
   // 2) Removed recovery connections can continue participating in resetting
   //    signing key, for one week after being removed from recovery connections
-  const borderTime = Date.now() - (7*24*60*60*1000);
-  // when users set their recovery connections for the first time
-  let initTimeBorder;
-  const res = {};
-  for (let conn of allConnections) {
-    // ignore not recovery connections
-    if (conn.level != 'recovery') {
-      continue;
-    }
-    // ignore connections to users that are already added to result
-    if (conn._to in res) {
-      continue;
-    }
-    // init the initTimeBorder with first recovery connection timestamp plus 24 hours
-    if (! initTimeBorder) {
-      initTimeBorder = conn.timestamp + (24*60*60*1000);
-    }
+  for (let id of recoveryIds) {
     // filter connections to a single user
-    const history = allConnections.filter(({ _to }) => (_to == conn._to));
-    const currentLevel = history[history.length - 1].level;
-    if (currentLevel == 'recovery') {
-      if (conn.timestamp < borderTime || conn.timestamp < initTimeBorder) {
+    const history = allConnections.filter(c => c.id == id);
+    const currentState = history[history.length - 1];
+    if (currentState.level == 'recovery') {
+      // find since when this connection was recovery
+      let recoveryStartPoint;
+      for (let i = history.length -1; 0 <= i; i--) {
+        if (history[i].level != 'recovery') {
+          break
+        }
+        recoveryStartPoint = history[i].timestamp;
+      }
+      if (recoveryStartPoint < aWeekBorder || recoveryStartPoint < firstDayBorder) {
         // if recovery level set more than 7 days ago or on the first day
-        res[conn._to] = {id: conn._to, activeAfter: 0, activeBefore: 0};
+        res[id] = {id, activeAfter: 0, activeBefore: 0};
       } else {
-        res[conn._to] = {
-          id: conn._to,
-          activeAfter: conn.timestamp - borderTime,
+        // if recovery level set less than 7 days ago(not on the first day)
+        // will active after 7 days
+        res[id] = {
+          id,
+          activeAfter: recoveryStartPoint - aWeekBorder,
           activeBefore: 0
         };
       }
     } else {
-      // find the first connection that removed the recovery level
-      const index = _.findIndex(history, conn) + 1;
-      // if recovery level removed less than 7 days ago
-      if (history[index]['timestamp'] > borderTime) {
-        res[conn._to] = {
-          id: conn._to,
+      // find the last period that this connection was a recovery connection
+      let recoveryStartPoint, recoveryEndPoint;
+      for (let i = history.length -1; 0 <= i; i--) {
+        if (history[i].level == 'recovery') {
+          for (let j = i; 0 <= j; j--) {
+            if (history[j].level != 'recovery') {
+              break
+            }
+            recoveryStartPoint = history[i].timestamp;
+          }
+          break
+        }
+        recoveryEndPoint = history[i].timestamp;
+      }
+      if (recoveryStartPoint < aWeekBorder && recoveryEndPoint > aWeekBorder) {
+        // if the recovery level removed less than 7 days ago
+        // remains active until 7 days
+        res[id] = {
+          id,
           activeAfter: 0,
-          activeBefore: history[index]['timestamp'] - borderTime
+          activeBefore: recoveryEndPoint - aWeekBorder
         };
       }
     }
