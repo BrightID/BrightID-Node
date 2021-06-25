@@ -528,7 +528,8 @@ function getRecoveryConnections(user, direction='outbound') {
     return res
   }
   const firstDayBorder = recoveryConnections[0].timestamp + (24*60*60*1000);
-  const aWeekBorder = Date.now() - (7*24*60*60*1000);
+  const aWeek =  7*24*60*60*1000;
+  const aWeekBorder = Date.now() - aWeek;
   const recoveryIds = new Set(recoveryConnections.map(conn => conn.id));
 
   // 1) New recovery connections can participate in resetting signing key,
@@ -541,9 +542,9 @@ function getRecoveryConnections(user, direction='outbound') {
     const history = allConnections.filter(c => c.id == id);
     const currentState = history[history.length - 1];
     if (currentState.level == 'recovery') {
-      // find since when this connection was recovery
+      // find since when this user was recovery
       let recoveryStartPoint;
-      for (let i = history.length -1; 0 <= i; i--) {
+      for (let i = history.length - 1; 0 <= i; i--) {
         if (history[i].level != 'recovery') {
           break
         }
@@ -553,8 +554,7 @@ function getRecoveryConnections(user, direction='outbound') {
         // if recovery level set more than 7 days ago or on the first day
         res[id] = {id, activeAfter: 0, activeBefore: 0};
       } else {
-        // if recovery level set less than 7 days ago(not on the first day)
-        // will active after 7 days
+        // if recovery level set earlier than 7 days and not on the first day
         res[id] = {
           id,
           activeAfter: recoveryStartPoint - aWeekBorder,
@@ -562,22 +562,26 @@ function getRecoveryConnections(user, direction='outbound') {
         };
       }
     } else {
-      // find the last period that this connection was a recovery connection
-      let recoveryStartPoint, recoveryEndPoint;
-      for (let i = history.length -1; 0 <= i; i--) {
+      // find the start and end point of the last period that this user was recovery
+      // we need start beacause the user may lost recovery level recently but
+      // recovery level was not activated actually, so such a user should not
+      // be included in the recovery connections
+      let recoveryStartPoint, recoveryEndPoint, i;
+      for (i = history.length - 1; 0 <= i; i--) {
         if (history[i].level == 'recovery') {
-          for (let j = i; 0 <= j; j--) {
-            if (history[j].level != 'recovery') {
-              break
-            }
-            recoveryStartPoint = history[i].timestamp;
-          }
           break
         }
         recoveryEndPoint = history[i].timestamp;
       }
-      if (recoveryStartPoint < aWeekBorder && recoveryEndPoint > aWeekBorder) {
-        // if the recovery level removed less than 7 days ago
+      for (i; 0 <= i; i--) {
+        if (history[i].level != 'recovery') {
+          break
+        }
+        recoveryStartPoint = history[i].timestamp;
+      }
+
+      if (recoveryEndPoint - recoveryStartPoint > aWeek && recoveryEndPoint > aWeekBorder) {
+        // if an active recovery connection lost recovery level earlier than 7 days
         // remains active until 7 days
         res[id] = {
           id,
