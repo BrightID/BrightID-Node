@@ -102,6 +102,7 @@ describe('verifications', function() {
     let resp = request.get(`${baseUrl}/apps/${app._key}`);
     const vel = resp.json.data.verificationExpirationLength;
     const verifications = resp.json.data.verifications;
+    const appId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
 
     for (const verification of verifications) {
       const info = {
@@ -111,8 +112,7 @@ describe('verifications', function() {
       };
       resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
       const pub = JSON.parse(resp.body).data.public;
-      const uid = 'unblinded_uid_of_the_user2';
-      const appId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
+      const uid = Math.random().toString(36).substr(2, 10);
       const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
       const s = stringify({ id: u2.id, public: pub });
       const sig = uInt8ArrayToB64(
@@ -133,6 +133,7 @@ describe('verifications', function() {
     let resp = request.get(`${baseUrl}/apps/${app._key}`);
     const vel = resp.json.data.verificationExpirationLength;
     const verifications = resp.json.data.verifications;
+    const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
 
     for (const verification of verifications) {
       const info = {
@@ -142,8 +143,7 @@ describe('verifications', function() {
       };
       resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
       const pub = JSON.parse(resp.body).data.public;
-      const uid = 'unblinded_uid_of_the_user1';
-      const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+      const uid = Math.random().toString(36).substr(2, 10);
       const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
       const s = stringify({ id: u1.id, public: pub });
       const sig = uInt8ArrayToB64(
@@ -172,15 +172,22 @@ describe('verifications', function() {
         json: true
       });
       resp.status.should.equal(204);
+    }
 
-      resp = request.get(`${baseUrl}/verifications/${info.app}/${appId}/${verification}`, {
-        qs: {
-          signed: 'eth',
-          timestamp: 'seconds',
-        },
-        json: true
-      });
-      resp.status.should.equal(200);
+    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}`, {
+      qs: {
+        signed: 'eth',
+        timestamp: 'seconds',
+      },
+      json: true
+    });
+    resp.status.should.equal(200);
+    for (let v of resp.json.data) {
+      if (v.verification == 'SeedConnectedWithFriend') {
+        v.unique.should.equal(false);
+      } else {
+        v.unique.should.equal(true);
+      }
     }
   });
 
@@ -211,7 +218,7 @@ describe('verifications', function() {
 
   it('apps should be able to check an appId verification', function() {
     let appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
-    let resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}/BrightID`, {
+    const resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',
@@ -219,16 +226,12 @@ describe('verifications', function() {
       json: true
     });
     resp.status.should.equal(200);
-
-    appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
-    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}/SeedConnectedWithFriend`, {
-      qs: {
-        signed: 'eth',
-        timestamp: 'seconds',
-      },
-      json: true
-    });
-    resp.status.should.equal(403);
-    resp.json.errorNum.should.equal(errors.NOT_VERIFIED);
+    for (let v of resp.json.data) {
+      if (v.verification == 'SeedConnectedWithFriend') {
+        v.unique.should.equal(false);
+      } else {
+        v.unique.should.equal(true);
+      }
+    }
   });
 });

@@ -308,16 +308,19 @@ schemas = Object.assign({
     roundedTimestamp: joi.number().integer().required().description("timestamp that is rounded to app's required precision")
   }),
 
-  verificationGetResponse: joi.object({
-    data: joi.object({
-      unique: joi.string().description("true if user is unique under given app"),
-      app: joi.string().description("unique app id"),
-      appId: joi.string().description("the id of the user within the app"),
-      verificationHash: joi.string().description("sha256 of the verification expiration"),
-      timestamp: schemas.timestamp.description("timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter"),
-      sig: joi.string().description("verification message signed by the node"),
-      publicKey: joi.string().description("the node's public key")
-    })
+  verificationsGetResponse: joi.object({
+    data:  joi.array().items(
+      joi.object({
+        unique: joi.string().description("true if user is unique under given app"),
+        app: joi.string().description("unique app id"),
+        appId: joi.string().description("the id of the user within the app"),
+        verification: joi.string().description("verification expiration"),
+        verificationHash: joi.string().description("sha256 of the verification expiration"),
+        timestamp: schemas.timestamp.description("timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter"),
+        sig: joi.string().description("verification message signed by the node"),
+        publicKey: joi.string().description("the node's public key")
+      })
+    )
   }),
 }, schemas);
 

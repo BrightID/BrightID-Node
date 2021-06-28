@@ -46,6 +46,7 @@ const NOT_HEAD = 55;
 const DUPLICATE_UID_ERROR = 56;
 const DUPLICATE_SIGNERS = 57;
 const WAIT_FOR_COOLDOWN = 58;
+const UNACCEPTABLE_VERIFICATION = 59;
 
 class BrightIDError extends Error {
   constructor() {
@@ -489,6 +490,16 @@ class WaitForCooldownError extends ForbiddenError {
   }
 }
 
+class UnacceptableVerification extends ForbiddenError {
+  constructor(verification, app) {
+    super();
+    this.errorNum = UNACCEPTABLE_VERIFICATION;
+    this.message = `"${verification}" expression is not acceptable for the "${app}".`;
+    this.verification = verification;
+    this.app = app;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -537,6 +548,7 @@ module.exports = {
   DUPLICATE_UID_ERROR,
   DUPLICATE_SIGNERS,
   WAIT_FOR_COOLDOWN,
+  UNACCEPTABLE_VERIFICATION,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -590,4 +602,5 @@ module.exports = {
   DuplicateUIDError,
   DuplicateSignersError,
   WaitForCooldownError,
+  UnacceptableVerification,
 }

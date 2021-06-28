@@ -211,12 +211,14 @@ const handlers = {
     const roundedTimestamp = req.param('roundedTimestamp');
     const verification = req.param('verification');
 
+    if (!app.verifications.includes(verification)) {
+      throw new errors.UnacceptableVerification(verification, appKey);
+    }
+
     const vel = app.verificationExpirationLength;
-    if (vel) {
-      const serverRoundedTimestamp = parseInt(Date.now() / vel) * vel;
-      if (serverRoundedTimestamp != roundedTimestamp) {
-        throw new errors.InvalidRoundedTimestampError(serverRoundedTimestamp, roundedTimestamp);
-      }
+    const serverRoundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
+    if (serverRoundedTimestamp !== roundedTimestamp) {
+      throw new errors.InvalidRoundedTimestampError(serverRoundedTimestamp, roundedTimestamp);
     }
 
     const info = stringify({ app: appKey, roundedTimestamp, verification });
@@ -307,84 +309,101 @@ const handlers = {
     db.insertAppIdVerification(app, uid, appId, verification, roundedTimestamp);
   },
 
-  verificationGet: function(req, res){
-    let unique = true;
+  verificationsGet: function(req, res){
     const appId = req.param('appId');
     const appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
-    const verification = req.param('verification');
     const app = db.getApp(appKey);
 
-    const doc = appIdsColl.firstExample({ app: appKey, appId });
-    if (!doc || !doc.verifications.includes(verification)) {
-      throw new errors.NotVerifiedError(appKey, verification);
-    }
+    const vel = app.verificationExpirationLength;
+    const roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
 
-    if (timestamp == 'seconds' && app.roundedTimestamp) {
-      timestamp = parseInt(app.roundedTimestamp / 1000);
-    } else if (timestamp == 'milliseconds' && app.roundedTimestamp) {
-      timestamp = app.roundedTimestamp;
+    if (timestamp == 'seconds') {
+      timestamp = vel ? roundedTimestamp / 1000 : parseInt(Date.now() / 1000);
+    } else if (timestamp == 'milliseconds') {
+      timestamp = vel ? roundedTimestamp : Date.now();
     } else {
       timestamp = undefined;
     }
 
-    // sign and return the verification
-    const verificationHash = crypto.sha256(verification);
-    let sig, publicKey;
-    if (signed == 'nacl') {
-      if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
-        throw new errors.KeypairNotSetError();
+    const result = [];
+    for (let verification of app.verifications) {
+      let unique = true;
+      const verificationHash = crypto.sha256(verification);
+      const doc = appIdsColl.firstExample({ app: appKey, appId, verification, roundedTimestamp });
+      if (!doc) {
+        unique = false;
+        result.push({
+          unique,
+          app: appKey,
+          appId,
+          sig: '',
+          verification,
+          verificationHash,
+          timestamp,
+        });
+        continue;
       }
 
-      let message = appKey + ',' + appId + ',' + verificationHash;
-      if (timestamp) {
-        message = message + ',' + timestamp;
-      }
-      const privateKey = module.context.configuration.privateKey;
-      publicKey = module.context.configuration.publicKey;
-      sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
-      );
-    } else if (signed == 'eth') {
-      if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
-        throw new errors.EthPrivatekeyNotSetError();
+      // sign and return the verification
+      let sig, publicKey;
+      if (signed == 'nacl') {
+        if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
+          throw new errors.KeypairNotSetError();
+        }
+
+        let message = appKey + ',' + appId + ',' + verificationHash;
+        if (timestamp) {
+          message = message + ',' + timestamp;
+        }
+        const privateKey = module.context.configuration.privateKey;
+        publicKey = module.context.configuration.publicKey;
+        sig = uInt8ArrayToB64(
+          Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
+        );
+      } else if (signed == 'eth') {
+        if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
+          throw new errors.EthPrivatekeyNotSetError();
+        }
+
+        let message, h;
+        if (app.idsAsHex) {
+          message = pad32(appKey) + addressToBytes32(appId);
+        } else {
+          message = pad32(appKey) + pad32(appId);
+        }
+        message = Buffer.from(message, 'binary').toString('hex');
+        message += verificationHash;
+        if (timestamp) {
+          const t = timestamp.toString(16);
+          message += ('0'.repeat(64 - t.length) + t);
+        }
+        h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
+        let ethPrivateKey = module.context.configuration.ethPrivateKey;
+        ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
+        publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
+        const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
+        sig = {
+          r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
+          s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
+          v: _sig.recid + 27,
+        }
       }
 
-      let message, h;
-      if (app.idsAsHex) {
-        message = pad32(appKey) + addressToBytes32(appId);
-      } else {
-        message = pad32(appKey) + pad32(appId);
-      }
-      message = Buffer.from(message, 'binary').toString('hex');
-      message += verificationHash;
-      if (timestamp) {
-        const t = timestamp.toString(16);
-        message += ('0'.repeat(64 - t.length) + t);
-      }
-      h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
-      let ethPrivateKey = module.context.configuration.ethPrivateKey;
-      ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
-      publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
-      const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
-      sig = {
-        r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
-        s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),
-        v: _sig.recid + 27,
-      }
-    }
-    res.send({
-      data: {
+      result.push({
         unique,
         app: appKey,
-        appId: appId,
+        appId,
+        verification,
         verificationHash,
         sig,
         timestamp,
         publicKey
-      }
-    });
+      });
+
+    }
+    res.send({ data: result });
   },
 
   appGet: function(req, res){
@@ -490,7 +509,7 @@ router.get('/operations/:hash', handlers.operationGet)
 
 router.get('/verifications/blinded/public', handlers.verificationPublicGet)
   .queryParam('app', joi.string().required().description('unique app id'))
-  .queryParam('roundedTimestamp', joi.number().integer().required().description("timestamp that is rounded to app's required precision"))
+  .queryParam('roundedTimestamp', joi.number().integer().required().description("timestamp that is rounded to app's required precision or zero"))
   .queryParam('verification', joi.string().description('custom verification expression'))
   .summary('Gets public part of WI-Schnorr params')
   .description("Gets public part of WI-Schnorr params using deterministic json representation of {app, roundedTimestamp, verification} as info")
@@ -518,15 +537,14 @@ router.post('/verifications/:app/:appId', handlers.verificationAppIdPost)
   .description('Clients use this endpoint to add unblinded signature for an appId to the node to be queried by apps')
   .response(null);
 
-router.get('/verifications/:app/:appId/:verification', handlers.verificationGet)
+router.get('/verifications/:app/:appId/', handlers.verificationsGet)
   .pathParam('app', joi.string().required().description('the app that user is verified for'))
   .pathParam('appId', joi.string().required().description('the id of user within the app'))
-  .queryParam('verification', joi.string().description('custom verification expression'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .summary('Gets a signed verification')
   .description('Apps use this endpoint to query a signed verification for an appId from the node')
-  .response(schemas.verificationGetResponse)
+  .response(schemas.verificationsGetResponse)
   .error(403, 'user is not sponsored')
   .error(404, 'appId not found');
 

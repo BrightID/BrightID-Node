@@ -643,18 +643,15 @@ function upsertOperation(op) {
 }
 
 function insertAppIdVerification(app, uid, appId, verification, roundedTimestamp) {
-  const d = appIdsColl.firstExample({ uid: uid });
+  const d = appIdsColl.firstExample({ uid });
   if (d) {
-    if (verification in d.verifications) {
-      throw new errors.DuplicateUIDError(uid);
-    }
-    appIdsColl.update(d, {verifications: [...d.verifications, verification]})
+    throw new errors.DuplicateUIDError(uid);
   } else {
     appIdsColl.insert({
       app,
       uid,
       appId,
-      verifications: [verification],
+      verification,
       roundedTimestamp,
     });
   }
