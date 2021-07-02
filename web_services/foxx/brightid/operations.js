@@ -33,11 +33,10 @@ const verifyUserSig = function(message, id, sig) {
 
 const verifyAppSig = function(message, app, sig) {
   app = db.getApp(app);
+  const { n: N, e: E } = JSON.parse(app.sponsorPublicKey);
   const result = BlindSignature.verify({
     unblinded: new BigInteger(sig),
-    N: app.sponsorPublicKey.n,
-    E: app.sponsorPublicKey.e,
-    message: message,
+    N, E, message
   });
   if (!result) {
     throw new errors.InvalidSignatureError();

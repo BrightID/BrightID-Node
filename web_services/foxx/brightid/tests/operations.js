@@ -126,7 +126,7 @@ describe('operations', function(){
     });
     appsColl.insert({
       _key: 'idchain',
-      sponsorPublicKey: { n: N, e: E },
+      sponsorPublicKey: stringify({ n: N, e: E }),
       verificationExpirationLength: 1000000,
       idsAsHex: false
     });
