@@ -470,6 +470,7 @@ function appToDic(app) {
     usingBlindSig: app.usingBlindSig,
     verificationExpirationLength: app.verificationExpirationLength,
     sponsorPublicKey: app.sponsorPublicKey,
+    nodeUrl: app.nodeUrl,
   };
 }
 
