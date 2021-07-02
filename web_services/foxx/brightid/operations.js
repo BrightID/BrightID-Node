@@ -35,8 +35,8 @@ const verifyAppSig = function(message, app, sig) {
   app = db.getApp(app);
   const result = BlindSignature.verify({
     unblinded: new BigInteger(sig),
-    N: app.keypair.n,
-    E: app.keypair.e,
+    N: app.sponsorPublicKey.n,
+    E: app.sponsorPublicKey.e,
     message: message,
   });
   if (!result) {

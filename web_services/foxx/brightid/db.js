@@ -469,6 +469,7 @@ function appToDic(app) {
     idsAsHex: app.idsAsHex,
     usingBlindSig: app.usingBlindSig,
     verificationExpirationLength: app.verificationExpirationLength,
+    sponsorPublicKey: app.sponsorPublicKey,
   };
 }
 

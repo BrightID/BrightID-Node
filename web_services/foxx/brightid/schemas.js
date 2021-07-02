@@ -165,6 +165,7 @@ schemas = Object.assign({
     idsAsHex: joi.boolean().description('true if app ids are in ethereum address format'),
     usingBlindSig: joi.boolean().description('true if app is using blind signature integration'),
     verificationExpirationLength: joi.number().integer().description('app verification expiration length in milliseconds'),
+    sponsorPublicKey: joi.string().required().description('the public part of the key pair that the app use to sign sponsor requests'),
   }),
 }, schemas);
 
