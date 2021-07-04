@@ -507,7 +507,67 @@ function userVerifications(user) {
   return verifications;
 }
 
-function getRecoveryConnections(user, direction='outbound') {
+function getRecoveryPeriods(allConnections, user, now) {
+  const recoveryPeriods = [];
+  const history = allConnections.filter(c => c.id == user);
+  let open = false;
+  let period = {};
+  for (let i = 0; i < history.length; i++) {
+    if (history[i].level == 'recovery' && !open) {
+      open = true;
+      period['start'] = history[i].timestamp
+    } else if (history[i].level != 'recovery' && open) {
+      period['end'] = history[i].timestamp;
+      recoveryPeriods.push(period);
+      period = {};
+      open = false;
+    }
+  }
+  if (open) {
+    period['end'] = now;
+    recoveryPeriods.push(period);
+  }
+  return recoveryPeriods;
+}
+
+function isActiveRecovery(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder) {
+  for (const period of recoveryPeriods) {
+    if (period.end > aWeekBorder &&
+      (period.end - period.start > aWeek || period.start < firstDayBorder)
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function countActiveAfter(recoveryPeriods, firstDayBorder, aWeek, now) {
+  const lastPeriod = recoveryPeriods[recoveryPeriods.length - 1];
+  if (lastPeriod.end == now &&
+    lastPeriod.end - lastPeriod.start < aWeek &&
+    lastPeriod.start > firstDayBorder
+  ) {
+    return aWeek - (lastPeriod.end - lastPeriod.start);
+  }
+  return 0;
+}
+
+function countActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) {
+  for (const period of recoveryPeriods) {
+    if (period.end > aWeekBorder &&
+      (period.end - period.start > aWeek || period.start < firstDayBorder)
+    ) {
+      if (period.end == now) {
+        return 0;
+      } else {
+        return period.end - aWeekBorder;
+      }
+    }
+  }
+  return 0;
+}
+
+function getRecoveryConnections(user, direction = 'outbound') {
   const res = {};
   let query, resIdAttr;
   if (direction == 'outbound') {
@@ -529,8 +589,10 @@ function getRecoveryConnections(user, direction='outbound') {
   if (recoveryConnections.length == 0) {
     return res
   }
-  const firstDayBorder = recoveryConnections[0].timestamp + (24*60*60*1000);
-  const aWeek =  7*24*60*60*1000;
+
+  const now = Date.now();
+  const firstDayBorder = recoveryConnections[0].timestamp + (24 * 60 * 60 * 1000);
+  const aWeek = 7 * 24 * 60 * 60 * 1000;
   const aWeekBorder = Date.now() - aWeek;
   const recoveryIds = new Set(recoveryConnections.map(conn => conn.id));
 
@@ -540,57 +602,18 @@ function getRecoveryConnections(user, direction='outbound') {
   // 2) Removed recovery connections can continue participating in resetting
   //    signing key, for one week after being removed from recovery connections
   for (let id of recoveryIds) {
-    // filter connections to a single user
-    const history = allConnections.filter(c => c.id == id);
-    const currentState = history[history.length - 1];
-    if (currentState.level == 'recovery') {
-      // find since when this user was recovery
-      let recoveryStartPoint;
-      for (let i = history.length - 1; 0 <= i; i--) {
-        if (history[i].level != 'recovery') {
-          break
-        }
-        recoveryStartPoint = history[i].timestamp;
-      }
-      if (recoveryStartPoint < aWeekBorder || recoveryStartPoint < firstDayBorder) {
-        // if recovery level set more than 7 days ago or on the first day
-        res[id] = {id, activeAfter: 0, activeBefore: 0};
-      } else {
-        // if recovery level set earlier than 7 days and not on the first day
-        res[id] = {
-          id,
-          activeAfter: recoveryStartPoint - aWeekBorder,
-          activeBefore: 0
-        };
-      }
-    } else {
-      // find the start and end point of the last period that this user was recovery
-      // we need start beacause the user may lost recovery level recently but
-      // recovery level was not activated actually, so such a user should not
-      // be included in the recovery connections
-      let recoveryStartPoint, recoveryEndPoint, i;
-      for (i = history.length - 1; 0 <= i; i--) {
-        if (history[i].level == 'recovery') {
-          break
-        }
-        recoveryEndPoint = history[i].timestamp;
-      }
-      for (i; 0 <= i; i--) {
-        if (history[i].level != 'recovery') {
-          break
-        }
-        recoveryStartPoint = history[i].timestamp;
-      }
+    // find the periods that this user was recovery
+    const recoveryPeriods = getRecoveryPeriods(allConnections, id, now);
+    // find this user is recovery now
+    const isActive = isActiveRecovery(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder);
+    // if recovery level set earlier than 7 days and not on the first day
+    // will active after 7 days since became recovery
+    const activeAfter = isActive ? 0 : countActiveAfter(recoveryPeriods, firstDayBorder, aWeek, now);
+    // if a recovery connection lost recovery level earlier than 7 days remains active until 7 days
+    const activeBefore = isActive ? countActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) : 0;
 
-      if (recoveryEndPoint - recoveryStartPoint > aWeek && recoveryEndPoint > aWeekBorder) {
-        // if an active recovery connection lost recovery level earlier than 7 days
-        // remains active until 7 days
-        res[id] = {
-          id,
-          activeAfter: 0,
-          activeBefore: recoveryEndPoint - aWeekBorder
-        };
-      }
+    if (isActive || activeAfter > 0 || activeBefore > 0) {
+      res[id] = { id, isActive, activeBefore, activeAfter }
     }
   }
   return res;
