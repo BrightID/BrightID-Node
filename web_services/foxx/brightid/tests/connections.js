@@ -115,64 +115,93 @@ describe('connections', function () {
 
 });
 
-describe('recovery connections', function () {
-  before(function(){
+describe('recovery connections', function() {
+  before(function() {
     usersColl.truncate();
     connectionsColl.truncate();
     connectionsHistoryColl.truncate();
   });
-  after(function(){
+  after(function() {
     usersColl.truncate();
     connectionsColl.truncate();
     connectionsHistoryColl.truncate();
   });
 
   it('users should be able add or remove recovery connections', function() {
-    db.connect({id1: 'b', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'b', level: 'recovery', 'timestamp': 1});
-    db.connect({id1: 'c', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'c', level: 'recovery', 'timestamp': 1});
-    db.connect({id1: 'd', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'd', level: 'recovery', 'timestamp': 1});
-    db.connect({id1: 'e', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'e', level: 'recovery', 'timestamp': 2});
-    db.connect({id1: 'f', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'f', level: 'recovery', 'timestamp': 3});
-    db.connect({id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate', 'timestamp': 4});
+    db.connect({ id1: 'b', id2: 'a', level: 'already known', 'timestamp': 1 });
+    db.connect({ id1: 'a', id2: 'b', level: 'recovery', 'timestamp': 1 });
+    db.connect({ id1: 'c', id2: 'a', level: 'already known', 'timestamp': Date.now() - (30 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'a', id2: 'c', level: 'recovery', 'timestamp': Date.now() - (30 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'd', id2: 'a', level: 'already known', 'timestamp': Date.now() - (29 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'a', id2: 'd', level: 'recovery', 'timestamp': Date.now() - (29 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'e', id2: 'a', level: 'already known', 'timestamp': Date.now() - (28 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'a', id2: 'e', level: 'recovery', 'timestamp': Date.now() - (28 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'f', id2: 'a', level: 'already known', 'timestamp': Date.now() - (22 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'a', id2: 'f', level: 'recovery', 'timestamp': Date.now() - (22 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'a', id2: 'b', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now() - (22 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'c', id2: 'b', level: 'already known', 'timestamp': Date.now() - (21 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'b', id2: 'c', level: 'recovery', 'timestamp': Date.now() - (21 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'c', id2: 'd', level: 'already known', 'timestamp': Date.now() - (20 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'd', id2: 'c', level: 'recovery', 'timestamp': Date.now() });
+    db.connect({ id1: 'b', id2: 'c', level: 'already known', 'timestamp': Date.now() });
+    db.connect({ id1: 'a', id2: 'e', level: 'already known', 'timestamp': Date.now() - (5 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'a', id2: 'e', level: 'recovery', 'timestamp': Date.now() - (2 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'g', id2: 'a', level: 'already known', 'timestamp': Date.now() - (10 * 24 * 60 * 60 * 1000) });
+    db.connect({ id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now() - (5 * 24 * 60 * 60 * 1000) });
 
     const recoveryConnections = db.getRecoveryConnections('a');
     recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
+  it('should not be able to add a recovery connection without cooling period', function() {
+    db.connect({ id1: 'a', id2: 'b', level: 'recovery', 'timestamp': Date.now() });
+    let recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+
+    db.connect({ id1: 'a', id2: 'b', level: 'already known', 'timestamp': Date.now() });
+    recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+  });
+
+  it('should not be able to inactive a recovery connection without cooling period', function() {
+    db.connect({ id1: 'a', id2: 'd', level: 'already known', 'timestamp': Date.now() });
+    let recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+
+    db.connect({ id1: 'a', id2: 'd', level: 'recovery', 'timestamp': Date.now() });
+    recoveryConnections = db.getRecoveryConnections('a');
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+  });
+
   it('remove recovery connection should take one week to take effect to protect against takeover', function() {
-    db.connect({id1: 'a', id2: 'c', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now()});
+    db.connect({ id1: 'a', id2: 'c', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now() });
 
     const recoveryConnections = db.getRecoveryConnections('a');
     recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
   it("don't allow a recovery connection to be used for recovery if it is too new", function() {
-    db.connect({id1: 'g', id2: 'a', level: 'already known', 'timestamp': Date.now()});
-    db.connect({id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now()});
+    db.connect({ id1: 'h', id2: 'a', level: 'already known', 'timestamp': Date.now() });
+    db.connect({ id1: 'a', id2: 'h', level: 'recovery', 'timestamp': Date.now() });
 
     const recoveryConnections = db.getRecoveryConnections('a');
-    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f']);
+    recoveryConnections.should.deep.equal(['c', 'd', 'e', 'f', ]);
   });
 
   it("ignore cooling period from recovery connections set in the first day", function() {
     connectionsColl.truncate();
     connectionsHistoryColl.truncate();
-    const firstConnTime = Date.now() - 4*24*60*60*1000;
-    db.connect({id1: 'b', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'b', level: 'recovery', 'timestamp': firstConnTime});
-    db.connect({id1: 'c', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'c', level: 'recovery', 'timestamp': firstConnTime + (5*60*60*1000)});
-    db.connect({id1: 'd', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'd', level: 'recovery', 'timestamp': firstConnTime + (22*60*60*1000)});
-    db.connect({id1: 'e', id2: 'a', level: 'already known', 'timestamp': 1});
-    db.connect({id1: 'a', id2: 'e', level: 'recovery', 'timestamp': firstConnTime + (30*60*60*1000)});
-    const recoveryConnections = db.getRecoveryConnections('a');
+    const firstConnTime = Date.now() - 4 * 24 * 60 * 60 * 1000;
+    db.connect({ id1: 'b', id2: 'a', level: 'already known', 'timestamp': 1 });
+    db.connect({ id1: 'a', id2: 'b', level: 'recovery', 'timestamp': firstConnTime });
+    db.connect({ id1: 'c', id2: 'a', level: 'already known', 'timestamp': 1 });
+    db.connect({ id1: 'a', id2: 'c', level: 'recovery', 'timestamp': firstConnTime + (5 * 60 * 60 * 1000) });
+    db.connect({ id1: 'd', id2: 'a', level: 'already known', 'timestamp': 1 });
+    db.connect({ id1: 'a', id2: 'd', level: 'recovery', 'timestamp': firstConnTime + (22 * 60 * 60 * 1000) });
+    db.connect({ id1: 'e', id2: 'a', level: 'already known', 'timestamp': 1 });
+    db.connect({ id1: 'a', id2: 'e', level: 'recovery', 'timestamp': firstConnTime + (30 * 60 * 60 * 1000) });
+
+    const recoveryConnections = db.getRecoveryConnections('a', 'outbound');
     recoveryConnections.should.deep.equal(['b', 'c', 'd']);
   });
-
 });

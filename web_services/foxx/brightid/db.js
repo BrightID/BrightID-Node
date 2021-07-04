@@ -674,54 +674,66 @@ function setRecoveryConnections(conns, key, timestamp) {
   });
 }
 
+function getRecoveryPeriods(allConnections, user, now) {
+  const recoveryPeriods = [];
+  const history = allConnections.filter(c => c.id == user);
+  let open = false;
+  let period = {};
+  for (let i = 0; i < history.length; i++) {
+    if (history[i].level == 'recovery' && !open) {
+      open = true;
+      period['start'] = history[i].timestamp
+    } else if (history[i].level != 'recovery' && open) {
+      period['end'] = history[i].timestamp;
+      recoveryPeriods.push(period);
+      period = {};
+      open = false;
+    }
+  }
+  if (open) {
+    period['end'] = now;
+    recoveryPeriods.push(period);
+  }
+  return recoveryPeriods;
+}
+
 function getRecoveryConnections(user) {
+  const res = [];
   const allConnections = connectionsHistoryColl.byExample({
     _from: 'users/' + user
   }).toArray().map(c => {
     return {
-      _to: c._to.replace('users/', ''),
+      id: c._to.replace('users/', ''),
       level: c.level,
       timestamp: c.timestamp
     }
   });
   allConnections.sort((c1, c2) => (c1.timestamp - c2.timestamp));
+  const recoveryConnections = allConnections.filter(conn => conn.level == 'recovery');
+  if (recoveryConnections.length == 0) {
+    return res
+  }
+
+  const now = Date.now();
+  const firstDayBorder = recoveryConnections[0].timestamp + (24 * 60 * 60 * 1000);
+  const aWeek = 7 * 24 * 60 * 60 * 1000;
+  const aWeekBorder = Date.now() - aWeek;
+  const recoveryIds = new Set(recoveryConnections.map(conn => conn.id));
 
   // 1) New recovery connections can participate in resetting signing key,
   //    one week after being set as recovery connection. This limit is not
   //    applied to recovery connections that users set for the first time.
   // 2) Removed recovery connections can continue participating in resetting
   //    signing key, for one week after being removed from recovery connections
-  const borderTime = Date.now() - (7*24*60*60*1000);
-  // when users set their recovery connections for the first time
-  let initTimeBorder;
-  const res = [];
-  for (let conn of allConnections) {
-    // ignore not recovery connections
-    if (conn.level != 'recovery') {
-      continue;
-    }
-    // ignore connections to users that are already added to result
-    if (res.includes(conn._to)) {
-      continue;
-    }
-    // init the initTimeBorder with first recovery connection timestamp plus 24 hours
-    if (! initTimeBorder) {
-      initTimeBorder = conn.timestamp + (24*60*60*1000);
-    }
-    // filter connections to a single user
-    const history = allConnections.filter(({ _to }) => (_to == conn._to));
-    const currentLevel = history[history.length - 1].level;
-    if (currentLevel == 'recovery') {
-      if (conn.timestamp < borderTime || conn.timestamp < initTimeBorder) {
-        // if recovery level set more than 7 days ago or on the first day
-        res.push(conn._to);
-      }
-    } else {
-      // find the first connection that removed the recovery level
-      const index = _.findIndex(history, conn) + 1;
-      // if recovery level removed less than 7 days ago
-      if (history[index]['timestamp'] > borderTime) {
-        res.push(conn._to);
+  for (let id of recoveryIds) {
+    // find the periods that this user was recovery
+    const recoveryPeriods = getRecoveryPeriods(allConnections, id, now);
+    // find this user is recovery now
+    for (const period of recoveryPeriods) {
+      if (period.end > aWeekBorder &&
+        (period.end - period.start > aWeek || period.start < firstDayBorder)
+      ) {
+        res.push(id);
       }
     }
   }
