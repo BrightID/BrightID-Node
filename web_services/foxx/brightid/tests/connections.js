@@ -219,11 +219,11 @@ describe('recovery connections', function() {
   });
 
   it("don't allow a recovery connection to be used for recovery if it is too new", function() {
-    db.connect({ id1: 'g', id2: 'a', level: 'already known', 'timestamp': Date.now() });
-    db.connect({ id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now() });
+    db.connect({ id1: 'h', id2: 'a', level: 'already known', 'timestamp': Date.now() });
+    db.connect({ id1: 'a', id2: 'h', level: 'recovery', 'timestamp': Date.now() });
 
     const recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    recoveryConnections['g'].activeAfter.should.be.greaterThan(0);
+    recoveryConnections['h'].activeAfter.should.be.greaterThan(0);
     const activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
       return conn.isActive;
     }).map(conn => {
