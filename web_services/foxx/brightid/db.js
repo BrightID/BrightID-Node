@@ -552,7 +552,7 @@ function getActiveAfter(recoveryPeriods, firstDayBorder, aWeek, now) {
   return 0;
 }
 
-function countActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) {
+function getActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) {
   for (const period of recoveryPeriods) {
     if (period.end > aWeekBorder &&
       (period.end - period.start > aWeek || period.start < firstDayBorder)
@@ -610,7 +610,7 @@ function getRecoveryConnections(user, direction = 'outbound') {
     // will active after 7 days since became recovery
     const activeAfter = isActive ? 0 : getActiveAfter(recoveryPeriods, firstDayBorder, aWeek, now);
     // if a recovery connection lost recovery level earlier than 7 days remains active until 7 days
-    const activeBefore = isActive ? countActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) : 0;
+    const activeBefore = isActive ? getActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) : 0;
 
     if (isActive || activeAfter > 0 || activeBefore > 0) {
       res[id] = { id, isActive, activeBefore, activeAfter }
