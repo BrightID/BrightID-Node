@@ -94,8 +94,8 @@ const operations = {
     group: joi.string().required().description('the unique id of the group'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
-  'Transfer Family Head': {
-    id: joi.string().required().description('brightid of the current head of the family group'),
+  'Change Family Head': {
+    id: joi.string().required().description('brightid of one of the current admins of the group'),
     head: joi.string().required().description('brightid of the member who is being granted the leadership of the family group'),
     group: joi.string().required().description('the unique id of the family group'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the head user represented by id'),
@@ -121,6 +121,7 @@ schemas = Object.assign({
     hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
     recoveryConnections: joi.array().items(joi.object({
       id: joi.string().required().description('brightid of recovery connection'),
+      isActive: joi.boolean().description('true if recovery connection active now'),
       activeAfter: joi.number().required().description('milliseconds until activation'),
       activeBefore: joi.number().required().description('milliseconds until inactivation'),
     })).description('list of recovery connections for the user specified by id'),
@@ -197,6 +198,7 @@ schemas = Object.assign({
       isSponsored: joi.boolean(),
       recoveryConnections: joi.array().items(joi.object({
         id: joi.string().required().description('brightid of recovery connection'),
+        isActive: joi.boolean().description('true if recovery connection active now'),
         activeAfter: joi.number().required().description('milliseconds until activation'),
         activeBefore: joi.number().required().description('milliseconds until inactivation'),
       })).description('list of recovery connections for the user'),
@@ -239,6 +241,7 @@ schemas = Object.assign({
       signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
       recoveryConnections: joi.array().items(joi.object({
         id: joi.string().required().description('brightid of recovery connection'),
+        isActive: joi.boolean().description('true if recovery connection active now'),
         activeAfter: joi.number().required().description('milliseconds until activation'),
         activeBefore: joi.number().required().description('milliseconds until inactivation'),
       })).description('list of recovery connections for the user specified by id'),

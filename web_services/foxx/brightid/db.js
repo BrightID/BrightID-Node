@@ -200,7 +200,7 @@ function invite(inviter, invitee, groupId, data, timestamp) {
     if (hasFamilyGroup(invitee)['isMember']) {
       throw new errors.AlreadyIsFamilyGroupMember();
     }
-    let members = usersInGroupsColl.byExample({
+    const members = usersInGroupsColl.byExample({
       _to: "groups/" + group._key,
     }).toArray().map(e => e._from);
     const conectedMembers = query`
@@ -835,7 +835,7 @@ function userEligibleGroupsToVouch(userId) {
   return result;
 }
 
-function transferFamilyHead(key, head, groupId) {
+function changeFamilyHead(key, head, groupId) {
   if (! groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
@@ -845,15 +845,15 @@ function transferFamilyHead(key, head, groupId) {
     })) {
     throw new errors.IneligibleFamilyGroupHead();
   }
-  if (hasFamilyGroup(key)['isHead']) {
+  if (hasFamilyGroup(head)['isHead']) {
     throw new errors.AlreadyIsFamilyGroupHead();
   }
   const group = groupsColl.document(groupId);
-  if (! group.head == key) {
-    throw new errors.NotHeadError();
+  if (! group.admins || ! group.admins.includes(key)) {
+    throw new errors.NotAdminError();
   }
-  groupsColl.update(group, { head });
-  addAdmin(key, head, groupId);
+  // update head and empty the group's vouchers
+  groupsColl.update(group, { head, vouchers: [] });
 }
 
 module.exports = {
@@ -898,5 +898,5 @@ module.exports = {
   hasFamilyGroup,
   vouchFamilyGroup,
   userEligibleGroupsToVouch,
-  transferFamilyHead,
+  changeFamilyHead,
 };
