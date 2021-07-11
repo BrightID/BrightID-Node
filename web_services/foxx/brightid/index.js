@@ -80,52 +80,6 @@ const handlers = {
     }
   },
 
-  userGet: function(req, res){
-    const id = req.param('id');
-    const user = db.loadUser(id);
-    if (! user) {
-      throw new errors.UserNotFoundError(id);
-    }
-
-    const verifications = db.userVerifications(id).map(v => v.name);
-    const outboundConnections = db.userConnections(id, 'outbound').map(conn => {
-      const u = db.userToDic(conn.id);
-      u.level = conn.level;
-      u.reportReason = conn.reportReason;
-      return u;
-    });
-    const inboundConnections = db.userConnections(id, 'inbound').map(conn => {
-      const u = db.userToDic(conn.id);
-      u.level = conn.level;
-      u.reportReason = conn.reportReason;
-      return u;
-    });
-    let groups = db.userGroups(id);
-    groups = groups.map(group => {
-      const g = db.groupToDic(group.id);
-      g.joined = group.timestamp;
-      return g;
-    });
-
-    const invites = db.userInvites(id);
-
-    res.send({
-      data: {
-        score: user.score,
-        createdAt: user.createdAt,
-        flaggers: db.getReporters(id),
-        recoveryConnections: Object.values(db.getRecoveryConnections(id)),
-        invites,
-        groups,
-        outboundConnections,
-        inboundConnections,
-        verifications,
-        isSponsored: db.isSponsored(id),
-        signingKeys: user.signingKeys
-      }
-    });
-  },
-
   userConnectionsGet: function(req, res) {
     const id = req.param('id');
     const direction = req.param('direction');
@@ -145,11 +99,29 @@ const handlers = {
     });
   },
 
-  userEligibleGroupsToVouchGet: function(req, res) {
+  userInvitesGet: function(req, res) {
     const id = req.param('id');
     res.send({
       data: {
-        groups: db.userEligibleGroupsToVouch(id)
+        invites: db.userInvites(id)
+      }
+    });
+  },
+
+  userMembershipsGet: function(req, res) {
+    const id = req.param('id');
+    res.send({
+      data: {
+        memberships: db.userMemberships(id)
+      }
+    });
+  },
+
+  userGroupsToVouchGet: function(req, res) {
+    const id = req.param('id');
+    res.send({
+      data: {
+        groups: db.userGroupsToVouch(id)
       }
     });
   },
@@ -162,31 +134,29 @@ const handlers = {
       throw new errors.UserNotFoundError(id);
     }
 
+    const sponsored = db.isSponsored(id);
     const verifications = db.userVerifications(id);
+    const recoveryConnections = Object.values(db.getRecoveryConnections(id));
     const connections = db.userConnections(id, 'inbound');
-    const groups = db.userGroups(id);
+    const memberships = db.userMemberships(id);
     const requestorConnections = db.userConnections(requestor, 'outbound');
-    const requestorGroups = db.userGroups(requestor);
+    const requestorMemberships = db.userMemberships(requestor);
 
     const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
     const connectionsNum = connections.filter(isKnown).length;
-    const groupsNum = groups.length;
+    const groupsNum = memberships.length;
     const mutualConnections = _.intersection(
       connections.filter(isKnown).map(c => c.id),
       requestorConnections.filter(isKnown).map(c => c.id)
     );
     const mutualGroups = _.intersection(
-      groups.map(g => g.id),
-      requestorGroups.map(g => g.id)
+      membership.map(m => m.id),
+      requestorMembership.map(m => m.id)
     );
 
     const conn = connections.find(c => c.id === requestor);
-    const connectedAt = conn ? conn.timestamp: 0;
     const reports = connections.filter(c => c.level === 'reported').map(c => {
-      return {
-        id: c.id,
-        reportReason: c.reportReason
-      }
+      return { id: c.id, reason: c.reportReason };
     });
 
     res.send({
@@ -195,12 +165,13 @@ const handlers = {
         groupsNum,
         mutualConnections,
         mutualGroups,
-        connectedAt,
-        createdAt: user.createdAt,
         reports,
         verifications,
+        sponsored,
+        recoveryConnections,
+        connectedAt: conn.timestamp,
+        createdAt: user.createdAt,
         signingKeys: user.signingKeys,
-        recoveryConnections: Object.values(db.getRecoveryConnections(id)),
       }
     });
   },
@@ -468,23 +439,26 @@ router.post('/operations', handlers.operationsPost)
   .error(403, 'Bad signature')
   .error(429, 'Too Many Requests');
 
-router.get('/users/:id', handlers.userGet)
+
+router.get('/users/:id/memberships', handlers.userMembershipsGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
-  .summary('Get information about a user')
-  .description("Gets a user's score, verifications, joining date, lists of connections and groups.")
-  .response(schemas.userGetResponse)
-  .error(404, 'User not found');
+  .summary('Gets memberships of the user')
+  .response(schemas.userMembershipsGetResponse);
+
+router.get('/users/:id/invites', handlers.userInvitesGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user'))
+  .summary('Gets invites of the user')
+  .response(schemas.userInvitesGetResponse);
 
 router.get('/users/:id/verifications', handlers.userVerificationsGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
-  .summary('Get verifications of a user')
-  .description("Gets list of user's verification objects with their properties")
+  .summary('Gets verifications of the user')
   .response(schemas.userVerificationsGetResponse);
 
 router.get('/users/:id/profile/:requestor', handlers.userProfileGet)
   .pathParam('id', joi.string().required().description('the brightid of the user that info requested about'))
   .pathParam('requestor', joi.string().required().description('the brightid of the user that requested info'))
-  .summary('Get profile information of a user')
+  .summary('Gets profile information of a user')
   .response(schemas.userProfileGetResponse)
   .error(404, 'User not found');
 
@@ -492,14 +466,13 @@ router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .pathParam('direction', joi.string().required().valid('inbound', 'outbound').description('the direction of the connection'))
   .summary('Gets inbound or outbound connections of a user')
-  .description("Gets list of user's connections with levels and timestamps")
+  .description('Gets user\'s connections with levels and timestamps')
   .response(schemas.userConnectionsGetResponse);
 
-router.get('/users/:id/eligibleGroupsToVouch', handlers.userEligibleGroupsToVouchGet)
+router.get('/users/:id/groupsToVouch', handlers.userGroupsToVouchGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
-  .summary('Get a list of the family groups')
-  .description("Get the list of family groups which the user can evaluate them")
-  .response(schemas.userEligibleGroupsToVouchGetResponse);
+  .summary('Gets family groups which the user can vouch for')
+  .response(schemas.userGroupsToVouchGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
@@ -550,21 +523,21 @@ router.get('/verifications/:app/:appId/', handlers.verificationsGet)
 
 router.get('/apps/:app', handlers.appGet)
   .pathParam('app', joi.string().required().description("Unique name of the app"))
-  .summary("Get information about an app")
+  .summary("Gets information about an app")
   .response(schemas.appGetResponse)
   .error(404, 'app not found');
 
 router.get('/apps', handlers.allAppsGet)
-  .summary("Get all apps")
+  .summary("Gets all apps")
   .response(schemas.allAppsGetResponse);
 
 router.get('/state', handlers.stateGet)
-  .summary("Get state of this node")
+  .summary("Gets state of this node")
   .response(schemas.stateGetResponse);
 
 router.get('/groups/:id', handlers.groupGet)
   .pathParam('id', joi.string().required().description('the id of the group'))
-  .summary('Get information about a group')
+  .summary('Gets information about a group')
   .description("Gets a group's admins, info, region, seed, type, url, timestamp, members and invited list.")
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');

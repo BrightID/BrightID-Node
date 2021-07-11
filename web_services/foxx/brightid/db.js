@@ -90,7 +90,7 @@ function connect(op) {
   }
 }
 
-function userConnections(userId, direction = 'outbound') {
+function userConnections(userId, direction='outbound') {
   let query, resIdAttr;
   if (direction == 'outbound') {
     query = { _from: 'users/' + userId };
@@ -100,42 +100,14 @@ function userConnections(userId, direction = 'outbound') {
     resIdAttr = '_from';
   }
   return connectionsColl.byExample(query).toArray().map(conn => {
+    const id = conn[resIdAttr].replace('users/', '');
     return {
-      id: conn[resIdAttr].replace('users/', ''),
+      id,
       level: conn.level,
-      reportReason: conn.reportReason || undefined,
+      reportReason: conn.reportReason,
       timestamp: conn.timestamp
-    }
+    };
   });
-}
-
-function userToDic(userId) {
-  const u = usersColl.document('users/' + userId);
-  const {
-    isHead: isFamilyGroupHead,
-    isMember: isFamilyGroupMember,
-  } = hasFamilyGroup(userId);
-  return {
-    id: u._key,
-    signingKeys: u.signingKeys,
-    verifications: userVerifications(u._key).map(v => v.name),
-    recoveryConnections: Object.values(getRecoveryConnections(u._key)),
-    reporters: getReporters(u._key),
-    createdAt: u.createdAt,
-    isFamilyGroupHead,
-    isFamilyGroupMember,
-  }
-}
-
-function getReporters(user) {
-  const reporters = {};
-  connectionsColl.byExample({
-    _to: 'users/' + user,
-    level: 'reported'
-  }).toArray().forEach(c => {
-    reporters[c._from.replace('users/', '')] = c.reportReason;
-  });
-  return reporters;
 }
 
 function groupMembers(groupId) {
@@ -144,20 +116,7 @@ function groupMembers(groupId) {
   }).toArray().map(e => e._from.replace('users/', ''));
 }
 
-function groupToDic(groupId) {
-  const group = groupsColl.document('groups/' + groupId);
-  return {
-    id: group._key,
-    members: groupMembers(group._key),
-    type: group.type || 'general',
-    admins: group.admins,
-    url: group.url,
-    timestamp: group.timestamp,
-    head: group.head || '',
-  }
-}
-
-function userGroups(userId) {
+function userMemberships(userId) {
   return usersInGroupsColl.byExample({
     _from: 'users/' + userId
   }).toArray().map( ug => {
@@ -247,21 +206,12 @@ function loadUser(id) {
   return query`RETURN DOCUMENT(${usersColl}, ${id})`.toArray()[0];
 }
 
-function userScore(key) {
-  return query`
-    FOR u in ${usersColl}
-      FILTER u._key  == ${key}
-      RETURN u.score
-  `.toArray()[0];
-}
-
 function createUser(key, timestamp) {
   // already exists?
   const user = loadUser(key);
 
   if (!user) {
     return usersColl.insert({
-      score: 0,
       signingKeys: [urlSafeB64ToB64(key)],
       createdAt: timestamp,
       _key: key
@@ -298,7 +248,6 @@ function createGroup(groupId, key1, url, type, timestamp) {
 
   const group = {
     _key: groupId,
-    score: 0,
     admins: [key1],
     url,
     type,
@@ -799,7 +748,7 @@ function vouchFamilyGroup(id, groupId, timestamp) {
   groupsColl.update(group, { vouchers: group.vouchers });
 }
 
-function userEligibleGroupsToVouch(userId) {
+function userGroupsToVouch(userId) {
   const result = [];
   const connections = query`
     FOR conn in ${connectionsColl}
@@ -866,16 +815,16 @@ module.exports = {
   invite,
   dismiss,
   userConnections,
-  userGroups,
-  loadUser,
+  userMemberships,
   userInvites,
+  userVerifications,
+  userGroupsToVouch,
+  loadUser,
   createUser,
   groupMembers,
-  userScore,
   getApp,
   getApps,
   appToDic,
-  userVerifications,
   sponsor,
   isSponsored,
   loadOperation,
@@ -884,10 +833,7 @@ module.exports = {
   setSigningKey,
   unusedSponsorships,
   getState,
-  getReporters,
   getRecoveryConnections,
-  userToDic,
-  groupToDic,
   addSigningKey,
   removeSigningKey,
   removeAllSigningKeys,
@@ -897,6 +843,5 @@ module.exports = {
   getCachedParams,
   hasFamilyGroup,
   vouchFamilyGroup,
-  userEligibleGroupsToVouch,
   changeFamilyHead,
 };

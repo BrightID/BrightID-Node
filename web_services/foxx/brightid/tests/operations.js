@@ -235,7 +235,7 @@ describe('operations', function(){
   });
 
   it('should be able to "Add Membership"', function () {
-    const groupId = db.userGroups(u1.id)[0].id;
+    const groupId = db.userMemberships(u1.id)[0].id;
     const timestamp = Date.now();
     db.invite(u1.id, u2.id, groupId, 'data', timestamp);
     const op = {
@@ -256,7 +256,7 @@ describe('operations', function(){
 
   it('should be able to "Remove Membership"', function () {
     const timestamp = Date.now();
-    const groupId = db.userGroups(u1.id)[0].id;
+    const groupId = db.userMemberships(u1.id)[0].id;
     const op = {
       'v': 6,
       'name': 'Remove Membership',
@@ -276,7 +276,7 @@ describe('operations', function(){
 
   it('admins should be able to "Invite" someone to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userGroups(u1.id)[0].id;
+    const groupId = db.userMemberships(u1.id)[0].id;
     const data = 'some data';
     const op = {
       'v': 6,
@@ -300,7 +300,7 @@ describe('operations', function(){
 
   it('admins should be able to "Dismiss" someone from the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userGroups(u1.id)[0].id;
+    const groupId = db.userMemberships(u1.id)[0].id;
     db.addMembership(groupId, u2.id, Date.now());
     db.groupMembers(groupId).should.include(u2.id);
     const op = {
@@ -321,7 +321,7 @@ describe('operations', function(){
 
   it('admins should be able to "Add Admin" to the group', function () {
     const timestamp = Date.now();
-    const groupId = db.userGroups(u1.id)[0].id;
+    const groupId = db.userMemberships(u1.id)[0].id;
     db.invite(u1.id, u2.id, groupId, 'data', Date.now());
     db.addMembership(groupId, u2.id, Date.now());
     db.groupMembers(groupId).should.include(u2.id);
@@ -344,7 +344,7 @@ describe('operations', function(){
   it('admins should be able "Update Group" to edit name and photo for groups', function () {
     const newUrl = 'http://url.com/newDummyUrl';
     const timestamp = Date.now();
-    const groupId = db.userGroups(u2.id)[0].id;
+    const groupId = db.userMemberships(u2.id)[0].id;
     const op = {
       'v': 6,
       'name': 'Update Group',
@@ -609,7 +609,7 @@ describe('operations', function(){
     it('eligible users should be able to vouch family groups by "Vouch Family Group"', function() {
       const timestamp = Date.now();
       const groupId = hash('randomstr1');
-      db.userEligibleGroupsToVouch(u9.id).should.include(groupId);
+      db.userGroupsToVouch(u9.id).should.include(groupId);
       const op = {
         'v': 6,
         'name': 'Vouch Family Group',
@@ -623,7 +623,7 @@ describe('operations', function(){
       );
       apply(op);
       groupsColl.document(groupId).vouchers.should.include(u9.id);
-      db.userEligibleGroupsToVouch(u9.id).should.not.include(groupId);
+      db.userGroupsToVouch(u9.id).should.not.include(groupId);
     });
 
     it('admins should be able to "Change Family Head" of the group', function() {
@@ -653,7 +653,7 @@ describe('operations', function(){
     it('after any changes (add/remove member or change head) in a family group all the vouchs will expired and eligible users can vouch again', function() {
       const groupId = hash('randomstr1');
       groupsColl.document(groupId).vouchers.should.deep.equal([]);
-      db.userEligibleGroupsToVouch(u9.id).should.include(groupId);
+      db.userGroupsToVouch(u9.id).should.include(groupId);
     });
 
     it('head of a family group should not be able to be head of another family group', function() {

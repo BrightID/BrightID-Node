@@ -13,7 +13,7 @@ const operations = {
     level: joi.string().valid('reported', 'suspicious', 'just met', 'already known', 'recovery').required().description('level of confidence'),
     reportReason: joi.string().valid('spammer', 'fake', 'duplicate', 'deceased', 'replaced', 'other').description('for reported level, the reason for reporting the user specificed by id2'),
     replacedWith: joi.string().description('for reported as replaced, the new brightid of the replaced account'),
-    requestProof: joi.string().description('brightid + "|" + timestamp signed by the reported user to prove that he requested the connection'),
+    requestProof: joi.string().description('brightid + | + timestamp signed by the reported user to prove that he requested the connection'),
   },
   'Add Group': {
     group: joi.string().required().description('the unique id of the group'),
@@ -48,7 +48,7 @@ const operations = {
   'Sponsor': {
     id: joi.string().required().description('the brightid of the user that is being sponsored'),
     app: joi.string().required().description('the app name that user is being sponsored by'),
-    sig: joi.string().required().description("unblinded signature of Chaum's blind signature schema using deterministic json representation of {id, app} as message"),
+    sig: joi.string().required().description('unblinded signature of Chaum\'s blind signature schema using deterministic json representation of {id, app} as message'),
   },
   'Invite': {
     inviter: joi.string().required().description('brightid of the user who has admin rights in the group and can invite others to the group'),
@@ -113,35 +113,11 @@ Object.keys(operations).forEach(name => {
 
 // extend lower-level schemas with higher-level schemas
 schemas = Object.assign({
-  user: joi.object({
-    id: joi.string().required().description('the user id'),
-    signingKeys: joi.string().required().description('signingKeys of the user'),
-    level: joi.string().required().description('the confidence level set on this user'),
-    verifications: joi.array().items(joi.string()),
-    hasPrimaryGroup: joi.boolean().description('true if user has primary group'),
-    recoveryConnections: joi.array().items(joi.object({
-      id: joi.string().required().description('brightid of recovery connection'),
-      isActive: joi.boolean().description('true if recovery connection active now'),
-      activeAfter: joi.number().required().description('milliseconds until activation'),
-      activeBefore: joi.number().required().description('milliseconds until inactivation'),
-    })).description('list of recovery connections for the user specified by id'),
-    reporters: joi.object().description('an object containing ids of reporters as key and reason as value'),
-    createdAt: schemas.timestamp.required().description('the user creation timestamp'),
-  }),
   connection: joi.object({
     id: joi.string().required().description('the brightid of the connection'),
     level: joi.string().required().description('the level of the connection'),
     timestamp: schemas.timestamp.required().description('the timestamp of the connection'),
-  }),
-  group: joi.object({
-    id: joi.string().required().description('unique identifier of the group'),
-    members: joi.array().items(joi.string()).required().description('brightids of group members'),
-    type: joi.string().required().description('type of group which is "primary" or "general"'),
-    admins: joi.array().items(joi.string()).required().description('brightids of group admins'),
-    url: joi.string().required().description('url of encrypted group data (name and photo)'),
-    timestamp: schemas.timestamp.required().description('group creation timestamp'),
-    head: joi.string().description('brightid of the member who is being granted the leadership of the family group'),
-    joined: schemas.timestamp.description('timestamp when the user joined the group'),
+    reportReason: joi.string().valid('spammer', 'fake', 'duplicate', 'deceased', 'replaced', 'other').description('for reported level, the reason for reporting'),
   }),
   invite: joi.object({
     id: joi.string().required().description('unique identifier of invite'),
@@ -169,6 +145,20 @@ schemas = Object.assign({
     sponsorPublicKey: joi.string().description('the public part of the key pair that the app uses to sign sponsor requests'),
     nodeUrl: joi.string().description('the url of the node that the app uses to query verification from'),
   }),
+  recoveryConnection: joi.object({
+    id: joi.string().required().description('brightid of recovery connection'),
+    isActive: joi.boolean().description('true if recovery connection active now'),
+    activeAfter: joi.number().required().description('milliseconds until activation'),
+    activeBefore: joi.number().required().description('milliseconds until inactivation'),
+  }),
+  report: joi.object({
+    id: joi.string().required().description('brightid of the reporter'),
+    reason: joi.string().required().valid('spammer', 'fake', 'duplicate', 'deceased', 'replaced', 'other').description('the reason for reporting'),
+  }),
+  membership: joi.object({
+    id: joi.string().required().description('the id of the group'),
+    timestamp: schemas.timestamp.required().description('the timestamp when user joined the group'),
+  }),
 }, schemas);
 
 schemas = Object.assign({
@@ -183,27 +173,19 @@ schemas = Object.assign({
 schemas = Object.assign({
   operationPostResponse: joi.object({
     data: joi.object({
-      hash: joi.string().required().description("sha256 hash of the operation message used for generating signature"),
+      hash: joi.string().required().description('sha256 hash of the operation message used for generating signature'),
     })
   }),
 
-  userGetResponse: joi.object({
+  userMembershipsGetResponse: joi.object({
     data: joi.object({
-      createdAt: schemas.timestamp.required(),
-      groups: joi.array().items(schemas.group),
+      memberships: joi.array().items(schemas.membership),
+    })
+  }),
+
+  userInvitesGetResponse: joi.object({
+    data: joi.object({
       invites: joi.array().items(schemas.invite),
-      outboundConnections: joi.array().items(schemas.user),
-      inboundConnections: joi.array().items(schemas.user),
-      verifications: joi.array().items(joi.string()),
-      isSponsored: joi.boolean(),
-      recoveryConnections: joi.array().items(joi.object({
-        id: joi.string().required().description('brightid of recovery connection'),
-        isActive: joi.boolean().description('true if recovery connection active now'),
-        activeAfter: joi.number().required().description('milliseconds until activation'),
-        activeBefore: joi.number().required().description('milliseconds until inactivation'),
-      })).description('list of recovery connections for the user'),
-      reporters: joi.object().description("an object containing ids of flaggers as key and reason as value"),
-      signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
     })
   }),
 
@@ -213,7 +195,7 @@ schemas = Object.assign({
     })
   }),
 
-  userEligibleGroupsToVouchGetResponse: joi.object({
+  userGroupsToVouchGetResponse: joi.object({
     data: joi.object({
       groups: joi.array().items(joi.string())
     })
@@ -233,25 +215,18 @@ schemas = Object.assign({
       mutualGroups: joi.array().items(joi.string()).required().description('ids of mutual groups'),
       connectedAt: schemas.timestamp.required().description('timestamp of last connection'),
       createdAt: schemas.timestamp.required().description('creation time of user specified by id'),
-      reports: joi.array().items(joi.object({
-        id: joi.string().required().description('brightid of reporter'),
-        reportReason: joi.string().required().description('the reason of reporting'),
-      })).description('list of reports for the user specified by id'),
+      reports: joi.array().items(schemas.report).required().description('list of reporters of the user with the reason for each report'),
       verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),
       signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
-      recoveryConnections: joi.array().items(joi.object({
-        id: joi.string().required().description('brightid of recovery connection'),
-        isActive: joi.boolean().description('true if recovery connection active now'),
-        activeAfter: joi.number().required().description('milliseconds until activation'),
-        activeBefore: joi.number().required().description('milliseconds until inactivation'),
-      })).description('list of recovery connections for the user specified by id'),
+      recoveryConnections: joi.array().items(schemas.recoveryConnection).required().description('list of recovery connections for the user'),
+      sponsored: joi.boolean().required().description('if user is sponsored'),
     })
   }),
 
   operationGetResponse: joi.object({
     data: joi.object({
-      state: joi.string().valid("init", "sent", "applied", "failed").description("state of operation"),
-      result: joi.string().description("result of operation after being applied. If operation is failed this field contain the reason.")
+      state: joi.string().valid('init', 'sent', 'applied', 'failed').description('state of operation'),
+      result: joi.string().description('result of operation after being applied. If operation is failed this field contain the reason.')
     })
   }),
 
@@ -271,7 +246,7 @@ schemas = Object.assign({
       verificationsBlock: joi.number().integer().required().description('the block that scorer service updated verifications based on operations got applied before that block'),
       initOp: joi.number().integer().required().description('number of operations in the init state'),
       sentOp: joi.number().integer().required().description('number of operations in the sent state'),
-      verificationsHashes: joi.array().items(joi.object()).required().description("different verifications' hashes for last 2 snapshots"),
+      verificationsHashes: joi.array().items(joi.object()).required().description('different verifications\' hashes for last 2 snapshots'),
     })
   }),
 
@@ -297,7 +272,7 @@ schemas = Object.assign({
 
   verificationSigGetResponse: joi.object({
     data: joi.object({
-      response: joi.string().description("WI-Schnorr server response that will be used by client to generate final signature"),
+      response: joi.string().description('WI-Schnorr server response that will be used by client to generate final signature'),
     })
   }),
 
@@ -310,20 +285,20 @@ schemas = Object.assign({
       delta: joi.string().required(),
     }).required().description('unblinded sig'),
     verification: joi.string().required().description('verification required for using the app'),
-    roundedTimestamp: joi.number().integer().required().description("timestamp that is rounded to app's required precision")
+    roundedTimestamp: joi.number().integer().required().description('timestamp that is rounded to app\'s required precision')
   }),
 
   verificationsGetResponse: joi.object({
-    data:  joi.array().items(
+    data: joi.array().items(
       joi.object({
-        unique: joi.string().description("true if user is unique under given app"),
-        app: joi.string().description("unique app id"),
-        appId: joi.string().description("the id of the user within the app"),
-        verification: joi.string().description("verification expiration"),
-        verificationHash: joi.string().description("sha256 of the verification expiration"),
-        timestamp: schemas.timestamp.description("timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter"),
-        sig: joi.string().description("verification message signed by the node"),
-        publicKey: joi.string().description("the node's public key")
+        unique: joi.string().description('if user is unique under given app'),
+        app: joi.string().description('unique id of the app'),
+        appId: joi.string().description('the id of the user within the app'),
+        verification: joi.string().description('verification expression'),
+        verificationHash: joi.string().description('sha256 of the verification expression'),
+        timestamp: schemas.timestamp.description('timestamp of the verification if a timestamp was requested'),
+        sig: joi.string().description('verification message signed by the node'),
+        publicKey: joi.string().description('the node\'s public key')
       })
     )
   }),
