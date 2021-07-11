@@ -150,8 +150,8 @@ const handlers = {
       requestorConnections.filter(isKnown).map(c => c.id)
     );
     const mutualGroups = _.intersection(
-      membership.map(m => m.id),
-      requestorMembership.map(m => m.id)
+      memberships.map(m => m.id),
+      requestorMemberships.map(m => m.id)
     );
 
     const conn = connections.find(c => c.id === requestor);
