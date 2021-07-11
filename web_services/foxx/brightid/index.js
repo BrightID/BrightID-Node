@@ -155,6 +155,7 @@ const handlers = {
     );
 
     const conn = connections.find(c => c.id === requestor);
+    const connectedAt = conn ? conn.timestamp : undefined;
     const reports = connections.filter(c => c.level === 'reported').map(c => {
       return { id: c.id, reason: c.reportReason };
     });
@@ -169,7 +170,7 @@ const handlers = {
         verifications,
         sponsored,
         recoveryConnections,
-        connectedAt: conn.timestamp,
+        connectedAt,
         createdAt: user.createdAt,
         signingKeys: user.signingKeys,
       }
