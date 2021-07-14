@@ -61,7 +61,6 @@ describe('groups', function() {
     });
     it('admins should be able to invite any user to the group', function (){
       db.invite('a', 'd', 'g3', 'data', Date.now());
-      console.log(db.userInvites('d').map(group => group.id), 44);
       db.userInvites('d').map(invite => invite.group).should.deep.equal(['g3']);
     });
     it('invited user should be able to join the group', function (){
@@ -171,14 +170,14 @@ describe('groups', function() {
     it('users that are not connected to all members of the family groups should not be able to invite to the family group', function() {
       (() => {
         db.invite('a1', 'c1', 'fg1', 'data', Date.now());
-      }).should.throw(errors.IneligibleFamilyGroupMember);
+      }).should.throw(errors.IneligibleFamilyMember);
     });
-    it('head of a family group should not be able to be head of another family groups', function() {
+    it('head of a family group should not be able to be head of another family group', function() {
       (() => {
         db.createGroup('fg2', 'a1', url, 'family', Date.now());
-      }).should.throw(errors.AlreadyIsFamilyGroupHead);
+      }).should.throw(errors.AlreadyIsFamilyHead);
     });
-    it("head of a family group should be able be member of another family groups", function() {
+    it("head of a family group should be able be member of another family group", function() {
       db.createGroup('fg2', 'd1', url, 'family', Date.now());
       db.invite('d1', 'a1', 'fg2', 'data', Date.now());
       db.addMembership('fg2', 'a1', Date.now());
@@ -188,32 +187,32 @@ describe('groups', function() {
     it('users that are member of family groups should not be able to invited to other family groups', function() {
       (() => {
         db.invite('d1', 'b1', 'fg2', 'data', Date.now());
-      }).should.throw(errors.AlreadyIsFamilyGroupMember);
+      }).should.throw(errors.AlreadyIsFamilyMember);
     });
     it('family groups which waiting for users to join ineligible to vouch for', function() {
       (() => {
         db.invite('d1', 'e1', 'fg2', 'data', Date.now());
-        db.vouchFamilyGroup('f1', 'fg2', Date.now());
+        db.vouchFamily('f1', 'fg2', Date.now());
       }).should.throw(errors.IneligibleToVouch);
     });
     it('ineligible users should not be able to vouch family groups', function() {
       (() => {
-        db.userGroupsToVouch('e1').should.not.include('fg1');
-        db.vouchFamilyGroup('e1', 'fg1', Date.now());
+        db.userFamiliesToVouch('e1').should.not.include('fg1');
+        db.vouchFamily('e1', 'fg1', Date.now());
       }).should.throw(errors.IneligibleToVouchFor);
     });
     it('eligible users should be able to vouch family groups', function() {
       invitationsColl.removeByExample({ _to: 'groups/fg2' });
-      db.userGroupsToVouch('e1').should.include('fg2');
-      db.vouchFamilyGroup('e1', 'fg2', Date.now());
+      db.userFamiliesToVouch('e1').should.include('fg2');
+      db.vouchFamily('e1', 'fg2', Date.now());
       groupsColl.document('fg2').vouchers.should.include('e1');
     });
     it('any changes in members of a family group should remove all already submitted vouches and vouchers should vouch again if they still eligible', function() {
       db.invite('d1', 'f1', 'fg2', 'data', Date.now());
       db.addMembership('fg2', 'f1', Date.now());
       groupsColl.document('fg2').vouchers.length.should.equal(0);
-      db.userGroupsToVouch('e1').should.include('fg2');
-      db.vouchFamilyGroup('e1', 'fg2', Date.now());
+      db.userFamiliesToVouch('e1').should.include('fg2');
+      db.vouchFamily('e1', 'fg2', Date.now());
       groupsColl.document('fg2').vouchers.should.include('e1');
     });
   });

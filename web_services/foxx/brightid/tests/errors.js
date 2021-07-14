@@ -106,7 +106,7 @@ describe('errors', function() {
 
   it('should throw UserNotFoundError when the user does not exist', function() {
     const id = 'testId';
-    const resp = request.get(`${baseUrl}/users/${id}`);
+    const resp = request.get(`${baseUrl}/users/${id}/profile/dummy`);
     resp.json.code.should.equal(404);
     resp.json.errorNum.should.equal(errors.USER_NOT_FOUND);
     resp.json.errorMessage.should.equal(`The user ${id} is not found.`);

@@ -19,7 +19,6 @@ const OPERATION_APPLIED_BEFORE = 25;
 const TOO_BIG_OPERATION = 26;
 const ALREADY_HAS_PRIMARY_GROUP = 28;
 const NEW_USER_BEFORE_FOUNDERS_JOIN = 29;
-const INVALID_GROUP_TYPE = 30;
 const DUPLICATE_GROUP = 31;
 const INVALID_COFOUNDERS = 32;
 const INELIGIBLE_NEW_ADMIN = 33;
@@ -35,13 +34,13 @@ const INELIGIBLE_RECOVERY_CONNECTION = 43;
 const WISCHNORR_PASSWORD_NOT_SET = 45;
 const INVALID_ROUNDED_TIMESTAMP = 46;
 const DUPLICATE_SIG_REQUEST_ERROR = 47;
-const ALREADY_IS_FAMILY_GROUP_HEAD = 48;
-const ALREADY_IS_FAMILY_GROUP_MEMBER = 49;
-const INELIGIBLE_FAMILY_GROUP_MEMBER = 50;
+const ALREADY_IS_FAMILY_HEAD = 48;
+const ALREADY_IS_FAMILY_MEMBER = 49;
+const INELIGIBLE_FAMILY_MEMBER = 50;
 const NOT_FAMILY_GROUP = 51;
 const INELIGIBLE_TO_VOUCH = 52;
 const INELIGIBLE_TO_VOUCH_FOR = 53;
-const INELIGIBLE_FAMILY_GROUP_HEAD = 54;
+const INELIGIBLE_FAMILY_HEAD = 54;
 const NOT_HEAD = 55;
 const DUPLICATE_UID_ERROR = 56;
 const DUPLICATE_SIGNERS = 57;
@@ -294,15 +293,6 @@ class NewUserBeforeFoundersJoinError extends ForbiddenError {
   }
 }
 
-class InvalidGroupTypeError extends ForbiddenError {
-  constructor(type) {
-    super();
-    this.errorNum = INVALID_GROUP_TYPE;
-    this.message = `${type} is not a valid group type.`;
-    this.type = type;
-  }
-}
-
 class DuplicateGroupError extends ForbiddenError {
   constructor() {
     super();
@@ -401,26 +391,26 @@ class DuplicateSigRequestError extends ForbiddenError {
   }
 }
 
-class AlreadyIsFamilyGroupHead extends ForbiddenError {
+class AlreadyIsFamilyHead extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = ALREADY_IS_FAMILY_GROUP_HEAD;
+    this.errorNum = ALREADY_IS_FAMILY_HEAD;
     this.message = 'The user already is head of a family group.';
   }
 }
 
-class AlreadyIsFamilyGroupMember extends ForbiddenError {
+class AlreadyIsFamilyMember extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = ALREADY_IS_FAMILY_GROUP_MEMBER;
+    this.errorNum = ALREADY_IS_FAMILY_MEMBER;
     this.message = 'The user already is member of a family group.';
   }
 }
 
-class IneligibleFamilyGroupMember extends ForbiddenError {
+class IneligibleFamilyMember extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = INELIGIBLE_FAMILY_GROUP_MEMBER;
+    this.errorNum = INELIGIBLE_FAMILY_MEMBER;
     this.message = 'The user is not eligible to join this family group.';
   }
 }
@@ -429,7 +419,7 @@ class NotFamilyGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_FAMILY_GROUP;
-    this.message = 'Requstor is not admin of the group.';
+    this.message = 'The group is not a family group.';
   }
 }
 
@@ -449,10 +439,10 @@ class IneligibleToVouchFor extends ForbiddenError {
   }
 }
 
-class IneligibleFamilyGroupHead extends ForbiddenError {
+class IneligibleFamilyHead extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = INELIGIBLE_FAMILY_GROUP_HEAD;
+    this.errorNum = INELIGIBLE_FAMILY_HEAD;
     this.message = 'user is not eligible to be head of the family group.';
   }
 }
@@ -522,7 +512,6 @@ module.exports = {
   TOO_BIG_OPERATION,
   ALREADY_HAS_PRIMARY_GROUP,
   NEW_USER_BEFORE_FOUNDERS_JOIN,
-  INVALID_GROUP_TYPE,
   DUPLICATE_GROUP,
   INVALID_COFOUNDERS,
   INELIGIBLE_NEW_ADMIN,
@@ -537,13 +526,13 @@ module.exports = {
   WISCHNORR_PASSWORD_NOT_SET,
   INVALID_ROUNDED_TIMESTAMP,
   DUPLICATE_SIG_REQUEST_ERROR,
-  ALREADY_IS_FAMILY_GROUP_HEAD,
-  ALREADY_IS_FAMILY_GROUP_MEMBER,
-  INELIGIBLE_FAMILY_GROUP_MEMBER,
+  ALREADY_IS_FAMILY_HEAD,
+  ALREADY_IS_FAMILY_MEMBER,
+  INELIGIBLE_FAMILY_MEMBER,
   NOT_FAMILY_GROUP,
   INELIGIBLE_TO_VOUCH,
   INELIGIBLE_TO_VOUCH_FOR,
-  INELIGIBLE_FAMILY_GROUP_HEAD,
+  INELIGIBLE_FAMILY_HEAD,
   NOT_HEAD,
   DUPLICATE_UID_ERROR,
   DUPLICATE_SIGNERS,
@@ -578,7 +567,6 @@ module.exports = {
   NotAdminError,
   AlreadyHasPrimaryGroupError,
   NewUserBeforeFoundersJoinError,
-  InvalidGroupTypeError,
   DuplicateGroupError,
   InvalidCoFoundersError,
   IneligibleNewAdminError,
@@ -591,13 +579,13 @@ module.exports = {
   InvalidRoundedTimestampError,
   WISchnorrPasswordNotSetError,
   DuplicateSigRequestError,
-  AlreadyIsFamilyGroupHead,
-  AlreadyIsFamilyGroupMember,
-  IneligibleFamilyGroupMember,
+  AlreadyIsFamilyHead,
+  AlreadyIsFamilyMember,
+  IneligibleFamilyMember,
   NotFamilyGroupError,
   IneligibleToVouch,
   IneligibleToVouchFor,
-  IneligibleFamilyGroupHead,
+  IneligibleFamilyHead,
   NotHeadError,
   DuplicateUIDError,
   DuplicateSignersError,

@@ -216,16 +216,16 @@ describe('operations', function(){
     const groupId = hash('randomstr');
 
     const op = {
-      'v': 6,
-      'name': 'Add Group',
-      'group': groupId,
-      'id1': u1.id,
+      v: 6,
+      name: 'Add Group',
+      group: groupId,
+      id: u1.id,
       url,
       type,
       timestamp,
     }
     const message = getMessage(op);
-    op.sig1 = uInt8ArrayToB64(
+    op.sig = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
@@ -407,7 +407,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
     );
     apply(op);
-    db.loadUser(u1.id).signingKeys.should.deep.equal([u4.signingKey]);
+    usersColl.document(u1.id).signingKeys.should.deep.equal([u4.signingKey]);
     u1.secretKey = u4.secretKey;
   });
 
@@ -429,7 +429,7 @@ describe('operations', function(){
     }
     addSigningKey(u2, u5.signingKey);
     addSigningKey(u2, u6.signingKey);
-    db.loadUser(u2.id).signingKeys.should.deep.equal([u2.signingKey, u5.signingKey, u6.signingKey]);
+    usersColl.document(u2.id).signingKeys.should.deep.equal([u2.signingKey, u5.signingKey, u6.signingKey]);
   });
 
   it('should be able to "Remove Signing Key"', function () {
@@ -446,7 +446,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
     );
     apply(op);
-    db.loadUser(u2.id).signingKeys.should.deep.equal([u2.signingKey, u6.signingKey]);
+    usersColl.document(u2.id).signingKeys.should.deep.equal([u2.signingKey, u6.signingKey]);
   });
 
   it('should be able to sign an operation using new Signing Key', function () {
@@ -483,7 +483,7 @@ describe('operations', function(){
       Object.values(nacl.sign.detached(strToUint8Array(message), u6.secretKey))
     );
     apply(op);
-    db.loadUser(u2.id).signingKeys.should.deep.equal([u6.signingKey]);
+    usersColl.document(u2.id).signingKeys.should.deep.equal([u6.signingKey]);
   });
 
   describe('family groups', function() {
@@ -522,16 +522,16 @@ describe('operations', function(){
       const url = 'http://url.com/dummy';
       const groupId = hash('randomstr1');
       const op = {
-        'v': 6,
-        'name': 'Add Group',
-        'group': groupId,
-        'id1': u7.id,
+        v: 6,
+        name: 'Add Group',
+        group: groupId,
+        id: u7.id,
         url,
         type,
         timestamp,
       }
       const message = getMessage(op);
-      op.sig1 = uInt8ArrayToB64(
+      op.sig = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u7.secretKey))
       );
       apply(op);
@@ -603,16 +603,16 @@ describe('operations', function(){
         Object.values(nacl.sign.detached(strToUint8Array(message), u7.secretKey))
       );
       const resp = apply(op);
-      resp.json.result.errorNum.should.equal(errors.INELIGIBLE_FAMILY_GROUP_MEMBER);
+      resp.json.result.errorNum.should.equal(errors.INELIGIBLE_FAMILY_MEMBER);
     });
 
-    it('eligible users should be able to vouch family groups by "Vouch Family Group"', function() {
+    it('eligible users should be able to vouch family groups by "Vouch Family"', function() {
       const timestamp = Date.now();
       const groupId = hash('randomstr1');
-      db.userGroupsToVouch(u9.id).should.include(groupId);
+      db.userFamiliesToVouch(u9.id).should.include(groupId);
       const op = {
         'v': 6,
-        'name': 'Vouch Family Group',
+        'name': 'Vouch Family',
         'group': groupId,
         'id': u9.id,
         timestamp,
@@ -623,7 +623,7 @@ describe('operations', function(){
       );
       apply(op);
       groupsColl.document(groupId).vouchers.should.include(u9.id);
-      db.userGroupsToVouch(u9.id).should.not.include(groupId);
+      db.userFamiliesToVouch(u9.id).should.not.include(groupId);
     });
 
     it('admins should be able to "Change Family Head" of the group', function() {
@@ -653,7 +653,7 @@ describe('operations', function(){
     it('after any changes (add/remove member or change head) in a family group all the vouchs will expired and eligible users can vouch again', function() {
       const groupId = hash('randomstr1');
       groupsColl.document(groupId).vouchers.should.deep.equal([]);
-      db.userGroupsToVouch(u9.id).should.include(groupId);
+      db.userFamiliesToVouch(u9.id).should.include(groupId);
     });
 
     it('head of a family group should not be able to be head of another family group', function() {
@@ -662,20 +662,20 @@ describe('operations', function(){
       const url = 'http://url.com/dummy';
       const groupId = hash('randomstr2');
       const op = {
-        'v': 6,
-        'name': 'Add Group',
-        'group': groupId,
-        'id1': u8.id,
+        v: 6,
+        name: 'Add Group',
+        group: groupId,
+        id: u8.id,
         url,
         type,
         timestamp,
       }
       const message = getMessage(op);
-      op.sig1 = uInt8ArrayToB64(
+      op.sig = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u8.secretKey))
       );
       const resp = apply(op);
-      resp.json.result.errorNum.should.equal(errors.ALREADY_IS_FAMILY_GROUP_HEAD);
+      resp.json.result.errorNum.should.equal(errors.ALREADY_IS_FAMILY_HEAD);
     });
 
     it('member of a family group should not be able to join another family group as member', function() {
@@ -684,16 +684,16 @@ describe('operations', function(){
       const url = 'http://url.com/dummy';
       const groupId = hash('randomstr3');
       let op = {
-        'v': 6,
-        'name': 'Add Group',
-        'group': groupId,
-        'id1': u9.id,
+        v: 6,
+        name: 'Add Group',
+        group: groupId,
+        id: u9.id,
         url,
         type,
         timestamp,
       }
       let message = getMessage(op);
-      op.sig1 = uInt8ArrayToB64(
+      op.sig = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), u9.secretKey))
       );
       apply(op);
@@ -714,7 +714,7 @@ describe('operations', function(){
         Object.values(nacl.sign.detached(strToUint8Array(message), u9.secretKey))
       );
       const resp = apply(op);
-      resp.json.result.errorNum.should.equal(errors.ALREADY_IS_FAMILY_GROUP_MEMBER);
+      resp.json.result.errorNum.should.equal(errors.ALREADY_IS_FAMILY_MEMBER);
     });
 
     it('head of a family group should be able to join another family group as a member', function() {

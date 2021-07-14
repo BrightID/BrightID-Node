@@ -29,7 +29,7 @@ describe('time window', function () {
     verificationsColl.truncate();
   });
   it('should get error after limit', function() {
-    operations.checkLimits({ name: 'Add Group', id1: 'a' }, 100, 2);
+    operations.checkLimits({ name: 'Add Group', id: 'a' }, 100, 2);
     operations.checkLimits({ name: 'Remove Group', id: 'a' }, 100, 2);
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'a' }, 100, 2);
@@ -44,8 +44,8 @@ describe('time window', function () {
   it('unverified users should have shared limit', function() {
     const now = Date.now();
     while (Date.now() - now <= 100);
-    operations.checkLimits({ name: 'Add Group', id1: 'b' }, 100, 2);
-    operations.checkLimits({ name: 'Add Group', id1: 'c' }, 100, 2);
+    operations.checkLimits({ name: 'Add Group', id: 'b' }, 100, 2);
+    operations.checkLimits({ name: 'Add Group', id: 'c' }, 100, 2);
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'b' }, 100, 2);
     }).should.throw(errors.TooManyOperationsError);
@@ -58,8 +58,8 @@ describe('time window', function () {
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'b' }, 100, 2);
     }).should.throw(errors.TooManyOperationsError);
-    operations.checkLimits({ name: 'Add Group', id1: 'c' }, 100, 2);
-    operations.checkLimits({ name: 'Add Group', id1: 'c' }, 100, 2);
+    operations.checkLimits({ name: 'Add Group', id: 'c' }, 100, 2);
+    operations.checkLimits({ name: 'Add Group', id: 'c' }, 100, 2);
     (() => {
       operations.checkLimits({ name: 'Add Membership', id: 'c' }, 100, 2);
     }).should.throw(errors.TooManyOperationsError);

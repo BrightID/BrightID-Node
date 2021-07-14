@@ -16,14 +16,14 @@ const {
 } = require('./encoding');
 const errors = require('./errors');
 
+const usersColl = arango._collection('users');
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
 const verifyUserSig = function(message, id, sig) {
-  const user = db.loadUser(id);
   // When "Connect" is called by a user that is not created yet
   // signingKey can be calculated from user's brightid
-  let signingKeys = user ? user.signingKeys : [urlSafeB64ToB64(id)];
-  for (signingKey of signingKeys) {
+  let signingKeys = usersColl.exists(id) ? usersColl.document(id).signingKeys : [urlSafeB64ToB64(id)];
+  for (let signingKey of signingKeys) {
     if (nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(signingKey))) {
       return signingKey;
     }
@@ -45,7 +45,7 @@ const verifyAppSig = function(message, app, sig) {
 
 const senderAttrs = {
   'Connect': ['id1'],
-  'Add Group': ['id1'],
+  'Add Group': ['id'],
   'Remove Group': ['id'],
   'Add Membership': ['id'],
   'Remove Membership': ['id'],
@@ -58,7 +58,7 @@ const senderAttrs = {
   'Remove Signing Key': ['id'],
   'Remove All Signing Keys': ['id'],
   'Update Group': ['id'],
-  'Vouch Family Group': ['id'],
+  'Vouch Family': ['id'],
   'Change Family Head': ['id'],
 };
 
@@ -71,7 +71,6 @@ function checkLimits(op, timeWindow, limit) {
     resetTime = now + timeWindow;
   }
   const senders = senderAttrs[op.name].map(attr => op[attr]);
-  const usersColl = arango._collection('users');
   for (let sender of senders) {
     // these condition structure is applying:
     // 1) a bucket for a verified user
@@ -108,7 +107,7 @@ function checkLimits(op, timeWindow, limit) {
 }
 
 const signerAndSigs = {
-  'Add Group': ['id1', 'sig1'],
+  'Add Group': ['id', 'sig'],
   'Remove Group': ['id', 'sig'],
   'Add Membership': ['id', 'sig'],
   'Remove Membership': ['id', 'sig'],
@@ -119,7 +118,7 @@ const signerAndSigs = {
   'Add Signing Key': ['id', 'sig'],
   'Remove Signing Key': ['id', 'sig'],
   'Remove All Signing Keys': ['id', 'sig'],
-  'Vouch Family Group': ['id', 'sig'],
+  'Vouch Family': ['id', 'sig'],
   'Change Family Head': ['id', 'sig'],
 }
 
@@ -177,7 +176,7 @@ function apply(op) {
   if (op['name'] == 'Connect') {
     return db.connect(op);
   } else if (op['name'] == 'Add Group') {
-    return db.createGroup(op.group, op.id1, op.url, op.type, op.timestamp);
+    return db.createGroup(op.group, op.id, op.url, op.type, op.timestamp);
   } else if (op['name'] == 'Remove Group') {
     return db.deleteGroup(op.group, op.id, op.timestamp);
   } else if (op['name'] == 'Add Membership') {
@@ -200,8 +199,8 @@ function apply(op) {
     return db.removeSigningKey(op.id, op.signingKey, op.timestamp);
   } else if (op['name'] == 'Update Group') {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
-  } else if (op['name'] == 'Vouch Family Group') {
-    return db.vouchFamilyGroup(op.id, op.group, op.timestamp);
+  } else if (op['name'] == 'Vouch Family') {
+    return db.vouchFamily(op.id, op.group, op.timestamp);
   } else if (op['name'] == 'Change Family Head') {
     return db.changeFamilyHead(op.id, op.head, op.group, op.timestamp);
   } else {

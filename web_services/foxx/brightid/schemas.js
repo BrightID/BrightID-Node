@@ -17,10 +17,10 @@ const operations = {
   },
   'Add Group': {
     group: joi.string().required().description('the unique id of the group'),
-    id1: joi.string().required().description('brightid of the first founder'),
+    id: joi.string().required().description('brightid of the group founder'),
     url: joi.string().required().description('the url that group data (profile image and name) encrypted by group AES key can be fetched from'),
     type: joi.string().valid('general', 'family').required().description('type of the group'),
-    sig1: joi.string().required().description('deterministic json representation of operation object signed by the creator of group represented by id1'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the founder of the group represented by id'),
   },
   'Remove Group': {
     id: joi.string().required().description('brightid of the group admin who want to remove the group'),
@@ -48,7 +48,7 @@ const operations = {
   'Sponsor': {
     id: joi.string().required().description('the brightid of the user that is being sponsored'),
     app: joi.string().required().description('the app name that user is being sponsored by'),
-    sig: joi.string().required().description('unblinded signature of Chaum\'s blind signature schema using deterministic json representation of {id, app} as message'),
+    sig: joi.string().required().description('unblinded signature of Chaum\'s blind signature schema using deterministic json representation of {name: "Sponsor", id, app, timestamp, v: 6} as message'),
   },
   'Invite': {
     inviter: joi.string().required().description('brightid of the user who has admin rights in the group and can invite others to the group'),
@@ -89,7 +89,7 @@ const operations = {
     id: joi.string().required().description('brightid of the user who is removing all the signingKeys except the one that used to sign this operation'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
-  'Vouch Family Group': {
+  'Vouch Family': {
     id: joi.string().required().description('brightid of the user who is vouching the family group'),
     group: joi.string().required().description('the unique id of the group'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
@@ -131,6 +131,7 @@ schemas = Object.assign({
   app: joi.object({
     id: joi.string().required().description('unique app id'),
     name: joi.string().required().description('app name'),
+    context: joi.string().description('the context of legacy apps'),
     verification: joi.string().required().description('verification required for using the app'),
     verifications: joi.array().items(joi.string().description('verification required for using the app')),
     verificationUrl: joi.string().required().description('the url to PUT a verification with /:id'),
@@ -195,9 +196,9 @@ schemas = Object.assign({
     })
   }),
 
-  userGroupsToVouchGetResponse: joi.object({
+  userFamiliesToVouchGetResponse: joi.object({
     data: joi.object({
-      groups: joi.array().items(joi.string())
+      families: joi.array().items(joi.string())
     })
   }),
 

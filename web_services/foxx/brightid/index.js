@@ -117,11 +117,11 @@ const handlers = {
     });
   },
 
-  userGroupsToVouchGet: function(req, res) {
+  userFamiliesToVouchGet: function(req, res) {
     const id = req.param('id');
     res.send({
       data: {
-        groups: db.userGroupsToVouch(id)
+        families: db.userFamiliesToVouch(id)
       }
     });
   },
@@ -129,10 +129,7 @@ const handlers = {
   userProfileGet: function(req, res) {
     const id = req.param('id');
     const requestor = req.param('requestor');
-    const user = db.loadUser(id);
-    if (! user) {
-      throw new errors.UserNotFoundError(id);
-    }
+    const user = db.getUser(id);
 
     const sponsored = db.isSponsored(id);
     const verifications = db.userVerifications(id);
@@ -410,11 +407,7 @@ const handlers = {
 
   groupGet: function(req, res){
     const id = req.param('id');
-    const group = db.loadGroup(id);
-    if (! group) {
-      throw new errors.GroupNotFoundError(id);
-    }
-
+    const group = db.getGroup(id);
     res.send({
       data: {
         members: db.groupMembers(id),
@@ -470,10 +463,10 @@ router.get('/users/:id/connections/:direction', handlers.userConnectionsGet)
   .description('Gets user\'s connections with levels and timestamps')
   .response(schemas.userConnectionsGetResponse);
 
-router.get('/users/:id/groupsToVouch', handlers.userGroupsToVouchGet)
+router.get('/users/:id/familiesToVouch', handlers.userFamiliesToVouchGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
   .summary('Gets family groups which the user can vouch for')
-  .response(schemas.userGroupsToVouchGetResponse);
+  .response(schemas.userFamiliesToVouchGetResponse);
 
 router.get('/operations/:hash', handlers.operationGet)
   .pathParam('hash', joi.string().required().description('sha256 hash of the operation message'))
