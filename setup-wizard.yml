@@ -18,12 +18,26 @@ fields:
       - Remote node (example URL) `https://remote-node-provider.io`
     target:
       type: environment
-      name: BN_UPDATER_SP_INFURA_URL
+      name: BN_UPDATER_MAINNET_WSS
       service: updater
     required: true
 
   - id: updater_idc
     title: Updater IDChain node url
+    description: >-
+      BrightID node updater needs access to an IDChain node.
+
+      - IDChain DNP: `ws://idchain.public.dappnode:8546` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
+
+      - Remote node (example URL): `https://remote-node-provider.io`
+    target:
+      type: environment
+      name: BN_UPDATER_IDCHAIN_WSS
+      service: updater
+    required: true
+
+  - id: updater_seedgroups_url
+    title: Updater Seedgroups node url
     description: >-
       BrightID node updater needs access to an IDChain node.
 

@@ -12,5 +12,11 @@
       "dappnode": "Wed, 10 Mar 2021 08:49:00 GMT"
     },
     "link": "https://dappnode.github.io/sdk-publish/?r=brightid-node.public.dappnode.eth&v=1.1.0&h=%2Fipfs%2FQmYsNDryg5DfLTefZuhJiu5Xz72P8Mwsci8eRigLNJ2cFq"
+  },
+  "1.2.2": {
+    "hash": "/ipfs/QmR7dJT84KAUKn2wNYpetBYwMReSFif4K6rpYoHFmfHwac",
+    "uploadedTo": {
+      "dappnode": "Thu, 17 Jun 2021 21:57:14 GMT"
+    }
   }
 }

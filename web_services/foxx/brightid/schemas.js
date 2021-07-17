@@ -139,7 +139,7 @@ schemas = Object.assign({
     url: joi.string().description('the base url for the app'),
     assignedSponsorships: joi.number().integer().description('number of assigned sponsorships'),
     unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
-    testing: joi.boolean().description('true of app is in testing mode'),
+    testing: joi.boolean().description('true if app is in testing mode'),
     idsAsHex: joi.boolean().description('true if app ids are in ethereum address format'),
     usingBlindSig: joi.boolean().description('true if app is using blind signature integration'),
     verificationExpirationLength: joi.number().integer().description('app verification expiration length in milliseconds'),
