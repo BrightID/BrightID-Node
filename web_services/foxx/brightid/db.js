@@ -432,6 +432,9 @@ function getRecoveryPeriods(allConnections, user, now) {
 }
 
 function isActiveRecovery(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder) {
+  // a user is an active recovery connection if there is a period that
+  // is not closed yet or closed in recent 7 days,
+  // and the period was more 7 days long or started in the first day
   for (const period of recoveryPeriods) {
     if (period.end > aWeekBorder &&
       (period.end - period.start > aWeek || period.start < firstDayBorder)
@@ -443,6 +446,9 @@ function isActiveRecovery(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder) {
 }
 
 function getActiveAfter(recoveryPeriods, firstDayBorder, aWeek, now) {
+  // a user will become an active recovery connection if
+  // it is in recovery level just now but the period is not 7 days long yet
+  // and not started in the first day
   const lastPeriod = recoveryPeriods[recoveryPeriods.length - 1];
   if (lastPeriod.end == now &&
     lastPeriod.end - lastPeriod.start < aWeek &&
@@ -454,11 +460,14 @@ function getActiveAfter(recoveryPeriods, firstDayBorder, aWeek, now) {
 }
 
 function getActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) {
+  // an active recovery connection will become inactive if
+  // it's an active recovery connection now but is not in recovery level anymore
   for (const period of recoveryPeriods) {
     if (period.end > aWeekBorder &&
       (period.end - period.start > aWeek || period.start < firstDayBorder)
     ) {
       if (period.end == now) {
+        // if it's not in recovery level now
         return 0;
       } else {
         return period.end - aWeekBorder;
@@ -468,19 +477,13 @@ function getActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, no
   return 0;
 }
 
-function getRecoveryConnections(userId, direction = 'outbound') {
-  const res = {};
-  let query, resIdAttr;
-  if (direction == 'outbound') {
-    query = { _from: 'users/' + userId };
-    resIdAttr = '_to';
-  } else if (direction == 'inbound') {
-    query = { _to: 'users/' + userId };
-    resIdAttr = '_from';
-  }
-  const allConnections = connectionsHistoryColl.byExample(query).toArray().map(c => {
+function getRecoveryConnections(userId) {
+  const res = [];
+  const allConnections = connectionsHistoryColl.byExample({
+    _from: 'users/' + userId
+  }).toArray().map(c => {
     return {
-      id: c[resIdAttr].replace('users/', ''),
+      id: c._to.replace('users/', ''),
       level: c.level,
       timestamp: c.timestamp
     }
@@ -495,6 +498,7 @@ function getRecoveryConnections(userId, direction = 'outbound') {
   const firstDayBorder = recoveryConnections[0].timestamp + (24 * 60 * 60 * 1000);
   const aWeek = 7 * 24 * 60 * 60 * 1000;
   const aWeekBorder = Date.now() - aWeek;
+  // find all users that were selected as recovery in user's connection history
   const recoveryIds = new Set(recoveryConnections.map(conn => conn.id));
 
   // 1) New recovery connections can participate in resetting signing key,
@@ -505,16 +509,15 @@ function getRecoveryConnections(userId, direction = 'outbound') {
   for (let id of recoveryIds) {
     // find the periods that this user was recovery
     const recoveryPeriods = getRecoveryPeriods(allConnections, id, now);
-    // find this user is recovery now
+    // find if this user is an active recovery connection
     const isActive = isActiveRecovery(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder);
-    // if recovery level set earlier than 7 days and not on the first day
-    // will active after 7 days since became recovery
+    // for not active recovery connections, find how long it takes to be activated
     const activeAfter = isActive ? 0 : getActiveAfter(recoveryPeriods, firstDayBorder, aWeek, now);
-    // if a recovery connection lost recovery level earlier than 7 days remains active until 7 days
+    // for active recovery connections, find how long it takes to be inactivated
     const activeBefore = isActive ? getActiveBefore(recoveryPeriods, firstDayBorder, aWeek, aWeekBorder, now) : 0;
 
     if (isActive || activeAfter > 0 || activeBefore > 0) {
-      res[id] = { id, isActive, activeBefore, activeAfter }
+      res.push({ id, isActive, activeBefore, activeAfter });
     }
   }
   return res;

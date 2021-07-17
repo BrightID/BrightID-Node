@@ -133,7 +133,7 @@ const handlers = {
 
     const sponsored = db.isSponsored(id);
     const verifications = db.userVerifications(id);
-    const recoveryConnections = Object.values(db.getRecoveryConnections(id));
+    const recoveryConnections = db.getRecoveryConnections(id);
     const connections = db.userConnections(id, 'inbound');
     const memberships = db.userMemberships(id);
     const requestorConnections = db.userConnections(requestor, 'outbound');

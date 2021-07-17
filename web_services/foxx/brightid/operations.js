@@ -137,11 +137,14 @@ function verify(op) {
     const recoveryConnections = db.getRecoveryConnections(op.id);
     if (op.id1 == op.id2) {
       throw new errors.DuplicateSignersError();
-    } else if (!(op.id1 in recoveryConnections) || !(op.id2 in recoveryConnections)) {
+    }
+    const rc1 = recoveryConnections.find(c => c.id == op.id1);
+    const rc2 = recoveryConnections.find(c => c.id == op.id2);
+    if (!rc1 || !rc2) {
       throw new errors.NotRecoveryConnectionsError();
-    } else if (recoveryConnections[op.id1].activeAfter != 0) {
+    } else if (rc1.activeAfter != 0) {
       throw new errors.WaitForCooldownError(op.id1);
-    } else if (recoveryConnections[op.id2].activeAfter != 0) {
+    } else if (rc2.activeAfter != 0) {
       throw new errors.WaitForCooldownError(op.id2);
     }
     verifyUserSig(message, op.id1, op.sig1);

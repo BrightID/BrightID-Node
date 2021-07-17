@@ -145,19 +145,19 @@ describe('recovery connections', function() {
     db.connect({ id1: 'a', id2: 'g', level: 'recovery', 'timestamp': Date.now() - (5 * 24 * 60 * 60 * 1000) });
 
     const recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    const activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    const activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
     });
     activeRecoveryConnection.should.deep.equal(['c', 'd', 'e', 'f']);
-    recoveryConnections['c'].activeBefore.should.be.equal(0);
+    recoveryConnections.find(c => c.id == 'c').activeBefore.should.be.equal(0);
   });
 
   it('should not be able to add a recovery connection without cooling period', function() {
     db.connect({ id1: 'a', id2: 'b', level: 'recovery', 'timestamp': Date.now() });
     let recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    let activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    let activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
@@ -166,7 +166,7 @@ describe('recovery connections', function() {
 
     db.connect({ id1: 'a', id2: 'b', level: 'already known', 'timestamp': Date.now() });
     recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
@@ -177,7 +177,7 @@ describe('recovery connections', function() {
   it('should not be able to inactive a recovery connection without cooling period', function() {
     db.connect({ id1: 'a', id2: 'd', level: 'already known', 'timestamp': Date.now() });
     let recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    let activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    let activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
@@ -186,7 +186,7 @@ describe('recovery connections', function() {
 
     db.connect({ id1: 'a', id2: 'd', level: 'recovery', 'timestamp': Date.now() });
     recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
@@ -194,23 +194,12 @@ describe('recovery connections', function() {
     activeRecoveryConnection.should.deep.equal(['c', 'd', 'e', 'f']);
   });
 
-  it('Should be able to get list of brightids that a user can participate in recovering process of them', function() {
-    const inboundRecoveryConnections = db.getRecoveryConnections('c', 'inbound');
-    Object.keys(inboundRecoveryConnections).should.deep.equal(['a', 'b', 'd']);
-    const activeInboundRecoveryConnection = Object.values(inboundRecoveryConnections).filter(conn => {
-      return conn.isActive;
-    }).map(conn => {
-      return conn.id;
-    });
-    activeInboundRecoveryConnection.should.deep.equal(['a', 'b']);
-  });
-
   it('remove recovery connection should take one week to take effect to protect against takeover', function() {
     db.connect({ id1: 'a', id2: 'c', level: 'reported', reportReason: 'duplicate', 'timestamp': Date.now() });
 
     const recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    recoveryConnections['c'].activeBefore.should.be.greaterThan(0);
-    const activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    recoveryConnections.find(c => c.id == 'c').activeBefore.should.be.greaterThan(0);
+    const activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
@@ -223,8 +212,8 @@ describe('recovery connections', function() {
     db.connect({ id1: 'a', id2: 'h', level: 'recovery', 'timestamp': Date.now() });
 
     const recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    recoveryConnections['h'].activeAfter.should.be.greaterThan(0);
-    const activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    recoveryConnections.find(c => c.id == 'h').activeAfter.should.be.greaterThan(0);
+    const activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
@@ -246,11 +235,11 @@ describe('recovery connections', function() {
     db.connect({ id1: 'a', id2: 'e', level: 'recovery', 'timestamp': firstConnTime + (30 * 60 * 60 * 1000) });
 
     const recoveryConnections = db.getRecoveryConnections('a', 'outbound');
-    recoveryConnections['e'].activeAfter.should.be.greaterThan(0);
-    recoveryConnections['b'].activeAfter.should.be.equal(0);
-    recoveryConnections['c'].activeAfter.should.be.equal(0);
-    recoveryConnections['d'].activeAfter.should.be.equal(0);
-    const activeRecoveryConnection = Object.values(recoveryConnections).filter(conn => {
+    recoveryConnections.find(c => c.id == 'e').activeAfter.should.be.greaterThan(0);
+    recoveryConnections.find(c => c.id == 'b').activeAfter.should.be.equal(0);
+    recoveryConnections.find(c => c.id == 'c').activeAfter.should.be.equal(0);
+    recoveryConnections.find(c => c.id == 'd').activeAfter.should.be.equal(0);
+    const activeRecoveryConnection = recoveryConnections.filter(conn => {
       return conn.isActive;
     }).map(conn => {
       return conn.id;
