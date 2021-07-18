@@ -386,8 +386,7 @@ const handlers = {
     }
     const context = db.getContext(app.context);
     if (context.idsAsHex) {
-      const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
-      if(!re.test(contextId)) {
+      if(!db.isEthereumAddress(contextId)) {
         throw new errors.InvalidContextIdError(contextId);
       }
       contextId = contextId.toLowerCase();
@@ -408,8 +407,7 @@ const handlers = {
     }
     const context = db.getContext(app.context);
     if (context.idsAsHex) {
-      const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
-      if(!re.test(contextId)) {
+      if(!db.isEthereumAddress(contextId)) {
         throw new errors.InvalidContextIdError(contextId);
       }
       contextId = contextId.toLowerCase();

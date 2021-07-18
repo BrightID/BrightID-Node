@@ -348,7 +348,32 @@ function v5_9_2() {
   variablesColl.update('VERIFICATIONS_HASHES', { hashes: JSON.stringify(hashes) });
 }
 
-const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9', 'v5_9_1', 'v5_9_2'];
+function v5_9_8() {
+  console.log("removing invalid contextIds form contexts' collection");
+  const re = new RegExp(/^0[xX][A-Fa-f0-9]+$/);
+
+  const contextsColl = arango._collection('contexts');
+  contextsColl.all().toArray().map(context => {
+    console.log(`Context: ${context._key}`);
+    const contextColl = arango._collection(context.collection);
+    if (!contextColl) {
+      return;
+    }
+    const docs = contextColl.all().toArray();
+    for (let doc of docs) {
+      if (!doc.contextId || (context.idsAsHex && !db.isEthereumAddress(doc.contextId))) {
+        console.log(`Remove invalid contextId: ${doc.contextId}`);
+        contextColl.removeByExample(doc);
+      } else if (context.idsAsHex && db.isEthereumAddress(doc.contextId) && doc.contextId != doc.contextId.toLowerCase()) {
+        console.log(`Update checksum contextId: ${doc.contextId}`);
+        contextColl.update(doc, {contextId: doc.contextId.toLowerCase()});
+      }
+    }
+  });
+}
+
+
+const upgrades = ['v5', 'v5_3', 'v5_5', 'v5_6', 'v5_6_1', 'v5_7', 'v5_8', 'v5_9', 'v5_9_1', 'v5_9_2', 'v5_9_8'];
 
 function initdb() {
   createCollections();
