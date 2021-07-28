@@ -393,7 +393,7 @@ function userVerifications(userId) {
     //   block = hashes[0]['block'];
     // }
 
-    // rollback consneus based block selection consneus temporarily to ensure faster verification
+    // rollback consensus-based block selection temporarily to ensure faster verification
     const block = Math.max(...Object.keys(hashes).map(block => parseInt(block)));
     verifications = verificationsColl.byExample({ user: userId, block }).toArray();
   } else {
