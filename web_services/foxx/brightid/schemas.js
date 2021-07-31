@@ -253,6 +253,7 @@ schemas = Object.assign({
 
   groupGetResponse: joi.object({
     data: joi.object({
+      id: joi.string().required().description('the unique id of the group'),
       members: joi.array().items(joi.string()).required().description('brightids of members of the group'),
       invites: joi.array().items(schemas.invite).required(),
       admins: joi.array().items(joi.string()).required().description('brightids of admins of the group'),
