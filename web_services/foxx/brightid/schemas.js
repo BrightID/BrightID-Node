@@ -94,7 +94,13 @@ const operations = {
     group: joi.string().required().description('the unique id of the group'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
-  'Change Family Head': {
+  'Set Family Head': {
+    id: joi.string().required().description('brightid of one of the current admins of the group'),
+    head: joi.string().required().description('brightid of the member who is being granted the leadership of the family group'),
+    group: joi.string().required().description('the unique id of the family group'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the head user represented by id'),
+  },
+  'Convert To Family': {
     id: joi.string().required().description('brightid of one of the current admins of the group'),
     head: joi.string().required().description('brightid of the member who is being granted the leadership of the family group'),
     group: joi.string().required().description('the unique id of the family group'),

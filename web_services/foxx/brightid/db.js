@@ -194,9 +194,15 @@ function createUser(key, timestamp) {
 }
 
 function familyGroup(key) {
-  return userMemberships(key).map(
-    m => groupsColl.document(m.id)
-  ).find(g => g.type == 'family');
+  return query`
+    FOR ug IN ${usersInGroupsColl}
+      FILTER ug._from == ${'users/' + key}
+      FOR group in ${groupsColl}
+        FILTER group._id == ug._to
+        && group.type == 'family'
+        && group.head NOT IN [null, ${key}]
+      RETURN group
+  `.toArray()[0];
 }
 
 function createGroup(groupId, key, url, type, timestamp) {
@@ -213,11 +219,10 @@ function createGroup(groupId, key, url, type, timestamp) {
   }
 
   if (type == 'family') {
-    const fg = familyGroup(key);
-    if (fg && fg.head == key) {
-      throw new errors.AlreadyIsFamilyHead();
+    if (familyGroup(key)) {
+      throw new errors.AlreadyIsFamilyMember(key);
     }
-    group.head = key;
+    group.head = null;
     group.vouchers = [];
   }
 
@@ -262,25 +267,24 @@ function knownConnections(userId) {
   return query`
     FOR conn in ${connectionsColl}
       FILTER conn._from == ${'users/' + userId}
-      FILTER conn.level IN ['already known', 'recovery']
+      && conn.level IN ['already known', 'recovery']
       FOR conn2 in ${connectionsColl}
         FILTER conn2._from == conn._to
-        FILTER conn2._to == conn._from
-        FILTER conn2.level IN ['already known', 'recovery']
+        && conn2._to == conn._from
+        && conn2.level IN ['already known', 'recovery']
       RETURN conn._to
   `.toArray().map(id => id.replace('users/', ''));
 }
 
 function checkJoiningFamily(groupId, userId) {
-  const fg = familyGroup(userId);
-  if (fg && fg.head != userId) {
-    throw new errors.AlreadyIsFamilyMember();
+  if (familyGroup(userId)) {
+    throw new errors.AlreadyIsFamilyMember(userId);
   }
   const members = groupMembers(groupId);
   const conns = knownConnections(userId);
   // if some of group members are unknown
   if (_.intersection(members, conns).length != members.length) {
-    throw new errors.IneligibleFamilyMember();
+    throw new errors.IneligibleFamilyMember(userId);
   }
 }
 
@@ -330,7 +334,11 @@ function deleteMembership(groupId, key, timestamp) {
   });
   // empty the group's vouchers after family group member changes
   if (group.type == 'family') {
-    groupsColl.update(group, { vouchers: [] });
+    if (group.head == key) {
+      groupsColl.update(group, { head: null, vouchers: [] });
+    } else {
+      groupsColl.update(group, { vouchers: [] });
+    }
   }
 }
 
@@ -669,11 +677,11 @@ function removeAllSigningKeys(userId, signingKey) {
 function vouchFamily(userId, groupId, timestamp) {
   const group = getGroup(groupId);
   if (group.type != 'family') {
-    throw new errors.NotFamilyGroupError();
+    throw new errors.NotFamilyError();
   }
 
-  // users can start vouching only after all invitees join
-  if (groupInvites(groupId).length > 0 || groupMembers(groupId).length < 2) {
+  // users can start vouching only after setting the head
+  if (!group.head) {
     throw new errors.IneligibleToVouch();
   }
 
@@ -694,11 +702,12 @@ function userFamiliesToVouch(userId) {
   const conns = knownConnections(userId);
   const connIds = conns.map(key => `users/${key}`);
   const candidates = query`
-    FOR conn in ${usersInGroupsColl}
-      FILTER conn._from IN ${connIds}
+    FOR ug in ${usersInGroupsColl}
+      FILTER ug._from IN ${connIds}
       FOR group in ${groupsColl}
-        FILTER group._id == conn._to
-        FILTER group.type == 'family'
+        FILTER group._id == ug._to
+        && group.type == 'family'
+        && group.head != null
       RETURN DISTINCT group
   `.toArray();
   return candidates.filter(group => {
@@ -710,20 +719,48 @@ function userFamiliesToVouch(userId) {
   }).map(group => group._key);
 }
 
-function changeFamilyHead(admin, head, groupId) {
+function setFamilyHead(admin, head, groupId) {
   const group = getGroup(groupId);
   if (! groupMembers(groupId).includes(head)) {
     throw new errors.IneligibleFamilyHead();
   }
-  const fg = familyGroup(head)
-  if (fg && fg.head == head) {
-    throw new errors.AlreadyIsFamilyHead();
+  if (familyGroup(group.head)) {
+    throw new errors.HeadAlreadyIsFamilyMember();
   }
   if (! group.admins.includes(admin)) {
     throw new errors.NotAdminError();
   }
   // update head and empty the group's vouchers
   groupsColl.update(group, { head, vouchers: [] });
+}
+
+function convertToFamily(admin, head, groupId) {
+  const group = getGroup(groupId);
+  if (group.type == 'family') {
+    throw new errors.AlreadyIsFamilyError();
+  }
+
+  if (! group.admins.includes(admin)) {
+    throw new errors.NotAdminError();
+  }
+
+  const members = groupMembers(groupId);
+  if (! members.includes(head)) {
+    throw new errors.IneligibleFamilyHead();
+  }
+
+  for (const member of members) {
+    if (member != head && familyGroup(member)) {
+      throw new errors.AlreadyIsFamilyMember(member);
+    }
+    const conns = knownConnections(member);
+    // if some of group members are unknown
+    const temp = members.filter(m => m != member);
+    if (_.intersection(temp, conns).length != temp.length) {
+      throw new errors.IneligibleFamilyMember(member);
+    }
+  }
+  groupsColl.update(group, { head, type: 'family', vouchers: [] });
 }
 
 module.exports = {
@@ -764,5 +801,6 @@ module.exports = {
   updateGroup,
   getCachedParams,
   vouchFamily,
-  changeFamilyHead,
+  setFamilyHead,
+  convertToFamily,
 };

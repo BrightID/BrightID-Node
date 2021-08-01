@@ -59,7 +59,8 @@ const senderAttrs = {
   'Remove All Signing Keys': ['id'],
   'Update Group': ['id'],
   'Vouch Family': ['id'],
-  'Change Family Head': ['id'],
+  'Set Family Head': ['id'],
+  'Convert To Family': ['id'],
 };
 
 let operationsCount = {};
@@ -119,7 +120,8 @@ const signerAndSigs = {
   'Remove Signing Key': ['id', 'sig'],
   'Remove All Signing Keys': ['id', 'sig'],
   'Vouch Family': ['id', 'sig'],
-  'Change Family Head': ['id', 'sig'],
+  'Set Family Head': ['id', 'sig'],
+  'Convert To Family': ['id', 'sig'],
 }
 
 function verify(op) {
@@ -204,8 +206,10 @@ function apply(op) {
     return db.updateGroup(op.id, op.group, op.url, op.timestamp);
   } else if (op['name'] == 'Vouch Family') {
     return db.vouchFamily(op.id, op.group, op.timestamp);
-  } else if (op['name'] == 'Change Family Head') {
-    return db.changeFamilyHead(op.id, op.head, op.group, op.timestamp);
+  } else if (op['name'] == 'Set Family Head') {
+    return db.setFamilyHead(op.id, op.head, op.group, op.timestamp);
+  } else if (op['name'] == 'Convert To Family') {
+    return db.convertToFamily(op.id, op.head, op.group, op.timestamp);
   } else {
     throw new errors.InvalidOperationNameError(op['name']);
   }

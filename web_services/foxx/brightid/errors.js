@@ -34,10 +34,10 @@ const INELIGIBLE_RECOVERY_CONNECTION = 43;
 const WISCHNORR_PASSWORD_NOT_SET = 45;
 const INVALID_ROUNDED_TIMESTAMP = 46;
 const DUPLICATE_SIG_REQUEST_ERROR = 47;
-const ALREADY_IS_FAMILY_HEAD = 48;
+const HEAD_ALREADY_IS_FAMILY_MEMBER = 48;
 const ALREADY_IS_FAMILY_MEMBER = 49;
 const INELIGIBLE_FAMILY_MEMBER = 50;
-const NOT_FAMILY_GROUP = 51;
+const NOT_FAMILY = 51;
 const INELIGIBLE_TO_VOUCH = 52;
 const INELIGIBLE_TO_VOUCH_FOR = 53;
 const INELIGIBLE_FAMILY_HEAD = 54;
@@ -46,6 +46,7 @@ const DUPLICATE_UID_ERROR = 56;
 const DUPLICATE_SIGNERS = 57;
 const WAIT_FOR_COOLDOWN = 58;
 const UNACCEPTABLE_VERIFICATION = 59;
+const ALREADY_IS_FAMILY = 60;
 
 class BrightIDError extends Error {
   constructor() {
@@ -391,34 +392,36 @@ class DuplicateSigRequestError extends ForbiddenError {
   }
 }
 
-class AlreadyIsFamilyHead extends ForbiddenError {
+class HeadAlreadyIsFamilyMember extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = ALREADY_IS_FAMILY_HEAD;
-    this.message = 'The user already is head of a family group.';
+    this.errorNum = HEAD_ALREADY_IS_FAMILY_MEMBER;
+    this.message = "The previous head can't already have another family group";
   }
 }
 
 class AlreadyIsFamilyMember extends ForbiddenError {
-  constructor() {
+  constructor(user) {
     super();
     this.errorNum = ALREADY_IS_FAMILY_MEMBER;
-    this.message = 'The user already is member of a family group.';
+    this.message = `${user} already is member of a family group.`;
+    this.user = user;
   }
 }
 
 class IneligibleFamilyMember extends ForbiddenError {
-  constructor() {
+  constructor(user) {
     super();
     this.errorNum = INELIGIBLE_FAMILY_MEMBER;
-    this.message = 'The user is not eligible to join this family group.';
+    this.message = `${user} is not eligible to join this family group.`;
+    this.user = user;
   }
 }
 
-class NotFamilyGroupError extends ForbiddenError {
+class NotFamilyError extends ForbiddenError {
   constructor() {
     super();
-    this.errorNum = NOT_FAMILY_GROUP;
+    this.errorNum = NOT_FAMILY;
     this.message = 'The group is not a family group.';
   }
 }
@@ -490,6 +493,14 @@ class UnacceptableVerification extends ForbiddenError {
   }
 }
 
+class AlreadyIsFamilyError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = ALREADY_IS_FAMILY;
+    this.message = 'The group already is a family group.';
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -526,10 +537,10 @@ module.exports = {
   WISCHNORR_PASSWORD_NOT_SET,
   INVALID_ROUNDED_TIMESTAMP,
   DUPLICATE_SIG_REQUEST_ERROR,
-  ALREADY_IS_FAMILY_HEAD,
+  HEAD_ALREADY_IS_FAMILY_MEMBER,
   ALREADY_IS_FAMILY_MEMBER,
   INELIGIBLE_FAMILY_MEMBER,
-  NOT_FAMILY_GROUP,
+  NOT_FAMILY,
   INELIGIBLE_TO_VOUCH,
   INELIGIBLE_TO_VOUCH_FOR,
   INELIGIBLE_FAMILY_HEAD,
@@ -538,6 +549,7 @@ module.exports = {
   DUPLICATE_SIGNERS,
   WAIT_FOR_COOLDOWN,
   UNACCEPTABLE_VERIFICATION,
+  ALREADY_IS_FAMILY,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -579,10 +591,10 @@ module.exports = {
   InvalidRoundedTimestampError,
   WISchnorrPasswordNotSetError,
   DuplicateSigRequestError,
-  AlreadyIsFamilyHead,
+  HeadAlreadyIsFamilyMember,
   AlreadyIsFamilyMember,
   IneligibleFamilyMember,
-  NotFamilyGroupError,
+  NotFamilyError,
   IneligibleToVouch,
   IneligibleToVouchFor,
   IneligibleFamilyHead,
@@ -591,4 +603,5 @@ module.exports = {
   DuplicateSignersError,
   WaitForCooldownError,
   UnacceptableVerification,
+  AlreadyIsFamilyError,
 }

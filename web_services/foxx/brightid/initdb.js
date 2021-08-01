@@ -41,6 +41,8 @@ const indexes = [
   {'collection': 'connections', 'fields': ['level'], 'type': 'persistent'},
   {'collection': 'connectionsHistory', 'fields': ['timestamp'], 'type': 'persistent'},
   {'collection': 'groups', 'fields': ['seed'], 'type': 'persistent'},
+  {'collection': 'groups', 'fields': ['type'], 'type': 'persistent'},
+  {'collection': 'groups', 'fields': ['head'], 'type': 'persistent'},
   {'collection': 'operations', 'fields': ['state'], 'type': 'persistent'},
   {'collection': 'cachedParams', fields: ['creationDate'], type: 'ttl', expireAfter: 600},
   {'collection': 'appIds', 'fields': ['uid'], 'type': 'persistent'},

@@ -514,6 +514,9 @@ describe('operations', function(){
 
       connect(u11, u8, 'already known');
       connect(u8, u11, 'already known');
+
+      connect(u11, u10, 'already known');
+      connect(u10, u11, 'already known');
     });
 
     it('should be able to create a family group by "Add Group"', function() {
@@ -538,7 +541,6 @@ describe('operations', function(){
 
       const group = groupsColl.document(groupId);
       group.type.should.equal('family');
-      group.head.should.equal(u7.id);
       group.admins.should.include(u7.id);
     });
 
@@ -606,6 +608,27 @@ describe('operations', function(){
       resp.json.result.errorNum.should.equal(errors.INELIGIBLE_FAMILY_MEMBER);
     });
 
+    it('admins should be able to "Set Family Head" of the group', function() {
+      const timestamp = Date.now();
+      const groupId = hash('randomstr1');
+
+      const op = {
+        'v': 6,
+        'name': 'Set Family Head',
+        'group': groupId,
+        'id': u7.id,
+        'head': u7.id,
+        timestamp,
+      }
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u7.secretKey))
+      );
+      apply(op);
+      const group = groupsColl.document(groupId);
+      group.head.should.equal(u7.id)
+    });
+
     it('eligible users should be able to vouch family groups by "Vouch Family"', function() {
       const timestamp = Date.now();
       const groupId = hash('randomstr1');
@@ -626,16 +649,16 @@ describe('operations', function(){
       db.userFamiliesToVouch(u9.id).should.not.include(groupId);
     });
 
-    it('admins should be able to "Change Family Head" of the group', function() {
+    it('admins should be able to change head of family by "Set Family Head"', function() {
       const timestamp = Date.now();
       const groupId = hash('randomstr1');
-
       let group = groupsColl.document(groupId);
-      group.head.should.equal(u7.id);
+      group.head.should.equal(u7.id)
+
 
       const op = {
         'v': 6,
-        'name': 'Change Family Head',
+        'name': 'Set Family Head',
         'group': groupId,
         'id': u7.id,
         'head': u8.id,
@@ -654,28 +677,6 @@ describe('operations', function(){
       const groupId = hash('randomstr1');
       groupsColl.document(groupId).vouchers.should.deep.equal([]);
       db.userFamiliesToVouch(u9.id).should.include(groupId);
-    });
-
-    it('head of a family group should not be able to be head of another family group', function() {
-      const timestamp = Date.now();
-      const type = 'family';
-      const url = 'http://url.com/dummy';
-      const groupId = hash('randomstr2');
-      const op = {
-        v: 6,
-        name: 'Add Group',
-        group: groupId,
-        id: u8.id,
-        url,
-        type,
-        timestamp,
-      }
-      const message = getMessage(op);
-      op.sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u8.secretKey))
-      );
-      const resp = apply(op);
-      resp.json.result.errorNum.should.equal(errors.ALREADY_IS_FAMILY_HEAD);
     });
 
     it('member of a family group should not be able to join another family group as member', function() {
@@ -753,6 +754,35 @@ describe('operations', function(){
       members.should.include(u8.id);
       const group1 = groupsColl.document(hash('randomstr1'));
       group1.head.should.equal(u8.id);
+    });
+
+    it('admins of an eligible general group should be able to "Convert To Family"', function() {
+      const timestamp = Date.now();
+      const groupId = hash('randomstr2');
+      const url = 'http://url.com/dummy';
+
+      db.createGroup(groupId, u10.id, url, 'general', Date.now());
+      db.invite(u10.id, u11.id, groupId, 'data', Date.now());
+      db.addMembership(groupId, u11.id, Date.now());
+      let group = db.getGroup(groupId);
+      group.type.should.equal('general');
+
+      const op = {
+        'v': 6,
+        'name': 'Convert To Family',
+        'group': groupId,
+        'id': u10.id,
+        'head': u11.id,
+        timestamp,
+      }
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u10.secretKey))
+      );
+      apply(op);
+      group = groupsColl.document(groupId);
+      group.type.should.equal('family');
+      group.head.should.equal(u11.id)
     });
   });
 });
