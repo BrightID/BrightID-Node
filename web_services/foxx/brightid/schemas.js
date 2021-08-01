@@ -218,9 +218,9 @@ schemas = Object.assign({
     data: joi.object({
       connectionsNum: joi.number().integer().required().description('number of connections with already known or recovery level'),
       groupsNum: joi.number().integer().required().description('number of groups'),
-      mutualConnections: joi.array().items(joi.string()).required().description('brightids of mutual connections'),
-      mutualGroups: joi.array().items(joi.string()).required().description('ids of mutual groups'),
-      connectedAt: schemas.timestamp.required().description('timestamp of last connection'),
+      mutualConnections: joi.array().items(joi.string()).description('brightids of mutual connections'),
+      mutualGroups: joi.array().items(joi.string()).description('ids of mutual groups'),
+      connectedAt: schemas.timestamp.description('timestamp of last connection'),
       createdAt: schemas.timestamp.required().description('creation time of user specified by id'),
       reports: joi.array().items(schemas.report).required().description('list of reporters of the user with the reason for each report'),
       verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),

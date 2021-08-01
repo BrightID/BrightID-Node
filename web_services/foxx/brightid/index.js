@@ -130,48 +130,37 @@ const handlers = {
     const id = req.param('id');
     const requestor = req.param('requestor');
     const user = db.getUser(id);
+    const data = {};
 
-    const sponsored = db.isSponsored(id);
-    const verifications = db.userVerifications(id);
-    const recoveryConnections = db.getRecoveryConnections(id);
+    data.sponsored = db.isSponsored(id);
+    data.verifications = db.userVerifications(id);
+    data.recoveryConnections = db.getRecoveryConnections(id);
     const connections = db.userConnections(id, 'inbound');
     const memberships = db.userMemberships(id);
-    const requestorConnections = db.userConnections(requestor, 'outbound');
-    const requestorMemberships = db.userMemberships(requestor);
-
     const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
-    const connectionsNum = connections.filter(isKnown).length;
-    const groupsNum = memberships.length;
-    const mutualConnections = _.intersection(
-      connections.filter(isKnown).map(c => c.id),
-      requestorConnections.filter(isKnown).map(c => c.id)
-    );
-    const mutualGroups = _.intersection(
-      memberships.map(m => m.id),
-      requestorMemberships.map(m => m.id)
-    );
-
-    const conn = connections.find(c => c.id === requestor);
-    const connectedAt = conn ? conn.timestamp : undefined;
-    const reports = connections.filter(c => c.level === 'reported').map(c => {
+    data.connectionsNum = connections.filter(isKnown).length;
+    data.groupsNum = memberships.length;
+    data.reports = connections.filter(c => c.level === 'reported').map(c => {
       return { id: c.id, reason: c.reportReason };
     });
+    data.createdAt = user.createdAt;
+    data.signingKeys = user.signingKeys;
 
-    res.send({
-      data: {
-        connectionsNum,
-        groupsNum,
-        mutualConnections,
-        mutualGroups,
-        reports,
-        verifications,
-        sponsored,
-        recoveryConnections,
-        connectedAt,
-        createdAt: user.createdAt,
-        signingKeys: user.signingKeys,
-      }
-    });
+    if (requestor) {
+      const requestorConnections = db.userConnections(requestor, 'outbound');
+      const requestorMemberships = db.userMemberships(requestor);
+      data.mutualConnections = _.intersection(
+        connections.filter(isKnown).map(c => c.id),
+        requestorConnections.filter(isKnown).map(c => c.id)
+      );
+      data.mutualGroups = _.intersection(
+        memberships.map(m => m.id),
+        requestorMemberships.map(m => m.id)
+      );
+      const conn = connections.find(c => c.id === requestor);
+      data.connectedAt = conn ? conn.timestamp : undefined;
+    }
+    res.send({ data });
   },
 
   verificationPublicGet: function(req, res){
@@ -450,10 +439,17 @@ router.get('/users/:id/verifications', handlers.userVerificationsGet)
   .summary('Gets verifications of the user')
   .response(schemas.userVerificationsGetResponse);
 
+router.get('/users/:id/profile', handlers.userProfileGet)
+  .pathParam('id', joi.string().required().description('the brightid of the user that info requested about'))
+  .summary('Gets profile information of a user')
+  .response(schemas.userProfileGetResponse)
+  .error(404, 'User not found');
+
 router.get('/users/:id/profile/:requestor', handlers.userProfileGet)
   .pathParam('id', joi.string().required().description('the brightid of the user that info requested about'))
   .pathParam('requestor', joi.string().required().description('the brightid of the user that requested info'))
   .summary('Gets profile information of a user')
+  .description('Gets profile information of a user, including requestor\'s mutal connections/groups info')
   .response(schemas.userProfileGetResponse)
   .error(404, 'User not found');
 
