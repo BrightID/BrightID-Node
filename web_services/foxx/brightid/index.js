@@ -410,6 +410,7 @@ const handlers = {
     const group = db.getGroup(id);
     res.send({
       data: {
+        id,
         members: db.groupMembers(id),
         invites: db.groupInvites(id),
         admins: group.admins,
