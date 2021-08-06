@@ -132,6 +132,7 @@ const handlers = {
     const user = db.getUser(id);
     const data = {};
 
+    data.id = id;
     data.sponsored = db.isSponsored(id);
     data.verifications = db.userVerifications(id);
     data.recoveryConnections = db.getRecoveryConnections(id);
@@ -157,8 +158,11 @@ const handlers = {
         memberships.map(m => m.id),
         requestorMemberships.map(m => m.id)
       );
-      const conn = connections.find(c => c.id === requestor);
-      data.connectedAt = conn ? conn.timestamp : undefined;
+      const conn = requestorConnections.find(c => c.id === id);
+      if (conn) {
+        data.connectedAt = conn.timestamp;
+        data.level = conn.level;
+      }
     }
     res.send({ data });
   },

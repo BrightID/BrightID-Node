@@ -216,17 +216,19 @@ schemas = Object.assign({
 
   userProfileGetResponse: joi.object({
     data: joi.object({
+      id: joi.string().description('brightid of the queried user'),
       connectionsNum: joi.number().integer().required().description('number of connections with already known or recovery level'),
       groupsNum: joi.number().integer().required().description('number of groups'),
-      mutualConnections: joi.array().items(joi.string()).description('brightids of mutual connections'),
-      mutualGroups: joi.array().items(joi.string()).description('ids of mutual groups'),
-      connectedAt: schemas.timestamp.description('timestamp of last connection'),
-      createdAt: schemas.timestamp.required().description('creation time of user specified by id'),
+      createdAt: schemas.timestamp.required().description('creation time of the user specified by id'),
       reports: joi.array().items(schemas.report).required().description('list of reporters of the user with the reason for each report'),
       verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),
       signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
       recoveryConnections: joi.array().items(schemas.recoveryConnection).required().description('list of recovery connections for the user'),
       sponsored: joi.boolean().required().description('if user is sponsored'),
+      mutualConnections: joi.array().items(joi.string()).description('brightids of mutual connections'),
+      mutualGroups: joi.array().items(joi.string()).description('ids of mutual groups'),
+      level: joi.string().valid('reported', 'suspicious', 'just met', 'already known', 'recovery').description('level of the connection from requestor to the user specified by id'),
+      connectedAt: schemas.timestamp.description('timestamp of the last connection from requestor to the user specified by id'),
     })
   }),
 
