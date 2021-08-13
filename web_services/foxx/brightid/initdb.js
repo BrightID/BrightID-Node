@@ -22,6 +22,7 @@ const collections = {
   'cachedParams': 'document',
   'signedVerifications': 'document',
   'appIds': 'document',
+  'seeds': 'document',
 };
 
 // deprecated collections should be added to this array after releasing
@@ -47,6 +48,8 @@ const indexes = [
   {'collection': 'cachedParams', fields: ['creationDate'], type: 'ttl', expireAfter: 600},
   {'collection': 'appIds', 'fields': ['uid'], 'type': 'persistent'},
   {'collection': 'appIds', 'fields': ['app', 'appId'], 'type': 'persistent'},
+  {'collection': 'seeds', 'fields': ['user'], 'type': 'persistent'},
+  {'collection': 'seeds', 'fields': ['type'], 'type': 'persistent'},
 ]
 
 const variables = [
@@ -105,7 +108,57 @@ function initializeVariables() {
   }
 }
 
-const upgrades = [];
+function v6() {
+  console.log('creating seeds collection')
+  const groupsColl = arango._collection('groups');
+  const usersInGroupsColl = arango._collection('usersInGroups');
+  const starGroups = [
+
+  ];
+
+  groupsColl.byExample({
+    seed: true
+  }).toArray().forEach(g => {
+    const members = usersInGroupsColl.byExample({
+      _to: `groups/${g._key}`
+    }).toArray();
+    members.forEach(m => {
+      const user = m._from.replace('users/', '')
+      if (starGroups.includes(g._key)) {
+        query`
+          UPSERT {
+            user: ${user},
+            type: 'star',
+          }
+          INSERT {
+            user: ${user},
+            type: 'star',
+            quota: 0,
+            timestamp: ${g.timestamp},
+          }
+          UPDATE {} IN seeds`
+      } else {
+        query`
+          UPSERT {
+            user: ${user},
+            type: 'community',
+            group: ${g._key}
+          }
+          INSERT {
+            user: ${user},
+            type: 'community',
+            community: ${g.region || ''},
+            group: ${g._key},
+            quota: ${g.quota ? Math.ceil(g.quota / members.length) : 0},
+            timestamp: ${g.timestamp},
+          }
+          UPDATE {} IN seeds`
+      }
+    });
+  });
+}
+
+const upgrades = ['v6'];
 
 function initdb() {
   createCollections();
