@@ -4,7 +4,7 @@ import time
 from . import utils
 import config
 
-SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
+STAR_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 FRIEND_CONNECTION_LEVELS = ['already known', 'recovery']
 CONN_DIFF_TIME = 60 * 60 * 1000
 GO_BACK_TIME = 10 * 24 * 60 * 60 * 1000
@@ -18,79 +18,70 @@ def add_verification_to(user, friend, block):
     if user in verifieds:
         return
     db['verifications'].insert({
-        'name': 'SeedConnectedWithFriend',
+        'name': 'CallJoinedWithFriend',
         'user': user,
         'friend': friend,
         'block': block,
         'timestamp': int(time.time() * 1000),
-        'hash': utils.hash('SeedConnectedWithFriend', user)
+        'hash': utils.hash('CallJoinedWithFriend', user)
     })
     verifieds.add(user)
 
 
-def get_seeds():
-    seeds = set()
-    for seed_group in snapshot_db['groups'].find({'seed': True}):
-        cursor = snapshot_db['usersInGroups'].find({'_to': seed_group['_id']})
-        seeds.update({ug['_from'].replace('users/', '') for ug in cursor})
-    return seeds
-
-
-def get_seed_connecteds(block):
+def get_call_joineds(block):
     cursor = db['verifications'].find(
-        {'name': 'SeedConnected', 'block': block})
+        {'name': 'CallJoined', 'block': block})
     return set(v['user'] for v in cursor if v.get('rank', 0) > 0)
 
 
 def verify(block):
     global verifieds
 
-    print('SEED CONNECTED WITH FRIEND')
-    verifieds = set()
+    print('CALL JOINED WITH FRIEND')
     time_border = (int(time.time()) * 1000) - GO_BACK_TIME
-    seeds = get_seeds()
-    seed_connecteds = get_seed_connecteds(block)
+    stars = [s['user'] for s in snapshot_db['seeds'].find({'type': 'star'})]
+    call_joineds = get_call_joineds(block)
 
-    # verify already verified users if they are still SeedConnected
-    for v in db['verifications'].find({'name': 'SeedConnectedWithFriend'}):
-        if v['user'] in seed_connecteds:
+    # verify already verified users if they are still have CallJoined
+    for v in db['verifications'].find({'name': 'CallJoinedWithFriend'}):
+        if v['user'] in call_joineds:
             add_verification_to(v['user'], v['friend'], block)
 
     # verify new users
-    for seed in seeds:
-        # seeds get verified by default
-        add_verification_to(seed, None, block)
-        # find users that seed connected to them recently
+    for star in stars:
+        # stars get verified by default
+        add_verification_to(star, None, block)
+        # find users that star connected to them recently
         conns = snapshot_db.aql.execute('''
             FOR c IN connections
-                FILTER c._from == @seed
+                FILTER c._from == @star
                     AND c.level IN @levels
                     AND c.timestamp > @time_border
                     RETURN c
         ''', bind_vars={
-            'seed': 'users/' + seed,
-            'levels': SEED_CONNECTION_LEVELS,
+            'star': f'users/{star}',
+            'levels': STAR_CONNECTION_LEVELS,
             'time_border': time_border
         })
-        # store connection timestamp in a map for all non-seeds that are seed connected
-        seed_conn_times = {}
+        # store connection timestamp in a map for all non-stars that have CallJoined verification
+        star_conn_times = {}
         for conn in conns:
             neighbor = conn['_to'].replace('users/', '')
-            if neighbor in seeds:
+            if neighbor in stars:
                 continue
-            if neighbor not in seed_connecteds:
+            if neighbor not in call_joineds:
                 continue
-            seed_conn_times[neighbor] = conn['timestamp']
+            star_conn_times[neighbor] = conn['timestamp']
 
         # iterate over all pairs and check if they are friends
-        pairs = itertools.combinations(seed_conn_times.keys(), 2)
+        pairs = itertools.combinations(star_conn_times.keys(), 2)
         for pair in pairs:
             # skip if both sides are verified
             if pair[0] in verifieds and pair[1] in verifieds:
                 continue
 
-            # skip if pair sides connected to seeds in different meets
-            gap = abs(seed_conn_times[pair[0]] - seed_conn_times[pair[1]])
+            # skip if pair sides connected to stars in different calls
+            gap = abs(star_conn_times[pair[0]] - star_conn_times[pair[1]])
             if gap > CONN_DIFF_TIME:
                 continue
 
@@ -110,5 +101,5 @@ def verify(block):
             add_verification_to(pair[1], pair[0], block)
 
     verified_count = db['verifications'].find(
-        {'name': 'SeedConnectedWithFriend', 'block': block}).count()
+        {'name': 'CallJoinedWithFriend', 'block': block}).count()
     print(f'verifieds: {verified_count}\n')
