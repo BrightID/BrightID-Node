@@ -16,5 +16,8 @@
   },
   "variables": {
     "type": "full"
+  },
+  "seeds": {
+    "type": "full"
   }
 }
