@@ -4,28 +4,27 @@ from . import utils
 import config
 
 PENALTY = 3
+EXTRA_QUOTA = 100
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 
 
-def seed_connections(group_id, after):
-    cursor = snapshot_db['usersInGroups'].find({'_to': group_id})
-    members = [ug['_from'] for ug in cursor]
+def star_connections(star, after):
     return snapshot_db.aql.execute('''
         FOR c in connections
-            FILTER c._from IN @members
+            FILTER c._from == @star
                 AND (c.timestamp > @after OR c.level == 'reported')
             SORT c.timestamp, c._from, c._to ASC
             RETURN c
-    ''', bind_vars={'after': after, 'members': members})
+    ''', bind_vars={'after': after, 'star': f'users/{star}'}).batch()
 
 
 def last_verifications():
     last_block = db['variables'].get('VERIFICATION_BLOCK')['value']
     cursor = db.aql.execute('''
         FOR v in verifications
-            FILTER v.name == 'SeedConnected'
+            FILTER v.name == 'CallJoined'
                 AND v.block == @block
             RETURN v
     ''', bind_vars={'block': last_block})
@@ -34,63 +33,68 @@ def last_verifications():
 
 
 def verify(block):
-    print('SEED CONNECTED')
+    print('CALL JOINED')
     users = last_verifications()
 
-    # find number of users each seed group verified
+    # find number of users each star verified
     counts = {}
     for u, v in users.items():
         v['reported'] = []
         for g in v['connected']:
             counts[g] = counts.get(g, 0) + 1
 
-    prev_snapshot_time = snapshot_db['variables'].get('PREV_SNAPSHOT_TIME')['value']
-    seed_groups = snapshot_db['groups'].find({'seed': True})
-    for seed_group in seed_groups:
-        # load connection that members of this seed group made after
-        # previous snapshot
-        connections = seed_connections(
-            seed_group['_id'], prev_snapshot_time * 1000)
-        quota = seed_group.get('quota', 0)
-        counter = counts.get(seed_group['_key'], 0)
+    prev_snapshot_time = snapshot_db['variables'].get('PREV_SNAPSHOT_TIME')[
+        'value']
+    stars = snapshot_db['seeds'].find({'type': 'star'})
+    for star in stars:
+        quota = star.get('quota', 0)
+        # at the first run calculate the stars quota
+        if quota == 0:
+            connections = star_connections(star['user'], 0)
+            quota = len([c for c in connections if c['level'] in [
+                        'just met', 'already known', 'recovery']]) + EXTRA_QUOTA
+            db['seeds'].update({'_key': star['_key'], 'quota': quota})
+        else:
+            # load connection that stars made after previous snapshot
+            connections = star_connections(star, prev_snapshot_time * 1000)
+
+        counter = counts.get(star['user'], 0)
         for c in connections:
             u = c['_to'].replace('users/', '')
             if u not in users:
                 users[u] = {'connected': [], 'reported': []}
 
             if c['level'] in ['just met', 'already known', 'recovery']:
-                already_connected = seed_group['_key'] in users[u]['connected']
-                if not already_connected:
+                if star['user'] not in users[u]['connected']:
                     counter += 1
                     if counter <= quota:
-                        users[u]['connected'].append(seed_group['_key'])
+                        users[u]['connected'].append(star['user'])
             elif c['level'] == 'reported':
-                already_reported = seed_group['_key'] in users[u]['reported']
-                if not already_reported:
-                    users[u]['reported'].append(seed_group['_key'])
+                if star['user'] not in users[u]['reported']:
+                    users[u]['reported'].append(star['user'])
 
         spent = min(counter, quota)
         exceeded = max(counter - quota, 0)
-        region = seed_group.get('region')
-        print(f'{region}, quota: {quota}, spent: {spent}, exceeded: {exceeded}')
+        print(
+            f"{star['user']}, quota: {quota}, spent: {spent}, exceeded: {exceeded}")
 
     for u, d in users.items():
         # penalizing users that are reported by seeds
         rank = len(d['connected']) - len(d['reported']) * PENALTY
         db['verifications'].insert({
-            'name': 'SeedConnected',
+            'name': 'CallJoined',
             'user': u,
             'rank': rank,
             'connected': d['connected'],
             'reported': d['reported'],
             'block': block,
             'timestamp': int(time.time() * 1000),
-            'hash': utils.hash('SeedConnected', u, rank)
+            'hash': utils.hash('CallJoined', u, rank)
         })
 
     verifiedCount = db.aql.execute('''
         FOR v in verifications
-            FILTER v.name == 'SeedConnected'
+            FILTER v.name == 'CallJoined'
                 AND v.rank > 0
                 AND v.block == @block
             RETURN v
