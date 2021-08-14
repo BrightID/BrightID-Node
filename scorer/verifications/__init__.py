@@ -6,3 +6,4 @@ from . import yekta
 from . import social_recovery_setup
 from . import apps
 from . import community_membership
+from . import community_membership_2

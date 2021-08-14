@@ -16,6 +16,7 @@ verifiers = {
     'CallJoined': verifications.call_joined,
     'CallJoinedWithFriend': verifications.call_joined_with_friend,
     'CommunityMembership': verifications.community_membership,
+    'CommunityMembership2': verifications.community_membership_2,
     'Yekta': verifications.yekta,
     'BrightID': verifications.brightid,
     'DollarForEveryone': verifications.dollar_for_everyone,
