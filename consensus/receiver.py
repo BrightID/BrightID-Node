@@ -38,11 +38,8 @@ def process(data, block_timestamp):
     except ValueError as e:
         print('error in parsing operations', data_str)
         return
-    if type(operations) != list:
-        # Old operation tx format. This if block can be removed on next version when all nodes upgraded to 5.9.4.
-        operations = [operations]
     for op in operations:
-        if type(op) != dict or op.get('v') != 5 or 'name' not in op:
+        if type(op) != dict or op.get('v') not in (5, 6) or 'name' not in op:
             print('invalid operation', op)
             continue
         op['blockTime'] = block_timestamp * 1000

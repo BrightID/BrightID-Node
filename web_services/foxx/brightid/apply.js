@@ -18,10 +18,6 @@ const handlers = {
     const hash = req.param('hash');
     op.hash = hash;
     try {
-      // decrypt first to use the original hash for querying operationsHashesColl
-      if (op.name == 'Link ContextId') {
-        operations.decrypt(op);
-      }
       if (operationsHashesColl.exists(op.hash)) {
         throw new errors.OperationAppliedBeforeError(op.hash);
       }
@@ -29,9 +25,6 @@ const handlers = {
       op.result = operations.apply(op);
       op.state = 'applied';
       operationsHashesColl.insert({ _key: op.hash });
-      if (op.name == 'Link ContextId') {
-        operations.encrypt(op);
-      }
     } catch (e) {
       op.state = 'failed';
       if (e instanceof ArangoError) {

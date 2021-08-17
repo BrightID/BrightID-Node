@@ -1,8 +1,5 @@
-const CONTEXT_NOT_FOUND = 1;
-const CONTEXTID_NOT_FOUND = 2;
 const NOT_VERIFIED = 3;
 const NOT_SPONSORED = 4;
-const KEYPAIR_NOT_SET = 6;
 const ETHPRIVATEKEY_NOT_SET = 7;
 const OPERATION_NOT_FOUND = 9;
 const USER_NOT_FOUND = 10;
@@ -10,8 +7,6 @@ const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
-const INVALID_PASSCODE = 15;
-const PASSCODE_NOT_SET = 16;
 const GROUP_NOT_FOUND = 17;
 const INVALID_OPERATION_NAME = 18;
 const INVALID_SIGNATURE = 19;
@@ -22,16 +17,13 @@ const NOT_RECOVERY_CONNECTIONS = 23;
 const INVALID_HASH = 24;
 const OPERATION_APPLIED_BEFORE = 25;
 const TOO_BIG_OPERATION = 26;
-const INELIGIBLE_NEW_USER = 27;
 const ALREADY_HAS_PRIMARY_GROUP = 28;
 const NEW_USER_BEFORE_FOUNDERS_JOIN = 29;
-const INVALID_GROUP_TYPE = 30;
 const DUPLICATE_GROUP = 31;
 const INVALID_COFOUNDERS = 32;
 const INELIGIBLE_NEW_ADMIN = 33;
 const NOT_INVITED = 34;
 const LEAVE_GROUP = 35;
-const DUPLICATE_CONTEXTID = 36;
 const TOO_MANY_LINK_REQUEST = 37;
 const UNUSED_SPONSORSHIPS = 38;
 const SPONSORED_BEFORE = 39;
@@ -39,7 +31,22 @@ const SPONSOR_NOT_SUPPORTED = 40;
 const NOT_ADMIN = 41;
 const ARANGO_ERROR = 42;
 const INELIGIBLE_RECOVERY_CONNECTION = 43;
-const INVALID_CONTEXTID = 44;
+const WISCHNORR_PASSWORD_NOT_SET = 45;
+const INVALID_ROUNDED_TIMESTAMP = 46;
+const DUPLICATE_SIG_REQUEST_ERROR = 47;
+const HEAD_ALREADY_IS_FAMILY_MEMBER = 48;
+const ALREADY_IS_FAMILY_MEMBER = 49;
+const INELIGIBLE_FAMILY_MEMBER = 50;
+const NOT_FAMILY = 51;
+const INELIGIBLE_TO_VOUCH = 52;
+const INELIGIBLE_TO_VOUCH_FOR = 53;
+const INELIGIBLE_FAMILY_HEAD = 54;
+const NOT_HEAD = 55;
+const DUPLICATE_UID_ERROR = 56;
+const DUPLICATE_SIGNERS = 57;
+const WAIT_FOR_COOLDOWN = 58;
+const UNACCEPTABLE_VERIFICATION = 59;
+const ALREADY_IS_FAMILY = 60;
 
 class BrightIDError extends Error {
   constructor() {
@@ -205,24 +212,6 @@ class UserNotFoundError extends NotFoundError {
   }
 }
 
-class ContextNotFoundError extends NotFoundError {
-  constructor(context) {
-    super();
-    this.errorNum = CONTEXT_NOT_FOUND;
-    this.message = `The context ${context} is not found.`;
-    this.context = context;
-  }
-}
-
-class ContextIdNotFoundError extends NotFoundError {
-  constructor(contextId) {
-    super();
-    this.errorNum = CONTEXTID_NOT_FOUND;
-    this.message = `The contextId ${contextId} is not linked.`;
-    this.contextId = contextId;
-  }
-}
-
 class GroupNotFoundError extends NotFoundError {
   constructor(group) {
     super();
@@ -233,20 +222,18 @@ class GroupNotFoundError extends NotFoundError {
 }
 
 class NotSponsoredError extends ForbiddenError {
-  constructor(contextId) {
+  constructor() {
     super();
     this.errorNum = NOT_SPONSORED;
-    this.message = `The user linked to the contextId ${contextId} is not sponsored.`;
-    this.contextId = contextId;
+    this.message = `The user is not sponsored.`;
   }
 }
 
 class NotVerifiedError extends ForbiddenError {
-  constructor(contextId, app) {
+  constructor(app, expression) {
     super();
     this.errorNum = NOT_VERIFIED;
-    this.message = `The user linked to contextId ${contextId} is not verified for ${app} app.`;
-    this.contextId = contextId;
+    this.message = `The user is not verified for this expression (${expression}) of "${app}" app.`;
     this.app = app;
   }
 }
@@ -256,14 +243,6 @@ class InvalidExpressionError extends InternalServerError {
     super();
     this.errorNum = INVALID_EXPRESSION;
     this.message = `Evaluating verification expression for ${app} app failed. Expression: "${expression}", Error: ${err}`;
-  }
-}
-
-class KeypairNotSetError extends InternalServerError {
-  constructor() {
-    super();
-    this.errorNum = KEYPAIR_NOT_SET;
-    this.message = 'BN_WS_PUBLIC_KEY or BN_WS_PRIVATE_KEY are not set in config.env.';
   }
 }
 
@@ -291,23 +270,6 @@ class InvalidTestingKeyError extends ForbiddenError {
   }
 }
 
-class PasscodeNotSetError extends ForbiddenError {
-  constructor(context) {
-    super();
-    this.errorNum = PASSCODE_NOT_SET;
-    this.message = `Passcode is not set on the remote node for the ${context} context.`;
-    this.context = context;
-  }
-}
-
-class InvalidPasscodeError extends ForbiddenError {
-  constructor() {
-    super();
-    this.errorNum = INVALID_PASSCODE;
-    this.message = 'Invalid passcode.';
-  }
-}
-
 class NotAdminError extends ForbiddenError {
   constructor() {
     super();
@@ -329,15 +291,6 @@ class NewUserBeforeFoundersJoinError extends ForbiddenError {
     super();
     this.errorNum = NEW_USER_BEFORE_FOUNDERS_JOIN;
     this.message = 'New members can not join before founders join the group.';
-  }
-}
-
-class InvalidGroupTypeError extends ForbiddenError {
-  constructor(type) {
-    super();
-    this.errorNum = INVALID_GROUP_TYPE;
-    this.message = `${type} is not a valid group type.`;
-    this.type = type;
   }
 }
 
@@ -381,23 +334,6 @@ class LeaveGroupError extends ForbiddenError {
   }
 }
 
-class DuplicateContextIdError extends ForbiddenError {
-  constructor(contextId) {
-    super();
-    this.errorNum = DUPLICATE_CONTEXTID;
-    this.message = `The contextId ${contextId} is used by another user before.`;
-    this.contextId = contextId;
-  }
-}
-
-class TooManyLinkRequestError extends TooManyRequestsError {
-  constructor() {
-    super();
-    this.errorNum = TOO_MANY_LINK_REQUEST;
-    this.message = 'Only three contextIds can be linked every 24 hours.';
-  }
-}
-
 class UnusedSponsorshipsError extends ForbiddenError {
   constructor(app) {
     super();
@@ -424,7 +360,7 @@ class SponsorNotSupportedError extends ForbiddenError {
   }
 }
 
-class IneligibleRecoveryConnection extends ForbiddenError {
+class IneligibleRecoveryConnectionError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_RECOVERY_CONNECTION;
@@ -432,21 +368,142 @@ class IneligibleRecoveryConnection extends ForbiddenError {
   }
 }
 
-class InvalidContextIdError extends NotFoundError {
-  constructor(contextId) {
+class WISchnorrPasswordNotSetError extends InternalServerError {
+  constructor() {
     super();
-    this.errorNum = INVALID_CONTEXTID;
-    this.message = `The contextId ${contextId} is not valid.`;
-    this.contextId = contextId;
+    this.errorNum = WISCHNORR_PASSWORD_NOT_SET;
+    this.message = 'WISCHNORR_PASSWORD is not set in config.env.';
+  }
+}
+
+class InvalidRoundedTimestampError extends ForbiddenError {
+  constructor(serverRoundedTimestamp, roundedTimestamp) {
+    super();
+    this.errorNum = INVALID_ROUNDED_TIMESTAMP;
+    this.message = `Server calculated rounded timestamp is ${serverRoundedTimestamp}, but client sent ${roundedTimestamp}.`;
+  }
+}
+
+class DuplicateSigRequestError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = DUPLICATE_SIG_REQUEST_ERROR;
+    this.message = 'Only one signature request per verification of the app in each expiration period is allowed.';
+  }
+}
+
+class HeadAlreadyIsFamilyMember extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = HEAD_ALREADY_IS_FAMILY_MEMBER;
+    this.message = "The previous head can't already have another family group";
+  }
+}
+
+class AlreadyIsFamilyMember extends ForbiddenError {
+  constructor(user) {
+    super();
+    this.errorNum = ALREADY_IS_FAMILY_MEMBER;
+    this.message = `${user} already is member of a family group.`;
+    this.user = user;
+  }
+}
+
+class IneligibleFamilyMember extends ForbiddenError {
+  constructor(user) {
+    super();
+    this.errorNum = INELIGIBLE_FAMILY_MEMBER;
+    this.message = `${user} is not eligible to join this family group.`;
+    this.user = user;
+  }
+}
+
+class NotFamilyError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = NOT_FAMILY;
+    this.message = 'The group is not a family group.';
+  }
+}
+
+class IneligibleToVouch extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_TO_VOUCH;
+    this.message = 'This group is not eligible to vouch for.';
+  }
+}
+
+class IneligibleToVouchFor extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_TO_VOUCH_FOR;
+    this.message = 'This user is not eligible to vouch for this group.';
+  }
+}
+
+class IneligibleFamilyHead extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INELIGIBLE_FAMILY_HEAD;
+    this.message = 'user is not eligible to be head of the family group.';
+  }
+}
+
+class NotHeadError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = NOT_HEAD;
+    this.message = 'Requstor is not head of the group.';
+  }
+}
+
+class DuplicateUIDError extends ForbiddenError {
+  constructor(uid) {
+    super();
+    this.errorNum = DUPLICATE_UID_ERROR;
+    this.message = `uid ${uid} already exists.`;
+  }
+}
+
+class DuplicateSignersError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = DUPLICATE_SIGNERS;
+    this.message = 'Signers of the request are duplicates.';
+  }
+}
+
+class WaitForCooldownError extends ForbiddenError {
+  constructor(signer) {
+    super();
+    this.errorNum = WAIT_FOR_COOLDOWN;
+    this.message = `${signer} is still in cooling down period.`;
+    this.signer = signer;
+  }
+}
+
+class UnacceptableVerification extends ForbiddenError {
+  constructor(verification, app) {
+    super();
+    this.errorNum = UNACCEPTABLE_VERIFICATION;
+    this.message = `"${verification}" expression is not acceptable for the "${app}".`;
+    this.verification = verification;
+    this.app = app;
+  }
+}
+
+class AlreadyIsFamilyError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = ALREADY_IS_FAMILY;
+    this.message = 'The group already is a family group.';
   }
 }
 
 module.exports = {
-  CONTEXT_NOT_FOUND,
-  CONTEXTID_NOT_FOUND,
   NOT_VERIFIED,
   NOT_SPONSORED,
-  KEYPAIR_NOT_SET,
   ETHPRIVATEKEY_NOT_SET,
   OPERATION_NOT_FOUND,
   USER_NOT_FOUND,
@@ -454,8 +511,6 @@ module.exports = {
   APP_NOT_FOUND,
   INVALID_EXPRESSION,
   INVALID_TESTING_KEY,
-  INVALID_PASSCODE,
-  PASSCODE_NOT_SET,
   GROUP_NOT_FOUND,
   INVALID_OPERATION_NAME,
   INVALID_SIGNATURE,
@@ -468,21 +523,33 @@ module.exports = {
   TOO_BIG_OPERATION,
   ALREADY_HAS_PRIMARY_GROUP,
   NEW_USER_BEFORE_FOUNDERS_JOIN,
-  INVALID_GROUP_TYPE,
   DUPLICATE_GROUP,
   INVALID_COFOUNDERS,
   INELIGIBLE_NEW_ADMIN,
   NOT_INVITED,
   LEAVE_GROUP,
-  DUPLICATE_CONTEXTID,
-  TOO_MANY_LINK_REQUEST,
   UNUSED_SPONSORSHIPS,
   SPONSORED_BEFORE,
   SPONSOR_NOT_SUPPORTED,
   NOT_ADMIN,
   ARANGO_ERROR,
   INELIGIBLE_RECOVERY_CONNECTION,
-  INVALID_CONTEXTID,
+  WISCHNORR_PASSWORD_NOT_SET,
+  INVALID_ROUNDED_TIMESTAMP,
+  DUPLICATE_SIG_REQUEST_ERROR,
+  HEAD_ALREADY_IS_FAMILY_MEMBER,
+  ALREADY_IS_FAMILY_MEMBER,
+  INELIGIBLE_FAMILY_MEMBER,
+  NOT_FAMILY,
+  INELIGIBLE_TO_VOUCH,
+  INELIGIBLE_TO_VOUCH_FOR,
+  INELIGIBLE_FAMILY_HEAD,
+  NOT_HEAD,
+  DUPLICATE_UID_ERROR,
+  DUPLICATE_SIGNERS,
+  WAIT_FOR_COOLDOWN,
+  UNACCEPTABLE_VERIFICATION,
+  ALREADY_IS_FAMILY,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -502,32 +569,39 @@ module.exports = {
   OperationAppliedBeforeError,
   TooBigOperationError,
   UserNotFoundError,
-  ContextNotFoundError,
-  ContextIdNotFoundError,
   GroupNotFoundError,
   NotSponsoredError,
   NotVerifiedError,
   InvalidExpressionError,
-  KeypairNotSetError,
   EthPrivatekeyNotSetError,
   IpNotSetError,
   InvalidTestingKeyError,
-  PasscodeNotSetError,
-  InvalidPasscodeError,
   NotAdminError,
   AlreadyHasPrimaryGroupError,
   NewUserBeforeFoundersJoinError,
-  InvalidGroupTypeError,
   DuplicateGroupError,
   InvalidCoFoundersError,
   IneligibleNewAdminError,
   NotInvitedError,
   LeaveGroupError,
-  DuplicateContextIdError,
-  TooManyLinkRequestError,
   UnusedSponsorshipsError,
   SponsoredBeforeError,
   SponsorNotSupportedError,
-  IneligibleRecoveryConnection,
-  InvalidContextIdError,
+  IneligibleRecoveryConnectionError,
+  InvalidRoundedTimestampError,
+  WISchnorrPasswordNotSetError,
+  DuplicateSigRequestError,
+  HeadAlreadyIsFamilyMember,
+  AlreadyIsFamilyMember,
+  IneligibleFamilyMember,
+  NotFamilyError,
+  IneligibleToVouch,
+  IneligibleToVouchFor,
+  IneligibleFamilyHead,
+  NotHeadError,
+  DuplicateUIDError,
+  DuplicateSignersError,
+  WaitForCooldownError,
+  UnacceptableVerification,
+  AlreadyIsFamilyError,
 }
