@@ -47,6 +47,8 @@ const DUPLICATE_SIGNERS = 57;
 const WAIT_FOR_COOLDOWN = 58;
 const UNACCEPTABLE_VERIFICATION = 59;
 const ALREADY_IS_FAMILY = 60;
+const UNUSED_QUOTA = 61;
+const SEED_NOT_FOUND = 62;
 
 class BrightIDError extends Error {
   constructor() {
@@ -501,6 +503,24 @@ class AlreadyIsFamilyError extends ForbiddenError {
   }
 }
 
+class UnusedQuotaError extends ForbiddenError {
+  constructor(user) {
+    super();
+    this.errorNum = UNUSED_QUOTA;
+    this.message = `${user} seed does not have enouph unused quota.`;
+    this.user = user;
+  }
+}
+
+class SeedNotFoundError extends NotFoundError {
+  constructor(user) {
+    super();
+    this.errorNum = SEED_NOT_FOUND;
+    this.message = `The seed ${user} is not found.`;
+    this.user = user;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -550,6 +570,7 @@ module.exports = {
   WAIT_FOR_COOLDOWN,
   UNACCEPTABLE_VERIFICATION,
   ALREADY_IS_FAMILY,
+  UNUSED_QUOTA,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -604,4 +625,6 @@ module.exports = {
   WaitForCooldownError,
   UnacceptableVerification,
   AlreadyIsFamilyError,
+  UnusedQuotaError,
+  SeedNotFoundError,
 }

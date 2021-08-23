@@ -28,6 +28,7 @@ const verificationsColl = db._collection('verifications');
 const variablesColl = db._collection('variables');
 const cachedParamsColl = db._collection('cachedParams');
 const appIdsColl = db._collection('appIds');
+const seedsColl = db._collection('seeds');
 
 function connect(op) {
   let {
@@ -261,6 +262,24 @@ function addUserToGroup(groupId, key, timestamp) {
   if (group.type == 'family') {
     groupsColl.update(group, { vouchers: [] });
   }
+
+  if (group.seed) {
+    const seed = seedsColl.firstExample({
+      user: key,
+      type: 'community',
+      group: groupId,
+    });
+    if (!seed) {
+      seedsColl.insert({
+        user: key,
+        type: 'community',
+        community: group.region || '',
+        group: groupId,
+        quota: 0,
+        timestamp,
+      });
+    }
+  }
 }
 
 function knownConnections(userId) {
@@ -332,6 +351,7 @@ function deleteMembership(groupId, key, timestamp) {
     _from: "users/" + key,
     _to: "groups/" + groupId,
   });
+
   // empty the group's vouchers after family group member changes
   if (group.type == 'family') {
     if (group.head == key) {
@@ -339,6 +359,36 @@ function deleteMembership(groupId, key, timestamp) {
     } else {
       groupsColl.update(group, { vouchers: [] });
     }
+  }
+
+  if (group.seed) {
+    const seed = seedsColl.firstExample({
+      user: key,
+      type: 'community',
+      group: groupId,
+    });
+    const quota = seed.quota;
+    let seeds = seedsColl.byExample({
+      type: 'community',
+      group: groupId,
+    }).toArray();
+    seeds = seeds.filter(function(item) {
+      return item.user !== key
+    })
+    const quotient = Math.floor(quota / seeds.length);
+    const remainder = quota % seeds.length;
+    for (let i = 0; i < seeds.length; i++) {
+      let newQuota = seeds[i].quota + quotient;
+      if (i < remainder) {
+        newQuota += 1
+      }
+      seedsColl.update(seeds[i], { quota: newQuota });
+    }
+    seedsColl.removeByExample({
+      user: key,
+      type: 'community',
+      group: groupId,
+    });
   }
 }
 
@@ -763,6 +813,44 @@ function convertToFamily(admin, head, groupId) {
   groupsColl.update(group, { head, type: 'family', vouchers: [] });
 }
 
+function transferQuota(source, destination, groupId, quota, timestamp) {
+  const group = getGroup(groupId);
+
+  const sourceSeed = seedsColl.firstExample({
+    type: 'community',
+    user: source,
+    group: group._key,
+  });
+  if (!sourceSeed) {
+    throw new errors.SeedNotFoundError(source);
+  }
+
+  let hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  hashes = JSON.parse(hashes);
+  const block = Math.max(...Object.keys(hashes).map(block => parseInt(block)));
+  const usedQuota = verificationsColl.byExample({
+    name: 'CommunityMembership',
+    'block': block,
+    'group': group._key,
+    'seed': source,
+  }).count();
+  if (sourceSeed.quota - usedQuota < quota) {
+    throw new errors.UnusedQuotaError(source);
+  }
+
+  const destinationSeed = seedsColl.firstExample({
+    type: 'community',
+    user: destination,
+    group: group._key,
+  });
+  if (!destinationSeed) {
+    throw new errors.SeedNotFoundError(destination);
+  }
+
+  seedsColl.update(sourceSeed, { quota: sourceSeed.quota - quota });
+  seedsColl.update(destinationSeed, { quota: destinationSeed.quota + quota });
+}
+
 module.exports = {
   connect,
   createGroup,
@@ -803,4 +891,5 @@ module.exports = {
   vouchFamily,
   setFamilyHead,
   convertToFamily,
+  transferQuota,
 };

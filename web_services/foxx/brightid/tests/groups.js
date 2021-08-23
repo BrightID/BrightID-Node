@@ -10,6 +10,7 @@ const groupsColl = arango._collection('groups');
 const usersInGroupsColl = arango._collection('usersInGroups');
 const usersColl = arango._collection('users');
 const invitationsColl = arango._collection('invitations');
+const seedsColl = arango._collection('seeds');
 
 const chai = require('chai');
 const should = chai.should();
@@ -250,6 +251,103 @@ describe('groups', function() {
       group = db.getGroup('g5');
       group.type.should.equal('family');
       group.head.should.equal('f1');
+    });
+  });
+
+  describe('community seed groups', function() {
+    before(function() {
+      usersColl.truncate();
+      connectionsColl.truncate();
+      groupsColl.truncate();
+      usersInGroupsColl.truncate();
+      invitationsColl.truncate();
+      seedsColl.truncate();
+
+      db.connect({ id1: 'a1', id2: 'b1', level: 'already known', timestamp: Date.now() });
+      db.connect({ id1: 'a1', id2: 'c1', level: 'already known', timestamp: Date.now() });
+      db.createGroup('sg1', 'a1', url, 'general', Date.now());
+
+      // make a seed group. this par will done by updater service
+      groupsColl.update('sg1', { 'seed': true, 'quota': 20, region: 'community one' });
+      seedsColl.insert({
+        user: 'a1',
+        type: 'community',
+        community: 'community one',
+        group: 'sg1',
+        quota: 20,
+        timestamp: Date.now(),
+      });
+    });
+
+    it('newcomers to the seed groups will become seed (with no quota)', function() {
+      db.invite('a1', 'b1', 'sg1', 'data', Date.now());
+      db.addMembership('sg1', 'b1', Date.now());
+      const members = db.groupMembers('sg1');
+      members.should.include('b1');
+      members.length.should.equal(2);
+      const b1 = seedsColl.firstExample({
+        type: 'community',
+        user: 'b1',
+        group: 'sg1',
+      });
+      b1.quota.should.equal(0);
+    });
+    it('seeds of a community should be able to transfer quota to each other', function() {
+      db.transferQuota('a1', 'b1', 'sg1', 5, Date.now());
+      const a1 = seedsColl.firstExample({
+        type: 'community',
+        user: 'a1',
+        group: 'sg1',
+      });
+      a1.quota.should.equal(15);
+      const b1 = seedsColl.firstExample({
+        type: 'community',
+        user: 'b1',
+        group: 'sg1',
+      });
+      b1.quota.should.equal(5);
+    });
+    it('seeds of a community should not be able to transfer more than their unused quota', function() {
+      db.invite('a1', 'c1', 'sg1', 'data', Date.now());
+      db.addMembership('sg1', 'c1', Date.now());
+      (() => {
+        db.transferQuota('a1', 'c1', 'sg1', 20, Date.now());
+      }).should.throw(errors.UnusedQuotaError);
+    });
+    it('by leaving any seed from the group, its quota will distribute between other seeds', function() {
+      let a1 = seedsColl.firstExample({
+        type: 'community',
+        user: 'a1',
+        group: 'sg1',
+      });
+      a1.quota.should.equal(15);
+      let c1 = seedsColl.firstExample({
+        type: 'community',
+        user: 'c1',
+        group: 'sg1',
+      });
+      c1.quota.should.equal(0);
+
+      db.deleteMembership('sg1', 'b1', Date.now());
+
+      a1 = seedsColl.firstExample({
+        type: 'community',
+        user: 'a1',
+        group: 'sg1',
+      });
+      a1.quota.should.equal(18);
+      c1 = seedsColl.firstExample({
+        type: 'community',
+        user: 'c1',
+        group: 'sg1',
+      });
+      c1.quota.should.equal(2);
+
+      seedsColl.byExample({
+        'user': 'b1',
+        'type': 'community',
+        'group': 'sg1'
+      }).count().should.equal(0);
     });
   });
 });
