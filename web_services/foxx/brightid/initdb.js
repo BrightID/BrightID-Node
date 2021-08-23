@@ -108,12 +108,15 @@ function initializeVariables() {
   }
 }
 
-function v6() {
+function v6_1() {
   console.log('creating seeds collection')
   const groupsColl = arango._collection('groups');
   const usersInGroupsColl = arango._collection('usersInGroups');
   const starGroups = [
-
+    'PbtXC7NF5bhiyrDoCShlg3iKK3d9bto_uxg9B4BGv9E',
+    'jutFlbXP0eJnJ2sPT8aibSYdYVde9XQZ_i-z96N9r1w',
+    'vPmP-pkagrl02LrGgIaFf4aimR4rTrbnIcYT5t7q2w4',
+    'bSGdH_RTE9CbHvBpx3Y08OUE0cw7fexp7y0M-9pD4S0',
   ];
 
   groupsColl.byExample({
@@ -122,9 +125,12 @@ function v6() {
     const members = usersInGroupsColl.byExample({
       _to: `groups/${g._key}`
     }).toArray();
-    members.forEach(m => {
-      const user = m._from.replace('users/', '')
-      if (starGroups.includes(g._key)) {
+    if (starGroups.includes(g._key)) {
+      // remove star groups
+      groupsColl.update(g._key, { seed: false, quota: 0 });
+
+      members.forEach(m => {
+        const user = m._from.replace('users/', '')
         query`
           UPSERT {
             user: ${user},
@@ -137,7 +143,10 @@ function v6() {
             timestamp: ${g.timestamp},
           }
           UPDATE {} IN seeds`
-      } else {
+      });
+    } else {
+      members.forEach(m => {
+        const user = m._from.replace('users/', '')
         query`
           UPSERT {
             user: ${user},
@@ -153,12 +162,12 @@ function v6() {
             timestamp: ${g.timestamp},
           }
           UPDATE {} IN seeds`
-      }
-    });
+      });
+    }
   });
 }
 
-const upgrades = ['v6'];
+const upgrades = ['v6_1'];
 
 function initdb() {
   createCollections();
