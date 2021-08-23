@@ -106,6 +106,13 @@ const operations = {
     group: joi.string().required().description('the unique id of the family group'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the head user represented by id'),
   },
+  'Transfer Quota': {
+    source: joi.string().required().description('brightid of the seed who has quota and can transfer to other seeds'),
+    destination: joi.string().required().description('brightid of the seed who is the destination of quota'),
+    group: joi.string().required().description('the unique id of the seed group'),
+    quota: joi.number().integer().required().description('the amount of quota'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the inviter'),
+  },
 };
 
 Object.keys(operations).forEach(name => {

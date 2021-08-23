@@ -36,7 +36,9 @@ const verifyAppSig = function(message, app, sig) {
   const { n: N, e: E } = JSON.parse(app.sponsorPublicKey);
   const result = BlindSignature.verify({
     unblinded: new BigInteger(sig),
-    N, E, message
+    N,
+    E,
+    message
   });
   if (!result) {
     throw new errors.InvalidSignatureError();
@@ -61,10 +63,12 @@ const senderAttrs = {
   'Vouch Family': ['id'],
   'Set Family Head': ['id'],
   'Convert To Family': ['id'],
+  'Transfer Quota': ['source'],
 };
 
 let operationsCount = {};
 let resetTime = 0;
+
 function checkLimits(op, timeWindow, limit) {
   const now = Date.now();
   if (now > resetTime) {
@@ -122,6 +126,7 @@ const signerAndSigs = {
   'Vouch Family': ['id', 'sig'],
   'Set Family Head': ['id', 'sig'],
   'Convert To Family': ['id', 'sig'],
+  'Transfer Quota': ['source', 'sig'],
 }
 
 function verify(op) {
@@ -210,6 +215,8 @@ function apply(op) {
     return db.setFamilyHead(op.id, op.head, op.group, op.timestamp);
   } else if (op['name'] == 'Convert To Family') {
     return db.convertToFamily(op.id, op.head, op.group, op.timestamp);
+  } else if (op['name'] == 'Transfer Quota') {
+    return db.transferQuota(op.source, op.destination, op.group, op.quota, op.timestamp);
   } else {
     throw new errors.InvalidOperationNameError(op['name']);
   }
