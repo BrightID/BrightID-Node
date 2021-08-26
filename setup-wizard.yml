@@ -1,5 +1,11 @@
 version: "2"
 fields:
+  - id: mountpoints
+    title: Mountpoints
+    description: Set mountpoints
+    target:
+      type: allNamedVolumesMountpoint
+
   - id: updater_eth
     title: Ethereum node url
     description: >-
