@@ -7,7 +7,7 @@ import config
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 FRIEND_CONNECTION_LEVELS = ['already known', 'recovery']
 CONN_DIFF_TIME = 60 * 60 * 1000
-GO_BACK_TIME = 10 * 24 * 60 * 60 * 1000
+GO_BACK_TIME = 6 * 60 * 60 * 1000 # 6 hours
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
