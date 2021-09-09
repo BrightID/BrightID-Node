@@ -8,8 +8,18 @@ def verify(block):
     print('Update verifications for apps')
     db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
     parser = Parser()
-    apps = {app["_key"]: app['verification']
-            for app in db['apps'] if app.get('verification')}
+    expressions = {}
+    for app in db['apps']:
+        if not app.get('verification'):
+            countinue
+        try:
+            expr = parser.parse(app['verification'])
+            variables = expr.variables()
+            expressions[app['verification']] = (expr,  variables)
+        except:
+            print('{} has an invalid verification expression: {}'.format(app['name'], app['verification']))
+            continue
+
     batch_db = db.begin_batch_execution(return_result=True)
     batch_col = batch_db.collection('verifications')
     counter = 0
@@ -22,10 +32,8 @@ def verify(block):
                     continue
                 verifications[f'{v["name"]}.{k}'] = v[k]
 
-        for app in apps:
+        for (key, (expr, variables)) in expressions.items():
             try:
-                expr = parser.parse(apps[app])
-                variables = expr.variables()
                 verifications.update(
                     {k: False for k in variables if k not in verifications})
                 verified = expr.evaluate(verifications)
@@ -35,8 +43,8 @@ def verify(block):
 
             if verified:
                 batch_col.insert({
-                    'app': True,
-                    'name': app,
+                    'expression': True,
+                    'name': key,
                     'user': user['_key'],
                     'block': block,
                     'timestamp': int(time.time() * 1000)

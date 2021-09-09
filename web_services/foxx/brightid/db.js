@@ -560,13 +560,15 @@ function getContextIdsByUser(coll, id) {
 }
 
 function getLastContextIds(coll, appKey) {
+  const app = getApp(appKey);
   return query`
     FOR c IN ${coll}
       FOR u in ${usersColl}
         FILTER c.user == u._key
         FOR v in verifications
           FILTER v.user == u._key
-          FILTER ${appKey} == v.name
+            AND v.expression == true
+            AND v.name == ${app.verification}
           FOR s IN ${sponsorshipsColl}
             FILTER s._from == u._id
             SORT c.timestamp DESC
@@ -601,7 +603,15 @@ function userVerifications(user) {
     delete v._rev;
     delete v.user;
   });
-  return verifications;
+
+  // replace expression based verification with app based ones
+  getApps().forEach((app) => {
+    const v = verifications.find(v => v.expression && app.verification == v.name);
+    if (v) {
+      verifications.push({ app: true, name: app._key, timestamp: v.timestamp, block: v.block });
+    }
+  });
+  return verifications.filter(v => !v.expression);
 }
 
 function linkContextId(id, context, contextId, timestamp) {

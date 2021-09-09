@@ -2,7 +2,7 @@
   "main": "apply.js",
   "name": "apply",
   "description": "Allows BrightID consensus module to apply operations to the database.",
-  "version": "5.9.8",
+  "version": "5.9.9",
   "scripts": {
     "setup": "initdb.js"
   }
