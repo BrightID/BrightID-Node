@@ -11,7 +11,7 @@ def verify(block):
     expressions = {}
     for app in db['apps']:
         if not app.get('verification'):
-            countinue
+            continue
         try:
             expr = parser.parse(app['verification'])
             variables = expr.variables()
