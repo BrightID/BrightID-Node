@@ -13,17 +13,17 @@ def get_communities():
     return snapshot_db.aql.execute('''
         FOR seed in seeds
             FILTER seed.type == 'community'
-            RETURN DISTINCT seed.community
+            RETURN DISTINCT seed.group
     ''')
 
 
-def get_seeds_quota(community):
+def get_seeds_quota(group):
     seeds = snapshot_db.aql.execute('''
         FOR seed in seeds
             FILTER seed.type == 'community'
-                AND seed.community == @community
+                AND seed.group == @group
             RETURN seed
-    ''', bind_vars={'community': community})
+    ''', bind_vars={'group': group})
     return {s['user']: s['quota'] for s in seeds}
 
 
@@ -84,10 +84,10 @@ def verify(block):
     print('COMMUNITY MEMBERSHIP LandingProbability')
     results = []
 
-    communities = get_communities()
-    for community in communities:
+    groups = get_communities()
+    for group in groups:
         members = {}
-        seeds_quota = get_seeds_quota(community)
+        seeds_quota = get_seeds_quota(group)
         quota = sum(seeds_quota.values())
         seeds_conns = get_seeds_conns([f'users/{s}' for s in seeds_quota])
         eligibles = {c['_to']: 0 for c in seeds_conns}
@@ -111,14 +111,19 @@ def verify(block):
                     break
             if user not in members:
                 exceeded += 1
-        results.append({'community': community, 'members': members})
+        community = db['groups'].get(group).get('region', '')
+        results.append(
+            {'group': group, 'community': community, 'members': members})
         print(
             f'{community}, quota: {quota}, spent: {len(members)}, exceeded: {exceeded}')
 
     for res in results:
         for u in res['members']:
+            if res['members'][u]['rank'] == 0:
+                continue
             db['verifications'].insert({
                 'name': 'CommunityMembership2',
+                'group': res['group'],
                 'community': res['community'],
                 'user': u.replace('users/', ''),
                 'rank': res['members'][u]['rank'],
