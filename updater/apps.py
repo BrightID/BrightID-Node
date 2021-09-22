@@ -49,9 +49,10 @@ def apps_data():
     print('Updating apps', time.ctime())
     local_apps = {app['_key']: app for app in db['apps']}
 
-    json_apps = requests.get(config.APPS_JSON_FILE).json()['Applications']
+    data = requests.get(config.APPS_JSON_FILE).json()
+
     new_local_apps = []
-    for json_app in json_apps:
+    for json_app in data['Applications']:
         new_local_app = {key: json_app[local_to_json[key]]
                          for key in local_to_json if local_to_json[key] in json_app}
         if 'Links' in json_app:
@@ -67,17 +68,25 @@ def apps_data():
 
         for key in new_local_app:
             if new_local_app.get(key) != local_app.get(key):
-                print(f"Updating {new_local_app['_key']} application")
+                print(f"Updating {new_local_app['_key']} app")
                 try:
                     db['apps'].update(new_local_app)
                 except Exception as e:
-                    print(f'Error in updating application: {e}')
+                    print(f'Error in updating app: {e}')
                 break
     try:
         print("Inserting new apps")
         db['apps'].import_bulk(new_local_apps)
     except Exception as e:
         print(f'Error in inserting new apps: {e}')
+
+    for app_key in data['Removed apps']:
+        if local_apps.get(app_key):
+            try:
+                print(f"Removing {app_key} app")
+                db['apps'].delete(app_key)
+            except Exception as e:
+                print(f'Error in removing app: {e}')
 
 
 def apps_balance():
