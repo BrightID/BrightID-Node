@@ -13,6 +13,7 @@ import verifications
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 variables = db.collection('variables')
 verifiers = {
+    'Seed': verifications.seed,
     'SeedConnected': verifications.seed_connected,
     'SeedConnectedWithFriend': verifications.seed_connected_with_friend,
     'Yekta': verifications.yekta,
