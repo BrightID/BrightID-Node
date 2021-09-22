@@ -14,6 +14,8 @@ const {
 } = require('./encoding');
 const errors = require('./errors');
 const wISchnorrServer  = require('./WISchnorrServer');
+const secp256k1 = require('secp256k1');
+const createKeccakHash = require('keccak');
 
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
@@ -600,6 +602,18 @@ function getState() {
   const initOp = operationsColl.byExample({'state': 'init'}).count();
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
   const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
+  let consensusSenderPublicKey = null;
+  if (module.context && module.context.configuration && module.context.configuration.consensusSenderPrivateKey){
+    const consensusSenderPrivateKey = new Uint8Array(Buffer.from(module.context.configuration.consensusSenderPrivateKey, 'hex'));
+    consensusSenderPublicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(consensusSenderPrivateKey, false).slice(1)));
+    consensusSenderPublicKey = '0x' + createKeccakHash('keccak256').update(consensusSenderPublicKey).digest().slice(-20).toString('hex');
+  }
+  let publicSigningKey = null;
+  if (module.context && module.context.configuration && module.context.configuration.ethPrivateKey){
+    const ethPrivateKey = new Uint8Array(Buffer.from(module.context.configuration.ethPrivateKey, 'hex'));
+    publicSigningKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey, false).slice(1)));
+    publicSigningKey = '0x' + createKeccakHash('keccak256').update(publicSigningKey).digest().slice(-20).toString('hex');
+  }
   let wISchnorrPublic = null;
   if (module.context && module.context.configuration && module.context.configuration.wISchnorrPassword){
     const password = module.context.configuration.wISchnorrPassword;
@@ -613,7 +627,9 @@ function getState() {
     initOp,
     sentOp,
     verificationsHashes,
-    wISchnorrPublic
+    wISchnorrPublic,
+    publicSigningKey,
+    consensusSenderPublicKey,
   }
 }
 

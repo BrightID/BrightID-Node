@@ -27,6 +27,7 @@ foxx config /brightid6 wISchnorrPassword=$BN_WS_WISCHNORR_PASSWORD
 foxx config /brightid6 publicKey=$BN_WS_PUBLIC_KEY
 foxx config /brightid6 privateKey=$BN_WS_PRIVATE_KEY
 foxx config /brightid6 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
+foxx config /brightid6 consensusSenderPrivateKey=$BN_CONSENSUS_PRIVATE_KEY
 foxx config /brightid6 operationsTimeWindow=$BN_WS_OPERATIONS_TIME_WINDOW
 foxx config /brightid6 operationsLimit=$BN_WS_OPERATIONS_LIMIT
 

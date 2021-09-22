@@ -26,6 +26,11 @@
       "type": "string",
       "required": false
     },
+    "consensusSenderPrivateKey": {
+      "description": "Ethereum private key of consensus sender service of this server node; used for sending operations (hex representation without 0x)",
+      "type": "string",
+      "required": false
+    },
     "wISchnorrPassword": {
       "description": "Public key of this server node (base64 encoded)",
       "type": "string",
