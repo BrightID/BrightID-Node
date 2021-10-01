@@ -35,6 +35,9 @@ def get_events(app):
     cb = w3.eth.getBlock('latest').number
     tb = min(cb, fb + config.CHUNK)
 
+    if tb < fb:
+        fb = tb - config.CHUNK
+
     print('\napp: {}'.format(app['_key']))
     print('checking events from block {} to block {}'.format(fb, tb))
     sponsor_event_contract = w3.eth.contract(
