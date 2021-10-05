@@ -26,6 +26,7 @@ services:
       BN_ARANGO_PROTOCOL: http
       BN_ARANGO_HOST: db.brightid-node.public.dappnode
       BN_ARANGO_PORT: "8529"
+      BN_CONSENSUS_SNAPSHOTS_PERIOD: "240"
   consensus_receiver:
     build: consensus
     depends_on:
