@@ -75,7 +75,7 @@ def process(snapshot):
             REMOVE { _key: v._key } IN verifications
         ''', bind_vars={'block': block})
     for v in verifiers:
-        if block % (config.SNAPSHOTS_PERIOD * verifiers[v]['step'])  != 0:
+        if block % (config.SNAPSHOTS_PERIOD * verifiers[v]['step']) != 0:
             continue
         verifiers[v]['verifier'].verify(block)
 

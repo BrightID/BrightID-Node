@@ -6,7 +6,6 @@ const stringify = require('fast-json-stable-stringify');
 const nacl = require('tweetnacl');
 const {
   uInt8ArrayToB64,
-  b64ToUrlSafeB64,
   urlSafeB64ToB64,
   strToUint8Array,
   b64ToUint8Array,
@@ -595,29 +594,32 @@ function insertAppIdVerification(app, uid, appId, verification, roundedTimestamp
   }
 }
 
+function priv2addr(priv) {
+  if (!priv) {
+    return null;
+  }
+  priv = new Uint8Array(Buffer.from(priv, 'hex'));
+  const publicKey = Buffer.from(Object.values(
+    secp256k1.publicKeyCreate(priv, false).slice(1)));
+  return '0x' + createKeccakHash('keccak256').update(publicKey).digest().slice(-20).toString('hex');
+}
+
 function getState() {
   const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
   const initOp = operationsColl.byExample({'state': 'init'}).count();
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
   const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
-  let consensusSenderPublicKey = null;
-  if (module.context && module.context.configuration && module.context.configuration.consensusSenderPrivateKey){
-    const consensusSenderPrivateKey = new Uint8Array(Buffer.from(module.context.configuration.consensusSenderPrivateKey, 'hex'));
-    consensusSenderPublicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(consensusSenderPrivateKey, false).slice(1)));
-    consensusSenderPublicKey = '0x' + createKeccakHash('keccak256').update(consensusSenderPublicKey).digest().slice(-20).toString('hex');
-  }
-  let publicSigningKey = null;
-  if (module.context && module.context.configuration && module.context.configuration.ethPrivateKey){
-    const ethPrivateKey = new Uint8Array(Buffer.from(module.context.configuration.ethPrivateKey, 'hex'));
-    publicSigningKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey, false).slice(1)));
-    publicSigningKey = '0x' + createKeccakHash('keccak256').update(publicSigningKey).digest().slice(-20).toString('hex');
-  }
+  const conf = module.context.configuration;
+  const consensusSenderAddress = priv2addr(conf.consensusSenderPrivateKey);
+  const ethSigningAddress = priv2addr(conf.ethPrivateKey);
+  const naclSigningKey = conf.privateKey && uInt8ArrayToB64(Object.values(
+    nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(conf.privateKey)).publicKey
+  ));
   let wISchnorrPublic = null;
-  if (module.context && module.context.configuration && module.context.configuration.wISchnorrPassword){
-    const password = module.context.configuration.wISchnorrPassword;
+  if (conf.wISchnorrPassword){
     const server = new wISchnorrServer();
-    server.GenerateSchnorrKeypair(password);
+    server.GenerateSchnorrKeypair(conf.wISchnorrPassword);
     wISchnorrPublic = server.ExtractPublicKey();
   }
   return {
@@ -627,8 +629,9 @@ function getState() {
     sentOp,
     verificationsHashes,
     wISchnorrPublic,
-    publicSigningKey,
-    consensusSenderPublicKey,
+    ethSigningAddress,
+    naclSigningKey,
+    consensusSenderAddress,
   }
 }
 
