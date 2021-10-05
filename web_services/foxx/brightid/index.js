@@ -287,9 +287,9 @@ const handlers = {
         message = message + ',' + timestamp;
       }
       const privateKey = module.context.configuration.privateKey;
-      publicKey = uInt8ArrayToB64(
+      publicKey = uInt8ArrayToB64(Object.values(
         nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(privateKey)).publicKey
-      );
+      ));
       sig = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
       );
