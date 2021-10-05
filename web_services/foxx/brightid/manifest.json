@@ -11,11 +11,6 @@
     "setup": "initdb.js"
   },
   "configuration": {
-    "publicKey": {
-      "description": "Public key of this server node (base64 encoded)",
-      "type": "string",
-      "required": false
-    },
     "privateKey": {
       "description": "Private key of this server node; used for signing verifications (base64 encoded)",
       "type": "string",
