@@ -278,7 +278,7 @@ const handlers = {
     // sign and return the verification
     let sig, publicKey;
     if (signed == 'nacl') {
-      if (! (module.context && module.context.configuration && module.context.configuration.publicKey && module.context.configuration.privateKey)){
+      if (! (module.context && module.context.configuration && module.context.configuration.privateKey)){
         throw new errors.KeypairNotSetError();
       }
 
@@ -287,7 +287,9 @@ const handlers = {
         message = message + ',' + timestamp;
       }
       const privateKey = module.context.configuration.privateKey;
-      publicKey = module.context.configuration.publicKey;
+      publicKey = uInt8ArrayToB64(
+        nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(privateKey)).publicKey
+      );
       sig = uInt8ArrayToB64(
         Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
       );
