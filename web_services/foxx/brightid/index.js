@@ -320,9 +320,9 @@ const handlers = {
         if (timestamp) {
           message = message + ',' + timestamp;
         }
-        publicKey = uInt8ArrayToB64(
+        publicKey = uInt8ArrayToB64(Object.values(
           nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(conf.privateKey)).publicKey
-        );
+        ));
         sig = uInt8ArrayToB64(
           Object.values(nacl.sign.detached(strToUint8Array(message),
           b64ToUint8Array(conf.privateKey)))
