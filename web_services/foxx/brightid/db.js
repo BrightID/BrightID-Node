@@ -6,7 +6,6 @@ const stringify = require('fast-json-stable-stringify');
 const nacl = require('tweetnacl');
 const {
   uInt8ArrayToB64,
-  b64ToUrlSafeB64,
   urlSafeB64ToB64,
   strToUint8Array,
   b64ToUint8Array,
@@ -14,6 +13,8 @@ const {
 } = require('./encoding');
 const errors = require('./errors');
 const wISchnorrServer  = require('./WISchnorrServer');
+const secp256k1 = require('secp256k1');
+const createKeccakHash = require('keccak');
 
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
@@ -366,8 +367,7 @@ function appToDic(app) {
     id: app._key,
     name: app.name,
     context: app.context,
-    verification: app.verification,
-    verifications: app.verifications,
+    verifications: (app.verifications && app.verifications.length > 0) ? app.verifications : [app.verification],
     verificationUrl: app.verificationUrl,
     logo: app.logo,
     url: app.url,
@@ -594,17 +594,32 @@ function insertAppIdVerification(app, uid, appId, verification, roundedTimestamp
   }
 }
 
+function priv2addr(priv) {
+  if (!priv) {
+    return null;
+  }
+  priv = new Uint8Array(Buffer.from(priv, 'hex'));
+  const publicKey = Buffer.from(Object.values(
+    secp256k1.publicKeyCreate(priv, false).slice(1)));
+  return '0x' + createKeccakHash('keccak256').update(publicKey).digest().slice(-20).toString('hex');
+}
+
 function getState() {
   const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
   const initOp = operationsColl.byExample({'state': 'init'}).count();
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
   const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
+  const conf = module.context.configuration;
+  const consensusSenderAddress = priv2addr(conf.consensusSenderPrivateKey);
+  const ethSigningAddress = priv2addr(conf.ethPrivateKey);
+  const naclSigningKey = conf.privateKey && uInt8ArrayToB64(Object.values(
+    nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(conf.privateKey)).publicKey
+  ));
   let wISchnorrPublic = null;
-  if (module.context && module.context.configuration && module.context.configuration.wISchnorrPassword){
-    const password = module.context.configuration.wISchnorrPassword;
+  if (conf.wISchnorrPassword){
     const server = new wISchnorrServer();
-    server.GenerateSchnorrKeypair(password);
+    server.GenerateSchnorrKeypair(conf.wISchnorrPassword);
     wISchnorrPublic = server.ExtractPublicKey();
   }
   return {
@@ -613,7 +628,10 @@ function getState() {
     initOp,
     sentOp,
     verificationsHashes,
-    wISchnorrPublic
+    wISchnorrPublic,
+    ethSigningAddress,
+    naclSigningKey,
+    consensusSenderAddress,
   }
 }
 

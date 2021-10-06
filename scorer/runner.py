@@ -13,20 +13,22 @@ import verifications
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 variables = db.collection('variables')
 verifiers = {
-    'SeedConnected': verifications.seed_connected,
-    'SeedConnectedWithFriend': verifications.seed_connected_with_friend,
-    'Yekta': verifications.yekta,
-    'BrightID': verifications.brightid,
-    'DollarForEveryone': verifications.dollar_for_everyone,
-    'SocialRecoverySetup': verifications.social_recovery_setup,
-    'apps': verifications.apps,
+    'Seed': {'verifier': verifications.seed, 'step': 1},
+    'SeedConnected': {'verifier': verifications.seed_connected, 'step': 1},
+    'SeedConnectedWithFriend': {'verifier': verifications.seed_connected_with_friend, 'step': 1},
+    'Yekta': {'verifier': verifications.yekta, 'step': 10},
+    'BrightID': {'verifier': verifications.brightid, 'step': 1},
+    'DollarForEveryone': {'verifier': verifications.dollar_for_everyone, 'step': 1},
+    'SocialRecoverySetup': {'verifier': verifications.social_recovery_setup, 'step': 1},
+    'apps': {'verifier': verifications.apps, 'step': 1},
 }
 
 
 def update_verifications_hashes(block):
     new_hashes = {}
-    verifications_names = [v for v in verifiers if v != 'apps']
-    for v in verifications_names:
+    for v in verifiers:
+        if block % (config.SNAPSHOTS_PERIOD * verifiers[v]['step']) != 0 or v == 'apps':
+            continue
         verifications = db['verifications'].find({'name': v, 'block': block})
         hashes = [v.get('hash', '') for v in verifications]
         message = ''.join(sorted(hashes)).encode('ascii')
@@ -73,7 +75,9 @@ def process(snapshot):
             REMOVE { _key: v._key } IN verifications
         ''', bind_vars={'block': block})
     for v in verifiers:
-        verifiers[v].verify(block)
+        if block % (config.SNAPSHOTS_PERIOD * verifiers[v]['step']) != 0:
+            continue
+        verifiers[v]['verifier'].verify(block)
 
     update_verifications_hashes(block)
     last_block = variables.get('VERIFICATION_BLOCK')['value']

@@ -1,9 +1,9 @@
 const NOT_VERIFIED = 3;
 const NOT_SPONSORED = 4;
-const ETHPRIVATEKEY_NOT_SET = 7;
+const NACL_KEY_NOT_SET = 6;
+const ETH_KEY_NOT_SET = 7;
 const OPERATION_NOT_FOUND = 9;
 const USER_NOT_FOUND = 10;
-const IP_NOT_SET = 11;
 const APP_NOT_FOUND = 12;
 const INVALID_EXPRESSION = 13;
 const INVALID_TESTING_KEY = 14;
@@ -246,19 +246,19 @@ class InvalidExpressionError extends InternalServerError {
   }
 }
 
-class EthPrivatekeyNotSetError extends InternalServerError {
+class NaclKeyNotSetError extends InternalServerError {
   constructor() {
     super();
-    this.errorNum = ETHPRIVATEKEY_NOT_SET;
-    this.message = 'BN_WS_ETH_PRIVATE_KEY is not set.';
+    this.errorNum = NACL_KEY_NOT_SET;
+    this.message = 'BN_WS_PRIVATE_KEY is not set.';
   }
 }
 
-class IpNotSetError extends InternalServerError {
+class EthKeyNotSetError extends InternalServerError {
   constructor() {
     super();
-    this.errorNum = IP_NOT_SET;
-    this.message = 'BN_WS_IP variable is not set in config.env and is not automatically loaded for an unknown reason.';
+    this.errorNum = ETH_KEY_NOT_SET;
+    this.message = 'BN_WS_ETH_PRIVATE_KEY is not set.';
   }
 }
 
@@ -504,10 +504,10 @@ class AlreadyIsFamilyError extends ForbiddenError {
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
-  ETHPRIVATEKEY_NOT_SET,
+  NACL_KEY_NOT_SET,
+  ETH_KEY_NOT_SET,
   OPERATION_NOT_FOUND,
   USER_NOT_FOUND,
-  IP_NOT_SET,
   APP_NOT_FOUND,
   INVALID_EXPRESSION,
   INVALID_TESTING_KEY,
@@ -573,8 +573,8 @@ module.exports = {
   NotSponsoredError,
   NotVerifiedError,
   InvalidExpressionError,
-  EthPrivatekeyNotSetError,
-  IpNotSetError,
+  NaclKeyNotSetError,
+  EthKeyNotSetError,
   InvalidTestingKeyError,
   NotAdminError,
   AlreadyHasPrimaryGroupError,
