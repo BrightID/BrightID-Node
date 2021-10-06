@@ -11,10 +11,6 @@
     "setup": "initdb.js"
   },
   "configuration": {
-    "ip": {
-      "description": "IPv4 address of the server hosting this service",
-      "type": "string"
-    },
     "privateKey": {
       "description": "Private key of this server node; used for signing verifications (base64 encoded)",
       "type": "string",
