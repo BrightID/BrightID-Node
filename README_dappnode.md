@@ -5,7 +5,7 @@ Install dappnode SDK if you don't have it already:
 
 ### Build package
 You need to be connected to your DAppNode VPN to build the package.
-> dappnodesdk build --compose_file_name docker-compose_Dappnode.yml
+> dappnodesdk build --compose_file_name docker-compose_DAppNode.yml
 
 ### Installation and running
 Above build command will output a direct link to the package installation on your dappnode.
