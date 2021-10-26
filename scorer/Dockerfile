@@ -3,10 +3,10 @@ FROM python:3.7 as builder
 
 ADD . /code
 WORKDIR /code/
-ADD https://github.com/BrightID/BrightID-AntiSybil/archive/v1.2.2.tar.gz ./
-RUN tar -xzf v1.2.2.tar.gz && rm v1.2.2.tar.gz
+ADD https://github.com/BrightID/BrightID-AntiSybil/archive/v1.2.3.tar.gz ./
+RUN tar -xzf v1.2.3.tar.gz && rm v1.2.3.tar.gz
 # Install with --user prefix so all installed packages are easy to copy in next stage
-RUN pip3 install --user BrightID-AntiSybil-1.2.2/.
+RUN pip3 install --user BrightID-AntiSybil-1.2.3/.
 RUN pip3 install --user -r requirements.txt
 
 # 2nd stage
