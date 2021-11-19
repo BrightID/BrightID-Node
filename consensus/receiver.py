@@ -20,7 +20,11 @@ if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') 
 def hash(op):
     op = {k: op[k] for k in op if k not in (
         'sig', 'sig1', 'sig2', 'hash', 'blockTime')}
-    if op['name'] == 'Social Recovery':
+    if op['name'] == 'Set Signing Key':
+        del op['id1']
+        del op['id2']
+    # in next release checking blockTime should be removed
+    if op['name'] == 'Social Recovery' and op['v'] == 6 and op['blockTime'] > 1637380189000:
         del op['id1']
         del op['id2']
     message = json.dumps(op, sort_keys=True, separators=(',', ':'))
