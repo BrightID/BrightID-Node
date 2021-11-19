@@ -20,6 +20,7 @@ verifiers = {
     'BrightID': {'verifier': verifications.brightid, 'step': 1},
     'DollarForEveryone': {'verifier': verifications.dollar_for_everyone, 'step': 1},
     'SocialRecoverySetup': {'verifier': verifications.social_recovery_setup, 'step': 1},
+    'predefined': {'verifier': verifications.predefined, 'step': 1},
     'apps': {'verifier': verifications.apps, 'step': 1},
 }
 
