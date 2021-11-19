@@ -13,6 +13,7 @@ if [ "$INIT_BRIGHTID_DB" == "1" ] || [ ! -f /var/lib/arangodb3/ENGINE ]; then
     mkdir -p /docker-entrypoint-initdb.d/dumps/_system/
     cp dump/* /docker-entrypoint-initdb.d/dumps/_system/
     rm dump -r
+    rm /var/lib/arangodb3/* -r
 fi
 
 if [ -z "$ARANGO_INIT_PORT" ] ; then
