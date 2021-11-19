@@ -21,7 +21,7 @@ def hash(op):
     blockTime = op['blockTime']
     op = {k: op[k] for k in op if k not in (
         'sig', 'sig1', 'sig2', 'hash', 'blockTime')}
-    if op['name'] == 'Set Signing Key' or op['name'] == 'Social Recovery':
+    if op['name'] == 'Set Signing Key':
         del op['id1']
         del op['id2']
     # in next release checking blockTime should be removed
