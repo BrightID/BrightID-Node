@@ -418,6 +418,18 @@ const handlers = {
       }
     });
   },
+
+  appIdSponsorshipGet: function(req, res){
+    const appId = req.param('appId');
+    const sponsorship = db.getSponsorship(appId);
+    res.send({
+      data: {
+        app: sponsorship._to.replace('apps/', ''),
+        state: sponsorship.state,
+        timestamp: sponsorship.timestamp,
+      }
+    });
+  },
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -538,6 +550,12 @@ router.get('/groups/:id', handlers.groupGet)
   .description("Gets a group's admins, info, region, seed, type, url, timestamp, members and invited list.")
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');
+
+router.get('/sponsorships/:appId', handlers.appIdSponsorshipGet)
+  .pathParam('appId', joi.string().required().description('the app id that info requested about'))
+  .summary('Gets sponsorship information of an app id')
+  .response(schemas.appIdSponsorshipGetResponse)
+  .error(404, 'App id not found');
 
 module.context.use(function (req, res, next) {
   try {

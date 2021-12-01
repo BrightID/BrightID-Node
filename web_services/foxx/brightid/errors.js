@@ -47,6 +47,7 @@ const DUPLICATE_SIGNERS = 57;
 const WAIT_FOR_COOLDOWN = 58;
 const UNACCEPTABLE_VERIFICATION = 59;
 const ALREADY_IS_FAMILY = 60;
+const APP_ID_NOT_FOUND = 61;
 
 class BrightIDError extends Error {
   constructor() {
@@ -347,7 +348,7 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = 'The user is sponsored before.';
+    this.message = 'The app id is sponsored before.';
   }
 }
 
@@ -501,6 +502,15 @@ class AlreadyIsFamilyError extends ForbiddenError {
   }
 }
 
+class AppIdNotFoundError extends NotFoundError {
+  constructor(appId) {
+    super();
+    this.errorNum = APP_ID_NOT_FOUND;
+    this.message = `${appId} app id is not found.`;
+    this.appId = appId;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -550,6 +560,7 @@ module.exports = {
   WAIT_FOR_COOLDOWN,
   UNACCEPTABLE_VERIFICATION,
   ALREADY_IS_FAMILY,
+  APP_ID_NOT_FOUND,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -604,4 +615,5 @@ module.exports = {
   WaitForCooldownError,
   UnacceptableVerification,
   AlreadyIsFamilyError,
+  AppIdNotFoundError,
 }

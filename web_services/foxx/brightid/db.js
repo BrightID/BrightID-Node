@@ -538,30 +538,57 @@ function setSigningKey(signingKey, key, timestamp) {
   });
 }
 
+function getSponsorship(appId) {
+  const sponsorship = sponsorshipsColl.firstExample({ appId });
+  if (! sponsorship) {
+    throw new errors.AppIdNotFoundError(appId);
+  }
+  return sponsorship;
+}
+
 function isSponsored(key) {
   return sponsorshipsColl.firstExample({ '_from': 'users/' + key }) != null;
 }
 
 function unusedSponsorships(app) {
-  const usedSponsorships = sponsorshipsColl.byExample({
-    _to: 'apps/' + app
-  }).count();
+  const usedSponsorships = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == ${'apps/' + app}
+        AND s.state IN ['done', null]
+      RETURN s
+  `._countTotal;
   const { totalSponsorships } = appsColl.document(app);
   return totalSponsorships - usedSponsorships;
 }
 
 function sponsor(op) {
+  const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.appId });
+  if (!sponsorship) {
+    sponsorshipsColl.insert({
+      _from: 'users/0',
+      _to: 'apps/' + op.app,
+      // it will expire after 1 hour
+      expireDate: Math.ceil((Date.now() / 1000) + 60 * 60),
+      appId: op.appId,
+      state: op.name == 'Sponsor' ? 'app' : 'client',
+      timestamp: op.timestamp,
+    });
+    return;
+  }
+
+  if (sponsorship.state == 'done' ||
+    (op.name == 'Sponsor' & sponsorship.state == 'app') ||
+    (op.name == 'Spend Sponsorship' & sponsorship.state == 'client')) {
+    throw new errors.SponsoredBeforeError();
+  }
+
   if (unusedSponsorships(op.app) < 1) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
-  if (isSponsored(op.id)) {
-    throw new errors.SponsoredBeforeError();
-  }
-
-  sponsorshipsColl.insert({
-    _from: 'users/' + op.id,
-    _to: 'apps/' + op.app,
+  sponsorshipsColl.update(sponsorship, {
+    expireDate: null,
+    state: 'done',
     timestamp: op.timestamp,
   });
 }
@@ -804,6 +831,7 @@ module.exports = {
   appToDic,
   sponsor,
   isSponsored,
+  getSponsorship,
   loadOperation,
   upsertOperation,
   insertAppIdVerification,

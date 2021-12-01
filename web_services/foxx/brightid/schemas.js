@@ -46,9 +46,13 @@ const operations = {
     sig2: joi.string().required().description('deterministic json representation of operation object signed by the recovery connection represented by id2'),
   },
   'Sponsor': {
-    id: joi.string().required().description('the brightid of the user that is being sponsored'),
+    appId: joi.string().required().description('the app id that is being sponsored'),
     app: joi.string().required().description('the app name that user is being sponsored by'),
     sig: joi.string().required().description('unblinded signature of Chaum\'s blind signature schema using deterministic json representation of {name: "Sponsor", id, app, timestamp, v: 6} as message'),
+  },
+  'Spend Sponsorship': {
+    appId: joi.string().required().description('the app id that is being sponsored'),
+    app: joi.string().required().description('the app name that user is being sponsored by'),
   },
   'Invite': {
     inviter: joi.string().required().description('brightid of the user who has admin rights in the group and can invite others to the group'),
@@ -312,8 +316,16 @@ schemas = Object.assign({
       })
     )
   }),
-}, schemas);
 
+  appIdSponsorshipGetResponse: joi.object({
+    data: joi.object({
+      app: joi.string().required().description('the app name that user is being sponsored by'),
+      state: joi.string().required().description('the state of the sponsorship can be one of "app" or "client" or "done"'),
+      timestamp: joi.number().required().description('the sponsorship timestamp'),
+    })
+  }),
+
+}, schemas);
 
 module.exports = {
   schemas,

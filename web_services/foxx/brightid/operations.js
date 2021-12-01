@@ -33,12 +33,7 @@ const verifyUserSig = function(message, id, sig) {
 
 const verifyAppSig = function(message, app, sig) {
   app = db.getApp(app);
-  const { n: N, e: E } = JSON.parse(app.sponsorPublicKey);
-  const result = BlindSignature.verify({
-    unblinded: new BigInteger(sig),
-    N, E, message
-  });
-  if (!result) {
+  if (!nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(sig), b64ToUint8Array(app.sponsorPublicKey))) {
     throw new errors.InvalidSignatureError();
   }
 }
@@ -51,6 +46,7 @@ const senderAttrs = {
   'Remove Membership': ['id'],
   'Social Recovery': ['id'],
   'Sponsor': ['app'],
+  'Spend Sponsorship': ['app'],
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
   'Add Admin': ['id'],
@@ -135,6 +131,8 @@ function verify(op) {
   let message = getMessage(op);
   if (op.name == 'Sponsor') {
     verifyAppSig(message, op.app, op.sig);
+  } else if (op.name == 'Spend Sponsorship') {
+    return;
   } else if (op.name == 'Social Recovery') {
     const recoveryConnections = db.getRecoveryConnections(op.id);
     if (op.id1 == op.id2) {
@@ -190,7 +188,7 @@ function apply(op) {
     return db.deleteMembership(op.group, op.id, op.timestamp);
   } else if (op['name'] == 'Social Recovery') {
     return db.setSigningKey(op.signingKey, op.id, op.timestamp);
-  } else if (op['name'] == 'Sponsor') {
+  } else if (['Sponsor', 'Spend Sponsorship'].includes(op['name'])) {
     return db.sponsor(op);
   } else if (op['name'] == 'Invite') {
     return db.invite(op.inviter, op.invitee, op.group, op.data, op.timestamp);
