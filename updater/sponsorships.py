@@ -61,7 +61,6 @@ def applyV5(app, context_id):
             '_to': 'apps/' + app['_key'],
             'expireDate': int(time.time()) + 3600,
             'contextId': context_id,
-            'state': 'app'
         })
         print(f"{context_id} is not linked to a brightid yet, a temporary sponsorship is added to be applied after user links contextId")
         return
@@ -93,7 +92,6 @@ def applyV5(app, context_id):
     operation = db['operations'].get(op['hash'])
     if not operation:
         db['operations'].insert(op)
-    return True
 
 
 def applyV6(app, app_id):
@@ -113,10 +111,6 @@ def applyV6(app, app_id):
         print('the app id is sponsored before')
         return
 
-    if not has_sponsorship(app):
-        print('app does not have unused sponsorships')
-        return
-
     db['sponsorships'].update({
         '_key': sponsorship['_key'],
         'expireDate': None,
@@ -127,15 +121,8 @@ def applyV6(app, app_id):
 
 def has_sponsorship(app):
     tsponsorships = app['totalSponsorships']
-    usponsorships = db.aql.execute('''
-        FOR s IN sponsorships
-            FILTER s._to == @app
-                AND s.state IN @states
-            RETURN s
-    ''', bind_vars={
-        'app': f'apps/{app["_key"]}',
-        'states': ['done', None]
-    }, count=True).count()
+    usponsorships = sponsorships.find(
+                {'_to': 'apps/{0}'.format(app['_key'])}).count()
     return tsponsorships - usponsorships > 0
 
 

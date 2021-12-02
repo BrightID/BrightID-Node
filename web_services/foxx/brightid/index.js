@@ -419,7 +419,7 @@ const handlers = {
     });
   },
 
-  appIdSponsorshipGet: function(req, res){
+  sponsorshipGet: function(req, res){
     const appId = req.param('appId');
     const sponsorship = db.getSponsorship(appId);
     res.send({
@@ -490,7 +490,7 @@ router.get('/operations/:hash', handlers.operationGet)
   .error(404, 'Operation not found');
 
 router.get('/verifications/blinded/public', handlers.verificationPublicGet)
-  .queryParam('app', joi.string().required().description('unique app id'))
+  .queryParam('app', joi.string().required().description('the key of the app'))
   .queryParam('roundedTimestamp', joi.number().integer().required().description("timestamp that is rounded to app's required precision or zero"))
   .queryParam('verification', joi.string().required().description('custom verification expression'))
   .summary('Gets public part of WI-Schnorr params')
@@ -507,7 +507,6 @@ router.get('/verifications/blinded/sig/:id', handlers.verificationSigGet)
   .summary('Gets WI-Schnorr server response')
   .description('Gets WI-Schnorr server response that will be used by client to generate final signature to be shared with the app')
   .response(schemas.verificationSigGetResponse)
-  .error(403, 'user is not sponsored')
   .error(404, 'app not found')
   .error(403, 'invalid rounded timestamp');
 
@@ -527,7 +526,6 @@ router.get('/verifications/:app/:appId/', handlers.verificationsGet)
   .summary('Gets a signed verification')
   .description('Apps use this endpoint to query all signed verifications for an appId from the node')
   .response(schemas.verificationsGetResponse)
-  .error(403, 'user is not sponsored')
   .error(404, 'appId not found');
 
 router.get('/apps/:app', handlers.appGet)
@@ -551,11 +549,11 @@ router.get('/groups/:id', handlers.groupGet)
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');
 
-router.get('/sponsorships/:appId', handlers.appIdSponsorshipGet)
-  .pathParam('appId', joi.string().required().description('the app id that info requested about'))
-  .summary('Gets sponsorship information of an app id')
-  .response(schemas.appIdSponsorshipGetResponse)
-  .error(404, 'App id not found');
+router.get('/sponsorships/:appId', handlers.sponsorshipGet)
+  .pathParam('appId', joi.string().required().description('the app generated id that info requested about'))
+  .summary('Gets sponsorship information of an app generated id')
+  .response(schemas.sponsorshipGetResponse)
+  .error(404, 'App generated id not found');
 
 module.context.use(function (req, res, next) {
   try {

@@ -348,7 +348,7 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = 'The app id is sponsored before.';
+    this.message = 'The app generated id is sponsored before.';
   }
 }
 
@@ -506,7 +506,7 @@ class AppIdNotFoundError extends NotFoundError {
   constructor(appId) {
     super();
     this.errorNum = APP_ID_NOT_FOUND;
-    this.message = `${appId} app id is not found.`;
+    this.message = `${appId} app generated id is not found.`;
     this.appId = appId;
   }
 }

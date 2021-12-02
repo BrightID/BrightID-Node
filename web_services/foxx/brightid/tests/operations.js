@@ -814,41 +814,5 @@ describe('operations', function(){
       resp2.json.data.state.should.equal('done');
     });
 
-    it('apps should not be able to sponsor users more than their unused sponsorships but there is no limit in the number of sponsorships in client or app state', function () {
-      // insert a sample of v5 verification records
-      sponsorshipsColl.insert({
-        _from: `users/1`,
-        _to: `apps/idchain`,
-      });
-
-      const appId = hash('randomAppId3');
-      const timestamp = Date.now();
-      let op1 = {
-        name: 'Sponsor',
-        appId,
-        app: 'idchain',
-        timestamp,
-        v: 6
-      }
-      const message = stringify(op1);
-      op1.sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
-      );
-      apply(op1);
-      let resp1 = request.get(`${baseUrl}/sponsorships/${appId}`);
-      resp1.json.data.state.should.equal('app');
-
-      let op2 = {
-        name: 'Spend Sponsorship',
-        appId,
-        app: 'idchain',
-        timestamp,
-        v: 6
-      }
-      const op_resp = apply(op2);
-      op_resp.json.result.errorNum.should.equal(errors.UNUSED_SPONSORSHIPS);
-      let resp2 = request.get(`${baseUrl}/sponsorships/${appId}`);
-      resp2.json.data.state.should.equal('app');
-    });
   });
 });

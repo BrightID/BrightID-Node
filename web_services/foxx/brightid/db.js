@@ -551,17 +551,18 @@ function isSponsored(key) {
 }
 
 function unusedSponsorships(app) {
-  const usedSponsorships = query`
-    FOR s in ${sponsorshipsColl}
-      FILTER s._to == ${'apps/' + app}
-        AND s.state IN ['done', null]
-      RETURN s
-  `._countTotal;
+  const usedSponsorships = sponsorshipsColl.byExample({
+    _to: 'apps/' + app
+  }).count();
   const { totalSponsorships } = appsColl.document(app);
   return totalSponsorships - usedSponsorships;
 }
 
 function sponsor(op) {
+  if (unusedSponsorships(op.app) < 1) {
+    throw new errors.UnusedSponsorshipsError(op.app);
+  }
+
   const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.appId });
   if (!sponsorship) {
     sponsorshipsColl.insert({
@@ -577,13 +578,9 @@ function sponsor(op) {
   }
 
   if (sponsorship.state == 'done' ||
-    (op.name == 'Sponsor' & sponsorship.state == 'app') ||
-    (op.name == 'Spend Sponsorship' & sponsorship.state == 'client')) {
+    (op.name == 'Sponsor' && sponsorship.state == 'app') ||
+    (op.name == 'Spend Sponsorship' && sponsorship.state == 'client')) {
     throw new errors.SponsoredBeforeError();
-  }
-
-  if (unusedSponsorships(op.app) < 1) {
-    throw new errors.UnusedSponsorshipsError(op.app);
   }
 
   sponsorshipsColl.update(sponsorship, {

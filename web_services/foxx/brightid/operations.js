@@ -132,6 +132,7 @@ function verify(op) {
   if (op.name == 'Sponsor') {
     verifyAppSig(message, op.app, op.sig);
   } else if (op.name == 'Spend Sponsorship') {
+    // there is no sig on this operation
     return;
   } else if (op.name == 'Social Recovery') {
     const recoveryConnections = db.getRecoveryConnections(op.id);

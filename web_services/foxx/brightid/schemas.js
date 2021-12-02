@@ -46,13 +46,13 @@ const operations = {
     sig2: joi.string().required().description('deterministic json representation of operation object signed by the recovery connection represented by id2'),
   },
   'Sponsor': {
-    appId: joi.string().required().description('the app id that is being sponsored'),
-    app: joi.string().required().description('the app name that user is being sponsored by'),
-    sig: joi.string().required().description('unblinded signature of Chaum\'s blind signature schema using deterministic json representation of {name: "Sponsor", id, app, timestamp, v: 6} as message'),
+    appId: joi.string().required().description('the app generated id that is being sponsored'),
+    app: joi.string().required().description('the app key that user is being sponsored by'),
+    sig: joi.string().required().description('deterministic json representation of operation object signed by the app keypair'),
   },
   'Spend Sponsorship': {
-    appId: joi.string().required().description('the app id that is being sponsored'),
-    app: joi.string().required().description('the app name that user is being sponsored by'),
+    appId: joi.string().required().description('the app generated id that is being sponsored'),
+    app: joi.string().required().description('the app key that user is being sponsored by'),
   },
   'Invite': {
     inviter: joi.string().required().description('brightid of the user who has admin rights in the group and can invite others to the group'),
@@ -150,7 +150,7 @@ schemas = Object.assign({
     assignedSponsorships: joi.number().integer().description('number of assigned sponsorships'),
     unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
     testing: joi.boolean().description('true if app is in testing mode'),
-    idsAsHex: joi.boolean().description('true if app ids are in ethereum address format'),
+    idsAsHex: joi.boolean().description('true if app generated ids are in ethereum address format'),
     usingBlindSig: joi.boolean().description('true if app is using blind signature integration'),
     verificationExpirationLength: joi.number().integer().description('app verification expiration length in milliseconds'),
     sponsorPublicKey: joi.string().description('the public part of the key pair that the app uses to sign sponsor requests'),
@@ -317,10 +317,10 @@ schemas = Object.assign({
     )
   }),
 
-  appIdSponsorshipGetResponse: joi.object({
+  sponsorshipGetResponse: joi.object({
     data: joi.object({
-      app: joi.string().required().description('the app name that user is being sponsored by'),
-      state: joi.string().required().description('the state of the sponsorship can be one of "app" or "client" or "done"'),
+      app: joi.string().required().description('the app key that user is being sponsored by'),
+      state: joi.string().valid('client', 'app', 'done').required().description('the state of the sponsorship'),
       timestamp: joi.number().required().description('the sponsorship timestamp'),
     })
   }),
