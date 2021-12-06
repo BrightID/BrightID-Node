@@ -571,21 +571,29 @@ function sponsor(op) {
       // it will expire after 1 hour
       expireDate: Math.ceil((Date.now() / 1000) + 60 * 60),
       appId: op.appId,
-      state: op.name == 'Sponsor' ? 'app' : 'client',
+      appHasAuthorized: op.name == 'Sponsor' ? true : false,
+      spendRequested: op.name == 'Spend Sponsorship' ? true : false,
       timestamp: op.timestamp,
     });
     return;
   }
 
-  if (sponsorship.state == 'done' ||
-    (op.name == 'Sponsor' && sponsorship.state == 'app') ||
-    (op.name == 'Spend Sponsorship' && sponsorship.state == 'client')) {
+  if (sponsorship.appHasAuthorized && sponsorship.spendRequested) {
     throw new errors.SponsoredBeforeError();
+  }
+
+  if (op.name == 'Sponsor' && sponsorship.appHasAuthorized) {
+    throw new errors.AppAuthorizedBeforeError();
+  }
+
+  if (op.name == 'Spend Sponsorship' && sponsorship.spendRequested) {
+    throw new errors.SpendRequestedBeforeError();
   }
 
   sponsorshipsColl.update(sponsorship, {
     expireDate: null,
-    state: 'done',
+    appHasAuthorized: true,
+    spendRequested: true,
     timestamp: op.timestamp,
   });
 }

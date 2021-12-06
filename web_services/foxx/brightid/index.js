@@ -425,7 +425,8 @@ const handlers = {
     res.send({
       data: {
         app: sponsorship._to.replace('apps/', ''),
-        state: sponsorship.state,
+        appHasAuthorized: sponsorship.appHasAuthorized,
+        spendRequested: sponsorship.spendRequested,
         timestamp: sponsorship.timestamp,
       }
     });

@@ -305,7 +305,7 @@ schemas = Object.assign({
   verificationsGetResponse: joi.object({
     data: joi.array().items(
       joi.object({
-        unique: joi.string().description('if user is unique under given app'),
+        unique: joi.boolean().description('true if the user is unique under given app'),
         app: joi.string().description('unique id of the app'),
         appId: joi.string().description('the id of the user within the app'),
         verification: joi.string().description('verification expression'),
@@ -320,7 +320,8 @@ schemas = Object.assign({
   sponsorshipGetResponse: joi.object({
     data: joi.object({
       app: joi.string().required().description('the app key that user is being sponsored by'),
-      state: joi.string().valid('client', 'app', 'done').required().description('the state of the sponsorship'),
+      appHasAuthorized: joi.boolean().required().description('true if the app authorized the node to use sponsorships for this app-generated id'),
+      spendRequested: joi.boolean().required().description('true if the client requested to spend sponsorship for this app-generated id'),
       timestamp: joi.number().required().description('the sponsorship timestamp'),
     })
   }),

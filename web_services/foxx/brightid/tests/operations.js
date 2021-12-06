@@ -756,62 +756,85 @@ describe('operations', function(){
 
     it('apps should be able to "Sponsor" first then clients "Spend Sponsorship"', function () {
       const appId = hash('randomAppId');
-      const timestamp = Date.now();
       let op1 = {
         name: 'Sponsor',
         appId,
         app: 'idchain',
-        timestamp,
+        timestamp: Date.now(),
         v: 6
       }
-      const message = stringify(op1);
       op1.sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
+        Object.values(nacl.sign.detached(strToUint8Array(stringify(op1)), sponsorPrivateKey))
       );
       apply(op1);
       let resp1 = request.get(`${baseUrl}/sponsorships/${appId}`);
-      resp1.json.data.state.should.equal('app');
+      resp1.json.data.appHasAuthorized.should.equal(true);
+      resp1.json.data.spendRequested.should.equal(false);
 
       let op2 = {
+        name: 'Sponsor',
+        appId,
+        app: 'idchain',
+        timestamp: Date.now(),
+        v: 6
+      }
+      op2.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(stringify(op2)), sponsorPrivateKey))
+      );
+      const opRes = apply(op2);
+      opRes.json.result.errorNum.should.equal(errors.APP_AUTHORIZED_BEFORE);
+
+      let op3 = {
         name: 'Spend Sponsorship',
         appId,
         app: 'idchain',
-        timestamp,
+        timestamp: Date.now(),
         v: 6
       }
-      apply(op2);
-      let resp2 = request.get(`${baseUrl}/sponsorships/${appId}`);
-      resp2.json.data.state.should.equal('done');
+      apply(op3);
+      let resp3 = request.get(`${baseUrl}/sponsorships/${appId}`);
+      resp3.json.data.appHasAuthorized.should.equal(true);
+      resp3.json.data.spendRequested.should.equal(true);
     });
 
     it('clients should be able to "Spend Sponsorship" first then apps "Sponsor"', function () {
       const appId = hash('randomAppId2');
-      const timestamp = Date.now();
       let op1 = {
         name: 'Spend Sponsorship',
         appId,
         app: 'idchain',
-        timestamp,
+        timestamp: Date.now(),
         v: 6
       }
       apply(op1);
       let resp1 = request.get(`${baseUrl}/sponsorships/${appId}`);
-      resp1.json.data.state.should.equal('client');
+      resp1.json.data.spendRequested.should.equal(true);
+      resp1.json.data.appHasAuthorized.should.equal(false);
 
       let op2 = {
+        name: 'Spend Sponsorship',
+        appId,
+        app: 'idchain',
+        timestamp: Date.now(),
+        v: 6
+      }
+      const opRes = apply(op2);
+      opRes.json.result.errorNum.should.equal(errors.SPEND_REQUESTED_BEFORE);
+
+      let op3 = {
         name: 'Sponsor',
         appId,
         app: 'idchain',
-        timestamp,
+        timestamp: Date.now(),
         v: 6
       }
-      const message = stringify(op2);
-      op2.sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey))
+      op3.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(stringify(op3)), sponsorPrivateKey))
       );
-      apply(op2);
-      let resp2 = request.get(`${baseUrl}/sponsorships/${appId}`);
-      resp2.json.data.state.should.equal('done');
+      apply(op3);
+      let resp3 = request.get(`${baseUrl}/sponsorships/${appId}`);
+      resp3.json.data.appHasAuthorized.should.equal(true);
+      resp3.json.data.spendRequested.should.equal(true);
     });
 
   });

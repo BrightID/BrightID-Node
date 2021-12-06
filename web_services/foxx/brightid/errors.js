@@ -48,6 +48,8 @@ const WAIT_FOR_COOLDOWN = 58;
 const UNACCEPTABLE_VERIFICATION = 59;
 const ALREADY_IS_FAMILY = 60;
 const APP_ID_NOT_FOUND = 61;
+const APP_AUTHORIZED_BEFORE = 62;
+const SPEND_REQUESTED_BEFORE = 63;
 
 class BrightIDError extends Error {
   constructor() {
@@ -511,6 +513,22 @@ class AppIdNotFoundError extends NotFoundError {
   }
 }
 
+class AppAuthorizedBeforeError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = APP_AUTHORIZED_BEFORE;
+    this.message = 'The app authorized to use sponsorships for this app-generated id before.';
+  }
+}
+
+class SpendRequestedBeforeError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = SPEND_REQUESTED_BEFORE;
+    this.message = 'Spend request for this app-generated id is submitted before.';
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -561,6 +579,8 @@ module.exports = {
   UNACCEPTABLE_VERIFICATION,
   ALREADY_IS_FAMILY,
   APP_ID_NOT_FOUND,
+  APP_AUTHORIZED_BEFORE,
+  SPEND_REQUESTED_BEFORE,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -616,4 +636,6 @@ module.exports = {
   UnacceptableVerification,
   AlreadyIsFamilyError,
   AppIdNotFoundError,
+  AppAuthorizedBeforeError,
+  SpendRequestedBeforeError,
 }
