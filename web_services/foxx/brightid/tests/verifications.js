@@ -183,6 +183,7 @@ describe('verifications', function() {
     });
     resp.status.should.equal(200);
     for (let v of resp.json.data) {
+      Object.keys(v).should.include('verificationHash')
       if (v.verification == 'SeedConnectedWithFriend') {
         v.unique.should.equal(false);
       } else {
@@ -222,11 +223,13 @@ describe('verifications', function() {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',
+        includeHash: false,
       },
       json: true
     });
     resp.status.should.equal(200);
     for (let v of resp.json.data) {
+      Object.keys(v).should.not.include('verificationHash')
       if (v.verification == 'SeedConnectedWithFriend') {
         v.unique.should.equal(false);
       } else {

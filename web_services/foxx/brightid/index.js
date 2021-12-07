@@ -276,6 +276,7 @@ const handlers = {
     const appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
+    const includeHash = req.param('includeHash');
     const app = db.getApp(appKey);
 
     const vel = app.verificationExpirationLength;
@@ -290,22 +291,24 @@ const handlers = {
     }
 
     const conf = module.context.configuration;
-    const result = [];
+    const results = [];
     for (let verification of app.verifications) {
-      let unique = true;
       const verificationHash = crypto.sha256(verification);
       const doc = appIdsColl.firstExample({ app: appKey, appId, verification, roundedTimestamp });
+      const unique = doc ? true : false;
+      const result = {
+        unique,
+        app: appKey,
+        appId,
+        verification,
+        sig: '',
+        timestamp,
+      }
+      if (includeHash) {
+        result['verificationHash'] = verificationHash;
+      }
       if (!doc) {
-        unique = false;
-        result.push({
-          unique,
-          app: appKey,
-          appId,
-          sig: '',
-          verification,
-          verificationHash,
-          timestamp,
-        });
+        results.push(result);
         continue;
       }
 
@@ -316,7 +319,10 @@ const handlers = {
           throw new errors.NaclKeyNotSetError();
         }
 
-        let message = appKey + ',' + appId + ',' + verificationHash;
+        let message = appKey + ',' + appId;
+        if (includeHash) {
+          message = message + ',' + verificationHash;
+        }
         if (timestamp) {
           message = message + ',' + timestamp;
         }
@@ -339,7 +345,9 @@ const handlers = {
           message = pad32(appKey) + pad32(appId);
         }
         message = Buffer.from(message, 'binary').toString('hex');
-        message += verificationHash;
+        if (includeHash) {
+          message += verificationHash;
+        }
         if (timestamp) {
           const t = timestamp.toString(16);
           message += ('0'.repeat(64 - t.length) + t);
@@ -355,19 +363,11 @@ const handlers = {
         }
       }
 
-      result.push({
-        unique,
-        app: appKey,
-        appId,
-        verification,
-        verificationHash,
-        sig,
-        timestamp,
-        publicKey
-      });
-
+      result['sig'] = sig;
+      result['publicKey'] = publicKey;
+      results.push(result);
     }
-    res.send({ data: result });
+    res.send({ data: results });
   },
 
   appGet: function(req, res){
@@ -524,6 +524,7 @@ router.get('/verifications/:app/:appId/', handlers.verificationsGet)
   .pathParam('appId', joi.string().required().description('the id of user within the app'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
+  .queryParam('includeHash', joi.boolean().default(true).description('false if the requester doesn\'t want the hash included'))
   .summary('Gets a signed verification')
   .description('Apps use this endpoint to query all signed verifications for an appId from the node')
   .response(schemas.verificationsGetResponse)

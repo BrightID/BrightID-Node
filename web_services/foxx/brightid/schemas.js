@@ -305,10 +305,10 @@ schemas = Object.assign({
   verificationsGetResponse: joi.object({
     data: joi.array().items(
       joi.object({
-        unique: joi.boolean().description('true if the user is unique under given app'),
-        app: joi.string().description('unique id of the app'),
-        appId: joi.string().description('the id of the user within the app'),
-        verification: joi.string().description('verification expression'),
+        unique: joi.boolean().required().description('true if the user is unique under given app'),
+        app: joi.string().required().description('unique id of the app'),
+        appId: joi.string().required().description('the id of the user within the app'),
+        verification: joi.string().required().description('verification expression'),
         verificationHash: joi.string().description('sha256 of the verification expression'),
         timestamp: schemas.timestamp.description('timestamp of the verification if a timestamp was requested'),
         sig: joi.string().description('verification message signed by the node'),
