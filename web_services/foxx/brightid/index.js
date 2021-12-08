@@ -552,7 +552,7 @@ router.get('/groups/:id', handlers.groupGet)
   .error(404, 'Group not found');
 
 router.get('/sponsorships/:appId', handlers.sponsorshipGet)
-  .pathParam('appId', joi.string().required().description('the app generated id that info requested about'))
+  .pathParam('appId', joi.string().required().description('the app generated id that info is requested about'))
   .summary('Gets sponsorship information of an app generated id')
   .response(schemas.sponsorshipGetResponse)
   .error(404, 'App generated id not found');
