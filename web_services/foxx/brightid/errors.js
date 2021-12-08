@@ -350,7 +350,7 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = 'The app generated id is sponsored before.';
+    this.message = 'The app generated id was sponsored before.';
   }
 }
 
