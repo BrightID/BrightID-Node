@@ -525,7 +525,7 @@ class SpendRequestedBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPEND_REQUESTED_BEFORE;
-    this.message = 'Spend request for this app-generated id is submitted before.';
+    this.message = 'Spend request for this app-generated id submitted before.';
   }
 }
 
