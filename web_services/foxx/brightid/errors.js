@@ -517,7 +517,7 @@ class AppAuthorizedBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = APP_AUTHORIZED_BEFORE;
-    this.message = 'The app authorized to use sponsorships for this app-generated id before.';
+    this.message = 'The app authorized a sponsorship for this app-generated id before.';
   }
 }
 
