@@ -255,7 +255,7 @@ function groupToDic(groupId) {
     id: group._key,
     members: groupMembers(group._key),
     type: group.type || 'general',
-    founders: group.founders.map(founder => founder.replace('users/', '')),
+    founders: (group.founders || []).map(founder => founder.replace('users/', '')),
     admins: group.admins || group.founders,
     isNew: group.isNew,
     // score on group is deprecated and will be removed on v6
