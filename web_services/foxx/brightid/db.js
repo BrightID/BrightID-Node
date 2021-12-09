@@ -538,6 +538,14 @@ function setSigningKey(signingKey, key, timestamp) {
   });
 }
 
+function getSponsorship(appId) {
+  const sponsorship = sponsorshipsColl.firstExample({ appId });
+  if (! sponsorship) {
+    throw new errors.AppIdNotFoundError(appId);
+  }
+  return sponsorship;
+}
+
 function isSponsored(key) {
   return sponsorshipsColl.firstExample({ '_from': 'users/' + key }) != null;
 }
@@ -555,13 +563,37 @@ function sponsor(op) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
-  if (isSponsored(op.id)) {
+  const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.appId });
+  if (!sponsorship) {
+    sponsorshipsColl.insert({
+      _from: 'users/0',
+      _to: 'apps/' + op.app,
+      // it will expire after 1 hour
+      expireDate: Math.ceil((Date.now() / 1000) + 60 * 60),
+      appId: op.appId,
+      appHasAuthorized: op.name == 'Sponsor' ? true : false,
+      spendRequested: op.name == 'Spend Sponsorship' ? true : false,
+      timestamp: op.timestamp,
+    });
+    return;
+  }
+
+  if (sponsorship.appHasAuthorized && sponsorship.spendRequested) {
     throw new errors.SponsoredBeforeError();
   }
 
-  sponsorshipsColl.insert({
-    _from: 'users/' + op.id,
-    _to: 'apps/' + op.app,
+  if (op.name == 'Sponsor' && sponsorship.appHasAuthorized) {
+    throw new errors.AppAuthorizedBeforeError();
+  }
+
+  if (op.name == 'Spend Sponsorship' && sponsorship.spendRequested) {
+    throw new errors.SpendRequestedBeforeError();
+  }
+
+  sponsorshipsColl.update(sponsorship, {
+    expireDate: null,
+    appHasAuthorized: true,
+    spendRequested: true,
     timestamp: op.timestamp,
   });
 }
@@ -804,6 +836,7 @@ module.exports = {
   appToDic,
   sponsor,
   isSponsored,
+  getSponsorship,
   loadOperation,
   upsertOperation,
   insertAppIdVerification,

@@ -27,16 +27,17 @@ class TestUpdate(unittest.TestCase):
         super(TestUpdate, self).__init__(*args, **kwargs)
         self.IDS_AS_HEX = True
         self.GAS = 500 * 10**3
-        self.GAS_PRICE = 5 * 10**9
-        self.SPONSOR_EVENT_CONTRACT = ''
+        self.GAS_PRICE = 10 * 10**9
+        self.SPONSOR_EVENT_CONTRACT = '0x33c50243A6be39fE245885cDEEf86E7C91D8D3B4'
         self.CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"},{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"}]'
         self.PRIVATE_KEY = ''
         self.APP = ''.join(random.choices(string.ascii_uppercase, k=5))
+        self.APP2 = ''.join(random.choices(string.ascii_uppercase, k=5))
         private, public = ed25519.create_keypair()
         public = base64.b64encode(public.to_bytes()).decode('ascii')
         private = base64.b64encode(private.to_bytes()).decode('ascii')
         self.USER = public.strip('=').replace('/', '_').replace('+', '-')
-        self.WS_PROVIDER = ''
+        self.WS_PROVIDER = 'wss://idchain.one/ws/'
         self.w3 = Web3(Web3.WebsocketProvider(
             self.WS_PROVIDER, websocket_kwargs={'timeout': 60}))
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
@@ -47,6 +48,7 @@ class TestUpdate(unittest.TestCase):
         self.apps = sponsorships.db.collection('apps')
         self.contexts = sponsorships.db.collection('contexts')
         self.sponsorships = sponsorships.db.collection('sponsorships')
+        self.operations = sponsorships.db.collection('operations')
         self.contract = self.w3.eth.contract(
             address=self.SPONSOR_EVENT_CONTRACT,
             abi=self.CONTRACT_ABI)
@@ -71,8 +73,21 @@ class TestUpdate(unittest.TestCase):
             'verification': self.APP,
         }
 
+        self.app_v6 = {
+            '_key': self.APP2,
+            'collection': self.APP2,
+            'verification': self.APP,
+            'wsProvider': self.WS_PROVIDER,
+            'sponsorEventContract': self.SPONSOR_EVENT_CONTRACT,
+            'sponsorPublicKey': '',
+            'totalSponsorships': 2,
+            'idsAsHex': self.IDS_AS_HEX,
+            'usingBlindSig': True
+        }
+
     def setUp(self):
         self.apps.insert(self.app)
+        self.apps.insert(self.app_v6)
         self.contexts.insert(self.context)
         self.users.insert({
             '_key': self.USER,
@@ -94,30 +109,35 @@ class TestUpdate(unittest.TestCase):
     def tearDown(self):
         try:
             self.contexts.delete(self.APP)
-        except:
+        except Exception:
             pass
         try:
             self.apps.delete(self.APP)
-        except:
+        except Exception:
+            pass
+        try:
+            self.apps.delete(self.APP2)
+        except Exception:
             pass
         try:
             self.users.delete(self.USER)
-        except:
+        except Exception:
             pass
         try:
             sponsorships.db.delete_collection(self.APP)
-        except:
+        except Exception:
             pass
         try:
-            r = self.sponsorships.find(
-                {'_from': 'users/{}'.format(self.USER)}).batch()[0]
-            self.sponsorships.delete(r['_key'])
-        except:
+            self.variables.delete(f'LAST_BLOCK_LOG_{self.APP}')
+        except Exception:
             pass
         try:
-            self.variables.delete('LAST_BLOCK_LOG_{}'.format(self.APP))
-        except:
+            self.variables.delete(f'LAST_BLOCK_LOG_{self.APP2}')
+        except Exception:
             pass
+        for r in self.sponsorships:
+            if r['_from'] == f'users/{self.USER}' or r.get('contextId') == self.CONTEXT_ID or r.get('appId') == self.CONTEXT_ID:
+                self.sponsorships.delete(r['_key'])
 
     def priv2addr(self, private_key):
         pk = keys.PrivateKey(bytes.fromhex(private_key))
@@ -137,7 +157,7 @@ class TestUpdate(unittest.TestCase):
         raw_transaction = signed.rawTransaction.hex()
         tx_hash = self.w3.eth.sendRawTransaction(raw_transaction).hex()
         rec = self.w3.eth.waitForTransactionReceipt(tx_hash)
-        print(f"Sponsor Transaction: status: {rec['status']}\ttx_hash: {tx_hash}")
+        print(f'Transaction:\tstatus: {rec["status"]}\ttx_hash: {tx_hash}')
 
     def sponsor(self, context_id):
         func = self.contract.functions.sponsor(context_id)
@@ -149,18 +169,29 @@ class TestUpdate(unittest.TestCase):
         self.sponsor(self.w3.toChecksumAddress(self.CONTEXT_ID))
 
         # Waiting
-        time.sleep(60)
+        time.sleep(30)
         self.variables.insert({
-            '_key': 'LAST_BLOCK_LOG_{}'.format(self.APP),
+            '_key': f'LAST_BLOCK_LOG_{self.APP}',
+            'value': lb - 1
+        })
+        self.variables.insert({
+            '_key': f'LAST_BLOCK_LOG_{self.APP2}',
             'value': lb - 1
         })
         sponsorships.update()
-        # wait for the operation
-        time.sleep(60)
-        self.assertFalse(self.sponsorships.find(
-            {'_from': 'users/{}'.format(self.USER)}).empty())
+
+        self.assertFalse(self.operations.find({
+            'name': 'Sponsor',
+            'app': self.APP,
+            'id': self.USER,
+        }).empty())
         self.assertTrue(self.testblocks.find(
             {'contextId': self.CONTEXT_ID}).empty())
+        self.assertFalse(self.sponsorships.find(
+            {'appId': self.CONTEXT_ID, 'state': 'app'}).empty())
+        time.sleep(60)
+        # self.assertFalse(self.sponsorships.find(
+        #     {'_from': f'users/{self.USER}'}).empty())
 
 
 if __name__ == '__main__':
