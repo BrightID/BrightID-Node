@@ -9,8 +9,9 @@ db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 
 files = [
-    {'url': 'https://explorer.brightid.org/history/markaz.json', 'rank': 'linksNum'},
+    {'url': 'https://explorer.brightid.org/history/bitu.json', 'rank': 'score'},
 ]
+
 
 def verify(block):
     for file in files:
@@ -25,7 +26,8 @@ def verify(block):
                 continue
             v['block'] = block
             v['timestamp'] = int(time.time() * 1000)
-            v['hash'] = utils.hash(v['name'], v['user'], v.get(file['rank'], ''))
+            v['hash'] = utils.hash(v['name'], v['user'],
+                                   v.get(file['rank'], ''))
             batch_col.insert(v)
             counter += 1
             if counter % 1000 == 0:
