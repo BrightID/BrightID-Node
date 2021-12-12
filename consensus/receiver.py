@@ -64,6 +64,9 @@ def process_op(op):
             return process_op(op)
     # resp is returned from arango not PUT /operations handler
     if resp.get('error'):
+        if resp.get('code') == 400:
+            print('invalid operation')
+            return
         raise Exception('Error from apply service')
 
 
