@@ -561,25 +561,20 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
-    if (e.cause && e.cause.isJoi && e.cause.details && e.cause.details.length  > 0){
+    if (e.cause && e.cause.isJoi){
       e.code = 400;
-      let msg1 = '';
-      let msg2 = `${e.cause.details[0]['path'][0]} must be one of the `;
-      e.cause.details.forEach(d => {
-        if (["any.required", "object.allowUnknown"].includes(d.type)) {
-          console.log('$$$', d.message);
-          msg1 += `, ${d.message}`;
-        } else if (d.type == "any.allowOnly") {
-          msg2 += `${d["context"]["valids"][0]}, `;
-        }
-      });
-      e.message = msg1 || msg2;
-      console.group("Error returned");
-      console.log('url:', req._raw.requestType, req._raw.url);
-      console.log('error:', e.message);
-      console.log('body:', req.body);
-      console.groupEnd();
-      res.throw(e.code, e);
+      if (req._raw.url.includes("operations") && e.cause.details && e.cause.details.length  > 0){
+        let msg1 = '';
+        let msg2 = `${e.cause.details[0]['path'][0]} must be one of the `;
+        e.cause.details.forEach(d => {
+          if (["any.required", "object.allowUnknown"].includes(d.type)) {
+            msg1 += `, ${d.message}`;
+          } else if (d.type == "any.allowOnly") {
+            msg2 += `${d["context"]["valids"][0]}, `;
+          }
+        });
+        e.message = msg1 || msg2;
+      }
     }
     if (! (e instanceof errors.NotFoundError)){
       console.group("Error returned");
