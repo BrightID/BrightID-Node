@@ -66,12 +66,10 @@ module.context.use(function (req, res, next) {
       e.code = 400;
       if (req._raw.url.includes("operations") && e.cause.details && e.cause.details.length  > 0){
         let msg1 = '';
-        let msg2 = `${e.cause.details[0]['path'][0]} must be one of the `;
+        const msg2 = 'invalid operation name';
         e.cause.details.forEach(d => {
-          if (["any.required", "object.allowUnknown"].includes(d.type)) {
-            msg1 += `, ${d.message}`;
-          } else if (d.type == "any.allowOnly") {
-            msg2 += `${d["context"]["valids"][0]}, `;
+          if (!d.message.includes('"name" must be one of')) {
+            msg1 += `${d.message}, `;
           }
         });
         e.message = msg1 || msg2;
