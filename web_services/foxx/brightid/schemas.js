@@ -260,6 +260,11 @@ schemas = Object.assign({
       initOp: joi.number().integer().required().description('number of operations in the init state'),
       sentOp: joi.number().integer().required().description('number of operations in the sent state'),
       verificationsHashes: joi.array().items(joi.object()).required().description('different verifications\' hashes for last 2 snapshots'),
+      wISchnorrPublic: joi.string().required().description('the public part of WI-Schnorr params that should be used by client to generate challenge'),
+      ethSigningAddress: joi.string().required().description('the ethereum address of this node; used for signing verifications'),
+      naclSigningKey: joi.string().required().description('nacl signing key of this node; used for signing verifications'),
+      consensusSenderAddress: joi.string().required().description('the ethereum address of consensus sender service of this node; used for sending operations'),
+      version: joi.string().required().description('version of this node'),
     })
   }),
 

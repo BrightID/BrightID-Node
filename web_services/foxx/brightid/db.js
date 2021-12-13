@@ -664,6 +664,7 @@ function getState() {
     ethSigningAddress,
     naclSigningKey,
     consensusSenderAddress,
+    version: module.context.manifest.version,
   }
 }
 
