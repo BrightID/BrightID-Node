@@ -62,6 +62,19 @@ module.context.use(function (req, res, next) {
   try {
     next();
   } catch (e) {
+    if (e.cause && e.cause.isJoi){
+      e.code = 400;
+      if (req._raw.url.includes("operations") && e.cause.details && e.cause.details.length  > 0){
+        let msg1 = '';
+        const msg2 = 'invalid operation name';
+        e.cause.details.forEach(d => {
+          if (!d.message.includes('"name" must be one of')) {
+            msg1 += `${d.message}, `;
+          }
+        });
+        e.message = msg1 || msg2;
+      }
+    }
     console.group("Error returned");
     console.log('url:', req._raw.requestType, req._raw.url);
     console.log('error:', e);
