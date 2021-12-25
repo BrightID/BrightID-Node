@@ -50,7 +50,7 @@ function pad32(data) {
 
 function addressToBytes32(address) {
   const b = Buffer.from(address.substring(2), 'hex').toString("binary");
-  return String.fromCharCode(0).repeat(12) + b;
+  return b;
 }
 
 module.exports = {

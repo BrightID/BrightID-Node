@@ -15,9 +15,13 @@ files = [
 
 def verify(block):
     for file in files:
-        f = requests.get(file['url'])
-        verifieds = json.loads(f.content)
-        print(verifieds[0].get('name', 'untitled').upper())
+        try:
+            f = requests.get(file['url'])
+            verifieds = json.loads(f.content)
+            print(verifieds[0].get('name', 'untitled').upper())
+        except:
+            print(f"Error in load verification's data from {file['url']}")
+            return
         batch_db = db.begin_batch_execution(return_result=True)
         batch_col = batch_db.collection('verifications')
         counter = 0
