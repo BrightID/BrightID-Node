@@ -281,6 +281,10 @@ const handlers = {
     if (app.idsAsHex) {
       appId = appId.toLowerCase();
     }
+    const appIdExists = appIdsColl.firstExample({ app: appKey, appId});
+    if (! appIdExists) {
+      throw new errors.AppIdNotFoundError(appId);
+    }
 
     const vel = app.verificationExpirationLength;
     const roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
