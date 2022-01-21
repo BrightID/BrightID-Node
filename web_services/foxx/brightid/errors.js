@@ -50,6 +50,7 @@ const ALREADY_IS_FAMILY = 60;
 const APP_ID_NOT_FOUND = 61;
 const APP_AUTHORIZED_BEFORE = 62;
 const SPEND_REQUESTED_BEFORE = 63;
+const INVALID_APP_ID = 64;
 
 class BrightIDError extends Error {
   constructor() {
@@ -529,6 +530,15 @@ class SpendRequestedBeforeError extends ForbiddenError {
   }
 }
 
+class InvalidAppIdError extends NotFoundError {
+  constructor(appId) {
+    super();
+    this.errorNum = INVALID_APP_ID;
+    this.message = `The appId "${appId}" is not valid.`;
+    this.appId = appId;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -581,6 +591,7 @@ module.exports = {
   APP_ID_NOT_FOUND,
   APP_AUTHORIZED_BEFORE,
   SPEND_REQUESTED_BEFORE,
+  INVALID_APP_ID,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -638,4 +649,5 @@ module.exports = {
   AppIdNotFoundError,
   AppAuthorizedBeforeError,
   SpendRequestedBeforeError,
+  InvalidAppIdError,
 }

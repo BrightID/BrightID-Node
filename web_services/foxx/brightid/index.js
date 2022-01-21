@@ -272,12 +272,15 @@ const handlers = {
   },
 
   verificationsGet: function(req, res){
-    const appId = req.param('appId');
     const appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
     const includeHash = req.param('includeHash');
     const app = db.getApp(appKey);
+    let appId = req.param('appId');
+    if (app.idsAsHex) {
+      appId = appId.toLowerCase();
+    }
 
     const vel = app.verificationExpirationLength;
     const roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
@@ -420,7 +423,10 @@ const handlers = {
   },
 
   sponsorshipGet: function(req, res){
-    const appId = req.param('appId');
+    let appId = req.param('appId');
+    if(db.isEthereumAddress(appId)) {
+      appId = appId.toLowerCase();
+    }
     const sponsorship = db.getSponsorship(appId);
     res.send({
       data: {

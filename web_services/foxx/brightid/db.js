@@ -563,6 +563,13 @@ function sponsor(op) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
+  const { idsAsHex } = appsColl.document(op.app);
+  if (idsAsHex) {
+    if(!isEthereumAddress(op.appId)) {
+      throw new errors.InvalidAppIdError(op.appId);
+    }
+    op.appId = op.appId.toLowerCase();
+  }
   const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.appId });
   if (!sponsorship) {
     sponsorshipsColl.insert({
@@ -615,15 +622,22 @@ function insertAppIdVerification(app, uid, appId, verification, roundedTimestamp
   const d = appIdsColl.firstExample({ uid });
   if (d) {
     throw new errors.DuplicateUIDError(uid);
-  } else {
-    appIdsColl.insert({
-      app,
-      uid,
-      appId,
-      verification,
-      roundedTimestamp,
-    });
   }
+
+  const { idsAsHex } = appsColl.document(app);
+  if (idsAsHex) {
+    if(!isEthereumAddress(appId)) {
+      throw new errors.InvalidAppIdError(appId);
+    }
+    appId = appId.toLowerCase();
+  }
+  appIdsColl.insert({
+    app,
+    uid,
+    appId,
+    verification,
+    roundedTimestamp,
+  });
 }
 
 function priv2addr(priv) {
@@ -814,6 +828,11 @@ function convertToFamily(admin, head, groupId) {
   groupsColl.update(group, { head, type: 'family', vouchers: [] });
 }
 
+function isEthereumAddress(address) {
+    const re = new RegExp(/^0[xX][A-Fa-f0-9]{40}$/);
+    return re.test(address);
+}
+
 module.exports = {
   connect,
   createGroup,
@@ -855,4 +874,5 @@ module.exports = {
   vouchFamily,
   setFamilyHead,
   convertToFamily,
+  isEthereumAddress,
 };
