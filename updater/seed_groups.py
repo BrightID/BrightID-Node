@@ -63,12 +63,12 @@ def update():
     print('Updating Seed Groups', time.ctime())
     votes_length = voting.functions.votesLength().call()
     variables = db.collection('variables')
-    if variables.has('SEED_GROUP_UPDATER'):
-        checked = variables.get('SEED_GROUP_UPDATER')['votes']
+    if variables.has('SEED_GROUP_UPDATER_CHECKED_VOTES'):
+        checked = variables.get('SEED_GROUP_UPDATER_CHECKED_VOTES')['votes']
     else:
         checked = list(range(0, votes_length))
         variables.insert({
-            '_key': 'SEED_GROUP_UPDATER',
+            '_key': 'SEED_GROUP_UPDATER_CHECKED_VOTES',
             'votes': checked
         })
     keys = ['open', 'executed', 'startDate', 'snapshotBlock', 'supportRequired',
@@ -82,18 +82,15 @@ def update():
                                    ) >= vote['supportRequired'] / 10**18
         approved = (vote['yea'] / vote['votingPower']
                     ) >= vote['minAcceptQuorum'] / 10**18
-        if vote['executed'] or (not vote['open'] and supported and approved):
-            # approved
-            action = get_action(vote_id)
-            if action:
-                execute(action)
-            checked.append(vote_id)
-        elif not vote['open'] and not supported or not approved:
-            # rejected
-            print("rejected")
+        if not vote['open']:
+            if supported and approved:
+                action = get_action(vote_id)
+                print(f"action: {action}")
+                if action:
+                    execute(action)
             checked.append(vote_id)
     variables.update({
-        '_key': 'SEED_GROUP_UPDATER',
+        '_key': 'SEED_GROUP_UPDATER_CHECKED_VOTES',
         'votes': checked
     })
 
