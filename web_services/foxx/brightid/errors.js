@@ -530,7 +530,7 @@ class SpendRequestedBeforeError extends ForbiddenError {
   }
 }
 
-class InvalidAppIdError extends NotFoundError {
+class InvalidAppIdError extends BadRequestError {
   constructor(appId) {
     super();
     this.errorNum = INVALID_APP_ID;
