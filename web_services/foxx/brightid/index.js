@@ -133,6 +133,7 @@ const handlers = {
     const data = {};
 
     data.id = id;
+    data.sponsored = db.isSponsored(id);
     data.verifications = db.userVerifications(id);
     data.recoveryConnections = db.getRecoveryConnections(id);
     const connections = db.userConnections(id, 'inbound');

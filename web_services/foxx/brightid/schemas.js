@@ -228,6 +228,7 @@ schemas = Object.assign({
       verifications: joi.array().items(joi.object()).required().description('list of verification objects user has with properties each verification has'),
       signingKeys: joi.array().items(joi.string()).required().description('list of signing keys that user can sign operations with'),
       recoveryConnections: joi.array().items(schemas.recoveryConnection).required().description('list of recovery connections for the user'),
+      sponsored: joi.boolean().required().description('if user is sponsored'),
       mutualConnections: joi.array().items(joi.string()).description('brightids of mutual connections'),
       mutualGroups: joi.array().items(joi.string()).description('ids of mutual groups'),
       level: joi.string().valid('reported', 'suspicious', 'just met', 'already known', 'recovery').description('level of the connection from requestor to the user specified by id'),
