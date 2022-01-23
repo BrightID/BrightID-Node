@@ -427,7 +427,7 @@ const handlers = {
 
   sponsorshipGet: function(req, res){
     let appId = req.param('appId');
-    if(db.isEthereumAddress(appId)) {
+    if (db.isEthereumAddress(appId)) {
       appId = appId.toLowerCase();
     }
     const sponsorship = db.getSponsorship(appId);
@@ -450,7 +450,6 @@ router.post('/operations', handlers.operationsPost)
   .error(400, 'Failed to add the operation')
   .error(403, 'Bad signature')
   .error(429, 'Too Many Requests');
-
 
 router.get('/users/:id/memberships', handlers.userMembershipsGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))
