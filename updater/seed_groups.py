@@ -18,60 +18,81 @@ def get_action(vote_id):
         argument_filters={'voteId': vote_id}
     ).get_all_entries()[0].args.metadata
     sections = [s.strip() for s in text.split('|')]
+    if len(sections) < 3:
+        print(f'"{text}" is an invalid action')
+        return
 
-    name = sections[0].lower() if len(sections) > 0 else None
-    if name not in ['grant seed status', 'revoke seed status']:
-        print('{} is an invalid action'.format(name))
-        return None
-    if ((name == 'grant seed status' and len(sections) != 5) or
-            (name == 'revoke seed status' and len(sections) != 3)):
-        print('"{}" is invalid action'.format(text))
-        return None
+    sections[0] = sections[0].lower()
+    if sections[0] not in ['grant seed status', 'revoke seed status']:
+        print(f'"{sections[0]}" is an invalid action name')
+        return
 
-    group = sections[1]
-    if not db.collection('groups').get(group):
-        print('group not found: {}'.format(group))
-        return None
+    if ((sections[0] == 'grant seed status' and len(sections) != 5) or
+            (sections[0] == 'revoke seed status' and len(sections) != 3)):
+        print(f'"{text}" is invalid action')
+        return
 
-    region = sections[2] if name == 'grant seed status' else None
-    quota = sections[3] if name == 'grant seed status' else None
-    info = sections[4] if name == 'grant seed status' else None
-    return {'name': name, 'group': group, 'region': region, 'info': info, 'quota': quota}
+    keys = ['name', 'group', 'region', 'quota', 'info']
+    res = dict(zip(keys, sections))
+    return res
+
+
+def execute(action):
+    print("applying: ", {k: str(v).encode("utf-8") for k, v in action.items()})
+    groups_coll = db.collection('groups')
+    group = groups_coll.get(action['group'])
+    if not group:
+        print(f'The group ${action["group"]} is not found.')
+        return
+
+    if 'quota' in action:
+        try:
+            action['quota'] = int(action['quota'])
+        except Exception:
+            print(f'{action["quota"]} is invalid quota')
+            return
+
+    if action['name'] == 'grant seed status':
+        groups_coll.update({'_key': action['group'], 'seed': True,
+                            'region': action['region'], 'info': action['info'], 'quota': action['quota']})
+    else:
+        groups_coll.update({'_key': action['group'], 'seed': False})
 
 
 def update():
     print('Updating Seed Groups', time.ctime())
+    votes_length = voting.functions.votesLength().call()
     variables = db.collection('variables')
-    if variables.has('LAST_BLOCK_SEED_UPDATER'):
-        last_block = variables.get('LAST_BLOCK_SEED_UPDATER')['value']
+    if variables.has('SEED_GROUP_UPDATER_CHECKED_VOTES'):
+        checked = variables.get('SEED_GROUP_UPDATER_CHECKED_VOTES')['votes']
     else:
-        last_block = w3.eth.getBlock('latest').number
+        checked = list(range(0, votes_length))
         variables.insert({
-            '_key': 'LAST_BLOCK_SEED_UPDATER',
-            'value': last_block
+            '_key': 'SEED_GROUP_UPDATER_CHECKED_VOTES',
+            'votes': checked
         })
-    current_block = w3.eth.getBlock('latest').number
-    if current_block < last_block:
-        last_block = current_block - 10000
-    print(last_block, current_block)
-    entries = voting.events.ExecuteVote.createFilter(
-        fromBlock=last_block).get_all_entries()
-
-    def in_range(entry): return last_block <= entry.blockNumber < current_block
-    new_votes = [entry.args.voteId for entry in entries if in_range(entry)]
-    print(len(new_votes))
-    actions = [get_action(vote) for vote in new_votes]
-    actions = [action for action in actions if action]
-
-    groups = db.collection('groups')
-    for action in actions:
-        print({k: str(v).encode("utf-8") for k, v in action.items()})
-        if action['name'] == 'grant seed status':
-            groups.update({'_key': action['group'], 'seed': True, 'region': action['region'],
-                           'info': action['info'], 'quota': int(action['quota'])})
-        else:
-            groups.update({'_key': action['group'], 'seed': False})
-    variables.update({'_key': 'LAST_BLOCK_SEED_UPDATER', 'value': current_block})
+    keys = ['open', 'executed', 'startDate', 'snapshotBlock', 'supportRequired',
+            'minAcceptQuorum', 'yea', 'nay', 'votingPower', 'script']
+    vote_ids = [v for v in range(0, votes_length) if v not in checked]
+    for vote_id in vote_ids:
+        print(f'processing vote: {vote_id}')
+        vote = voting.functions.getVote(vote_id).call()
+        vote = dict(zip(keys, vote))
+        supported = vote['yea'] / (vote['yea'] + vote['nay']
+                                   ) >= vote['supportRequired'] / 10**18
+        approved = (vote['yea'] / vote['votingPower']
+                    ) >= vote['minAcceptQuorum'] / 10**18
+        if not vote['open']:
+            if supported and approved:
+                action = get_action(vote_id)
+                print(f"action: {action}")
+                if action:
+                    execute(action)
+            checked.append(vote_id)
+    variables.update({
+        '_key': 'SEED_GROUP_UPDATER_CHECKED_VOTES',
+        'votes': checked
+    })
 
 
 if __name__ == '__main__':

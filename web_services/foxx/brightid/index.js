@@ -272,12 +272,19 @@ const handlers = {
   },
 
   verificationsGet: function(req, res){
-    const appId = req.param('appId');
     const appKey = req.param('app');
     const signed = req.param('signed');
     let timestamp = req.param('timestamp');
     const includeHash = req.param('includeHash');
     const app = db.getApp(appKey);
+    let appId = req.param('appId');
+    if (app.idsAsHex) {
+      appId = appId.toLowerCase();
+    }
+    const appIdExists = appIdsColl.firstExample({ app: appKey, appId});
+    if (! appIdExists) {
+      throw new errors.AppIdNotFoundError(appId);
+    }
 
     const vel = app.verificationExpirationLength;
     const roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
@@ -420,7 +427,10 @@ const handlers = {
   },
 
   sponsorshipGet: function(req, res){
-    const appId = req.param('appId');
+    let appId = req.param('appId');
+    if (db.isEthereumAddress(appId)) {
+      appId = appId.toLowerCase();
+    }
     const sponsorship = db.getSponsorship(appId);
     res.send({
       data: {
@@ -441,7 +451,6 @@ router.post('/operations', handlers.operationsPost)
   .error(400, 'Failed to add the operation')
   .error(403, 'Bad signature')
   .error(429, 'Too Many Requests');
-
 
 router.get('/users/:id/memberships', handlers.userMembershipsGet)
   .pathParam('id', joi.string().required().description('the brightid of the user'))

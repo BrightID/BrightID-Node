@@ -119,7 +119,7 @@ describe('operations', function(){
       sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
       verificationExpirationLength: 1000000,
       totalSponsorships: 3,
-      idsAsHex: false,
+      idsAsHex: true,
     });
   });
 
@@ -755,7 +755,7 @@ describe('operations', function(){
   describe('Sponsoring users', function() {
 
     it('apps should be able to "Sponsor" first then clients "Spend Sponsorship"', function () {
-      const appId = hash('randomAppId');
+      const appId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11E';
       let op1 = {
         name: 'Sponsor',
         appId,
@@ -773,7 +773,7 @@ describe('operations', function(){
 
       let op2 = {
         name: 'Sponsor',
-        appId,
+        appId: appId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -786,7 +786,7 @@ describe('operations', function(){
 
       let op3 = {
         name: 'Spend Sponsorship',
-        appId,
+        appId: appId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -798,7 +798,7 @@ describe('operations', function(){
     });
 
     it('clients should be able to "Spend Sponsorship" first then apps "Sponsor"', function () {
-      const appId = hash('randomAppId2');
+      const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
       let op1 = {
         name: 'Spend Sponsorship',
         appId,
@@ -813,7 +813,7 @@ describe('operations', function(){
 
       let op2 = {
         name: 'Spend Sponsorship',
-        appId,
+        appId: appId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -823,7 +823,7 @@ describe('operations', function(){
 
       let op3 = {
         name: 'Sponsor',
-        appId,
+        appId: appId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -832,7 +832,7 @@ describe('operations', function(){
         Object.values(nacl.sign.detached(strToUint8Array(stringify(op3)), sponsorPrivateKey))
       );
       apply(op3);
-      let resp3 = request.get(`${baseUrl}/sponsorships/${appId}`);
+      let resp3 = request.get(`${baseUrl}/sponsorships/${appId.toLowerCase()}`);
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
     });

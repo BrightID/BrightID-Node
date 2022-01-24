@@ -190,6 +190,23 @@ describe('verifications', function() {
         v.unique.should.equal(true);
       }
     }
+
+    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId.toLowerCase()}`, {
+      qs: {
+        signed: 'eth',
+        timestamp: 'seconds',
+      },
+      json: true
+    });
+    resp.status.should.equal(200);
+    for (let v of resp.json.data) {
+      Object.keys(v).should.include('verificationHash')
+      if (v.verification == 'SeedConnectedWithFriend') {
+        v.unique.should.equal(false);
+      } else {
+        v.unique.should.equal(true);
+      }
+    }
   });
 
   it('should not be able get more than one signature per verification of the app in each expiration period', function() {
@@ -219,7 +236,7 @@ describe('verifications', function() {
 
   it('apps should be able to check an appId verification', function() {
     let appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
-    const resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}`, {
+    let resp = request.get(`${baseUrl}/verifications/${app._key}/${appId.toLowerCase()}`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',
@@ -236,5 +253,17 @@ describe('verifications', function() {
         v.unique.should.equal(true);
       }
     }
+
+    appId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11C';
+    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}`, {
+      qs: {
+        signed: 'eth',
+        timestamp: 'seconds',
+        includeHash: false,
+      },
+      json: true
+    });
+    resp.status.should.equal(404);
+    resp.json.errorNum.should.equal(errors.APP_ID_NOT_FOUND);
   });
 });
