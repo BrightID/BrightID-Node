@@ -57,6 +57,9 @@ def apps_data():
     for json_app in data['Applications']:
         new_local_app = {key: json_app[local_to_json[key]]
                          for key in local_to_json if local_to_json[key] in json_app}
+        if 'verificationExpirationLength' in new_local_app:
+            new_local_app['verificationExpirationLength'] = int(
+                new_local_app['verificationExpirationLength']) if new_local_app['verificationExpirationLength'].isdigit() else 0
         if 'Links' in json_app:
             new_local_app['url'] = next(iter(json_app['Links'] or []), '')
         if 'Images' in json_app:
