@@ -22,6 +22,8 @@ local_to_json = {
     'idsAsHex': 'Ids As Hex',
     'usingBlindSig': 'Using Blind Sig',
     'localFilter': 'Local Filter',
+    'nodeUrl': 'Node Url',
+    'verificationExpirationLength': 'Verification Expiration Length',
 }
 
 
