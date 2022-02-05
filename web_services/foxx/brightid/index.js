@@ -205,9 +205,21 @@ const handlers = {
     const sig = req.param('sig');
     const e = req.param('e');
     const pub = req.param('public');
+
+    // to enable clients that requested the signed verification using the same public before
+    // but failed in receiving the response
+    let sv = signedVerificationsColl.firstExample({ publicHash: hash(pub) });
+    if (sv) {
+      res.send({
+        data: {
+          response: sv.response
+        }
+      });
+      return;
+    }
+
     const params = db.getCachedParams(pub);
     const app = db.getApp(params.app);
-
     const msg = stringify({ id, 'public': JSON.parse(pub) });
     operations.verifyUserSig(msg, id, sig);
 
@@ -238,11 +250,10 @@ const handlers = {
     server.GenerateSchnorrKeypair(conf.wISchnorrPassword);
 
     const q = { id, roundedTimestamp: params.roundedTimestamp, app: params.app, verification: params.verification };
-    const sv = signedVerificationsColl.firstExample(q);
+    sv = signedVerificationsColl.firstExample(q);
     if (sv) {
       throw new errors.DuplicateSigRequestError();
     }
-    signedVerificationsColl.insert(q);
 
     let priv = params.private;
     priv = {
@@ -251,6 +262,10 @@ const handlers = {
       d: new BigInteger(priv.d),
     };
     const response = server.GenerateWISchnorrServerResponse(priv, e);
+    // using hash of pub to reduce storage size
+    q['publicHash'] = hash(pub);
+    q['response'] = response;
+    signedVerificationsColl.insert(q);
     res.send({
       data: {
         response
