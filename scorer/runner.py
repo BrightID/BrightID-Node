@@ -16,7 +16,7 @@ verifiers = {
     'Seed': {'verifier': verifications.seed, 'step': 1},
     'SeedConnected': {'verifier': verifications.seed_connected, 'step': 1},
     'SeedConnectedWithFriend': {'verifier': verifications.seed_connected_with_friend, 'step': 1},
-    'Yekta': {'verifier': verifications.yekta, 'step': 10},
+    # 'Yekta': {'verifier': verifications.yekta, 'step': 10},
     'BrightID': {'verifier': verifications.brightid, 'step': 1},
     'DollarForEveryone': {'verifier': verifications.dollar_for_everyone, 'step': 1},
     'SocialRecoverySetup': {'verifier': verifications.social_recovery_setup, 'step': 1},
