@@ -615,7 +615,7 @@ function userVerifications(user) {
 }
 
 function linkContextId(id, context, contextId, timestamp) {
-  const { collection, idsAsHex } = getContext(context);
+  const { collection, idsAsHex, soulboundApp } = getContext(context);
   const coll = db._collection(collection);
   if (!contextId) {
     throw new errors.InvalidContextIdError(contextId);
@@ -626,6 +626,10 @@ function linkContextId(id, context, contextId, timestamp) {
       throw new errors.InvalidContextIdError(contextId);
     }
     contextId = contextId.toLowerCase();
+  } else if (soulboundApp) {
+    if (contextId.length > 32) {
+      throw new errors.InvalidContextIdError(contextId);
+    }
   }
 
   // remove testblocks if exists
