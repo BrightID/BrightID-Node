@@ -20,6 +20,7 @@ local_to_json = {
     'wsProvider': 'Websocket Endpoint',
     'verification': 'Verification',
     'testing': 'Testing',
+    'soulbound': 'Soulbound',
 }
 
 
