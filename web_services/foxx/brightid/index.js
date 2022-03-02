@@ -273,9 +273,9 @@ const handlers = {
     });
   },
 
-  verificationAppIdPost: function(req, res){
+  verificationAppUserIdPost: function(req, res){
     const app = req.param('app');
-    const appId = req.param('appId');
+    const appUserId = req.param('appUserId');
     const { sig, verification, roundedTimestamp, uid } = req.body;
     const client = new WISchnorrClient(db.getState().wISchnorrPublic);
     const info = { app, verification, roundedTimestamp };
@@ -283,7 +283,7 @@ const handlers = {
     if (! result) {
       throw new errors.InvalidSignatureError();
     };
-    db.insertAppIdVerification(app, uid, appId, verification, roundedTimestamp);
+    db.insertAppUserIdVerification(app, uid, appUserId, verification, roundedTimestamp);
   },
 
   verificationsGet: function(req, res){
@@ -292,13 +292,13 @@ const handlers = {
     let timestamp = req.param('timestamp');
     const includeHash = req.param('includeHash');
     const app = db.getApp(appKey);
-    let appId = req.param('appId');
+    let appUserId = req.param('appUserId');
     if (app.idsAsHex) {
-      appId = appId.toLowerCase();
+      appUserId = appUserId.toLowerCase();
     }
-    const appIdExists = appIdsColl.firstExample({ app: appKey, appId});
-    if (! appIdExists) {
-      throw new errors.AppIdNotFoundError(appId);
+    const appUserIdExists = appIdsColl.firstExample({ app: appKey, appId: appUserId });
+    if (! appUserIdExists) {
+      throw new errors.AppUserIdNotFoundError(appUserId);
     }
 
     const vel = app.verificationExpirationLength;
@@ -316,12 +316,12 @@ const handlers = {
     const results = [];
     for (let verification of app.verifications) {
       const verificationHash = crypto.sha256(verification);
-      const doc = appIdsColl.firstExample({ app: appKey, appId, verification, roundedTimestamp });
+      const doc = appIdsColl.firstExample({ app: appKey, appId: appUserId, verification, roundedTimestamp });
       const unique = doc ? true : false;
       const result = {
         unique,
         app: appKey,
-        appId,
+        appId: appUserId,
         verification,
         sig: '',
         timestamp,
@@ -341,7 +341,7 @@ const handlers = {
           throw new errors.NaclKeyNotSetError();
         }
 
-        let message = appKey + ',' + appId;
+        let message = appKey + ',' + appUserId;
         if (includeHash) {
           message = message + ',' + verificationHash;
         }
@@ -362,9 +362,9 @@ const handlers = {
 
         let message, h;
         if (app.idsAsHex) {
-          message = pad32(appKey) + addressToBytes32(appId);
+          message = pad32(appKey) + addressToBytes32(appUserId);
         } else {
-          message = pad32(appKey) + pad32(appId);
+          message = pad32(appKey) + pad32(appUserId);
         }
         message = Buffer.from(message, 'binary').toString('hex');
         if (includeHash) {
@@ -442,11 +442,11 @@ const handlers = {
   },
 
   sponsorshipGet: function(req, res){
-    let appId = req.param('appId');
-    if (db.isEthereumAddress(appId)) {
-      appId = appId.toLowerCase();
+    let appUserId = req.param('appUserId');
+    if (db.isEthereumAddress(appUserId)) {
+      appUserId = appUserId.toLowerCase();
     }
-    const sponsorship = db.getSponsorship(appId);
+    const sponsorship = db.getSponsorship(appUserId);
     res.send({
       data: {
         app: sponsorship._to.replace('apps/', ''),
@@ -535,24 +535,24 @@ router.get('/verifications/blinded/sig/:id', handlers.verificationSigGet)
   .error(404, 'app not found')
   .error(403, 'invalid rounded timestamp');
 
-router.post('/verifications/:app/:appId', handlers.verificationAppIdPost)
+router.post('/verifications/:app/:appUserId', handlers.verificationAppUserIdPost)
   .pathParam('app', joi.string().required().description('the app that user is verified for'))
-  .pathParam('appId', joi.string().required().description('the id of the user within the app'))
-  .body(schemas.verificationAppIdPostBody)
+  .pathParam('appUserId', joi.string().required().description('the id of the user within the app'))
+  .body(schemas.verificationAppUserIdPostBody)
   .summary('Posts an unblinded signature')
-  .description('Clients use this endpoint to add unblinded signature for an appId to the node to be queried by apps')
+  .description('Clients use this endpoint to add unblinded signature for an appUserId to the node to be queried by apps')
   .response(null);
 
-router.get('/verifications/:app/:appId/', handlers.verificationsGet)
+router.get('/verifications/:app/:appUserId/', handlers.verificationsGet)
   .pathParam('app', joi.string().required().description('the app that user is verified for'))
-  .pathParam('appId', joi.string().required().description('the id of user within the app'))
+  .pathParam('appUserId', joi.string().required().description('the id of user within the app'))
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .queryParam('includeHash', joi.boolean().default(true).description('false if the requester doesn\'t want the hash included'))
   .summary('Gets a signed verification')
-  .description('Apps use this endpoint to query all signed verifications for an appId from the node')
+  .description('Apps use this endpoint to query all signed verifications for an appUserId from the node')
   .response(schemas.verificationsGetResponse)
-  .error(404, 'appId not found');
+  .error(404, 'appUserId not found');
 
 router.get('/apps/:app', handlers.appGet)
   .pathParam('app', joi.string().required().description("Unique name of the app"))
@@ -575,8 +575,8 @@ router.get('/groups/:id', handlers.groupGet)
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');
 
-router.get('/sponsorships/:appId', handlers.sponsorshipGet)
-  .pathParam('appId', joi.string().required().description('the app generated id that info is requested about'))
+router.get('/sponsorships/:appUserId', handlers.sponsorshipGet)
+  .pathParam('appUserId', joi.string().required().description('the app generated id that info is requested about'))
   .summary('Gets sponsorship information of an app generated id')
   .response(schemas.sponsorshipGetResponse)
   .error(404, 'App generated id not found');

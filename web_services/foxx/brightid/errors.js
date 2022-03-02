@@ -505,12 +505,12 @@ class AlreadyIsFamilyError extends ForbiddenError {
   }
 }
 
-class AppIdNotFoundError extends NotFoundError {
-  constructor(appId) {
+class AppUserIdNotFoundError extends NotFoundError {
+  constructor(appUserId) {
     super();
     this.errorNum = APP_ID_NOT_FOUND;
-    this.message = `${appId} app generated id is not found.`;
-    this.appId = appId;
+    this.message = `${appUserId} app generated id is not found.`;
+    this.appUserId = appUserId;
   }
 }
 
@@ -530,12 +530,12 @@ class SpendRequestedBeforeError extends ForbiddenError {
   }
 }
 
-class InvalidAppIdError extends BadRequestError {
-  constructor(appId) {
+class InvalidAppUserIdError extends BadRequestError {
+  constructor(appUserId) {
     super();
     this.errorNum = INVALID_APP_ID;
-    this.message = `The appId "${appId}" is not valid.`;
-    this.appId = appId;
+    this.message = `The appUserId "${appUserId}" is not valid.`;
+    this.appUserId = appUserId;
   }
 }
 
@@ -646,8 +646,8 @@ module.exports = {
   WaitForCooldownError,
   UnacceptableVerification,
   AlreadyIsFamilyError,
-  AppIdNotFoundError,
+  AppUserIdNotFoundError,
   AppAuthorizedBeforeError,
   SpendRequestedBeforeError,
-  InvalidAppIdError,
+  InvalidAppUserIdError,
 }
