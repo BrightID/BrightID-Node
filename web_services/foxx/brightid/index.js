@@ -27,6 +27,7 @@ const errors = require('./errors');
 
 const router = createRouter();
 module.context.use(router);
+const usersColl = arango._collection('users');
 const operationsHashesColl = arango._collection('operationsHashes');
 const signedVerificationsColl = arango._collection('signedVerifications');
 const cachedParamsColl = arango._collection('cachedParams');
@@ -147,7 +148,7 @@ const handlers = {
     data.createdAt = user.createdAt;
     data.signingKeys = user.signingKeys;
 
-    if (requestor) {
+    if (requestor && usersColl.exists(requestor)) {
       const requestorConnections = db.userConnections(requestor, 'outbound');
       const requestorMemberships = db.userMemberships(requestor);
       data.mutualConnections = _.intersection(
