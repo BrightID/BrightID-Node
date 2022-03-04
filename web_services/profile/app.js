@@ -135,6 +135,47 @@ app.get("/download/:channel/:uuid", function (req, res, next) {
   });
 });
 
+app.delete("/:channel/:uuid", function (req, res, next) {
+  const { channel, uuid } = req.params;
+
+  if (!uuid) {
+    res.status(400).json({ error: "missing uuid" });
+    return;
+  }
+
+  if (!channel) {
+    res.status(400).json({ error: "missing channel" });
+    return;
+  }
+
+  // get array of profiles stored in channel
+  const current_data = dataCache.get(channel);
+  if (!current_data) {
+    res.status(404).json({error: `Channel ${channel} not found`});
+    return;
+  }
+
+  // remove entry
+  const new_data = current_data.filter((entry) => (entry.uuid !== uuid))
+  if (new_data.length === current_data.length) {
+    // entry to be deleted not found :-(
+    res.status(404).json({error: `Profile ${uuid} in channel ${channel} not found`});
+    return;
+  }
+
+  // save data in cache
+  dataCache.set(channel, new_data, async function (err, success) {
+    if (err) {
+      console.log(err);
+      res.status(500).json({ error: "unable to store profile data" });
+      return;
+    }
+    res.status(200);
+    res.json({ success: true });
+  });
+});
+
+
 app.get("/download/:uuid", function (req, res, next) {
   const { uuid } = req.params;
 
