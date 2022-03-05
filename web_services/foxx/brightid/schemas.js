@@ -155,6 +155,7 @@ schemas = Object.assign({
     verificationExpirationLength: joi.number().integer().description('app verification expiration length in milliseconds'),
     sponsorPublicKey: joi.string().description('the public part of the key pair that the app uses to sign sponsor requests'),
     nodeUrl: joi.string().description('the url of the node that the app uses to query verification from'),
+    soulbound: joi.boolean().required().description('true if the app uses soulbound standard'),
   }),
   recoveryConnection: joi.object({
     id: joi.string().required().description('brightid of recovery connection'),

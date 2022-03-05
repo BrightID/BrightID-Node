@@ -379,6 +379,7 @@ function appToDic(app) {
     verificationExpirationLength: app.verificationExpirationLength,
     sponsorPublicKey: app.sponsorPublicKey,
     nodeUrl: app.nodeUrl,
+    soulbound: app.soulbound,
   };
 }
 
