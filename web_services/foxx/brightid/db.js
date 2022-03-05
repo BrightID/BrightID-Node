@@ -538,7 +538,8 @@ function appToDic(app) {
     url: app.url,
     assignedSponsorships: app.totalSponsorships,
     unusedSponsorships: unusedSponsorships(app._key),
-    testing: app.testing
+    testing: app.testing,
+    soulbound: app.soulbound,
   };
 }
 

@@ -172,7 +172,8 @@ schemas = Object.assign({
     url: joi.string().description('the base url for the app'),
     assignedSponsorships: joi.number().integer().description('number of assigned sponsorships'),
     unusedSponsorships: joi.number().integer().description('number of unused sponsorships'),
-    testing: joi.boolean().required().description('true if the app in the testing mode'),
+    testing: joi.boolean().required().description('true if the app is in the testing mode'),
+    soulbound: joi.boolean().required().description('true if the app uses soulbound standard'),
   }),
 }, schemas);
 
