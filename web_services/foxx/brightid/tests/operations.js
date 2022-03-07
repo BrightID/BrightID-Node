@@ -755,10 +755,10 @@ describe('operations', function(){
   describe('Sponsoring users', function() {
 
     it('apps should be able to "Sponsor" first then clients "Spend Sponsorship"', function () {
-      const appId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11E';
+      const appUserId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11E';
       let op1 = {
         name: 'Sponsor',
-        appId,
+        appUserId,
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -767,13 +767,13 @@ describe('operations', function(){
         Object.values(nacl.sign.detached(strToUint8Array(stringify(op1)), sponsorPrivateKey))
       );
       apply(op1);
-      let resp1 = request.get(`${baseUrl}/sponsorships/${appId}`);
+      let resp1 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
       resp1.json.data.appHasAuthorized.should.equal(true);
       resp1.json.data.spendRequested.should.equal(false);
 
       let op2 = {
         name: 'Sponsor',
-        appId: appId.toLowerCase(),
+        appUserId: appUserId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -786,34 +786,34 @@ describe('operations', function(){
 
       let op3 = {
         name: 'Spend Sponsorship',
-        appId: appId.toLowerCase(),
+        appUserId: appUserId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
       }
       apply(op3);
-      let resp3 = request.get(`${baseUrl}/sponsorships/${appId}`);
+      let resp3 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
     });
 
     it('clients should be able to "Spend Sponsorship" first then apps "Sponsor"', function () {
-      const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+      const appUserId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
       let op1 = {
         name: 'Spend Sponsorship',
-        appId,
+        appUserId,
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
       }
       apply(op1);
-      let resp1 = request.get(`${baseUrl}/sponsorships/${appId}`);
+      let resp1 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
       resp1.json.data.spendRequested.should.equal(true);
       resp1.json.data.appHasAuthorized.should.equal(false);
 
       let op2 = {
         name: 'Spend Sponsorship',
-        appId: appId.toLowerCase(),
+        appUserId: appUserId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -823,7 +823,7 @@ describe('operations', function(){
 
       let op3 = {
         name: 'Sponsor',
-        appId: appId.toLowerCase(),
+        appUserId: appUserId.toLowerCase(),
         app: 'idchain',
         timestamp: Date.now(),
         v: 6
@@ -832,7 +832,7 @@ describe('operations', function(){
         Object.values(nacl.sign.detached(strToUint8Array(stringify(op3)), sponsorPrivateKey))
       );
       apply(op3);
-      let resp3 = request.get(`${baseUrl}/sponsorships/${appId.toLowerCase()}`);
+      let resp3 = request.get(`${baseUrl}/sponsorships/${appUserId.toLowerCase()}`);
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
     });

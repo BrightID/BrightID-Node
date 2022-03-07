@@ -102,7 +102,7 @@ describe('verifications', function() {
     let resp = request.get(`${baseUrl}/apps/${app._key}`);
     const vel = resp.json.data.verificationExpirationLength;
     const verifications = resp.json.data.verifications;
-    const appId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
+    const appUserId = '0x79af508c9698076bc1c2dfa224f7829e9768b11e';
 
     for (const verification of verifications) {
       const info = {
@@ -133,7 +133,7 @@ describe('verifications', function() {
     let resp = request.get(`${baseUrl}/apps/${app._key}`);
     const vel = resp.json.data.verificationExpirationLength;
     const verifications = resp.json.data.verifications;
-    const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+    const appUserId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
 
     for (const verification of verifications) {
       const info = {
@@ -162,7 +162,7 @@ describe('verifications', function() {
       const { response } = JSON.parse(resp.body).data;
       const signature = client.GenerateWISchnorrBlindSignature(challenge.t, response);
 
-      resp = request.post(`${baseUrl}/verifications/${info.app}/${appId}`, {
+      resp = request.post(`${baseUrl}/verifications/${info.app}/${appUserId}`, {
         body: {
           uid,
           sig: signature,
@@ -174,7 +174,7 @@ describe('verifications', function() {
       resp.status.should.equal(204);
     }
 
-    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}`, {
+    resp = request.get(`${baseUrl}/verifications/${app._key}/${appUserId}`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',
@@ -191,7 +191,7 @@ describe('verifications', function() {
       }
     }
 
-    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId.toLowerCase()}`, {
+    resp = request.get(`${baseUrl}/verifications/${app._key}/${appUserId.toLowerCase()}`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',
@@ -219,7 +219,7 @@ describe('verifications', function() {
     let resp = request.get(`${baseUrl}/verifications/blinded/public`, { qs: info });
     const pub = JSON.parse(resp.body).data.public;
     const uid = 'unblinded_uid_of_the_user1';
-    const appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+    const appUserId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
     const challenge = client.GenerateWISchnorrClientChallenge(pub, stringify(info), uid);
     const s = stringify({ id: u1.id, public: pub });
     const sig = uInt8ArrayToB64(
@@ -234,9 +234,9 @@ describe('verifications', function() {
     resp.json.errorNum.should.equal(errors.DUPLICATE_SIG_REQUEST_ERROR);
   });
 
-  it('apps should be able to check an appId verification', function() {
-    let appId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
-    let resp = request.get(`${baseUrl}/verifications/${app._key}/${appId.toLowerCase()}`, {
+  it('apps should be able to check an appUserId verification', function() {
+    let appUserId = '0xE8FB09228d1373f931007ca7894a08344B80901c';
+    let resp = request.get(`${baseUrl}/verifications/${app._key}/${appUserId.toLowerCase()}`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',
@@ -254,8 +254,8 @@ describe('verifications', function() {
       }
     }
 
-    appId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11C';
-    resp = request.get(`${baseUrl}/verifications/${app._key}/${appId}`, {
+    appUserId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11C';
+    resp = request.get(`${baseUrl}/verifications/${app._key}/${appUserId}`, {
       qs: {
         signed: 'eth',
         timestamp: 'seconds',

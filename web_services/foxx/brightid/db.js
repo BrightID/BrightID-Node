@@ -379,6 +379,7 @@ function appToDic(app) {
     verificationExpirationLength: app.verificationExpirationLength,
     sponsorPublicKey: app.sponsorPublicKey,
     nodeUrl: app.nodeUrl,
+    soulbound: app.soulbound,
   };
 }
 
@@ -538,10 +539,10 @@ function setSigningKey(signingKey, key, timestamp) {
   });
 }
 
-function getSponsorship(appId) {
-  const sponsorship = sponsorshipsColl.firstExample({ appId });
+function getSponsorship(appUserId) {
+  const sponsorship = sponsorshipsColl.firstExample({ appId: appUserId });
   if (! sponsorship) {
-    throw new errors.AppIdNotFoundError(appId);
+    throw new errors.AppUserIdNotFoundError(appUserId);
   }
   return sponsorship;
 }
@@ -565,19 +566,19 @@ function sponsor(op) {
 
   const { idsAsHex } = appsColl.document(op.app);
   if (idsAsHex) {
-    if(!isEthereumAddress(op.appId)) {
-      throw new errors.InvalidAppIdError(op.appId);
+    if(!isEthereumAddress(op.appUserId)) {
+      throw new errors.InvalidAppUserIdError(op.appUserId);
     }
-    op.appId = op.appId.toLowerCase();
+    op.appUserId = op.appUserId.toLowerCase();
   }
-  const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.appId });
+  const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.appUserId });
   if (!sponsorship) {
     sponsorshipsColl.insert({
       _from: 'users/0',
       _to: 'apps/' + op.app,
       // it will expire after 1 hour
       expireDate: Math.ceil((Date.now() / 1000) + 60 * 60),
-      appId: op.appId,
+      appId: op.appUserId,
       appHasAuthorized: op.name == 'Sponsor' ? true : false,
       spendRequested: op.name == 'Spend Sponsorship' ? true : false,
       timestamp: op.timestamp,
@@ -618,7 +619,7 @@ function upsertOperation(op) {
   }
 }
 
-function insertAppIdVerification(app, uid, appId, verification, roundedTimestamp) {
+function insertAppUserIdVerification(app, uid, appUserId, verification, roundedTimestamp) {
   const d = appIdsColl.firstExample({ uid });
   if (d) {
     throw new errors.DuplicateUIDError(uid);
@@ -626,15 +627,15 @@ function insertAppIdVerification(app, uid, appId, verification, roundedTimestamp
 
   const { idsAsHex } = appsColl.document(app);
   if (idsAsHex) {
-    if(!isEthereumAddress(appId)) {
-      throw new errors.InvalidAppIdError(appId);
+    if(!isEthereumAddress(appUserId)) {
+      throw new errors.InvalidAppUserIdError(appUserId);
     }
-    appId = appId.toLowerCase();
+    appUserId = appUserId.toLowerCase();
   }
   appIdsColl.insert({
     app,
     uid,
-    appId,
+    appId: appUserId,
     verification,
     roundedTimestamp,
   });
@@ -859,7 +860,7 @@ module.exports = {
   getSponsorship,
   loadOperation,
   upsertOperation,
-  insertAppIdVerification,
+  insertAppUserIdVerification,
   setSigningKey,
   unusedSponsorships,
   getState,

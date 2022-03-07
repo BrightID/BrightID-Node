@@ -41,6 +41,9 @@ def verify(block):
     counts = {}
     for u, v in users.items():
         v['reported'] = []
+        # this if block used to init communities and can be removed in the next release
+        if 'communities' not in v:
+            v['communities'] = v['connected']
         for g in v['connected']:
             counts[g] = counts.get(g, 0) + 1
 
@@ -56,17 +59,17 @@ def verify(block):
         for c in connections:
             u = c['_to'].replace('users/', '')
             if u not in users:
-                users[u] = {'connected': [], 'reported': []}
+                users[u] = {'connected': [], 'reported': [], 'communities': []}
 
             if c['level'] in ['just met', 'already known', 'recovery']:
-                already_connected = seed_group['_key'] in users[u]['connected']
-                if not already_connected:
+                if seed_group['_key'] not in users[u]['communities']:
+                    users[u]['communities'].append(seed_group['_key'])
+                if seed_group['_key'] not in users[u]['connected']:
                     counter += 1
                     if counter <= quota:
                         users[u]['connected'].append(seed_group['_key'])
             elif c['level'] == 'reported':
-                already_reported = seed_group['_key'] in users[u]['reported']
-                if not already_reported:
+                if seed_group['_key'] not in users[u]['reported']:
                     users[u]['reported'].append(seed_group['_key'])
 
         spent = min(counter, quota)
@@ -82,6 +85,7 @@ def verify(block):
             'user': u,
             'rank': rank,
             'connected': d['connected'],
+            'communities': d['communities'],
             'reported': d['reported'],
             'block': block,
             'timestamp': int(time.time() * 1000),

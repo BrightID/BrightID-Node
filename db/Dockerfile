@@ -16,7 +16,7 @@ ENV ARANGO_SIGNATURE_URL ${ARANGO_PACKAGE_URL}.asc
 RUN apk add --no-cache gnupg pwgen binutils numactl numactl-tools nodejs yarn && \
     yarn global add foxx-cli && \
     apk del yarn && \
-    gpg --batch --keyserver ha.pool.sks-keyservers.net --recv-keys CD8CB0F1E0AD5B52E93F41E7EA93F5E56E751E9B && \
+    gpg --batch --keyserver keyserver.ubuntu.com --recv-keys CD8CB0F1E0AD5B52E93F41E7EA93F5E56E751E9B && \
     mkdir /docker-entrypoint-initdb.d && \
     cd /tmp                                && \
     wget ${ARANGO_SIGNATURE_URL}           && \

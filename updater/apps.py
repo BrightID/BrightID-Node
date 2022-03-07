@@ -24,6 +24,7 @@ local_to_json = {
     'localFilter': 'Local Filter',
     'nodeUrl': 'Node Url',
     'verificationExpirationLength': 'Verification Expiration Length',
+    'soulbound': 'Soulbound',
 }
 
 
