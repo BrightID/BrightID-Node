@@ -51,11 +51,12 @@ const APP_ID_NOT_FOUND = 61;
 const APP_AUTHORIZED_BEFORE = 62;
 const SPEND_REQUESTED_BEFORE = 63;
 const INVALID_APP_ID = 64;
+const CACHED_PARAMS_NOT_FOUND = 65;
 
 class BrightIDError extends Error {
   constructor() {
     super();
-    this.name = 'BrightIDError';
+    this.name = "BrightIDError";
     this.date = new Date();
   }
 }
@@ -64,7 +65,7 @@ class BadRequestError extends BrightIDError {
   constructor() {
     super();
     this.code = 400;
-    this.message = 'Bad Request';
+    this.message = "Bad Request";
   }
 }
 
@@ -72,7 +73,7 @@ class UnauthorizedError extends BrightIDError {
   constructor() {
     super();
     this.code = 401;
-    this.message = 'Unauthorized';
+    this.message = "Unauthorized";
   }
 }
 
@@ -80,7 +81,7 @@ class ForbiddenError extends BrightIDError {
   constructor() {
     super();
     this.code = 403;
-    this.message = 'Forbidden';
+    this.message = "Forbidden";
   }
 }
 
@@ -88,7 +89,7 @@ class NotFoundError extends BrightIDError {
   constructor() {
     super();
     this.code = 404;
-    this.message = 'Not Found';
+    this.message = "Not Found";
   }
 }
 
@@ -96,7 +97,7 @@ class TooManyRequestsError extends BrightIDError {
   constructor() {
     super();
     this.code = 429;
-    this.message = 'Too Many Requests';
+    this.message = "Too Many Requests";
   }
 }
 
@@ -104,7 +105,7 @@ class InternalServerError extends BrightIDError {
   constructor() {
     super();
     this.code = 500;
-    this.message = 'Internal Server Error';
+    this.message = "Internal Server Error";
   }
 }
 
@@ -112,7 +113,7 @@ class InvalidSignatureError extends UnauthorizedError {
   constructor() {
     super();
     this.errorNum = INVALID_SIGNATURE;
-    this.message = 'Signature is not valid.';
+    this.message = "Signature is not valid.";
   }
 }
 
@@ -129,7 +130,11 @@ class TooManyOperationsError extends TooManyRequestsError {
   constructor(senders, waitingTime, timeWindow, limit) {
     super();
     this.errorNum = TOO_MANY_OPERATIONS;
-    this.message = `More than ${limit} operations sent from ${senders.join(', ')} in ${parseInt(timeWindow / 1000)} seconds. Try again after ${parseInt(waitingTime / 1000)} seconds.`;
+    this.message = `More than ${limit} operations sent from ${senders.join(
+      ", "
+    )} in ${parseInt(timeWindow / 1000)} seconds. Try again after ${parseInt(
+      waitingTime / 1000
+    )} seconds.`;
     this.senders = senders;
     this.waitingTime = waitingTime;
     this.timeWindow = timeWindow;
@@ -168,7 +173,7 @@ class InvalidOperationHashError extends BadRequestError {
   constructor() {
     super();
     this.errorNum = INVALID_HASH;
-    this.message = 'Operation hash is not valid.';
+    this.message = "Operation hash is not valid.";
   }
 }
 
@@ -176,7 +181,7 @@ class NotRecoveryConnectionsError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_RECOVERY_CONNECTIONS;
-    this.message = 'Signers of the request are not recovery connections.';
+    this.message = "Signers of the request are not recovery connections.";
   }
 }
 
@@ -254,7 +259,7 @@ class NaclKeyNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = NACL_KEY_NOT_SET;
-    this.message = 'BN_WS_PRIVATE_KEY is not set.';
+    this.message = "BN_WS_PRIVATE_KEY is not set.";
   }
 }
 
@@ -262,7 +267,7 @@ class EthKeyNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = ETH_KEY_NOT_SET;
-    this.message = 'BN_WS_ETH_PRIVATE_KEY is not set.';
+    this.message = "BN_WS_ETH_PRIVATE_KEY is not set.";
   }
 }
 
@@ -270,7 +275,7 @@ class InvalidTestingKeyError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_TESTING_KEY;
-    this.message = 'Invalid testing key.';
+    this.message = "Invalid testing key.";
   }
 }
 
@@ -278,7 +283,7 @@ class NotAdminError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_ADMIN;
-    this.message = 'Requstor is not admin of the group.';
+    this.message = "Requstor is not admin of the group.";
   }
 }
 
@@ -286,7 +291,7 @@ class AlreadyHasPrimaryGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = ALREADY_HAS_PRIMARY_GROUP;
-    this.message = 'The user already has a primary group.';
+    this.message = "The user already has a primary group.";
   }
 }
 
@@ -294,7 +299,7 @@ class NewUserBeforeFoundersJoinError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NEW_USER_BEFORE_FOUNDERS_JOIN;
-    this.message = 'New members can not join before founders join the group.';
+    this.message = "New members can not join before founders join the group.";
   }
 }
 
@@ -302,7 +307,7 @@ class DuplicateGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = DUPLICATE_GROUP;
-    this.message = 'Group with this id already exists.';
+    this.message = "Group with this id already exists.";
   }
 }
 
@@ -310,7 +315,8 @@ class InvalidCoFoundersError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_COFOUNDERS;
-    this.message = 'One or both of the co-founders are not connected to the founder.';
+    this.message =
+      "One or both of the co-founders are not connected to the founder.";
   }
 }
 
@@ -318,7 +324,7 @@ class IneligibleNewAdminError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_NEW_ADMIN;
-    this.message = 'New admin is not member of the group.';
+    this.message = "New admin is not member of the group.";
   }
 }
 
@@ -326,7 +332,7 @@ class NotInvitedError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_INVITED;
-    this.message = 'The user is not invited to join this group.';
+    this.message = "The user is not invited to join this group.";
   }
 }
 
@@ -334,7 +340,8 @@ class LeaveGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = LEAVE_GROUP;
-    this.message = 'Last admin can not leave the group when it still has other members.';
+    this.message =
+      "Last admin can not leave the group when it still has other members.";
   }
 }
 
@@ -351,7 +358,7 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = 'The app generated id was sponsored before.';
+    this.message = "The app generated id was sponsored before.";
   }
 }
 
@@ -368,7 +375,8 @@ class IneligibleRecoveryConnectionError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_RECOVERY_CONNECTION;
-    this.message = 'Recovery level can only be selected for connections that already know you or trust you as their recovery connection.';
+    this.message =
+      "Recovery level can only be selected for connections that already know you or trust you as their recovery connection.";
   }
 }
 
@@ -376,7 +384,7 @@ class WISchnorrPasswordNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = WISCHNORR_PASSWORD_NOT_SET;
-    this.message = 'WISCHNORR_PASSWORD is not set in config.env.';
+    this.message = "WISCHNORR_PASSWORD is not set in config.env.";
   }
 }
 
@@ -392,7 +400,8 @@ class DuplicateSigRequestError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = DUPLICATE_SIG_REQUEST_ERROR;
-    this.message = 'Only one signature request per verification of the app in each expiration period is allowed.';
+    this.message =
+      "Only one signature request per verification of the app in each expiration period is allowed.";
   }
 }
 
@@ -426,7 +435,7 @@ class NotFamilyError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_FAMILY;
-    this.message = 'The group is not a family group.';
+    this.message = "The group is not a family group.";
   }
 }
 
@@ -434,7 +443,7 @@ class IneligibleToVouch extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_TO_VOUCH;
-    this.message = 'This group is not eligible to vouch for.';
+    this.message = "This group is not eligible to vouch for.";
   }
 }
 
@@ -442,7 +451,7 @@ class IneligibleToVouchFor extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_TO_VOUCH_FOR;
-    this.message = 'This user is not eligible to vouch for this group.';
+    this.message = "This user is not eligible to vouch for this group.";
   }
 }
 
@@ -450,7 +459,7 @@ class IneligibleFamilyHead extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_FAMILY_HEAD;
-    this.message = 'user is not eligible to be head of the family group.';
+    this.message = "user is not eligible to be head of the family group.";
   }
 }
 
@@ -458,7 +467,7 @@ class NotHeadError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_HEAD;
-    this.message = 'Requstor is not head of the group.';
+    this.message = "Requstor is not head of the group.";
   }
 }
 
@@ -474,7 +483,7 @@ class DuplicateSignersError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = DUPLICATE_SIGNERS;
-    this.message = 'Signers of the request are duplicates.';
+    this.message = "Signers of the request are duplicates.";
   }
 }
 
@@ -501,7 +510,7 @@ class AlreadyIsFamilyError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = ALREADY_IS_FAMILY;
-    this.message = 'The group already is a family group.';
+    this.message = "The group already is a family group.";
   }
 }
 
@@ -518,7 +527,8 @@ class AppAuthorizedBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = APP_AUTHORIZED_BEFORE;
-    this.message = 'The app authorized a sponsorship for this app-generated id before.';
+    this.message =
+      "The app authorized a sponsorship for this app-generated id before.";
   }
 }
 
@@ -526,7 +536,7 @@ class SpendRequestedBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPEND_REQUESTED_BEFORE;
-    this.message = 'Spend request for this app-generated id submitted before.';
+    this.message = "Spend request for this app-generated id submitted before.";
   }
 }
 
@@ -536,6 +546,14 @@ class InvalidAppUserIdError extends BadRequestError {
     this.errorNum = INVALID_APP_ID;
     this.message = `The appUserId "${appUserId}" is not valid.`;
     this.appUserId = appUserId;
+  }
+}
+
+class CachedParamsNotFound extends NotFoundError {
+  constructor() {
+    super();
+    this.errorNum = CACHED_PARAMS_NOT_FOUND;
+    this.message = `WISchnorr params not found.`;
   }
 }
 
@@ -592,6 +610,7 @@ module.exports = {
   APP_AUTHORIZED_BEFORE,
   SPEND_REQUESTED_BEFORE,
   INVALID_APP_ID,
+  CACHED_PARAMS_NOT_FOUND,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -650,4 +669,5 @@ module.exports = {
   AppAuthorizedBeforeError,
   SpendRequestedBeforeError,
   InvalidAppUserIdError,
-}
+  CachedParamsNotFound,
+};
