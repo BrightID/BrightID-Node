@@ -322,7 +322,7 @@ const handlers = {
       const result = {
         unique,
         app: appKey,
-        appUserId: appUserId,
+        appUserId,
         verification,
         sig: '',
         timestamp,
