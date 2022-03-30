@@ -566,6 +566,15 @@ class ForbiddenConnectionError extends ForbiddenError {
   }
 }
 
+class UnsingableAppUserIdError extends BadRequestError {
+  constructor(appUserId) {
+    super();
+    this.errorNum = UNSINGABLE_APP_USER_ID;
+    this.message = "appUserIds longer than 32 bytes are not 'eth' signable";
+    this.appUserId = appUserId;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -621,6 +630,7 @@ module.exports = {
   INVALID_APP_ID,
   CACHED_PARAMS_NOT_FOUND,
   FORBIDDEN_CONNECTION,
+  UNSINGABLE_APP_USER_ID,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -681,4 +691,5 @@ module.exports = {
   InvalidAppUserIdError,
   CachedParamsNotFound,
   ForbiddenConnectionError,
+  UnsingableAppUserIdError,
 };
