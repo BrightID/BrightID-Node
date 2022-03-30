@@ -53,6 +53,7 @@ const SPEND_REQUESTED_BEFORE = 63;
 const INVALID_APP_ID = 64;
 const CACHED_PARAMS_NOT_FOUND = 65;
 const FORBIDDEN_CONNECTION = 66;
+const UNSINGABLE_APP_USER_ID = 67;
 
 class BrightIDError extends Error {
   constructor() {
