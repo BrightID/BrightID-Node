@@ -52,6 +52,7 @@ const APP_AUTHORIZED_BEFORE = 62;
 const SPEND_REQUESTED_BEFORE = 63;
 const INVALID_APP_ID = 64;
 const CACHED_PARAMS_NOT_FOUND = 65;
+const FORBIDDEN_CONNECTION = 66;
 
 class BrightIDError extends Error {
   constructor() {
@@ -557,6 +558,14 @@ class CachedParamsNotFound extends NotFoundError {
   }
 }
 
+class ForbiddenConnectionError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = FORBIDDEN_CONNECTION;
+    this.message = "connecting to yourself is not allowed.";
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -611,6 +620,7 @@ module.exports = {
   SPEND_REQUESTED_BEFORE,
   INVALID_APP_ID,
   CACHED_PARAMS_NOT_FOUND,
+  FORBIDDEN_CONNECTION,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -670,4 +680,5 @@ module.exports = {
   SpendRequestedBeforeError,
   InvalidAppUserIdError,
   CachedParamsNotFound,
+  ForbiddenConnectionError,
 };

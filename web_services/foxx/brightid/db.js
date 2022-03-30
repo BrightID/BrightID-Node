@@ -41,6 +41,10 @@ function connect(op) {
     timestamp
   } = op;
 
+  if (key1 == key2) {
+    throw new errors.ForbiddenConnectionError();
+  }
+
   const _from = 'users/' + key1;
   const _to = 'users/' + key2;
   if (level == 'recovery') {
