@@ -21,6 +21,8 @@ const {
   hash,
   pad32,
   addressToBytes32,
+  getNaclKeyPair,
+  getEthKeyPair,
 } = require('./encoding');
 const parser = require('expr-eval').Parser;
 const errors = require('./errors');
@@ -243,12 +245,12 @@ const handlers = {
     }
 
     const conf = module.context.configuration;
-    if (! conf.wISchnorrPassword){
+    if (! (conf.wISchnorrPassword || conf.seed)){
       throw new errors.WISchnorrPasswordNotSetError();
     }
 
     const server = new WISchnorrServer();
-    server.GenerateSchnorrKeypair(conf.wISchnorrPassword);
+    server.GenerateSchnorrKeypair(conf.wISchnorrPassword || conf.seed);
 
     const q = { id, roundedTimestamp: params.roundedTimestamp, app: params.app, verification: params.verification };
     sv = signedVerificationsColl.firstExample(q);
@@ -313,7 +315,6 @@ const handlers = {
       timestamp = undefined;
     }
 
-    const conf = module.context.configuration;
     const results = [];
     for (let verification of app.verifications) {
       const verificationHash = crypto.sha256(verification);
@@ -338,7 +339,8 @@ const handlers = {
       // sign and return the verification
       let sig, publicKey;
       if (signed == 'nacl') {
-        if (! conf.privateKey){
+        const naclKeyPair = getNaclKeyPair();
+        if (!naclKeyPair.privateKey) {
           throw new errors.NaclKeyNotSetError();
         }
 
@@ -349,15 +351,13 @@ const handlers = {
         if (timestamp) {
           message = message + ',' + timestamp;
         }
-        publicKey = uInt8ArrayToB64(Object.values(
-          nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(conf.privateKey)).publicKey
-        ));
+        publicKey = naclKeyPair.publicKey;
         sig = uInt8ArrayToB64(
-          Object.values(nacl.sign.detached(strToUint8Array(message),
-          b64ToUint8Array(conf.privateKey)))
+          Object.values(nacl.sign.detached(strToUint8Array(message), naclKeyPair.privateKey))
         );
       } else if (signed == 'eth') {
-        if (! conf.ethPrivateKey){
+        const ethKeyPair = getEthKeyPair();
+        if (!ethKeyPair.privateKey) {
           throw new errors.EthKeyNotSetError();
         }
 
@@ -379,9 +379,8 @@ const handlers = {
           message += ('0'.repeat(64 - t.length) + t);
         }
         h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
-        const ethPrivateKey = new Uint8Array(Buffer.from(conf.ethPrivateKey, 'hex'));
-        publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
-        const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
+        publicKey = ethKeyPair.publicKey;
+        const _sig = secp256k1.ecdsaSign(h, ethKeyPair.privateKey);
         sig = {
           r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
           s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),

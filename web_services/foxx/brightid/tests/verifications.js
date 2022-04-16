@@ -9,7 +9,8 @@ const db = require('../db');
 const {
   b64ToUrlSafeB64,
   uInt8ArrayToB64,
-  strToUint8Array
+  strToUint8Array,
+  b64ToUint8Array,
 } = require('../encoding');
 const chai = require('chai');
 const nacl = require('tweetnacl');
@@ -193,8 +194,7 @@ describe('verifications', function() {
 
     resp = request.get(`${baseUrl}/verifications/${app._key}/${appUserId.toLowerCase()}`, {
       qs: {
-        signed: 'eth',
-        timestamp: 'seconds',
+        signed: 'nacl',
       },
       json: true
     });
@@ -205,6 +205,8 @@ describe('verifications', function() {
         v.unique.should.equal(false);
       } else {
         v.unique.should.equal(true);
+        const message = v.app + ',' + v.appUserId + ',' + v.verificationHash;
+        nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(v.sig),  b64ToUint8Array(v.publicKey)).should.equal(true);
       }
     }
   });

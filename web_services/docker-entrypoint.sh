@@ -17,6 +17,7 @@ foxx install /apply5 /code/foxx/apply5.zip
 
 foxx upgrade /brightid6 /code/foxx/brightid6.zip ||
 foxx install /brightid6 /code/foxx/brightid6.zip
+foxx config /brightid6 seed=$SEED
 foxx config /brightid6 wISchnorrPassword=$BN_WS_WISCHNORR_PASSWORD
 foxx config /brightid6 privateKey=$BN_WS_PRIVATE_KEY
 foxx config /brightid6 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
