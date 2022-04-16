@@ -4,7 +4,7 @@ set -e
 echo "consensus RUN_TYPE: $RUN_TYPE"
 
 if [ "$RUN_TYPE" = "SENDER" ] ; then
-  if [ "$BN_CONSENSUS_PRIVATE_KEY" != "" ] ; then
+  if [ "$BN_CONSENSUS_PRIVATE_KEY" != "" ] | [ "$SEED" != "" ] ; then
     echo "Starting in SENDER mode"
     exec python3 -u sender.py
   else
