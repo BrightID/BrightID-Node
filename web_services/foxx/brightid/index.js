@@ -16,7 +16,6 @@ const WISchnorrClient  = require('./WISchnorrClient');
 const crypto = require('@arangodb/crypto');
 const {
   strToUint8Array,
-  b64ToUint8Array,
   uInt8ArrayToB64,
   hash,
   pad32,

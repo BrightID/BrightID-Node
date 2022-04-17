@@ -1,16 +1,11 @@
-const BigInteger = require('jsbn').BigInteger;
 const stringify = require('fast-json-stable-stringify');
 const db = require('./db');
 const arango = require('@arangodb').db;
-const CryptoJS = require('crypto-js');
 const nacl = require('tweetnacl');
-const BlindSignature = require('./rsablind');
 
 const {
   strToUint8Array,
   b64ToUint8Array,
-  uInt8ArrayToB64,
-  b64ToUrlSafeB64,
   urlSafeB64ToB64,
   hash
 } = require('./encoding');

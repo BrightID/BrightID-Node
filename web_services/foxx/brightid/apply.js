@@ -2,7 +2,6 @@
 const createRouter = require('@arangodb/foxx/router');
 const joi = require('joi');
 const { db: arango, ArangoError } = require('@arangodb');
-const nacl = require('tweetnacl');
 const db = require('./db');
 const operations = require('./operations');
 const schemas = require('./schemas');

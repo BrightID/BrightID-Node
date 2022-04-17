@@ -1,14 +1,8 @@
 'use strict';
-const { sha256 } = require('@arangodb/crypto');
 const { query, db } = require('@arangodb');
 const _ = require('lodash');
-const stringify = require('fast-json-stable-stringify');
-const nacl = require('tweetnacl');
 const {
-  uInt8ArrayToB64,
   urlSafeB64ToB64,
-  strToUint8Array,
-  b64ToUint8Array,
   hash,
   priv2addr,
   getNaclKeyPair,
