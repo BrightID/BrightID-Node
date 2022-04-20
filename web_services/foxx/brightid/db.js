@@ -384,6 +384,7 @@ function appToDic(app) {
     sponsorPublicKey: app.sponsorPublicKey,
     nodeUrl: app.nodeUrl,
     soulbound: app.soulbound,
+    callbackUrl: app.callbackUrl,
   };
 }
 
