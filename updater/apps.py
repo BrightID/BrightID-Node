@@ -25,6 +25,7 @@ local_to_json = {
     'nodeUrl': 'Node Url',
     'verificationExpirationLength': 'Verification Expiration Length',
     'soulbound': 'Soulbound',
+    'callbackUrl': 'Callback Url',
 }
 
 

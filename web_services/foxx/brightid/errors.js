@@ -52,6 +52,8 @@ const APP_AUTHORIZED_BEFORE = 62;
 const SPEND_REQUESTED_BEFORE = 63;
 const INVALID_APP_ID = 64;
 const CACHED_PARAMS_NOT_FOUND = 65;
+const FORBIDDEN_CONNECTION = 66;
+const UNSINGABLE_APP_USER_ID = 67;
 
 class BrightIDError extends Error {
   constructor() {
@@ -557,6 +559,23 @@ class CachedParamsNotFound extends NotFoundError {
   }
 }
 
+class ForbiddenConnectionError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = FORBIDDEN_CONNECTION;
+    this.message = "connecting to yourself is not allowed.";
+  }
+}
+
+class UnsingableAppUserIdError extends BadRequestError {
+  constructor(appUserId) {
+    super();
+    this.errorNum = UNSINGABLE_APP_USER_ID;
+    this.message = "appUserIds longer than 32 bytes are not 'eth' signable";
+    this.appUserId = appUserId;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -611,6 +630,8 @@ module.exports = {
   SPEND_REQUESTED_BEFORE,
   INVALID_APP_ID,
   CACHED_PARAMS_NOT_FOUND,
+  FORBIDDEN_CONNECTION,
+  UNSINGABLE_APP_USER_ID,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -670,4 +691,6 @@ module.exports = {
   SpendRequestedBeforeError,
   InvalidAppUserIdError,
   CachedParamsNotFound,
+  ForbiddenConnectionError,
+  UnsingableAppUserIdError,
 };

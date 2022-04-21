@@ -365,6 +365,9 @@ const handlers = {
         if (app.idsAsHex) {
           message = pad32(appKey) + addressToBytes32(appUserId);
         } else {
+          if (appUserId.length > 32) {
+            throw new errors.UnsingableAppUserIdError(appUserId);
+          }
           message = pad32(appKey) + pad32(appUserId);
         }
         message = Buffer.from(message, 'binary').toString('hex');

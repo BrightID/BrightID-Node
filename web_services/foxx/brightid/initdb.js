@@ -50,7 +50,7 @@ const indexes = [
 ]
 
 const variables = [
-  { '_key': 'LAST_DB_UPGRADE', 'value': -1 },
+  { '_key': 'LAST_DB_UPGRADE_V6', 'value': -1 },
   { '_key': 'VERIFICATIONS_HASHES', 'hashes': '{}' },
   { '_key': 'VERIFICATION_BLOCK', 'value': 0 },
   // 2021/02/09 as starting point for applying new seed connected
@@ -105,7 +105,24 @@ function initializeVariables() {
   }
 }
 
-const upgrades = [];
+
+function v6_8() {
+  const connectionsHistoryColl = arango._collection('connectionsHistory');
+  connectionsHistoryColl.all().toArray().forEach(conn => {
+    if (conn._from == conn._to) {
+      connectionsHistoryColl.remove(conn);
+    }
+  });
+
+  const connectionsColl = arango._collection('connections');
+  connectionsColl.all().toArray().forEach(conn => {
+    if (conn._from == conn._to) {
+      connectionsColl.remove(conn);
+    }
+  });
+}
+
+const upgrades = ['v6_8'];
 
 function initdb() {
   createCollections();
@@ -113,15 +130,15 @@ function initdb() {
   removeDeprecatedCollections();
   initializeVariables();
   let index;
-  if (variablesColl.exists('LAST_DB_UPGRADE')) {
-    upgrade = variablesColl.document('LAST_DB_UPGRADE').value;
+  if (variablesColl.exists('LAST_DB_UPGRADE_V6')) {
+    upgrade = variablesColl.document('LAST_DB_UPGRADE_V6').value;
     index = upgrades.indexOf(upgrade) + 1;
   } else {
     index = 0;
   }
   while (upgrades[index]) {
     eval(upgrades[index])();
-    variablesColl.update('LAST_DB_UPGRADE', { value: upgrades[index] });
+    variablesColl.update('LAST_DB_UPGRADE_V6', { value: upgrades[index] });
     index += 1;
   }
 }
