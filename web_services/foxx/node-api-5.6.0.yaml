@@ -6,8 +6,7 @@ paths:
         content:
           application/json:
             schema:
-              description: Send operations to idchain to be applied to BrightID nodes'
-                databases after consensus
+              description: Send operations to idchain to be applied to BrightID nodes' databases after consensus
               oneOf:
                 - title: Connect
                   type: object
@@ -24,8 +23,7 @@ paths:
                       description: brightid of the target of the directed connection
                       type: string
                     sig1:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id1
+                      description: deterministic json representation of operation object signed by the user represented by id1
                       type: string
                     level:
                       description: level of confidence
@@ -37,8 +35,7 @@ paths:
                         - recovery
                       type: string
                     reportReason:
-                      description: for reported level, the reason for reporting the user
-                        specificed by id2
+                      description: 'for reported level, the reason for reporting the user specificed by id2'
                       enum:
                         - spammer
                         - fake
@@ -48,12 +45,10 @@ paths:
                         - other
                       type: string
                     replacedWith:
-                      description: for reported as replaced, the new brightid of the
-                        replaced account
+                      description: 'for reported as replaced, the new brightid of the replaced account'
                       type: string
                     requestProof:
-                      description: brightid + "|" + timestamp signed by the reported user
-                        to prove that he requested the connection
+                      description: brightid + "|" + timestamp signed by the reported user to prove that he requested the connection
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -87,12 +82,10 @@ paths:
                       description: brightid of the second user making the connection
                       type: string
                     sig1:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id1
+                      description: deterministic json representation of operation object signed by the user represented by id1
                       type: string
                     sig2:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id2
+                      description: deterministic json representation of operation object signed by the user represented by id2
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -123,20 +116,17 @@ paths:
                       description: brightid of the user removing the connection
                       type: string
                     id2:
-                      description: brightid of the second user that the connection with is
-                        being removed
+                      description: brightid of the second user that the connection with is being removed
                       type: string
                     reason:
-                      description: the reason for removing connection specificed by the
-                        user represented by id1
+                      description: the reason for removing connection specificed by the user represented by id1
                       enum:
                         - fake
                         - duplicate
                         - deceased
                       type: string
                     sig1:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id1
+                      description: deterministic json representation of operation object signed by the user represented by id1
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -176,16 +166,13 @@ paths:
                       description: brightid of the third founder
                       type: string
                     inviteData2:
-                      description: the group AES key encrypted for signingKey of the user
-                        represented by id2
+                      description: the group AES key encrypted for signingKey of the user represented by id2
                       type: string
                     inviteData3:
-                      description: the group AES key encrypted for signingKey of the user
-                        represented by id3
+                      description: the group AES key encrypted for signingKey of the user represented by id3
                       type: string
                     url:
-                      description: the url that group data (profile image and name)
-                        encrypted by group AES key can be fetched from
+                      description: the url that group data (profile image and name) encrypted by group AES key can be fetched from
                       type: string
                     type:
                       description: type of the group
@@ -194,8 +181,7 @@ paths:
                         - primary
                       type: string
                     sig1:
-                      description: deterministic json representation of operation object
-                        signed by the creator of group represented by id1
+                      description: deterministic json representation of operation object signed by the creator of group represented by id1
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -234,8 +220,7 @@ paths:
                       description: the unique id of the group
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id1
+                      description: deterministic json representation of operation object signed by the user represented by id1
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -265,12 +250,10 @@ paths:
                       description: brightid of the user wants to join the group
                       type: string
                     group:
-                      description: the unique id of the group that the user represented by
-                        id wants to join
+                      description: the unique id of the group that the user represented by id wants to join
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id
+                      description: deterministic json representation of operation object signed by the user represented by id
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -281,7 +264,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - id
@@ -301,12 +283,10 @@ paths:
                       description: brightid of the user wants to leave the group
                       type: string
                     group:
-                      description: the unique id of the group that the user represented by
-                        id wants to leave
+                      description: the unique id of the group that the user represented by id wants to leave
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id
+                      description: deterministic json representation of operation object signed by the user represented by id
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -317,7 +297,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - id
@@ -334,8 +313,7 @@ paths:
                         - Set Trusted Connections
                       type: string
                     id:
-                      description: brightid of the user who is setting his/her trusted
-                        connections
+                      description: brightid of the user who is setting his/her trusted connections
                       type: string
                     trusted:
                       description: brightid list of trusted connections
@@ -343,8 +321,7 @@ paths:
                       items:
                         type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id
+                      description: deterministic json representation of operation object signed by the user represented by id
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -355,7 +332,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - id
@@ -372,28 +348,22 @@ paths:
                         - Set Signing Key
                       type: string
                     id:
-                      description: brightid of the user who is trying to recover his/her
-                        account by setting new signing key on his/her brightid
+                      description: brightid of the user who is trying to recover his/her account by setting new signing key on his/her brightid
                       type: string
                     signingKey:
-                      description: the public key of the new key pair that user will use to
-                        sign operations with
+                      description: the public key of the new key pair that user will use to sign operations with
                       type: string
                     id1:
-                      description: brightid of a trusted connection of the user represented
-                        by id
+                      description: brightid of a trusted connection of the user represented by id
                       type: string
                     id2:
-                      description: brightid of another trusted connection of the user
-                        represented by id
+                      description: brightid of another trusted connection of the user represented by id
                       type: string
                     sig1:
-                      description: deterministic json representation of operation object
-                        signed by the trusted connection represented by id1
+                      description: deterministic json representation of operation object signed by the trusted connection represented by id1
                       type: string
                     sig2:
-                      description: deterministic json representation of operation object
-                        signed by the trusted connection represented by id2
+                      description: deterministic json representation of operation object signed by the trusted connection represented by id2
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -404,7 +374,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - id
@@ -424,29 +393,19 @@ paths:
                         - Link ContextId
                       type: string
                     id:
-                      description: brightid of the user who is linking his/her brightid to
-                        a context id
+                      description: brightid of the user who is linking his/her brightid to a context id
                       type: string
                     contextId:
-                      description: the unique id of the user represented by brightid in the
-                        specific context
+                      description: the unique id of the user represented by brightid in the specific context
                       type: string
                     encrypted:
-                      description: "the json representation of `{id: id, contextId:
-                        contextId}` encrypted using an AES key shared between
-                        all nodes manage linking brightids to contextIds for a
-                        specific context. This field is not sent by clients and
-                        will be replaced by `id` and `contextId` fields before
-                        sending operation to blockchain to keep the relation of
-                        brightids to contextIds private."
+                      description: 'the json representation of `{id: id, contextId: contextId}` encrypted using an AES key shared between all nodes manage linking brightids to contextIds for a specific context. This field is not sent by clients and will be replaced by `id` and `contextId` fields before sending operation to blockchain to keep the relation of brightids to contextIds private.'
                       type: string
                     context:
-                      description: the context name in which the user represented by
-                        brightid is linking context id with his/her brightid
+                      description: the context name in which the user represented by brightid is linking context id with his/her brightid
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id
+                      description: deterministic json representation of operation object signed by the user represented by id
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -457,7 +416,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - context
@@ -473,26 +431,16 @@ paths:
                         - Sponsor
                       type: string
                     contextId:
-                      description: the contextId for the user that is being sponsored by
-                        context
+                      description: the contextId for the user that is being sponsored by context
                       type: string
                     id:
-                      description: brightid of the user that is being sponsored by context.
-                        This field is not provided by context owners who sponsor
-                        the user as they do not have users brightids. BrightID
-                        nodes that are trusted by context owners and have the
-                        private key that is used to spend sponsorships assigned
-                        to the context, will replace `contextId` by this field
-                        before sending this operation to blockchain
+                      description: 'brightid of the user that is being sponsored by context. This field is not provided by context owners who sponsor the user as they do not have users brightids. BrightID nodes that are trusted by context owners and have the private key that is used to spend sponsorships assigned to the context, will replace `contextId` by this field before sending this operation to blockchain'
                       type: string
                     app:
                       description: the app name that user is being sponsored by
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the private key shared between context owners
-                        and trusted node operators which enable them to spend
-                        sponsorships assigned to the context
+                      description: deterministic json representation of operation object signed by the private key shared between context owners and trusted node operators which enable them to spend sponsorships assigned to the context
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -503,7 +451,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - app
@@ -519,22 +466,19 @@ paths:
                         - Invite
                       type: string
                     inviter:
-                      description: brightid of the user who has admin rights in the group
-                        and can invite others to the group
+                      description: brightid of the user who has admin rights in the group and can invite others to the group
                       type: string
                     invitee:
                       description: brightid of the user whom is invited to the group
                       type: string
                     group:
-                      description: the unique id of the group that invitee is being invited
-                        to
+                      description: the unique id of the group that invitee is being invited to
                       type: string
                     data:
                       description: the group AES key encrypted for signingKey of the invitee
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the inviter
+                      description: deterministic json representation of operation object signed by the inviter
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -545,7 +489,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - inviter
@@ -564,19 +507,16 @@ paths:
                         - Dismiss
                       type: string
                     dismisser:
-                      description: brightid of the user who has admin rights in the group
-                        and can dismiss others from the group
+                      description: brightid of the user who has admin rights in the group and can dismiss others from the group
                       type: string
                     dismissee:
                       description: brightid of the user whom is dismissed from the group
                       type: string
                     group:
-                      description: the unique id of the group that dismissee is being
-                        dismissed from
+                      description: the unique id of the group that dismissee is being dismissed from
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the dismisser
+                      description: deterministic json representation of operation object signed by the dismisser
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -587,7 +527,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - dismisser
@@ -605,20 +544,16 @@ paths:
                         - Add Admin
                       type: string
                     id:
-                      description: brightid of the user who has admin rights in the group
-                        and can grant administratorship to other members
+                      description: brightid of the user who has admin rights in the group and can grant administratorship to other members
                       type: string
                     admin:
-                      description: brightid of the member whom is being granted
-                        administratorship of the group
+                      description: brightid of the member whom is being granted administratorship of the group
                       type: string
                     group:
-                      description: the unique id of the group that new admin is being added
-                        to
+                      description: the unique id of the group that new admin is being added to
                       type: string
                     sig:
-                      description: deterministic json representation of operation object
-                        signed by the user represented by id
+                      description: deterministic json representation of operation object signed by the user represented by id
                       type: string
                     timestamp:
                       description: milliseconds since epoch when the operation created
@@ -629,7 +564,6 @@ paths:
                         - 5
                       type: number
                   additionalProperties: false
-                  
                   required:
                     - name
                     - id
@@ -638,13 +572,12 @@ paths:
                     - sig
                     - timestamp
                     - v
-        description: Send operations to idchain to be applied to BrightID nodes' databases
-          after consensus
+        description: Send operations to idchain to be applied to BrightID nodes' databases after consensus
       description: Add an operation be applied after consensus.
       summary: Add an operation to be applied after consensus
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -655,16 +588,13 @@ paths:
                     type: object
                     properties:
                       hash:
-                        description: sha256 hash of the operation message used for
-                          generating signature
+                        description: sha256 hash of the operation message used for generating signature
                         type: string
                     additionalProperties: false
-                    
                     required:
                       - hash
                 additionalProperties: false
-                
-        "400":
+        '400':
           description: Failed to add the operation
           content:
             application/json:
@@ -691,10 +621,9 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -721,12 +650,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: POST_operations
-  "/operations/{hash}":
+  '/operations/{hash}':
     get:
       parameters:
         - required: true
@@ -738,7 +666,7 @@ paths:
       summary: Get state and result of an operation
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -757,14 +685,11 @@ paths:
                           - failed
                         type: string
                       result:
-                        description: result of operation after being applied. If operation
-                          is failed this field contain the reason.
+                        description: result of operation after being applied. If operation is failed this field contain the reason.
                         type: string
                     additionalProperties: false
-                    
                 additionalProperties: false
-                
-        "404":
+        '404':
           description: Operation not found
           content:
             application/json:
@@ -791,10 +716,9 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -821,12 +745,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_operations_hash
-  "/users/{id}":
+  '/users/{id}':
     get:
       parameters:
         - required: true
@@ -835,12 +758,11 @@ paths:
           in: path
           schema:
             type: string
-      description: Gets a user's score, verifications, joining date, lists of connections,
-        groups and eligible groups.
+      description: 'Gets a user''s score, verifications, joining date, lists of connections, groups and eligible groups.'
       summary: Get information about a user
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -884,8 +806,7 @@ paths:
                               items:
                                 type: string
                             isNew:
-                              description: true if some of founders did not join the group
-                                yet and group is still in founding stage
+                              description: true if some of founders did not join the group yet and group is still in founding stage
                               type: boolean
                             score:
                               default: 0
@@ -902,7 +823,6 @@ paths:
                               description: timestamp when the user joined
                               type: integer
                           additionalProperties: false
-                          
                           required:
                             - id
                             - members
@@ -940,8 +860,7 @@ paths:
                               items:
                                 type: string
                             isNew:
-                              description: true if some of founders did not join the group
-                                yet and group is still in founding stage
+                              description: true if some of founders did not join the group yet and group is still in founding stage
                               type: boolean
                             score:
                               default: 0
@@ -964,14 +883,9 @@ paths:
                               description: brightid of inviter
                               type: string
                             data:
-                              description: encrypted version of the AES key that group name
-                                and photo uploaded to `url` encrypted
-                                withinvitee should first decrypt this data with
-                                his/her signingKey and then fetch data in `url`
-                                and decrypt that using the AES key
+                              description: encrypted version of the AES key that group name and photo uploaded to `url` encrypted withinvitee should first decrypt this data with his/her signingKey and then fetch data in `url` and decrypt that using the AES key
                               type: string
                           additionalProperties: false
-                          
                           required:
                             - id
                             - members
@@ -1017,17 +931,14 @@ paths:
                               items:
                                 type: string
                             flaggers:
-                              description: an object containing ids of flaggers as key and
-                                reason as value
+                              description: an object containing ids of flaggers as key and reason as value
                               type: object
                               properties: {}
                               additionalProperties: false
-                              
                             createdAt:
                               description: the user creation timestamp
                               type: integer
                           additionalProperties: false
-                          
                           required:
                             - id
                             - signingKey
@@ -1044,19 +955,15 @@ paths:
                         items:
                           type: string
                       flaggers:
-                        description: an object containing ids of flaggers as key and reason
-                          as value
+                        description: an object containing ids of flaggers as key and reason as value
                         type: object
                         properties: {}
                         additionalProperties: false
-                        
                     additionalProperties: false
-                    
                     required:
                       - createdAt
                 additionalProperties: false
-                
-        "404":
+        '404':
           description: User not found
           content:
             application/json:
@@ -1083,10 +990,9 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1113,12 +1019,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_users_id
-  "/users/{id}/verifications":
+  '/users/{id}/verifications':
     get:
       parameters:
         - required: true
@@ -1131,7 +1036,7 @@ paths:
       summary: Get verifications of a user
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1147,12 +1052,9 @@ paths:
                           type: object
                           properties: {}
                           additionalProperties: false
-                          
                     additionalProperties: false
-                    
                 additionalProperties: false
-                
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1179,12 +1081,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_users_id_verifications
-  "/users/{id}/profile/{requestor}":
+  '/users/{id}/profile/{requestor}':
     get:
       parameters:
         - required: true
@@ -1202,7 +1103,7 @@ paths:
       summary: Get profile information of a user
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1213,8 +1114,7 @@ paths:
                     type: object
                     properties:
                       connectionsNum:
-                        description: number of connections with already known or recovery
-                          level
+                        description: number of connections with already known or recovery level
                         type: integer
                       groupsNum:
                         description: number of groups
@@ -1248,21 +1148,17 @@ paths:
                               description: the reason of reporting
                               type: string
                           additionalProperties: false
-                          
                           required:
                             - id
                             - reportReason
                       verifications:
-                        description: list of verification objects user has with properties
-                          each verification has
+                        description: list of verification objects user has with properties each verification has
                         type: array
                         items:
                           type: object
                           properties: {}
                           additionalProperties: false
-                          
                     additionalProperties: false
-                    
                     required:
                       - connectionsNum
                       - groupsNum
@@ -1272,8 +1168,7 @@ paths:
                       - createdAt
                       - verifications
                 additionalProperties: false
-                
-        "404":
+        '404':
           description: User not found
           content:
             application/json:
@@ -1300,10 +1195,9 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1330,12 +1224,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_users_id_profile_requestor
-  "/users/{id}/connections/{direction}":
+  '/users/{id}/connections/{direction}':
     get:
       parameters:
         - required: true
@@ -1354,7 +1247,7 @@ paths:
       summary: Get inbound or outbound connections of a user
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1379,16 +1272,13 @@ paths:
                               description: the timestamp of the connection
                               type: integer
                           additionalProperties: false
-                          
                           required:
                             - id
                             - level
                             - timestamp
                     additionalProperties: false
-                    
                 additionalProperties: false
-                
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1415,12 +1305,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_users_id_connections_direction
-  "/verifications/{app}/{contextId}":
+  '/verifications/{app}/{contextId}':
     get:
       parameters:
         - required: true
@@ -1436,15 +1325,13 @@ paths:
           schema:
             type: string
         - required: false
-          description: the value will be eth or nacl to indicate the type of signature
-            returned
+          description: the value will be eth or nacl to indicate the type of signature returned
           name: signed
           in: query
           schema:
             type: string
         - required: false
-          description: 'request a timestamp of the specified format to be added to the
-            response. Accepted values: "seconds", "milliseconds"'
+          description: 'request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'
           name: timestamp
           in: query
           schema:
@@ -1453,7 +1340,7 @@ paths:
       summary: Gets a signed verification
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1473,15 +1360,12 @@ paths:
                         description: the context name
                         type: string
                       contextIds:
-                        description: list of all contextIds this user linked from most
-                          recent to oldest including current active contextId as
-                          first member
+                        description: list of all contextIds this user linked from most recent to oldest including current active contextId as first member
                         type: array
                         items:
                           type: string
                       timestamp:
-                        description: timestamp of the verification if a timestamp was
-                          requested by including a 'timestamp' parameter
+                        description: timestamp of the verification if a timestamp was requested by including a 'timestamp' parameter
                         type: integer
                       sig:
                         description: verification message signed by the node
@@ -1490,10 +1374,8 @@ paths:
                         description: the node's public key
                         type: string
                     additionalProperties: false
-                    
                 additionalProperties: false
-                
-        "403":
+        '403':
           description: user is not sponsored
           content:
             application/json:
@@ -1520,11 +1402,10 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "404":
-          description: context, contextId or verification not found
+        '404':
+          description: 'context, contextId or verification not found'
           content:
             application/json:
               schema:
@@ -1550,10 +1431,9 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1580,12 +1460,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_verifications_app_contextId
-  "/verifications/{app}":
+  '/verifications/{app}':
     get:
       parameters:
         - required: true
@@ -1594,12 +1473,11 @@ paths:
           in: path
           schema:
             type: string
-      description: Gets list of all of contextIds in the context that are currently linked
-        to unique humans
+      description: Gets list of all of contextIds in the context that are currently linked to unique humans
       summary: Gets list of all of contextIds
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1615,10 +1493,8 @@ paths:
                         items:
                           type: string
                     additionalProperties: false
-                    
                 additionalProperties: false
-                
-        "404":
+        '404':
           description: context not found
           content:
             application/json:
@@ -1645,10 +1521,9 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1675,7 +1550,6 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
@@ -1685,7 +1559,7 @@ paths:
       summary: Get this server's IPv4 address
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1699,10 +1573,8 @@ paths:
                         description: IPv4 address in dot-decimal notation.
                         type: string
                     additionalProperties: false
-                    
                 additionalProperties: false
-                
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1729,12 +1601,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_ip
-  "/apps/{app}":
+  '/apps/{app}':
     get:
       parameters:
         - required: true
@@ -1746,7 +1617,7 @@ paths:
       summary: Get information about an app
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1769,7 +1640,7 @@ paths:
                         description: verification required for using the app
                         type: string
                       verificationUrl:
-                        description: the url to PUT a verification with /:id
+                        description: 'the url to PUT a verification with /:id'
                         type: string
                       logo:
                         description: app logo (base64 encoded image)
@@ -1784,7 +1655,6 @@ paths:
                         description: number of unused sponsorships
                         type: integer
                     additionalProperties: false
-                    
                     required:
                       - id
                       - name
@@ -1792,8 +1662,7 @@ paths:
                       - verification
                       - verificationUrl
                 additionalProperties: false
-                
-        "404":
+        '404':
           description: app not found
           content:
             application/json:
@@ -1820,10 +1689,9 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1850,7 +1718,6 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
@@ -1860,7 +1727,7 @@ paths:
       summary: Get all apps
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1888,7 +1755,7 @@ paths:
                               description: verification required for using the app
                               type: string
                             verificationUrl:
-                              description: the url to PUT a verification with /:id
+                              description: 'the url to PUT a verification with /:id'
                               type: string
                             logo:
                               description: app logo (base64 encoded image)
@@ -1903,7 +1770,6 @@ paths:
                               description: number of unused sponsorships
                               type: integer
                           additionalProperties: false
-                          
                           required:
                             - id
                             - name
@@ -1911,10 +1777,8 @@ paths:
                             - verification
                             - verificationUrl
                     additionalProperties: false
-                    
                 additionalProperties: false
-                
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -1941,7 +1805,6 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
@@ -1951,7 +1814,7 @@ paths:
       summary: Get state of this node
       tags: []
       responses:
-        "200":
+        '200':
           description: HTTP 200 OK.
           content:
             application/json:
@@ -1965,17 +1828,14 @@ paths:
                         description: last block that consensus receiver service processed
                         type: integer
                       verificationsBlock:
-                        description: the block that scorer service updated verifications
-                          based on operations got applied before that block
+                        description: the block that scorer service updated verifications based on operations got applied before that block
                         type: integer
                     additionalProperties: false
-                    
                     required:
                       - lastProcessedBlock
                       - verificationsBlock
                 additionalProperties: false
-                
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -2002,12 +1862,11 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: GET_state
-  "/testblocks/{app}/{action}/{contextId}":
+  '/testblocks/{app}/{action}/{contextId}':
     put:
       parameters:
         - required: true
@@ -2034,14 +1893,13 @@ paths:
           in: query
           schema:
             type: string
-      description: Updating state of contextId to be considered as unsponsored, unlinked or
-        unverified temporarily for testing.
+      description: 'Updating state of contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.'
       summary: Block user's verification for testing.
       tags: []
       responses:
-        "204":
+        '204':
           description: HTTP 204 No Content.
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -2068,7 +1926,6 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
@@ -2099,14 +1956,13 @@ paths:
           in: query
           schema:
             type: string
-      description: Remove limitations applied to a contextId to be considered as
-        unsponsored, unlinked or unverified temporarily for testing.
+      description: 'Remove limitations applied to a contextId to be considered as unsponsored, unlinked or unverified temporarily for testing.'
       summary: Remove blocking state applied on user's verification for testing.
       tags: []
       responses:
-        "204":
+        '204':
           description: HTTP 204 No Content.
-        "500":
+        '500':
           description: Default error response.
           content:
             application/json:
@@ -2133,24 +1989,23 @@ paths:
                   code:
                     type: integer
                 additionalProperties: false
-                
                 required:
                   - error
       security: []
       operationId: DELETE_testblocks_app_action_contextId
 info:
-  title: BrightID-Node
+  title: BrightID-Node-Soulbound
   description: Read and update the anonymous social graph stored on BrightID nodes.
   version: 5.6.0
   contact:
-    url: https://github.com/BrightID/BrightID-Node
+    url: 'https://github.com/BrightID/BrightID-Node'
   license:
     name: ISC License
-    url: https://github.com/BrightID/BrightID-Node/blob/master/LICENSE-ISC
+    url: 'https://github.com/BrightID/BrightID-Node/blob/master/LICENSE-ISC'
 servers:
-  - url: https://app.brightid.org/node/v5
+  - url: 'https://app.brightid.org/node/v5'
     description: mainnet base url
-  - url: http://test.brightid.org/brightid/v5
+  - url: 'http://test.brightid.org/brightid/v5'
     description: testnet base url (http-only)
-  - url: http://node.brightid.org/brightid/v5
+  - url: 'http://node.brightid.org/brightid/v5'
     description: mainnet base url (http-only)
