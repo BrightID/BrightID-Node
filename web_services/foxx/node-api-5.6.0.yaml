@@ -1995,7 +1995,10 @@ paths:
       operationId: DELETE_testblocks_app_action_contextId
 info:
   title: BrightID-Node-Soulbound
-  description: Read and update the anonymous social graph stored on BrightID nodes. Maintains a list of previously linked identifiers (e.g. accounts) to allow recovery of a Soulbound item, or to track all of a person's identifiers over time (to enforce permanent bans, for example).
+  description: |
+    Read and update the anonymous social graph stored on BrightID nodes.
+  
+    Maintains a list of previously linked identifiers (e.g. accounts) to allow recovery of a Soulbound item, or to track all of a person's identifiers over time (to enforce permanent bans, for example).
   version: 5.6.0
   contact:
     url: 'https://github.com/BrightID/BrightID-Node'
