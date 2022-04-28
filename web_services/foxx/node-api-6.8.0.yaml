@@ -1,0 +1,2865 @@
+openapi: 3.0.0
+paths:
+  /operations:
+    post:
+      requestBody:
+        content:
+          application/json:
+            schema:
+              description: Send operations to idchain to be applied to BrightID nodes'
+                databases after consensus
+              oneOf:
+                - title: Connect
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Connect
+                      type: string
+                    id1:
+                      description: brightid of the user making the directed connection
+                      type: string
+                    id2:
+                      description: brightid of the target of the directed connection
+                      type: string
+                    sig1:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id1
+                      type: string
+                    level:
+                      description: level of confidence
+                      enum:
+                        - reported
+                        - suspicious
+                        - just met
+                        - already known
+                        - recovery
+                      type: string
+                    reportReason:
+                      description: for reported level, the reason for reporting the user
+                        specificed by id2
+                      enum:
+                        - spammer
+                        - fake
+                        - duplicate
+                        - deceased
+                        - replaced
+                        - other
+                      type: string
+                    replacedWith:
+                      description: for reported as replaced, the new brightid of the
+                        replaced account
+                      type: string
+                    requestProof:
+                      description: brightid + | + timestamp signed by the reported user to
+                        prove that he requested the connection
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id1
+                    - id2
+                    - sig1
+                    - level
+                    - timestamp
+                    - v
+                - title: Add Group
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Add Group
+                      type: string
+                    group:
+                      description: the unique id of the group
+                      type: string
+                    id:
+                      description: brightid of the group founder
+                      type: string
+                    url:
+                      description: the url that group data (profile image and name)
+                        encrypted by group AES key can be fetched from
+                      type: string
+                    type:
+                      description: type of the group
+                      enum:
+                        - general
+                        - family
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the founder of the group represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - group
+                    - id
+                    - url
+                    - type
+                    - sig
+                    - timestamp
+                    - v
+                - title: Remove Group
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Remove Group
+                      type: string
+                    id:
+                      description: brightid of the group admin who want to remove the group
+                      type: string
+                    group:
+                      description: the unique id of the group
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id1
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+                - title: Add Membership
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Add Membership
+                      type: string
+                    id:
+                      description: brightid of the user wants to join the group
+                      type: string
+                    group:
+                      description: the unique id of the group that the user represented by
+                        id wants to join
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+                - title: Remove Membership
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Remove Membership
+                      type: string
+                    id:
+                      description: brightid of the user wants to leave the group
+                      type: string
+                    group:
+                      description: the unique id of the group that the user represented by
+                        id wants to leave
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+                - title: Social Recovery
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Social Recovery
+                      type: string
+                    id:
+                      description: brightid of the user who is resetting signingKeys by
+                        social recovery
+                      type: string
+                    signingKey:
+                      description: the public key of the new key pair that user will use to
+                        sign operations with
+                      type: string
+                    id1:
+                      description: brightid of a recovery connection of the user
+                        represented by id
+                      type: string
+                    id2:
+                      description: brightid of a recovery connection of the user
+                        represented by id
+                      type: string
+                    sig1:
+                      description: deterministic json representation of operation object
+                        signed by the recovery connection represented by id1
+                      type: string
+                    sig2:
+                      description: deterministic json representation of operation object
+                        signed by the recovery connection represented by id2
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - signingKey
+                    - id1
+                    - id2
+                    - sig1
+                    - sig2
+                    - timestamp
+                    - v
+                - title: Sponsor
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Sponsor
+                      type: string
+                    appUserId:
+                      description: the app generated id that is being sponsored
+                      type: string
+                    app:
+                      description: the app key that user is being sponsored by
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the app keypair
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - appUserId
+                    - app
+                    - sig
+                    - timestamp
+                    - v
+                - title: Spend Sponsorship
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Spend Sponsorship
+                      type: string
+                    appUserId:
+                      description: the app generated id that is being sponsored
+                      type: string
+                    app:
+                      description: the app key that user is being sponsored by
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - appUserId
+                    - app
+                    - timestamp
+                    - v
+                - title: Invite
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Invite
+                      type: string
+                    inviter:
+                      description: brightid of the user who has admin rights in the group
+                        and can invite others to the group
+                      type: string
+                    invitee:
+                      description: brightid of the user whom is invited to the group
+                      type: string
+                    group:
+                      description: the unique id of the group that invitee is being invited
+                        to
+                      type: string
+                    data:
+                      description: the group AES key encrypted for signingKey of the invitee
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the inviter
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - inviter
+                    - invitee
+                    - group
+                    - data
+                    - sig
+                    - timestamp
+                    - v
+                - title: Dismiss
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Dismiss
+                      type: string
+                    dismisser:
+                      description: brightid of the user who has admin rights in the group
+                        and can dismiss others from the group
+                      type: string
+                    dismissee:
+                      description: brightid of the user whom is dismissed from the group
+                      type: string
+                    group:
+                      description: the unique id of the group that dismissee is being
+                        dismissed from
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the dismisser
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - dismisser
+                    - dismissee
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+                - title: Add Admin
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Add Admin
+                      type: string
+                    id:
+                      description: brightid of one of the current admins of the group
+                      type: string
+                    admin:
+                      description: brightid of the member whom is being granted
+                        administratorship of the group
+                      type: string
+                    group:
+                      description: the unique id of the group
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the admin user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - admin
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+                - title: Update Group
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Update Group
+                      type: string
+                    id:
+                      description: brightid of one of the admins of the group
+                      type: string
+                    group:
+                      description: the unique id of the group
+                      type: string
+                    url:
+                      description: the new url that group data (profile image and name)
+                        encrypted by group AES key can be fetched from
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - group
+                    - url
+                    - sig
+                    - timestamp
+                    - v
+                - title: Add Signing Key
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Add Signing Key
+                      type: string
+                    id:
+                      description: brightid of the user who is adding new signingKey
+                      type: string
+                    signingKey:
+                      description: the public key of the new key pair that user can sign
+                        operations with
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - signingKey
+                    - sig
+                    - timestamp
+                    - v
+                - title: Remove Signing Key
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Remove Signing Key
+                      type: string
+                    id:
+                      description: brightid of the user who is removing the signingKey
+                      type: string
+                    signingKey:
+                      description: the signingKey that is being removed
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - signingKey
+                    - sig
+                    - timestamp
+                    - v
+                - title: Remove All Signing Keys
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Remove All Signing Keys
+                      type: string
+                    id:
+                      description: brightid of the user who is removing all the signingKeys
+                        except the one that used to sign this operation
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - sig
+                    - timestamp
+                    - v
+                - title: Vouch Family
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Vouch Family
+                      type: string
+                    id:
+                      description: brightid of the user who is vouching the family group
+                      type: string
+                    group:
+                      description: the unique id of the group
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+                - title: Set Family Head
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Set Family Head
+                      type: string
+                    id:
+                      description: brightid of one of the current admins of the group
+                      type: string
+                    head:
+                      description: brightid of the member who is being granted the
+                        leadership of the family group
+                      type: string
+                    group:
+                      description: the unique id of the family group
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the head user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - head
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+                - title: Convert To Family
+                  type: object
+                  properties:
+                    name:
+                      description: operation name
+                      enum:
+                        - Convert To Family
+                      type: string
+                    id:
+                      description: brightid of one of the current admins of the group
+                      type: string
+                    head:
+                      description: brightid of the member who is being granted the
+                        leadership of the family group
+                      type: string
+                    group:
+                      description: the unique id of the family group
+                      type: string
+                    sig:
+                      description: deterministic json representation of operation object
+                        signed by the head user represented by id
+                      type: string
+                    timestamp:
+                      description: milliseconds since epoch when the operation created
+                      type: number
+                    v:
+                      description: version of API
+                      enum:
+                        - 6
+                      type: number
+                  additionalProperties: false
+                  required:
+                    - name
+                    - id
+                    - head
+                    - group
+                    - sig
+                    - timestamp
+                    - v
+        description: Send operations to idchain to be applied to BrightID nodes' databases
+          after consensus
+      description: Add an operation be applied after consensus.
+      summary: Add an operation to be applied after consensus
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      hash:
+                        description: sha256 hash of the operation message used for
+                          generating signature
+                        type: string
+                    additionalProperties: false
+                    required:
+                      - hash
+                additionalProperties: false
+        "400":
+          description: Failed to add the operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "403":
+          description: Bad signature
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "429":
+          description: Too Many Requests
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: POST_operations
+  "/operations/{hash}":
+    get:
+      parameters:
+        - required: true
+          description: sha256 hash of the operation message
+          name: hash
+          in: path
+          schema:
+            type: string
+      summary: Gets state and result of an operation
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      state:
+                        description: state of operation
+                        enum:
+                          - init
+                          - sent
+                          - applied
+                          - failed
+                        type: string
+                      result:
+                        description: result of operation after being applied. If operation
+                          is failed this field contain the reason.
+                        type: string
+                    additionalProperties: false
+                additionalProperties: false
+        "404":
+          description: Operation not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_operations_hash
+  "/users/{id}/memberships":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user
+          name: id
+          in: path
+          schema:
+            type: string
+      summary: Gets memberships of the user
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      memberships:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: the id of the group
+                              type: string
+                            timestamp:
+                              description: the timestamp when user joined the group
+                              type: integer
+                          additionalProperties: false
+                          required:
+                            - id
+                            - timestamp
+                    additionalProperties: false
+                additionalProperties: false
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_users_id_memberships
+  "/users/{id}/invites":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user
+          name: id
+          in: path
+          schema:
+            type: string
+      summary: Gets invites of the user
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      invites:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: unique identifier of invite
+                              type: string
+                            group:
+                              description: unique identifier of the group that invitee is
+                                invited to
+                              type: string
+                            inviter:
+                              description: brightid of inviter
+                              type: string
+                            invitee:
+                              description: brightid of invitee
+                              type: string
+                            timestamp:
+                              description: timestamp when the user was invited
+                              type: integer
+                            data:
+                              description: encrypted version of the AES key that group name
+                                and photo uploaded to `url` encrypted
+                                withinvitee should first decrypt this data with
+                                his/her signingKey and then fetch data in `url`
+                                and decrypt that using the AES key
+                              type: string
+                          additionalProperties: false
+                          required:
+                            - id
+                            - group
+                            - inviter
+                            - invitee
+                            - timestamp
+                            - data
+                    additionalProperties: false
+                additionalProperties: false
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_users_id_invites
+  "/users/{id}/verifications":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user
+          name: id
+          in: path
+          schema:
+            type: string
+      summary: Gets verifications of the user
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      verifications:
+                        type: array
+                        items:
+                          type: object
+                          properties: {}
+                          additionalProperties: false
+                    additionalProperties: false
+                additionalProperties: false
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_users_id_verifications
+  "/users/{id}/profile":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user that info requested about
+          name: id
+          in: path
+          schema:
+            type: string
+      summary: Gets profile information of a user
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        description: brightid of the queried user
+                        type: string
+                      connectionsNum:
+                        description: number of connections with already known or recovery
+                          level
+                        type: integer
+                      groupsNum:
+                        description: number of groups
+                        type: integer
+                      createdAt:
+                        description: creation time of the user specified by id
+                        type: integer
+                      reports:
+                        description: list of reporters of the user with the reason for each
+                          report
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: brightid of the reporter
+                              type: string
+                            reason:
+                              description: the reason for reporting
+                              enum:
+                                - spammer
+                                - fake
+                                - duplicate
+                                - deceased
+                                - replaced
+                                - other
+                              type: string
+                          additionalProperties: false
+                          required:
+                            - id
+                            - reason
+                      verifications:
+                        description: list of verification objects user has with properties
+                          each verification has
+                        type: array
+                        items:
+                          type: object
+                          properties: {}
+                          additionalProperties: false
+                      signingKeys:
+                        description: list of signing keys that user can sign operations with
+                        type: array
+                        items:
+                          type: string
+                      recoveryConnections:
+                        description: list of recovery connections for the user
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: brightid of recovery connection
+                              type: string
+                            isActive:
+                              description: true if recovery connection active now
+                              type: boolean
+                            activeAfter:
+                              description: milliseconds until activation
+                              type: number
+                            activeBefore:
+                              description: milliseconds until inactivation
+                              type: number
+                          additionalProperties: false
+                          required:
+                            - id
+                            - activeAfter
+                            - activeBefore
+                      sponsored:
+                        description: if user is sponsored
+                        type: boolean
+                      mutualConnections:
+                        description: brightids of mutual connections
+                        type: array
+                        items:
+                          type: string
+                      mutualGroups:
+                        description: ids of mutual groups
+                        type: array
+                        items:
+                          type: string
+                      level:
+                        description: level of the connection from requestor to the user
+                          specified by id
+                        enum:
+                          - reported
+                          - suspicious
+                          - just met
+                          - already known
+                          - recovery
+                        type: string
+                      connectedAt:
+                        description: timestamp of the last connection from requestor to the
+                          user specified by id
+                        type: integer
+                    additionalProperties: false
+                    required:
+                      - connectionsNum
+                      - groupsNum
+                      - createdAt
+                      - reports
+                      - verifications
+                      - signingKeys
+                      - recoveryConnections
+                      - sponsored
+                additionalProperties: false
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_users_id_profile
+  "/users/{id}/profile/{requestor}":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user that info requested about
+          name: id
+          in: path
+          schema:
+            type: string
+        - required: true
+          description: the brightid of the user that requested info
+          name: requestor
+          in: path
+          schema:
+            type: string
+      description: Gets profile information of a user, including requestor's mutal
+        connections/groups info
+      summary: Gets profile information of a user
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        description: brightid of the queried user
+                        type: string
+                      connectionsNum:
+                        description: number of connections with already known or recovery
+                          level
+                        type: integer
+                      groupsNum:
+                        description: number of groups
+                        type: integer
+                      createdAt:
+                        description: creation time of the user specified by id
+                        type: integer
+                      reports:
+                        description: list of reporters of the user with the reason for each
+                          report
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: brightid of the reporter
+                              type: string
+                            reason:
+                              description: the reason for reporting
+                              enum:
+                                - spammer
+                                - fake
+                                - duplicate
+                                - deceased
+                                - replaced
+                                - other
+                              type: string
+                          additionalProperties: false
+                          required:
+                            - id
+                            - reason
+                      verifications:
+                        description: list of verification objects user has with properties
+                          each verification has
+                        type: array
+                        items:
+                          type: object
+                          properties: {}
+                          additionalProperties: false
+                      signingKeys:
+                        description: list of signing keys that user can sign operations with
+                        type: array
+                        items:
+                          type: string
+                      recoveryConnections:
+                        description: list of recovery connections for the user
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: brightid of recovery connection
+                              type: string
+                            isActive:
+                              description: true if recovery connection active now
+                              type: boolean
+                            activeAfter:
+                              description: milliseconds until activation
+                              type: number
+                            activeBefore:
+                              description: milliseconds until inactivation
+                              type: number
+                          additionalProperties: false
+                          required:
+                            - id
+                            - activeAfter
+                            - activeBefore
+                      sponsored:
+                        description: if user is sponsored
+                        type: boolean
+                      mutualConnections:
+                        description: brightids of mutual connections
+                        type: array
+                        items:
+                          type: string
+                      mutualGroups:
+                        description: ids of mutual groups
+                        type: array
+                        items:
+                          type: string
+                      level:
+                        description: level of the connection from requestor to the user
+                          specified by id
+                        enum:
+                          - reported
+                          - suspicious
+                          - just met
+                          - already known
+                          - recovery
+                        type: string
+                      connectedAt:
+                        description: timestamp of the last connection from requestor to the
+                          user specified by id
+                        type: integer
+                    additionalProperties: false
+                    required:
+                      - connectionsNum
+                      - groupsNum
+                      - createdAt
+                      - reports
+                      - verifications
+                      - signingKeys
+                      - recoveryConnections
+                      - sponsored
+                additionalProperties: false
+        "404":
+          description: User not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_users_id_profile_requestor
+  "/users/{id}/connections/{direction}":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user
+          name: id
+          in: path
+          schema:
+            type: string
+        - required: true
+          description: the direction of the connection
+          name: direction
+          in: path
+          schema:
+            type: string
+      description: Gets user's connections with levels and timestamps
+      summary: Gets inbound or outbound connections of a user
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      connections:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: the brightid of the connection
+                              type: string
+                            level:
+                              description: the level of the connection
+                              type: string
+                            timestamp:
+                              description: the timestamp of the connection
+                              type: integer
+                            reportReason:
+                              description: for reported level, the reason for reporting
+                              enum:
+                                - spammer
+                                - fake
+                                - duplicate
+                                - deceased
+                                - replaced
+                                - other
+                              type: string
+                          additionalProperties: false
+                          required:
+                            - id
+                            - level
+                            - timestamp
+                    additionalProperties: false
+                additionalProperties: false
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_users_id_connections_direction
+  "/users/{id}/familiesToVouch":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user
+          name: id
+          in: path
+          schema:
+            type: string
+      summary: Gets family groups which the user can vouch for
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      families:
+                        type: array
+                        items:
+                          type: string
+                    additionalProperties: false
+                additionalProperties: false
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_users_id_familiesToVouch
+  /verifications/blinded/public:
+    get:
+      parameters:
+        - required: false
+          description: the key of the app
+          name: app
+          in: query
+          schema:
+            type: string
+        - required: false
+          description: timestamp that is rounded to app's required precision or zero
+          name: roundedTimestamp
+          in: query
+          schema:
+            type: integer
+        - required: false
+          description: custom verification expression
+          name: verification
+          in: query
+          schema:
+            type: string
+      description: Gets public part of WI-Schnorr params using deterministic json
+        representation of {app, roundedTimestamp, verification} as info
+      summary: Gets public part of WI-Schnorr params
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      public:
+                        description: the public part of WI-Schnorr params that should be
+                          used by client to generate challenge
+                        type: string
+                    additionalProperties: false
+                    required:
+                      - public
+                additionalProperties: false
+        "403":
+          description: invalid rounded timestamp
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "404":
+          description: app not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_verifications_blinded_public
+  "/verifications/blinded/sig/{id}":
+    get:
+      parameters:
+        - required: true
+          description: the brightid of the user requesting the verification
+          name: id
+          in: path
+          schema:
+            type: string
+        - required: false
+          description: public part of WI-Schnorr params
+          name: public
+          in: query
+          schema:
+            type: string
+        - required: false
+          description: deterministic json representation of {id, public} signed by the user
+            represented by id
+          name: sig
+          in: query
+          schema:
+            type: string
+        - required: false
+          description: the e part of WI-Schnorr challenge generated by client using public
+            provided by node
+          name: e
+          in: query
+          schema:
+            type: string
+      description: Gets WI-Schnorr server response that will be used by client to generate
+        final signature to be shared with the app
+      summary: Gets WI-Schnorr server response
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      response:
+                        description: WI-Schnorr server response that will be used by client
+                          to generate final signature
+                        type: string
+                    additionalProperties: false
+                additionalProperties: false
+        "403":
+          description: invalid rounded timestamp
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "404":
+          description: app not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_verifications_blinded_sig_id
+  "/verifications/{app}/{appUserId}":
+    post:
+      parameters:
+        - required: true
+          description: the app that user is verified for
+          name: app
+          in: path
+          schema:
+            type: string
+        - required: true
+          description: the id of the user within the app
+          name: appUserId
+          in: path
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                uid:
+                  description: uid generated by client per app per expiration period and
+                    blind signed by node
+                  type: string
+                sig:
+                  description: unblinded sig
+                  type: object
+                  properties:
+                    rho:
+                      type: string
+                    omega:
+                      type: string
+                    sigma:
+                      type: string
+                    delta:
+                      type: string
+                  additionalProperties: false
+                  required:
+                    - rho
+                    - omega
+                    - sigma
+                    - delta
+                verification:
+                  description: verification required for using the app
+                  type: string
+                roundedTimestamp:
+                  description: timestamp that is rounded to app's required precision
+                  type: integer
+              additionalProperties: false
+              required:
+                - uid
+                - sig
+                - verification
+                - roundedTimestamp
+      description: Clients use this endpoint to add unblinded signature for an appUserId to
+        the node to be queried by apps
+      summary: Posts an unblinded signature
+      tags: []
+      responses:
+        "204":
+          description: HTTP 204 No Content.
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: POST_verifications_app_appUserId
+    get:
+      parameters:
+        - required: true
+          description: the app that user is verified for
+          name: app
+          in: path
+          schema:
+            type: string
+        - required: true
+          description: the id of user within the app
+          name: appUserId
+          in: path
+          schema:
+            type: string
+        - required: false
+          description: the value will be eth or nacl to indicate the type of signature
+            returned
+          name: signed
+          in: query
+          schema:
+            type: string
+        - required: false
+          description: 'request a timestamp of the specified format to be added to the
+            response. Accepted values: "seconds", "milliseconds"'
+          name: timestamp
+          in: query
+          schema:
+            type: string
+        - required: false
+          description: false if the requester doesn't want the hash included
+          name: includeHash
+          in: query
+          schema:
+            type: boolean
+            default: true
+      description: Apps use this endpoint to query all signed verifications for an
+        appUserId from the node
+      summary: Gets a signed verification
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        unique:
+                          description: true if the user is unique under given app
+                          type: boolean
+                        app:
+                          description: unique id of the app
+                          type: string
+                        appUserId:
+                          description: the id of the user within the app
+                          type: string
+                        verification:
+                          description: verification expression
+                          type: string
+                        verificationHash:
+                          description: sha256 of the verification expression
+                          type: string
+                        timestamp:
+                          description: timestamp of the verification if a timestamp was
+                            requested
+                          type: integer
+                        sig:
+                          description: verification message signed by the node
+                          type: string
+                        publicKey:
+                          description: the node's public key
+                          type: string
+                      additionalProperties: false
+                      required:
+                        - unique
+                        - app
+                        - appUserId
+                        - verification
+                additionalProperties: false
+        "404":
+          description: appUserId not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_verifications_app_appUserId
+  "/apps/{app}":
+    get:
+      parameters:
+        - required: true
+          description: Unique name of the app
+          name: app
+          in: path
+          schema:
+            type: string
+      summary: Gets information about an app
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        description: unique app id
+                        type: string
+                      name:
+                        description: app name
+                        type: string
+                      context:
+                        description: the context of legacy apps
+                        type: string
+                      verification:
+                        description: verification required for using the app
+                        type: string
+                      verifications:
+                        type: array
+                        items:
+                          description: verification required for using the app
+                          type: string
+                      verificationUrl:
+                        description: the url to PUT a verification with /:id
+                        type: string
+                      logo:
+                        description: app logo (base64 encoded image)
+                        type: string
+                      url:
+                        description: the base url for the app
+                        type: string
+                      assignedSponsorships:
+                        description: number of assigned sponsorships
+                        type: integer
+                      unusedSponsorships:
+                        description: number of unused sponsorships
+                        type: integer
+                      testing:
+                        description: true if app is in testing mode
+                        type: boolean
+                      idsAsHex:
+                        description: true if app generated ids are in ethereum address
+                          format
+                        type: boolean
+                      usingBlindSig:
+                        description: true if app is using blind signature integration
+                        type: boolean
+                      verificationExpirationLength:
+                        description: app verification expiration length in milliseconds
+                        type: integer
+                      sponsorPublicKey:
+                        description: the public part of the key pair that the app uses to
+                          sign sponsor requests
+                        type: string
+                      nodeUrl:
+                        description: the url of the node that the app uses to query
+                          verification from
+                        type: string
+                      soulbound:
+                        description: true if the app uses soulbound standard
+                        type: boolean
+                      callbackUrl:
+                        description: the callback url of the app
+                        type: string
+                    additionalProperties: false
+                    required:
+                      - id
+                      - name
+                      - verification
+                      - verificationUrl
+                      - soulbound
+                additionalProperties: false
+        "404":
+          description: app not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_apps_app
+  /apps:
+    get:
+      summary: Gets all apps
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      apps:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: unique app id
+                              type: string
+                            name:
+                              description: app name
+                              type: string
+                            context:
+                              description: the context of legacy apps
+                              type: string
+                            verification:
+                              description: verification required for using the app
+                              type: string
+                            verifications:
+                              type: array
+                              items:
+                                description: verification required for using the app
+                                type: string
+                            verificationUrl:
+                              description: the url to PUT a verification with /:id
+                              type: string
+                            logo:
+                              description: app logo (base64 encoded image)
+                              type: string
+                            url:
+                              description: the base url for the app
+                              type: string
+                            assignedSponsorships:
+                              description: number of assigned sponsorships
+                              type: integer
+                            unusedSponsorships:
+                              description: number of unused sponsorships
+                              type: integer
+                            testing:
+                              description: true if app is in testing mode
+                              type: boolean
+                            idsAsHex:
+                              description: true if app generated ids are in ethereum
+                                address format
+                              type: boolean
+                            usingBlindSig:
+                              description: true if app is using blind signature integration
+                              type: boolean
+                            verificationExpirationLength:
+                              description: app verification expiration length in
+                                milliseconds
+                              type: integer
+                            sponsorPublicKey:
+                              description: the public part of the key pair that the app
+                                uses to sign sponsor requests
+                              type: string
+                            nodeUrl:
+                              description: the url of the node that the app uses to query
+                                verification from
+                              type: string
+                            soulbound:
+                              description: true if the app uses soulbound standard
+                              type: boolean
+                            callbackUrl:
+                              description: the callback url of the app
+                              type: string
+                          additionalProperties: false
+                          required:
+                            - id
+                            - name
+                            - verification
+                            - verificationUrl
+                            - soulbound
+                    additionalProperties: false
+                additionalProperties: false
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_apps
+  /state:
+    get:
+      summary: Gets state of this node
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      lastProcessedBlock:
+                        description: last block that consensus receiver service processed
+                        type: integer
+                      verificationsBlock:
+                        description: the block that scorer service updated verifications
+                          based on operations got applied before that block
+                        type: integer
+                      initOp:
+                        description: number of operations in the init state
+                        type: integer
+                      sentOp:
+                        description: number of operations in the sent state
+                        type: integer
+                      verificationsHashes:
+                        description: different verifications' hashes for last 2 snapshots
+                        type: array
+                        items:
+                          type: object
+                          properties: {}
+                          additionalProperties: false
+                      wISchnorrPublic:
+                        description: the public part of WI-Schnorr params that should be
+                          used by client to generate challenge
+                        type: string
+                      ethSigningAddress:
+                        description: the ethereum address of this node; used for signing
+                          verifications
+                        type: string
+                      naclSigningKey:
+                        description: nacl signing key of this node; used for signing
+                          verifications
+                        type: string
+                      consensusSenderAddress:
+                        description: the ethereum address of consensus sender service of
+                          this node; used for sending operations
+                        type: string
+                      version:
+                        description: version of this node
+                        type: string
+                    additionalProperties: false
+                    required:
+                      - lastProcessedBlock
+                      - verificationsBlock
+                      - initOp
+                      - sentOp
+                      - verificationsHashes
+                      - wISchnorrPublic
+                      - ethSigningAddress
+                      - naclSigningKey
+                      - consensusSenderAddress
+                      - version
+                additionalProperties: false
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_state
+  "/groups/{id}":
+    get:
+      parameters:
+        - required: true
+          description: the id of the group
+          name: id
+          in: path
+          schema:
+            type: string
+      description: Gets a group's admins, info, region, seed, type, url, timestamp, members
+        and invited list.
+      summary: Gets information about a group
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        description: the unique id of the group
+                        type: string
+                      members:
+                        description: brightids of members of the group
+                        type: array
+                        items:
+                          type: string
+                      invites:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id:
+                              description: unique identifier of invite
+                              type: string
+                            group:
+                              description: unique identifier of the group that invitee is
+                                invited to
+                              type: string
+                            inviter:
+                              description: brightid of inviter
+                              type: string
+                            invitee:
+                              description: brightid of invitee
+                              type: string
+                            timestamp:
+                              description: timestamp when the user was invited
+                              type: integer
+                            data:
+                              description: encrypted version of the AES key that group name
+                                and photo uploaded to `url` encrypted
+                                withinvitee should first decrypt this data with
+                                his/her signingKey and then fetch data in `url`
+                                and decrypt that using the AES key
+                              type: string
+                          additionalProperties: false
+                          required:
+                            - id
+                            - group
+                            - inviter
+                            - invitee
+                            - timestamp
+                            - data
+                      admins:
+                        description: brightids of admins of the group
+                        type: array
+                        items:
+                          type: string
+                      seed:
+                        description: true if group is Seed
+                        type: boolean
+                      region:
+                        description: region of the group
+                        type: string
+                      type:
+                        description: type of the group
+                        type: string
+                      url:
+                        description: url of the group
+                        type: string
+                      info:
+                        description: URL of a documnet that contains info about the group
+                        type: string
+                      timestamp:
+                        description: the group creation timestamp
+                        type: number
+                    additionalProperties: false
+                    required:
+                      - id
+                      - members
+                      - invites
+                      - admins
+                      - seed
+                      - type
+                      - url
+                      - timestamp
+                additionalProperties: false
+        "404":
+          description: Group not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_groups_id
+  "/sponsorships/{appUserId}":
+    get:
+      parameters:
+        - required: true
+          description: the app generated id that info is requested about
+          name: appUserId
+          in: path
+          schema:
+            type: string
+      summary: Gets sponsorship information of an app generated id
+      tags: []
+      responses:
+        "200":
+          description: HTTP 200 OK.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      app:
+                        description: the app key that user is being sponsored by
+                        type: string
+                      appHasAuthorized:
+                        description: true if the app authorized the node to use
+                          sponsorships for this app-generated id
+                        type: boolean
+                      spendRequested:
+                        description: true if the client requested to spend sponsorship for
+                          this app-generated id
+                        type: boolean
+                      timestamp:
+                        description: the sponsorship timestamp
+                        type: number
+                    additionalProperties: false
+                    required:
+                      - app
+                      - appHasAuthorized
+                      - spendRequested
+                      - timestamp
+                additionalProperties: false
+        "404":
+          description: App generated id not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+        "500":
+          description: Default error response.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    anyOf:
+                      - type: any
+                        enum:
+                          - true
+                      - oneOf:
+                          - type: array
+                            items: {}
+                          - type: boolean
+                          - type: number
+                          - type: object
+                          - type: string
+                        nullable: true
+                  errorNum:
+                    type: integer
+                  errorMessage:
+                    type: string
+                  code:
+                    type: integer
+                additionalProperties: false
+                required:
+                  - error
+      security: []
+      operationId: GET_sponsorships_appUserId
+info:
+  title: BrightID-Node
+  description: Read and update the anonymous social graph stored on BrightID nodes.
+  version: 6.8.0
+  license:
+    name: ISC
+servers:
+  - url: /_db/_system/brightid6
