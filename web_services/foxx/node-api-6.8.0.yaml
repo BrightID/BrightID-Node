@@ -2857,7 +2857,7 @@ paths:
       operationId: GET_sponsorships_appUserId
 info:
   title: BrightID-Node
-  description: Read and update the anonymous social graph stored on BrightID nodes.
+  description: Read and update the anonymous social graph stored on BrightID nodes. Uses blind signatures to preserve privacy. Allows verifications to expire. Allows one link per person per app during an expiration period. Does not maintain a list of previously linked identifiers. To maintain linked identifiers, use BrightID-Node-Soulbound.
   version: 6.8.0
   contact:
     url: 'https://github.com/BrightID/BrightID-Node'
