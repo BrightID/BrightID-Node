@@ -2859,7 +2859,15 @@ info:
   title: BrightID-Node
   description: Read and update the anonymous social graph stored on BrightID nodes.
   version: 6.8.0
+  contact:
+    url: 'https://github.com/BrightID/BrightID-Node'
   license:
-    name: ISC
+    name: ISC License
+    url: 'https://github.com/BrightID/BrightID-Node/blob/master/LICENSE-ISC'
 servers:
-  - url: /_db/_system/brightid6
+  - url: 'https://app.brightid.org/node/v6'
+    description: mainnet base url
+  - url: 'http://test.brightid.org/brightid/v6'
+    description: testnet base url (http-only)
+  - url: 'http://node.brightid.org/brightid/v6'
+    description: mainnet base url (http-only)
