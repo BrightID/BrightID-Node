@@ -110,14 +110,14 @@ function v6_8() {
   const connectionsHistoryColl = arango._collection('connectionsHistory');
   connectionsHistoryColl.all().toArray().forEach(conn => {
     if (conn._from == conn._to) {
-      connectionsHistoryColl.removeByExample(conn);
+      connectionsHistoryColl.remove(conn);
     }
   });
 
   const connectionsColl = arango._collection('connections');
   connectionsColl.all().toArray().forEach(conn => {
     if (conn._from == conn._to) {
-      connectionsColl.removeByExample(conn);
+      connectionsColl.remove(conn);
     }
   });
 }
