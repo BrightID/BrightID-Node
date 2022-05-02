@@ -73,15 +73,14 @@ app.post("/upload/:channel", function (req, res) {
   }
 
   // save data in cache
-  dataCache.set(channel, cacheEntry, async function (err, success) {
-    if (err) {
-      console.log(err);
-      res.status(500).json({ error: "unable to store profile data" });
-      return;
-    }
+  try {
+    dataCache.set(channel, cacheEntry)
     res.status(201);
     res.json({ success: true });
-  });
+  } catch (e) {
+    console.log(err);
+    res.status(500).json({ error: "unable to store profile data" });
+  }
 });
 
 app.post("/upload", function (req, res, next) {
@@ -91,19 +90,19 @@ app.post("/upload", function (req, res, next) {
     res.status(404).json({ error: "missing uuid" });
     return;
   }
+  if (!data) {
+    res.status(404).json({ error: "missing data" });
+    return;
+  }
 
   // save data in cache
-  if (data) {
-    dataCache.set(uuid, data, async function (err, success) {
-      if (err) {
-        console.log(err);
-        res.status(500).json({ error: "unable to store profile data" });
-        return;
-      }
-      res.json({ success: true });
-    });
-  } else {
-    res.status(404).json({ error: "missing data" });
+  try {
+    dataCache.set(uuid, data)
+    res.json({ success: true });
+  }
+  catch (e) {
+    console.log(err);
+    res.status(500).json({ error: "unable to store profile data" });
   }
 });
 
@@ -164,17 +163,15 @@ app.delete("/:channel/:uuid", function (req, res, next) {
   }
 
   // save data in cache
-  dataCache.set(channel, new_data, async function (err, success) {
-    if (err) {
-      console.log(err);
-      res.status(500).json({ error: "unable to store profile data" });
-      return;
-    }
+  try {
+    dataCache.set(channel, new_data)
     res.status(200);
     res.json({ success: true });
-  });
+  } catch (err) {
+    console.log(err);
+    res.status(500).json({ error: "unable to store profile data" });
+  }
 });
-
 
 app.get("/download/:uuid", function (req, res, next) {
   const { uuid } = req.params;
