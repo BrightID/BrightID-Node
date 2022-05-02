@@ -51,13 +51,8 @@ const handlers = {
       operations.encrypt(op);
     }
 
-    if (op.name == 'Sponsor') {
-      db.sponsor(op);
-    } else {
-      op.state = 'init';
-      db.upsertOperation(op);
-    }
-
+    op.state = 'init';
+    db.upsertOperation(op);
     res.send({
       data: {
         hash: op.hash
@@ -234,14 +229,15 @@ const handlers = {
       throw new errors.NotVerifiedError(contextId, appKey);
     }
 
+    const sponsorship = db.getSponsorship(contextId);
+    if (!sponsorship.appHasAuthorized) {
+      throw new errors.NotSponsoredError(contextId);
+    }
+
     const coll = arango._collection(context.collection);
     const user = db.getUserByContextId(coll, contextId);
     if (! user) {
       throw new errors.ContextIdNotFoundError(contextId);
-    }
-
-    if (! db.isSponsored(user)) {
-      throw new errors.NotSponsoredError(contextId);
     }
 
     let verifications = db.userVerifications(user);
@@ -467,6 +463,23 @@ const handlers = {
       }
     });
   },
+
+  sponsorshipGet: function(req, res){
+    let appKey = req.param('app');
+    let contextId = req.param('contextId');
+    if (db.isEthereumAddress(contextId)) {
+      contextId = contextId.toLowerCase();
+    }
+    const sponsorship = db.getSponsorship(contextId);
+    res.send({
+      data: {
+        app: sponsorship._to.replace('apps/', ''),
+        appHasAuthorized: sponsorship.appHasAuthorized,
+        spendRequested: sponsorship.spendRequested,
+        timestamp: sponsorship.timestamp,
+      }
+    });
+  },
 };
 
 router.post('/operations', handlers.operationsPost)
@@ -583,6 +596,12 @@ router.get('/groups/:id', handlers.groupGet)
   .description("Gets a group's admins, founders, info, isNew, region, seed, type, url, timestamp, members, invited and eligible members.")
   .response(schemas.groupGetResponse)
   .error(404, 'Group not found');
+
+router.get('/sponsorships/:contextId', handlers.sponsorshipGet)
+  .pathParam('contextId', joi.string().required().description('the contextId of user within the context'))
+  .summary('Gets sponsorship information of a contextId')
+  .response(schemas.sponsorshipGetResponse)
+  .error(403, 'user is not sponsored');
 
 module.context.use(function (req, res, next) {
   try {

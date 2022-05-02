@@ -46,6 +46,7 @@ const senderAttrs = {
   'Set Trusted Connections': ['id'],
   'Set Signing Key': ['id'],
   'Sponsor': ['app'],
+  'Spend Sponsorship': ['app'],
   'Link ContextId': ['id'],
   'Invite': ['inviter'],
   'Dismiss': ['dismisser'],
@@ -129,6 +130,9 @@ function verify(op) {
   let message = getMessage(op);
   if (op.name == 'Sponsor') {
     verifyAppSig(message, op.app, op.sig);
+  } else if (op.name == 'Spend Sponsorship') {
+    // there is no sig on this operation
+    return;
   } else if (op.name == 'Set Signing Key') {
     const recoveryConnections = db.getRecoveryConnections(op.id);
     if (op.id1 == op.id2 ||
@@ -192,7 +196,7 @@ function apply(op) {
     return db.setRecoveryConnections(op.trusted, op.id, op.timestamp);
   } else if (op['name'] == 'Set Signing Key') {
     return db.setSigningKey(op.signingKey, op.id, op.timestamp);
-  } else if (op['name'] == 'Sponsor') {
+  } else if (['Sponsor', 'Spend Sponsorship'].includes(op['name'])) {
     return db.sponsor(op);
   } else if (op['name'] == 'Link ContextId') {
     return db.linkContextId(op.id, op.context, op.contextId, op.timestamp);

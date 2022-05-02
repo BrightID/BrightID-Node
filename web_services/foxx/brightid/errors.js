@@ -40,6 +40,8 @@ const NOT_ADMIN = 41;
 const ARANGO_ERROR = 42;
 const INELIGIBLE_RECOVERY_CONNECTION = 43;
 const INVALID_CONTEXTID = 44;
+const APP_AUTHORIZED_BEFORE = 45;
+const SPEND_REQUESTED_BEFORE = 46;
 
 class BrightIDError extends Error {
   constructor() {
@@ -411,7 +413,7 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = 'The user is sponsored before.';
+    this.message = 'The contextId is sponsored before.';
   }
 }
 
@@ -438,6 +440,23 @@ class InvalidContextIdError extends NotFoundError {
     this.errorNum = INVALID_CONTEXTID;
     this.message = `The contextId ${contextId} is not valid.`;
     this.contextId = contextId;
+  }
+}
+
+class AppAuthorizedBeforeError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = APP_AUTHORIZED_BEFORE;
+    this.message =
+      "The app authorized a sponsorship for this contextId before.";
+  }
+}
+
+class SpendRequestedBeforeError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = SPEND_REQUESTED_BEFORE;
+    this.message = "Spend request for this contextId submitted before.";
   }
 }
 
@@ -483,6 +502,8 @@ module.exports = {
   ARANGO_ERROR,
   INELIGIBLE_RECOVERY_CONNECTION,
   INVALID_CONTEXTID,
+  APP_AUTHORIZED_BEFORE,
+  SPEND_REQUESTED_BEFORE,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -530,4 +551,6 @@ module.exports = {
   SponsorNotSupportedError,
   IneligibleRecoveryConnection,
   InvalidContextIdError,
+  AppAuthorizedBeforeError,
+  SpendRequestedBeforeError,
 }

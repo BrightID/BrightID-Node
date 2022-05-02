@@ -78,8 +78,12 @@ const operations = {
   'Sponsor': {
     contextId: joi.string().description('the contextId for the user that is being sponsored by context'),
     id: joi.string().description('brightid of the user that is being sponsored by context. This field is not provided by context owners who sponsor the user as they do not have users brightids. BrightID nodes that are trusted by context owners and have the private key that is used to spend sponsorships assigned to the context, will replace `contextId` by this field before sending this operation to blockchain'),
-    app: joi.string().required().description('the app name that user is being sponsored by'),
+    app: joi.string().required().description('the app key that user is being sponsored by'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the private key shared between context owners and trusted node operators which enable them to spend sponsorships assigned to the context'),
+  },
+  'Spend Sponsorship': {
+    contextId: joi.string().required().description('the contextId that is being sponsored'),
+    app: joi.string().required().description('the app key that user is being sponsored by'),
   },
   'Invite': {
     inviter: joi.string().required().description('brightid of the user who has admin rights in the group and can invite others to the group'),
@@ -332,6 +336,15 @@ schemas = Object.assign({
       url: joi.string().required().description('url of the group'),
       info: joi.string().description('URL of a documnet that contains info about the group'),
       timestamp: joi.number().required().description('the group creation timestamp'),
+    })
+  }),
+
+  sponsorshipGetResponse: joi.object({
+    data: joi.object({
+      app: joi.string().required().description('the app key that user is being sponsored by'),
+      appHasAuthorized: joi.boolean().required().description('true if the app authorized the node to use sponsorships for this contextId'),
+      spendRequested: joi.boolean().required().description('true if the client requested to spend sponsorship for this contextId'),
+      timestamp: joi.number().required().description('the sponsorship timestamp'),
     })
   }),
 
