@@ -565,7 +565,7 @@ function unusedSponsorships(app) {
 }
 
 function sponsor(op) {
-  if (unusedSponsorships(op.app) < 1) {
+  if (op.name == 'Sponsor' && unusedSponsorships(op.app) < 1) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
