@@ -31,8 +31,8 @@ const notification_service = is_dev
   : process.env.NOTIFICATION_SERVICE_RELEASE;
 
 const channel_entry_limit = 30;
+const channel_max_size_bytes = 1024*1024*10; // 10 MegaByte
 // const channel_max_size_bytes = 1024*1024; // 1 MegaByte
-const channel_max_size_bytes = 1024; // 1 MegaByte
 const channel_limit_response_code = 440;
 const channel_limit_message = "Channel full"
 
