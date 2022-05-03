@@ -82,7 +82,7 @@ describe('Remove items from channel', () => {
             }
         })
 
-        it(`should delete the same entry again`, async () => {
+        it(`should handle deleting non-existing entry`, async () => {
             const deleteResult = await request(app)
             .delete(`/${channelId}/${channelEntries[0].uuid}`)
             .expect(404)
