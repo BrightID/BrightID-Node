@@ -20,6 +20,7 @@
     "express": "^4.17.1",
     "jquery": "^3.5.0",
     "node-cache": "^5.1.2",
+    "object-sizeof": "^1.6.3",
     "uuid": "^3.4.0"
   },
   "devDependencies": {
