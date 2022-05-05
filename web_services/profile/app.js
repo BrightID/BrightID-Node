@@ -4,6 +4,7 @@ const sizeof = require('object-sizeof')
 const app = express();
 const NodeCache = require("node-cache");
 const config = require("./config");
+const { renderStats } = require('./stats')
 
 const dataCache = new NodeCache(config.data_cache_config);
 const channelCache = new NodeCache(config.channel_config);
@@ -22,6 +23,10 @@ if (config.is_dev) {
 app.get("/", function (req, res, next) {
   res.send("BrightID socket server");
 });
+
+app.get("/stats", function(req, res, next){
+  res.send(renderStats(channelCache, dataCache))
+})
 
 app.post("/upload/:channelId", function (req, res) {
   const { channelId } = req.params;
