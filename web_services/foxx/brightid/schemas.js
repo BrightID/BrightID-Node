@@ -76,8 +76,7 @@ const operations = {
     sig: joi.string().required().description('deterministic json representation of operation object signed by the user represented by id'),
   },
   'Sponsor': {
-    contextId: joi.string().description('the contextId for the user that is being sponsored by context'),
-    id: joi.string().description('brightid of the user that is being sponsored by context. This field is not provided by context owners who sponsor the user as they do not have users brightids. BrightID nodes that are trusted by context owners and have the private key that is used to spend sponsorships assigned to the context, will replace `contextId` by this field before sending this operation to blockchain'),
+    contextId: joi.string().required().description('the contextId for the user that is being sponsored by context'),
     app: joi.string().required().description('the app key that user is being sponsored by'),
     sig: joi.string().required().description('deterministic json representation of operation object signed by the private key shared between context owners and trusted node operators which enable them to spend sponsorships assigned to the context'),
   },
