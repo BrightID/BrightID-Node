@@ -35,10 +35,14 @@ app.post("/upload/:channelId", function (req, res) {
     res.status(400).json({ error: "missing uuid" });
     return;
   }
-  // Don't allow too high TTL values
-  if (requestedTtl && requestedTtl > config.stdTTL) {
-    res.status(400).json({ error: "requested TTL too high" });
-    return;
+  // Limit TTL values
+  if (requestedTtl) {
+    if (requestedTtl > config.stdTTL) {
+      res.status(400).json({error: `requested TTL ${requestedTtl} too high`});
+      return;
+    } else if (requestedTtl < config.minTTL) {
+      res.status(400).json({error: `requested TTL ${requestedTtl} too low`});
+    }
   }
 
   // use standard TTL if nothing provided by client

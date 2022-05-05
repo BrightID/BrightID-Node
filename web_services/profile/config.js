@@ -5,6 +5,7 @@ const port = process.env.BN_WS_PROFILE_SERVICE_PORT || 3000;
 
 const stdTTL = 60*60*24 // 24 hours
 const finalTTL = 600 // 10 minutes
+const minTTL = 60 // 1 minute
 
 /* Cache config for channels */
 const channel_config = {
@@ -43,5 +44,6 @@ module.exports = {
   channel_limit_response_code,
   channel_limit_message,
   finalTTL,
-  stdTTL
+  stdTTL,
+  minTTL
 };
