@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const request = require('supertest')
+const sizeof = require('object-sizeof')
 const app = require('../app')
 const config = require('../config')
 
@@ -18,7 +19,7 @@ describe('size-based channel limit', () => {
                 data: `Profile ${i} data`,
                 uuid: uuidv4(),
             }
-            const entrySize = Buffer.byteLength(entry.data) + Buffer.byteLength(entry.uuid)
+            const entrySize = sizeof(entry.data) + sizeof(entry.uuid)
             if (entrySize < remainingSize) {
                 channelEntries.push(entry)
                 const res = await request(app)
@@ -26,7 +27,8 @@ describe('size-based channel limit', () => {
                 .send(channelEntries[i])
                 .expect(201)
                 remainingSize -= entrySize
-                console.log(`Remaining size: ${remainingSize}`)
+                size += entrySize
+                console.log(`New size: ${size}, remaining: ${remainingSize}`)
                 i++;
             } else {
                 break
