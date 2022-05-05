@@ -3,25 +3,17 @@ const is_test = process.env.NODE_ENV === "test";
 
 const port = process.env.BN_WS_PROFILE_SERVICE_PORT || 3000;
 
-/* A channel entry does never expire. It only gets deleted with
-the parent channel or when explicitly calling delete/take
- */
-const channel_entry_config = {
-  stdTTL: 0,
-};
-
-/* A channel expires after xx minutes, resulting in all entries
-being deleted.
- */
 const stdTTL = 60*60*24 // 24 hours
 const finalTTL = 600 // 10 minutes
+
+/* Cache config for channels */
 const channel_config = {
   stdTTL,
   checkperiod: 120,
   useClones: false // because we are storing complex objects
 }
 
-/* config for legacy uploads not using channel concept */
+/* Cache config for legacy uploads not using channel concept */
 const data_cache_config = {
   stdTTL: 900,
   checkperiod: 120,
@@ -44,7 +36,6 @@ module.exports = {
   is_dev,
   port,
   channel_config,
-  channel_entry_config,
   data_cache_config,
   notification_service,
   channel_entry_limit,
