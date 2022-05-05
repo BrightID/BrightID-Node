@@ -48,7 +48,7 @@ app.post("/upload/:channelId", function (req, res) {
   if (!channel) {
     // Create new channel.
     channel = {
-      cache: new NodeCache(config.channel_entry_config),
+      entries: new Map(),
       size: 0,
       ttl
     }
@@ -56,14 +56,14 @@ app.post("/upload/:channelId", function (req, res) {
     channelCache.set(channelId, channel, ttl)
   } else {
     // existing channel. check if this channel was about to expire, but got another upload
-    if (channel.cache.keys().length === 0) {
+    if (channel.entries.size === 0) {
       console.log(`Restoring requested TTL ${channel.ttl} for channel ${channelId}`)
       channelCache.ttl(channelId, channel.ttl)
     }
   }
 
   // Check if there is already data with the provided uuid to prevent duplicates
-  const existingData = channel.cache.get(uuid)
+  const existingData = channel.entries.get(uuid)
   if (existingData) {
     if (existingData === data) {
       console.log(`Received duplicate profile ${uuid} for channel ${channelId}`)
@@ -90,7 +90,7 @@ app.post("/upload/:channelId", function (req, res) {
 
   // save data in cache
   try {
-    channel.cache.set(uuid, data)
+    channel.entries.set(uuid, data)
     channel.size = newSize
     res.status(201);
     res.json({ success: true });
@@ -121,7 +121,7 @@ app.get("/download/:channelId/:uuid", function (req, res, next) {
   }
 
   // get data
-  const data = channel.cache.get(uuid)
+  const data = channel.entries.get(uuid)
   if (!data) {
     res.status(404).json({error: `Data ${uuid} in channel ${channelId} not found`});
     return;
@@ -153,17 +153,17 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
   }
 
   // get data (needed to track channel size)
-  const data = channel.cache.get(uuid)
+  const data = channel.entries.get(uuid)
   if (!data) {
     res.status(404).json({error: `Data ${uuid} in channel ${channelId} not found`});
     return;
   }
 
   // remove entry
-  const numDeleted = channel.cache.del(uuid)
-  if (numDeleted === 0) {
+  const deleted = channel.entries.delete(uuid)
+  if (!deleted) {
     // No entry deleted although it exists??
-    res.status(500).json({error: `Profile ${uuid} in channel ${channelId} could not be deleted`});
+    res.status(500).json({error: `Data ${uuid} in channel ${channelId} could not be deleted`});
     return;
   }
 
@@ -172,12 +172,21 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
 
   console.log(`Deleted ${uuid} from channel ${channelId}. New size: ${channel.size}`)
 
-  // if the last entry was deleted, prepare the channel for deletion. Leave a few minutes TTL in case some upload was
-  // hanging from a slow connection
-  if (channel.cache.keys().length === 0) {
+  // handle removing of last entry
+  if (channel.entries.size === 0) {
+
+    // if channel is empty size should also be 0. Double-check.
+    if (channel.size !== 0) {
+      console.warn(`Channel size calculation incorrect. This should not happen.`)
+      channel.size = 0;
+    }
+
+    // Prepare channel for deletion. Leave a few minutes TTL in case some upload is
+    // hanging from a slow connection
     console.log(`last element removed from channel ${channelId}. Setting reduced TTL ${config.finalTTL}.`)
     channelCache.ttl(channelId, config.finalTTL)
   }
+
   res.status(200);
   res.json({ success: true });
 });
@@ -201,13 +210,13 @@ app.get("/list/:channelId", function(req, res, next) {
     return;
   }
 
-  if (!channel.cache) {
-    res.status(500).json({error: `Cache for channel ${channelId} not existing`});
+  if (!channel.entries) {
+    res.status(500).json({error: `Map for channel ${channelId} not existing`});
     return;
   }
 
   res.json({
-    profileIds: channel.cache.keys()
+    profileIds: Array.from(channel.entries.keys()) // channel.entries.keys()
   })
 })
 
