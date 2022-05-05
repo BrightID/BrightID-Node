@@ -659,17 +659,6 @@ function linkContextId(id, context, contextId, timestamp) {
     }
   }
 
-  // spend sponsorship if app has authorized and contextId is not sponsored
-  const sponsorship = sponsorshipsColl.firstExample({ contextId });
-  if (sponsorship && sponsorship.appHasAuthorized && !sponsorship.spendRequested) {
-    sponsorshipsColl.update(sponsorship, {
-      expireDate: null,
-      appHasAuthorized: true,
-      spendRequested: true,
-      timestamp,
-    });
-  }
-
   coll.insert({
     user: id,
     contextId,
