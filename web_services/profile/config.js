@@ -1,4 +1,5 @@
 const is_dev = process.env.NODE_ENV === "dev";
+const is_test = process.env.NODE_ENV === "test";
 
 const port = process.env.BN_WS_PROFILE_SERVICE_PORT || 3000;
 
@@ -26,13 +27,16 @@ const data_cache_config = {
   checkperiod: 120,
 }
 
-const notification_service = is_dev
+const notification_service = (is_dev || is_test)
   ? process.env.NOTIFICATION_SERVICE_DEV
   : process.env.NOTIFICATION_SERVICE_RELEASE;
 
 const channel_entry_limit = 30;
-const channel_max_size_bytes = 1024*1024*10; // 10 MegaByte
-// const channel_max_size_bytes = 1024*1024; // 1 MegaByte
+
+const channel_max_size_bytes = is_test
+  ? 1024 // 1 kb
+  : 1024*1024*10 // 10 MegaByte
+
 const channel_limit_response_code = 440;
 const channel_limit_message = "Channel full"
 

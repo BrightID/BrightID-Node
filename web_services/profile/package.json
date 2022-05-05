@@ -9,7 +9,6 @@
   "author": "",
   "license": "ISC",
   "jest": {
-    "testEnvironment": "node",
     "coveragePathIgnorePatterns": [
       "/node_modules/"
     ]
