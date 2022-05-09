@@ -13,7 +13,7 @@ const renderLegacyCaches = (dataCache) => {
   <td>${index}</td>
   <td><a href="/download/${key}">${key}</a></td>
   <td>${Number(size/1024).toFixed(2)}</td>
-  <td>${new Date(dataCache.getTtl(key)).toLocaleTimeString()} (${dataCache.getTtl(key)})</td>
+  <td>${new Date(dataCache.getTtl(key)).toLocaleString()} (${dataCache.getTtl(key)})</td>
 </tr>
     `
   })
@@ -52,17 +52,21 @@ const renderActiveChannels = (channelCache) => {
 
   channelCache.keys().forEach((key, index) => {
     const entry = channelCache.get(key)
-    sizeTotal += entry.size
-    countTotal += entry.entries.size
-    body += `
+    if (entry) {
+      sizeTotal += entry.size
+      countTotal += entry.entries.size
+      body += `
 <tr>
   <td>${index}</td>
   <td><a href="/list/${key}">${key}</a></td>
   <td>${entry.entries.size}</td>
   <td>${Number(entry.size / 1024).toFixed(2)} kb</td>
-  <td>${new Date(channelCache.getTtl(key)).toLocaleTimeString()} (${channelCache.getTtl(key)})</td>
+  <td>${new Date(channelCache.getTtl(key)).toLocaleString()} (${channelCache.getTtl(key)})</td>
 </tr>
 `
+    } else {
+      console.warn(`No map existing for key ${key}!`)
+    }
   })
 
   let footer = `
