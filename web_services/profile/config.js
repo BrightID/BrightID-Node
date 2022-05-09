@@ -13,8 +13,9 @@ const channel_config = {
   defaultTTL,
   checkperiod: is_test
     ? 10  // low 10 sec check intervall to test expiration
-    : 120,  // 2 minute check intervall
-  useClones: false // because we are storing complex objects
+    : 120,  // 2 minute check intervall for regular usage
+  useClones: false, // because we are storing complex objects
+  maxKeys: 2000 // limit total number of open channels
 }
 
 /* Cache config for legacy uploads not using channel concept */
