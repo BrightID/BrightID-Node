@@ -42,7 +42,7 @@ app.post("/upload/:channelId", function (req, res) {
   }
   // Limit TTL values
   if (requestedTtl) {
-    if (requestedTtl > config.stdTTL) {
+    if (requestedTtl > config.maxTTL) {
       res.status(400).json({error: `requested TTL ${requestedTtl} too high`});
       return;
     } else if (requestedTtl < config.minTTL) {
@@ -50,8 +50,8 @@ app.post("/upload/:channelId", function (req, res) {
     }
   }
 
-  // use standard TTL if nothing provided by client
-  const ttl = requestedTtl || config.stdTTL
+  // use default TTL if nothing provided by client
+  const ttl = requestedTtl || config.defaultTTL
 
   let channel = channelCache.get(channelId)
   if (!channel) {
