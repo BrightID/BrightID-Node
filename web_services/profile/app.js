@@ -190,10 +190,17 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
       channel.size = 0;
     }
 
-    // Prepare channel for deletion. Leave a few minutes TTL in case some upload is
+    // Reduce remaining TTL. Leave a few minutes TTL in case some upload is
     // hanging from a slow connection
-    console.log(`last element removed from channel ${channelId}. Setting reduced TTL ${config.finalTTL}.`)
-    channelCache.ttl(channelId, config.finalTTL)
+    const expirationTime = channelCache.getTtl(channelId); // This actually returns a unix timestamp in ms(!) when channel will expire
+    const remainingTTL = expirationTime - Date.now()
+    if (remainingTTL > config.finalTTL) {
+      console.log(`last element removed from channel ${channelId}. Reducing TTL from ${Math.floor(remainingTTL/1000)} to ${config.finalTTL} secs.`)
+      channelCache.ttl(channelId, config.finalTTL)
+    } else {
+      console.log(`last element removed from channel ${channelId}. Remaining TTL: ${remainingTTL}ms.`)
+      channelCache.ttl(channelId, config.finalTTL)
+    }
   }
 
   res.status(200);

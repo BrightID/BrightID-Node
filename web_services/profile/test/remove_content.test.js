@@ -1,8 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const request = require('supertest')
 const app = require('../app')
-const config = require('../config')
-
 
 const setupChannel = async (numEntries) => {
     channelId = uuidv4();
