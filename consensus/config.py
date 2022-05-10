@@ -5,7 +5,7 @@ from eth_utils import decode_hex
 
 INFURA_URL = os.environ['BN_CONSENSUS_INFURA_URL']
 PRIVATE_KEY = os.environ.get('BN_CONSENSUS_PRIVATE_KEY')
-SEED = os.environ.get('SEED')
+SEED = os.environ.get('BN_SEED')
 if not PRIVATE_KEY and SEED:
     PRIVATE_KEY = hashlib.sha256(SEED.encode('utf-8')).hexdigest()
 ADDRESS = keys.PrivateKey(
