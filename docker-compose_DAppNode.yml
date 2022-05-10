@@ -6,6 +6,7 @@ services:
       - db
     image: "ws.brightid-node.public.dappnode.eth:1.3.0"
     environment:
+      BN_SEED: ""
       BN_WS_PRIVATE_KEY: ""
       BN_WS_ETH_PRIVATE_KEY: ""
       BN_WS_WISCHNORR_PASSWORD: ""
