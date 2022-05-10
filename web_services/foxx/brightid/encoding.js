@@ -1,6 +1,10 @@
 "use strict";
 const B64 = require('base64-js');
 const crypto = require('@arangodb/crypto');
+const nacl = require('tweetnacl');
+const secp256k1 = require('secp256k1');
+
+const conf = module.context.configuration;
 
 function uInt8ArrayToB64(array) {
   const b = Buffer.from(array);
@@ -53,6 +57,35 @@ function addressToBytes32(address) {
   return String.fromCharCode(0).repeat(12) + b;
 }
 
+function getNaclKeyPair() {
+  let publicKey, privateKey;
+  if (conf.privateKey) {
+    publicKey = uInt8ArrayToB64(Object.values(
+      nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(conf.privateKey)).publicKey
+    ));
+    privateKey = b64ToUint8Array(conf.privateKey);
+  } else if (conf.seed) {
+    const hex32 = crypto.sha256(conf.seed).slice(0, 32);
+    const naclKeyPair = nacl.sign.keyPair.fromSeed(strToUint8Array(hex32));
+    publicKey = uInt8ArrayToB64(Object.values(naclKeyPair.publicKey));
+    privateKey = naclKeyPair.secretKey;
+  }
+  return { publicKey, privateKey };
+}
+
+function getEthKeyPair() {
+  let publicKey, privateKey;
+  if (conf.ethPrivateKey) {
+    privateKey = new Uint8Array(Buffer.from(conf.ethPrivateKey, 'hex'));
+    publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(privateKey))).toString('hex');
+  } else if (conf.seed) {
+    const hex64 = crypto.sha256(conf.seed);
+    privateKey = new Uint8Array(Buffer.from(hex64, 'hex'));
+    publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(privateKey))).toString('hex');
+  }
+  return { publicKey, privateKey };
+}
+
 module.exports = {
   uInt8ArrayToB64,
   b64ToUint8Array,
@@ -61,5 +94,7 @@ module.exports = {
   urlSafeB64ToB64,
   hash,
   pad32,
-  addressToBytes32
+  addressToBytes32,
+  getNaclKeyPair,
+  getEthKeyPair,
 };

@@ -733,4 +733,21 @@ describe('operations', function(){
       resp.json.data.unique.should.equal(true);
     });
   });
+
+  describe('Checking verifications signatures', function() {
+    it('nacl signature', function () {
+      const contextId = '0x51E4093bb8DA34AdD694A152635bE8e38F4F1a29';
+
+      let resp = request.get(`${baseUrl}/verifications/${app}/${contextId.toLowerCase()}`, {
+        qs: {
+          signed: 'nacl',
+        },
+        json: true
+      });
+      resp.status.should.equal(200);
+      resp.json.data.unique.should.equal(true);
+      const message = resp.json.data.app + ',' + resp.json.data.contextIds.join(',');
+      nacl.sign.detached.verify(strToUint8Array(message), b64ToUint8Array(resp.json.data.sig),  b64ToUint8Array(resp.json.data.publicKey)).should.equal(true);
+    });
+  });
 });

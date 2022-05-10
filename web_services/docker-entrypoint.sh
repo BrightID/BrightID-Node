@@ -11,6 +11,7 @@ foxx server set default tcp://$BN_ARANGO_HOST:$BN_ARANGO_PORT
 foxx upgrade /brightid5 /code/foxx/brightid5.zip ||
 foxx install /brightid5 /code/foxx/brightid5.zip
 foxx config /brightid5 ip=$BN_WS_IP
+foxx config /brightid5 seed=$SEED
 foxx config /brightid5 publicKey=$BN_WS_PUBLIC_KEY
 foxx config /brightid5 privateKey=$BN_WS_PRIVATE_KEY
 foxx config /brightid5 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY

@@ -16,6 +16,8 @@ const {
   hash,
   pad32,
   addressToBytes32,
+  getNaclKeyPair,
+  getEthKeyPair,
 } = require('./encoding');
 const parser = require('expr-eval').Parser;
 const errors = require('./errors');
@@ -274,7 +276,8 @@ const handlers = {
     // sign and return the verification
     let sig, publicKey;
     if (signed == 'nacl') {
-      if (! (module.context && module.context.configuration && module.context.configuration.privateKey)){
+      const naclKeyPair = getNaclKeyPair();
+      if (!naclKeyPair.privateKey) {
         throw new errors.KeypairNotSetError();
       }
 
@@ -282,15 +285,13 @@ const handlers = {
       if (timestamp) {
         message = message + ',' + timestamp;
       }
-      const privateKey = module.context.configuration.privateKey;
-      publicKey = uInt8ArrayToB64(Object.values(
-        nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(privateKey)).publicKey
-      ));
+      publicKey = naclKeyPair.publicKey;
       sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), b64ToUint8Array(privateKey)))
+        Object.values(nacl.sign.detached(strToUint8Array(message), naclKeyPair.privateKey))
       );
     } else if (signed == 'eth') {
-      if (! (module.context && module.context.configuration && module.context.configuration.ethPrivateKey)){
+      const ethKeyPair = getEthKeyPair();
+      if (!ethKeyPair.privateKey) {
         throw new errors.EthPrivatekeyNotSetError();
       }
 
@@ -306,10 +307,8 @@ const handlers = {
         message += ('0'.repeat(64 - t.length) + t);
       }
       h = new Uint8Array(createKeccakHash('keccak256').update(message, 'hex').digest());
-      let ethPrivateKey = module.context.configuration.ethPrivateKey;
-      ethPrivateKey = new Uint8Array(Buffer.from(ethPrivateKey, 'hex'));
-      publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(ethPrivateKey))).toString('hex');
-      const _sig = secp256k1.ecdsaSign(h, ethPrivateKey);
+      publicKey = ethKeyPair.publicKey;
+      const _sig = secp256k1.ecdsaSign(h, ethKeyPair.privateKey);
       sig = {
         r: Buffer.from(Object.values(_sig.signature.slice(0, 32))).toString('hex'),
         s: Buffer.from(Object.values(_sig.signature.slice(32, 64))).toString('hex'),

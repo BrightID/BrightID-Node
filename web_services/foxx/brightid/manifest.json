@@ -11,6 +11,11 @@
     "setup": "initdb.js"
   },
   "configuration": {
+    "seed": {
+      "description": "A password; is used for generating privateKey, ethPrivateKey, consensusSenderPrivateKey, and wISchnorrPassword if they haven't set (string)",
+      "type": "string",
+      "required": false
+    },
     "privateKey": {
       "description": "Private key of this server node; used for signing verifications (base64 encoded)",
       "type": "string",
