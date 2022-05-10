@@ -1,7 +1,7 @@
 const sizeof = require('object-sizeof')
 const process = require('process')
 
-const renderLegacyCaches = (dataCache) => {
+const renderLegacyCaches = (dataCache, rootPath) => {
   let body = ''
   let sizeTotal = 0
   dataCache.keys().forEach((key, index) => {
@@ -11,7 +11,7 @@ const renderLegacyCaches = (dataCache) => {
     body += `
 <tr>
   <td>${index}</td>
-  <td><a href="/download/${key}">${key}</a></td>
+  <td><a href="${rootPath}/download/${key}">${key}</a></td>
   <td>${Number(size/1024).toFixed(2)}</td>
   <td>${new Date(dataCache.getTtl(key)).toLocaleString()} (${dataCache.getTtl(key)})</td>
 </tr>
@@ -45,7 +45,7 @@ const renderLegacyCaches = (dataCache) => {
   return table
 }
 
-const renderActiveChannels = (channelCache) => {
+const renderActiveChannels = (channelCache, rootPath) => {
   let body = ''
   let sizeTotal = 0
   let countTotal = 0
@@ -58,14 +58,17 @@ const renderActiveChannels = (channelCache) => {
       body += `
 <tr>
   <td>${index}</td>
-  <td><a href="/list/${key}">${key}</a></td>
+  <td><a href=${rootPath}/list/${key}>${key}</a></td>
   <td>${entry.entries.size}</td>
   <td>${Number(entry.size / 1024).toFixed(2)} kb</td>
+  <td>${entry.ttl}</td>
   <td>${new Date(channelCache.getTtl(key)).toLocaleString()} (${channelCache.getTtl(key)})</td>
 </tr>
 `
     } else {
-      console.warn(`No map existing for key ${key}!`)
+      // Entry not existing.
+      // Can happen if a key expires between getting list of keys with `channelCache.keys()`
+      // and receiving the entry inside the loop with `channelCache.get(key).
     }
   })
 
@@ -84,6 +87,7 @@ const renderActiveChannels = (channelCache) => {
         <th>ID</th>
         <th>Entries</th>
         <th>Est. size</th>
+        <th>TTL (secs)</th>
         <th>Expires</th>
       </tr>
     </thead>
@@ -108,15 +112,19 @@ const renderProcessStats = () => {
   return body
 }
 
-const renderStats = (channelCache, dataCache) => {
+const renderStats = (req, channelCache, dataCache) => {
+  // quick hack to have working links both in local dev environment (hosted at "/")
+  // and in production (hosted at "/profile")
+  const local = req.hostname ==='127.0.0.1'
+  const rootPath = local ? '' : '/profile'
   let body = `
 <html>
   <h3>process.memoryUsage()</h3>
     ${renderProcessStats()}
   <h3>Open channels: ${channelCache.keys().length}</h3>
-    ${renderActiveChannels(channelCache)}
+    ${renderActiveChannels(channelCache, rootPath)}
   <h3>Legacy caches: ${dataCache.keys().length}</h3>
-    ${renderLegacyCaches(dataCache)}
+    ${renderLegacyCaches(dataCache, rootPath)}
 </html>
  `
   return body

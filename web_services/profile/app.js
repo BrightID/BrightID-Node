@@ -25,7 +25,7 @@ app.get("/", function (req, res, next) {
 });
 
 app.get("/stats", function(req, res, next){
-  res.send(renderStats(channelCache, dataCache))
+  res.send(renderStats(req, channelCache, dataCache))
 })
 
 app.post("/upload/:channelId", function (req, res) {
