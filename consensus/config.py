@@ -6,16 +6,11 @@ from eth_utils import decode_hex
 INFURA_URL = os.environ['BN_CONSENSUS_INFURA_URL']
 PRIVATE_KEY = os.environ.get('BN_CONSENSUS_PRIVATE_KEY')
 SEED = os.environ.get('SEED')
-
-if PRIVATE_KEY:
-    ADDRESS = keys.PrivateKey(
-        decode_hex(PRIVATE_KEY)
-    ).public_key.to_checksum_address() if PRIVATE_KEY else ''
-elif SEED:
+if not PRIVATE_KEY and SEED:
     PRIVATE_KEY = hashlib.sha256(SEED.encode('utf-8')).hexdigest()
-    ADDRESS = keys.PrivateKey(
-        decode_hex(PRIVATE_KEY)
-    ).public_key.to_checksum_address() if PRIVATE_KEY else ''
+ADDRESS = keys.PrivateKey(
+    decode_hex(PRIVATE_KEY)
+).public_key.to_checksum_address() if PRIVATE_KEY else ''
 
 MAX_DATA_SIZE = int(os.environ['BN_CONSENSUS_MAX_DATA_SIZE'])
 GAS = int(os.environ['BN_CONSENSUS_GAS'])
