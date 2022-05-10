@@ -42,6 +42,7 @@ app.post("/upload/:channelId", function (req, res) {
   }
   // Limit TTL values
   if (requestedTtl) {
+    console.log(`client requested TTL: ${requestedTtl}`)
     if (requestedTtl > config.maxTTL) {
       res.status(400).json({error: `requested TTL ${requestedTtl} too high`});
       return;
@@ -63,6 +64,7 @@ app.post("/upload/:channelId", function (req, res) {
     }
     // save channel in cache with requested TTL
     channelCache.set(channelId, channel, ttl)
+    console.log(`Created new channel ${channelId} with TTL ${channel.ttl}`)
   } else {
     // existing channel. check if this channel was about to expire, but got another upload
     if (channel.entries.size === 0) {
@@ -76,9 +78,9 @@ app.post("/upload/:channelId", function (req, res) {
   if (existingData) {
     if (existingData === data) {
       console.log(`Received duplicate profile ${uuid} for channel ${channelId}`)
-      // restart TTL counter of channel
-      // TODO: Not needed anymore? channel has default lifetime of 24 hours!
-      channelCache.ttl(channelId, channel.requestedTtl)
+      // Workaround for recovery channels: interpret upload of existing data as request to extend TTL of channel
+      // TODO: Remove ttl extension when client that knows how to create channels with longer ttl time is released
+      channelCache.ttl(channelId, channel.ttl)
       res.status(201).json({ success: true });
     } else {
       // Same UUID but different content? This is scary. Likely client bug. Bail out.
