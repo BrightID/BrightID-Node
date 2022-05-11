@@ -65,8 +65,9 @@ function getNaclKeyPair() {
     ));
     privateKey = b64ToUint8Array(conf.privateKey);
   } else if (conf.seed) {
-    const hex32 = crypto.sha256(conf.seed).slice(0, 32);
-    const naclKeyPair = nacl.sign.keyPair.fromSeed(strToUint8Array(hex32));
+    const hex32 = crypto.sha256(conf.seed);
+    const uint8Array = new Uint8Array(Buffer.from(hex32, 'hex'));
+    const naclKeyPair = nacl.sign.keyPair.fromSeed(uint8Array);
     publicKey = uInt8ArrayToB64(Object.values(naclKeyPair.publicKey));
     privateKey = naclKeyPair.secretKey;
   }
@@ -79,8 +80,8 @@ function getEthKeyPair() {
     privateKey = new Uint8Array(Buffer.from(conf.ethPrivateKey, 'hex'));
     publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(privateKey))).toString('hex');
   } else if (conf.seed) {
-    const hex64 = crypto.sha256(conf.seed);
-    privateKey = new Uint8Array(Buffer.from(hex64, 'hex'));
+    const hex32 = crypto.sha256(conf.seed);
+    privateKey = new Uint8Array(Buffer.from(hex32, 'hex'));
     publicKey = Buffer.from(Object.values(secp256k1.publicKeyCreate(privateKey))).toString('hex');
   }
   return { publicKey, privateKey };
