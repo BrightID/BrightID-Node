@@ -5,13 +5,14 @@
   "shortDescription": "BrightID Node and API",
   "description": "A BrightID Node stores the social graph and provides an API for public access. This package contains the Arango Database with the BrightID graph and provides a public API for BrightID clients.",
   "type": "service",
-  "author": "Michael Bauer <michael@brightid.org> (https://github.com/triplespeeder)",
+  "author": "Michael Bauer <michael@m-bauer.org> (https://github.com/triplespeeder)",
   "categories": ["Communications"],
   "keywords": ["BrightID", "Identity", "IDChain"],
   "links": {
     "homepage": "https://github.com/BrightID/BrightID-Node",
     "api": "http://web.brightid-node.public.dappnode/brightid/",
-    "Arango database": "http://db.brightid-node.public.dappnode:8529/"
+    "Arango database": "http://db.brightid-node.public.dappnode:8529/",
+    "Channel service stats": "http://web.brightid-node.public.dappnode/profile/stats"
   },
   "mainService": "web",
   "repository": {
