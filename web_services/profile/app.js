@@ -1,10 +1,13 @@
 // app.js
 const express = require("express");
+const sizeof = require('object-sizeof')
 const app = express();
 const NodeCache = require("node-cache");
 const config = require("./config");
+const { renderStats } = require('./stats')
 
-const dataCache = new NodeCache(config.node_cache);
+const dataCache = new NodeCache(config.data_cache_config);
+const channelCache = new NodeCache(config.channel_config);
 
 // BodyParser Middleware
 app.use(express.json({ limit: "100kb" }));
@@ -21,9 +24,13 @@ app.get("/", function (req, res, next) {
   res.send("BrightID socket server");
 });
 
-app.post("/upload/:channel", function (req, res) {
-  const { channel } = req.params;
-  const { data, uuid } = req.body;
+app.get("/stats", function(req, res, next){
+  res.send(renderStats(req, channelCache, dataCache))
+})
+
+app.post("/upload/:channelId", function (req, res) {
+  const { channelId } = req.params;
+  const { data, uuid, requestedTtl } = req.body;
 
   if (!data) {
     res.status(400).json({ error: "missing data" });
@@ -33,57 +40,208 @@ app.post("/upload/:channel", function (req, res) {
     res.status(400).json({ error: "missing uuid" });
     return;
   }
-
-  let cacheEntry
-  const profile = {uuid, data}
-
-  const current_data = dataCache.get(channel)
-  if (current_data) {
-    // Check if there is already a profile with the provided uuid to prevent duplicates
-    const existingProfile = current_data.find(entry => (entry.uuid === uuid))
-    if (existingProfile) {
-      if (existingProfile.data === profile.data) {
-        console.log(`Received duplicate profile ${uuid} for channel ${channel}`)
-        // restart TTL counter of channel
-        dataCache.ttl(channel)
-        res.status(201).json({ success: true });
-      } else {
-        // Same UUID but different content? This is scary. Likely client bug. Bail out.
-        res.status(500).json({error: `Profile ${uuid} already exists in channel ${channel} with different data.`});
-      }
+  // Limit TTL values
+  if (requestedTtl) {
+    console.log(`client requested TTL: ${requestedTtl}`)
+    if (requestedTtl > config.maxTTL) {
+      res.status(400).json({error: `requested TTL ${requestedTtl} too high`});
       return;
+    } else if (requestedTtl < config.minTTL) {
+      res.status(400).json({error: `requested TTL ${requestedTtl} too low`});
     }
+  }
 
-    const isRecoveryChannel = (uuid) =>
-        uuid.startsWith('connection_') ||
-        uuid.startsWith('group_') ||
-        uuid.startsWith('sig_');
+  // use default TTL if nothing provided by client
+  const ttl = requestedTtl || config.defaultTTL
 
-    // Bail out if channel is full but ignore the limit if it's a recovery channel
-    if (current_data.length >= config.channel_entry_limit && !isRecoveryChannel(uuid)) {
-      res.status(config.channel_limit_response_code).json({error: config.channel_limit_message});
-      return;
+  let channel = channelCache.get(channelId)
+  if (!channel) {
+    // Create new channel.
+    channel = {
+      entries: new Map(),
+      size: 0,
+      ttl
     }
-
-    // add data to channel
-    cacheEntry = current_data.concat([profile]);
+    // save channel in cache with requested TTL
+    channelCache.set(channelId, channel, ttl)
+    console.log(`Created new channel ${channelId} with TTL ${channel.ttl}`)
   } else {
-    // this is an initial profile upload. Create new channel.
-    cacheEntry = [profile]
+    // existing channel. check if this channel was about to expire, but got another upload
+    if (channel.entries.size === 0) {
+      console.log(`Restoring requested TTL ${channel.ttl} for channel ${channelId}`)
+      channelCache.ttl(channelId, channel.ttl)
+    }
+  }
+
+  // Check if there is already data with the provided uuid to prevent duplicates
+  const existingData = channel.entries.get(uuid)
+  if (existingData) {
+    if (existingData === data) {
+      console.log(`Received duplicate profile ${uuid} for channel ${channelId}`)
+      // Workaround for recovery channels: interpret upload of existing data as request to extend TTL of channel
+      // TODO: Remove ttl extension when client that knows how to create channels with longer ttl time is released
+      channelCache.ttl(channelId, channel.ttl)
+      res.status(201).json({ success: true });
+    } else {
+      // Same UUID but different content? This is scary. Likely client bug. Bail out.
+      res.status(500).json({error: `Profile ${uuid} already exists in channel ${channelId} with different data.`});
+    }
+    return;
+  }
+
+  // check channel size
+  const entrySize = sizeof(data) + sizeof(uuid)
+  const newSize = channel.size + entrySize
+  console.log(`channel ${channelId} newSize: ${newSize},\t delta: ${entrySize} bytes`)
+  if (newSize > config.channel_max_size_bytes) {
+    // channel full :-(
+    res.status(config.channel_limit_response_code).json({error: config.channel_limit_message});
+    return;
   }
 
   // save data in cache
-  dataCache.set(channel, cacheEntry, async function (err, success) {
-    if (err) {
-      console.log(err);
-      res.status(500).json({ error: "unable to store profile data" });
-      return;
-    }
+  try {
+    channel.entries.set(uuid, data)
+    channel.size = newSize
     res.status(201);
     res.json({ success: true });
+  } catch (e) {
+    console.log(err);
+    res.status(500).json({ error: "unable to store channel data" });
+  }
+});
+
+app.get("/download/:channelId/:uuid", function (req, res, next) {
+  const { channelId, uuid } = req.params;
+
+  if (!uuid) {
+    res.status(400).json({ error: "missing uuid" });
+    return;
+  }
+
+  if (!channelId) {
+    res.status(400).json({ error: "missing channel" });
+    return;
+  }
+
+  // get channel
+  const channel = channelCache.get(channelId)
+  if (!channel) {
+    res.status(404).json({error: `Channel ${channelId} not found`});
+    return;
+  }
+
+  // get data
+  const data = channel.entries.get(uuid)
+  if (!data) {
+    res.status(404).json({error: `Data ${uuid} in channel ${channelId} not found`});
+    return;
+  }
+
+  res.json({
+    data: data,
   });
 });
 
+app.delete("/:channelId/:uuid", function (req, res, next) {
+  const { channelId, uuid } = req.params;
+
+  if (!uuid) {
+    res.status(400).json({ error: "missing uuid" });
+    return;
+  }
+
+  if (!channelId) {
+    res.status(400).json({ error: "missing channelId" });
+    return;
+  }
+
+  // get channel
+  const channel = channelCache.get(channelId)
+  if (!channel) {
+    res.status(404).json({error: `Channel ${channelId} not found`});
+    return;
+  }
+
+  // get data (needed to track channel size)
+  const data = channel.entries.get(uuid)
+  if (!data) {
+    res.status(404).json({error: `Data ${uuid} in channel ${channelId} not found`});
+    return;
+  }
+
+  // remove entry
+  const deleted = channel.entries.delete(uuid)
+  if (!deleted) {
+    // No entry deleted although it exists??
+    res.status(500).json({error: `Data ${uuid} in channel ${channelId} could not be deleted`});
+    return;
+  }
+
+  // update channel size
+  channel.size -= sizeof(data) + sizeof(uuid)
+
+  console.log(`Deleted ${uuid} from channel ${channelId}. New size: ${channel.size}`)
+
+  // handle removing of last entry
+  if (channel.entries.size === 0) {
+
+    // if channel is empty size should also be 0. Double-check.
+    if (channel.size !== 0) {
+      console.warn(`Channel size calculation incorrect. This should not happen.`)
+      channel.size = 0;
+    }
+
+    // Reduce remaining TTL. Leave a few minutes TTL in case some upload is
+    // hanging from a slow connection
+    const expirationTime = channelCache.getTtl(channelId); // This actually returns a unix timestamp in ms(!) when channel will expire
+    const remainingTTL = expirationTime - Date.now()
+    if (remainingTTL > config.finalTTL) {
+      console.log(`last element removed from channel ${channelId}. Reducing TTL from ${Math.floor(remainingTTL/1000)} to ${config.finalTTL} secs.`)
+      channelCache.ttl(channelId, config.finalTTL)
+    } else {
+      console.log(`last element removed from channel ${channelId}. Remaining TTL: ${remainingTTL}ms.`)
+      channelCache.ttl(channelId, config.finalTTL)
+    }
+  }
+
+  res.status(200);
+  res.json({ success: true });
+});
+
+app.get("/list/:channelId", function(req, res, next) {
+  const { channelId } = req.params;
+
+  if (!channelId) {
+    res.status(400).json({ error: "missing channelId" });
+    return;
+  }
+
+  // get channel
+  const channel = channelCache.get(channelId)
+  if (!channel) {
+    // Don't fail when channel is not existing. Instead return empty array
+    // res.status(404).json({error: `Channel ${channelId} not found`});
+    res.json({
+      profileIds: []
+    })
+    return;
+  }
+
+  if (!channel.entries) {
+    res.status(500).json({error: `Map for channel ${channelId} not existing`});
+    return;
+  }
+
+  res.json({
+    profileIds: Array.from(channel.entries.keys()) // channel.entries.keys()
+  })
+})
+
+
+/**
+ * Legacy methods for upload/download without using channels below
+ **/
 app.post("/upload", function (req, res, next) {
   const { data, uuid } = req.body;
 
@@ -91,90 +249,21 @@ app.post("/upload", function (req, res, next) {
     res.status(404).json({ error: "missing uuid" });
     return;
   }
-
-  // save data in cache
-  if (data) {
-    dataCache.set(uuid, data, async function (err, success) {
-      if (err) {
-        console.log(err);
-        res.status(500).json({ error: "unable to store profile data" });
-        return;
-      }
-      res.json({ success: true });
-    });
-  } else {
+  if (!data) {
     res.status(404).json({ error: "missing data" });
-  }
-});
-
-app.get("/download/:channel/:uuid", function (req, res, next) {
-  const { channel, uuid } = req.params;
-
-  if (!uuid) {
-    res.status(400).json({ error: "missing uuid" });
-    return;
-  }
-
-  if (!channel) {
-    res.status(400).json({ error: "missing channel" });
-    return;
-  }
-
-  // get array of profiles stored in channel
-  const channelProfiles = dataCache.get(channel) || [];
-  // find the profile with matching uuid
-  const profile = channelProfiles.find(entry => entry.uuid === uuid );
-
-  if (!profile) {
-    res.status(404).json({error: `Profile ${uuid} in channel ${channel} not found`});
-    return;
-  }
-
-  res.json({
-    data: profile.data,
-  });
-});
-
-app.delete("/:channel/:uuid", function (req, res, next) {
-  const { channel, uuid } = req.params;
-
-  if (!uuid) {
-    res.status(400).json({ error: "missing uuid" });
-    return;
-  }
-
-  if (!channel) {
-    res.status(400).json({ error: "missing channel" });
-    return;
-  }
-
-  // get array of profiles stored in channel
-  const current_data = dataCache.get(channel);
-  if (!current_data) {
-    res.status(404).json({error: `Channel ${channel} not found`});
-    return;
-  }
-
-  // remove entry
-  const new_data = current_data.filter((entry) => (entry.uuid !== uuid))
-  if (new_data.length === current_data.length) {
-    // entry to be deleted not found :-(
-    res.status(404).json({error: `Profile ${uuid} in channel ${channel} not found`});
     return;
   }
 
   // save data in cache
-  dataCache.set(channel, new_data, async function (err, success) {
-    if (err) {
-      console.log(err);
-      res.status(500).json({ error: "unable to store profile data" });
-      return;
-    }
-    res.status(200);
+  try {
+    dataCache.set(uuid, data)
     res.json({ success: true });
-  });
+  }
+  catch (e) {
+    console.log(err);
+    res.status(500).json({ error: "unable to store profile data" });
+  }
 });
-
 
 app.get("/download/:uuid", function (req, res, next) {
   const { uuid } = req.params;
@@ -190,21 +279,5 @@ app.get("/download/:uuid", function (req, res, next) {
     data,
   });
 });
-
-app.get("/list/:channel", function(req, res, next) {
-  const { channel } = req.params;
-
-  if (!channel) {
-    res.status(400).json({ error: "missing channel" });
-    return;
-  }
-
-  const channelProfiles = dataCache.get(channel) || [];
-  let profileIds = channelProfiles.map(entry => (entry.uuid))
-
-  res.json({
-    profileIds
-  })
-})
 
 module.exports = app;

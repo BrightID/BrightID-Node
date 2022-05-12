@@ -9,7 +9,6 @@
   "author": "",
   "license": "ISC",
   "jest": {
-    "testEnvironment": "node",
     "coveragePathIgnorePatterns": [
       "/node_modules/"
     ]
@@ -19,7 +18,8 @@
     "dotenv": "^8.2.0",
     "express": "^4.17.1",
     "jquery": "^3.5.0",
-    "node-cache": "^4.2.0",
+    "node-cache": "^5.1.2",
+    "object-sizeof": "^1.6.3",
     "uuid": "^3.4.0"
   },
   "devDependencies": {
