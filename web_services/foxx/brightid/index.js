@@ -231,15 +231,19 @@ const handlers = {
       throw new errors.NotVerifiedError(contextId, appKey);
     }
 
-    const sponsorship = db.getSponsorship(contextId);
-    if (!sponsorship.appHasAuthorized) {
-      throw new errors.NotSponsoredError(contextId);
-    }
-
     const coll = arango._collection(context.collection);
     const user = db.getUserByContextId(coll, contextId);
     if (! user) {
       throw new errors.ContextIdNotFoundError(contextId);
+    }
+
+    if (!app.soulbound) {
+      if (!db.isSponsored(user)) {
+        const sponsorship = db.getSponsorship(contextId);
+        if (!sponsorship.appHasAuthorized) {
+          throw new errors.NotSponsoredError(contextId);
+        }
+      }
     }
 
     let verifications = db.userVerifications(user);
