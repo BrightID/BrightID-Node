@@ -1,22 +1,22 @@
-# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.7.10/Dockerfile
-FROM alpine:3.11
+# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.8.6/Dockerfile
+FROM alpine:3.14
 MAINTAINER Frank Celler <info@arangodb.com>
 
-ENV ARANGO_VERSION 3.7.10
+ENV ARANGO_VERSION 3.8.6
 ENV ARANGO_NO_AUTH true
-ENV ARANGO_URL https://download.arangodb.com/arangodb37/DEBIAN/amd64
+ENV ARANGO_URL https://download.arangodb.com/arangodb38/DEBIAN/amd64
 ENV ARANGO_PACKAGE arangodb3_${ARANGO_VERSION}-1_amd64.deb
 ENV ARANGO_PACKAGE_URL ${ARANGO_URL}/${ARANGO_PACKAGE}
 ENV ARANGO_SIGNATURE_URL ${ARANGO_PACKAGE_URL}.asc
 
 # see
-#   https://www.arangodb.com/docs/3.7/programs-arangod-server.html#managing-endpoints
-#   https://www.arangodb.com/docs/3.7/programs-arangod-log.html
+#   https://www.arangodb.com/docs/3.8/programs-arangod-server.html#managing-endpoints
+#   https://www.arangodb.com/docs/3.8/programs-arangod-log.html
 
 RUN apk add --no-cache gnupg pwgen binutils numactl numactl-tools nodejs yarn && \
-    yarn global add foxx-cli && \
+    yarn global add foxx-cli@2.0.1 && \
     apk del yarn && \
-    gpg --batch --keyserver keyserver.ubuntu.com --recv-keys CD8CB0F1E0AD5B52E93F41E7EA93F5E56E751E9B && \
+    gpg --batch --keyserver keys.openpgp.org --recv-keys CD8CB0F1E0AD5B52E93F41E7EA93F5E56E751E9B && \
     mkdir /docker-entrypoint-initdb.d && \
     cd /tmp                                && \
     wget ${ARANGO_SIGNATURE_URL}           && \
@@ -28,8 +28,8 @@ RUN apk add --no-cache gnupg pwgen binutils numactl numactl-tools nodejs yarn &&
         -e 's!^(file\s*=\s*).*!\1 -!' \
         -e 's!^\s*uid\s*=.*!!' \
         /etc/arangodb3/arangod.conf        && \
-    echo chgrp -R 0 /var/lib/arangodb3 /var/lib/arangodb3-apps && \
-    echo chmod -R 775 /var/lib/arangodb3 /var/lib/arangodb3-apps && \
+    chgrp -R 0 /var/lib/arangodb3 /var/lib/arangodb3-apps && \
+    chmod -R 775 /var/lib/arangodb3 /var/lib/arangodb3-apps && \
     rm -f /usr/bin/foxx && \
     rm -f ${ARANGO_PACKAGE}* data.tar.gz && \
     apk del gnupg
