@@ -1,5 +1,5 @@
 #!/bin/sh
-# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.7.10/docker-entrypoint.sh
+# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.8.6/docker-entrypoint.sh
 set -e
 
 echo "BN_ARANGO_EXTRA_OPTS: $BN_ARANGO_EXTRA_OPTS"
