@@ -50,51 +50,7 @@ def get_events(app):
     return sponsoreds, tb
 
 
-def applyV5(app, context_id):
-    # check the context id is linked
-    context = contexts[app['context']]
-    collection = context['collection']
-    c = db[collection].find({'contextId': context_id})
-    if c.empty():
-        db['sponsorships'].insert({
-            '_from': 'users/0',
-            '_to': 'apps/' + app['_key'],
-            'expireDate': int(time.time()) + 3600,
-            'contextId': context_id,
-        })
-        print(f"{context_id} is not linked to a brightid yet, a temporary sponsorship is added to be applied after user links contextId")
-        return
-
-    user = c.next()['user']
-    c = sponsorships.find({'_from': f'users/{user}'})
-    if not c.empty():
-        print("the user is sponsored before")
-        return
-
-    op = {
-        'name': 'Sponsor',
-        'app': app['_key'],
-        'id': user,
-        'timestamp': int(time.time() * 1000),
-        'v': 5
-    }
-
-    signing_key = ed25519.SigningKey(
-        base64.b64decode(app['sponsorPrivateKey']))
-    message = json.dumps(op, sort_keys=True,
-                         separators=(',', ':')).encode('ascii')
-    sig = signing_key.sign(message)
-    op['sig'] = base64.b64encode(sig).decode('ascii')
-    h = base64.b64encode(sha256(message).digest()).decode("ascii")
-    op['hash'] = h.replace('/', '_').replace('+', '-').replace('=', '')
-    op['state'] = 'init'
-    op['_key'] = op['hash']
-    operation = db['operations'].get(op['hash'])
-    if not operation:
-        db['operations'].insert(op)
-
-
-def applyV6(app, app_id):
+def sponsor(app, app_id):
     c = sponsorships.find({'appId': app_id})
     if c.empty():
         db['sponsorships'].insert({
@@ -102,19 +58,19 @@ def applyV6(app, app_id):
             '_to': 'apps/' + app['_key'],
             'expireDate': int(time.time()) + 3600,
             'appId': app_id,
-            'state': 'app',
+            'appHasAuthorized': True,
+            'spendRequested': False
         })
         return
 
     sponsorship = c.next()
-    if sponsorship['state'] in ['app', 'done']:
-        print('the app id is sponsored before')
+    if not sponsorship['spendRequested']:
         return
 
     db['sponsorships'].update({
         '_key': sponsorship['_key'],
         'expireDate': None,
-        'state': 'done',
+        'appHasAuthorized': True,
         'timestamp': int(time.time() * 1000),
     })
 
@@ -168,10 +124,7 @@ def update():
                 print("app does not have unused sponsorships")
                 continue
 
-            if app.get('usingBlindSig'):
-                applyV6(app, _id)
-            else:
-                applyV5(app, _id)
+            sponsor(app, _id)
 
         variables.update({
             '_key': f'LAST_BLOCK_LOG_{app["_key"]}',
