@@ -1,4 +1,4 @@
-FROM mhart/alpine-node:8
+FROM mhart/alpine-node:16
 
 ADD . /code
 WORKDIR /code/profile/
@@ -8,7 +8,7 @@ WORKDIR /code/profile/
 #   https://stackoverflow.com/a/52196681
 RUN npm install &&\
  npm config set unsafe-perm true && \
- npm install foxx-cli@1.3.0 -g &&\
+ npm install foxx-cli@2.0.1 -g &&\
  npm cache clean --force &&\
  apk add --update --no-cache netcat-openbsd curl
 

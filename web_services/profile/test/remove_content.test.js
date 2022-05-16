@@ -1,8 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const request = require('supertest')
 const app = require('../app')
-const config = require('../config')
-
 
 const setupChannel = async (numEntries) => {
     channelId = uuidv4();
@@ -82,7 +80,7 @@ describe('Remove items from channel', () => {
             }
         })
 
-        it(`should delete the same entry again`, async () => {
+        it(`should handle deleting non-existing entry`, async () => {
             const deleteResult = await request(app)
             .delete(`/${channelId}/${channelEntries[0].uuid}`)
             .expect(404)
@@ -123,49 +121,6 @@ describe('Remove items from channel', () => {
             .get(`/list/${channelId}`)
             .expect(200)
             expect(res.body.profileIds).toHaveLength(0);
-        })
-    })
-
-    describe('Respect channel limits', () => {
-        // Setup random channel and fill it to the limit
-        beforeAll(async ()=>{
-            const channelData = await setupChannel(config.channel_entry_limit)
-            channelId = channelData.channelId
-            channelEntries = channelData.channelEntries
-        })
-
-        it('Should fail to exceed channel limit', async () => {
-            const additionalEntry = {
-                data: `extra entry`,
-                uuid: uuidv4(),
-            }
-            const res = await request(app)
-            .post(`/upload/${channelId}`)
-            .send(additionalEntry)
-            .expect(config.channel_limit_response_code)
-        })
-
-        it ('should succeed to add an entry after deleting one', async () => {
-            const additionalEntry = {
-                data: `extra entry`,
-                uuid: uuidv4(),
-            }
-            // first try should fail
-            await request(app)
-            .post(`/upload/${channelId}`)
-            .send(additionalEntry)
-            .expect(config.channel_limit_response_code)
-
-            // now delete one entry
-            await request(app)
-            .delete(`/${channelId}/${channelEntries[0].uuid}`)
-            .expect(200)
-
-            // now adding should succeed
-            const res = await request(app)
-            .post(`/upload/${channelId}`)
-            .send(additionalEntry)
-            .expect(201)
         })
     })
 })

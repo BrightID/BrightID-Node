@@ -1,20 +1,16 @@
 'use strict';
-const { sha256 } = require('@arangodb/crypto');
 const { query, db } = require('@arangodb');
 const _ = require('lodash');
-const stringify = require('fast-json-stable-stringify');
-const nacl = require('tweetnacl');
 const {
-  uInt8ArrayToB64,
   urlSafeB64ToB64,
-  strToUint8Array,
-  b64ToUint8Array,
-  hash
+  hash,
+  priv2addr,
+  getNaclKeyPair,
+  getEthKeyPair,
+  getConsensusSenderAddress,
 } = require('./encoding');
 const errors = require('./errors');
 const wISchnorrServer  = require('./WISchnorrServer');
-const secp256k1 = require('secp256k1');
-const createKeccakHash = require('keccak');
 
 const connectionsColl = db._collection('connections');
 const connectionsHistoryColl = db._collection('connectionsHistory');
@@ -565,7 +561,7 @@ function unusedSponsorships(app) {
 }
 
 function sponsor(op) {
-  if (unusedSponsorships(op.app) < 1) {
+  if (op.name == 'Sponsor' && unusedSponsorships(op.app) < 1) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
@@ -646,16 +642,6 @@ function insertAppUserIdVerification(app, uid, appUserId, verification, roundedT
   });
 }
 
-function priv2addr(priv) {
-  if (!priv) {
-    return null;
-  }
-  priv = new Uint8Array(Buffer.from(priv, 'hex'));
-  const publicKey = Buffer.from(Object.values(
-    secp256k1.publicKeyCreate(priv, false).slice(1)));
-  return '0x' + createKeccakHash('keccak256').update(publicKey).digest().slice(-20).toString('hex');
-}
-
 function getState() {
   const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
   const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
@@ -663,15 +649,13 @@ function getState() {
   const sentOp = operationsColl.byExample({'state': 'sent'}).count();
   const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
   const conf = module.context.configuration;
-  const consensusSenderAddress = priv2addr(conf.consensusSenderPrivateKey);
-  const ethSigningAddress = priv2addr(conf.ethPrivateKey);
-  const naclSigningKey = conf.privateKey && uInt8ArrayToB64(Object.values(
-    nacl.sign.keyPair.fromSecretKey(b64ToUint8Array(conf.privateKey)).publicKey
-  ));
+  const consensusSenderAddress = getConsensusSenderAddress();
+  const {privateKey: ethPrivateKey} = getEthKeyPair();
+  const {publicKey: naclSigningKey} = getNaclKeyPair();
   let wISchnorrPublic = null;
-  if (conf.wISchnorrPassword){
+  if (conf.wISchnorrPassword || conf.seed){
     const server = new wISchnorrServer();
-    server.GenerateSchnorrKeypair(conf.wISchnorrPassword);
+    server.GenerateSchnorrKeypair(conf.wISchnorrPassword || conf.seed);
     wISchnorrPublic = server.ExtractPublicKey();
   }
   return {
@@ -681,7 +665,7 @@ function getState() {
     sentOp,
     verificationsHashes,
     wISchnorrPublic,
-    ethSigningAddress,
+    ethSigningAddress: priv2addr(ethPrivateKey),
     naclSigningKey,
     consensusSenderAddress,
     version: module.context.manifest.version,
