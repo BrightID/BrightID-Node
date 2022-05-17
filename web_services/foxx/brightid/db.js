@@ -756,7 +756,7 @@ function isSponsored(key) {
 }
 
 function getSponsorship(contextId) {
-  const sponsorship = sponsorshipsColl.firstExample({ contextId });
+  const sponsorship = sponsorshipsColl.firstExample({ appId: contextId });
   if (! sponsorship) {
     throw new errors.NotSponsoredError(contextId);
   }
@@ -784,14 +784,14 @@ function sponsor(op) {
   // remove testblocks if exists
   removeTestblock(op.contextId, 'sponsorship', op.app);
 
-  const sponsorship = sponsorshipsColl.firstExample({ 'contextId': op.contextId });
+  const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.contextId });
   if (!sponsorship) {
     sponsorshipsColl.insert({
       _from: 'users/0',
       _to: 'apps/' + op.app,
       // it will expire after 1 hour
       expireDate: Math.ceil((Date.now() / 1000) + 60 * 60),
-      contextId: op.contextId,
+      appId: op.contextId,
       appHasAuthorized: op.name == 'Sponsor' ? true : false,
       spendRequested: op.name == 'Spend Sponsorship' ? true : false,
       timestamp: op.timestamp,
