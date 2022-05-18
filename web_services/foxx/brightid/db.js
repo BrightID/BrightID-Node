@@ -571,7 +571,7 @@ function getLastContextIds(coll, appKey) {
             AND v.expression == true
             AND v.name == ${app.verification}
           FOR s IN ${sponsorshipsColl}
-            FILTER s._from == u._id
+            FILTER s._from == u._id OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
             SORT c.timestamp DESC
             COLLECT user = c.user INTO contextIds = c.contextId
             RETURN contextIds[0]
