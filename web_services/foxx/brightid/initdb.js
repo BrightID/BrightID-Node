@@ -32,7 +32,6 @@ const indexes = [
   {'collection': 'verifications', 'fields': ['name'], 'type': 'persistent'},
   {'collection': 'verifications', 'fields': ['block'], 'type': 'persistent'},
   {'collection': 'sponsorships', 'fields': ['expireDate'], 'type': 'ttl', 'expireAfter': 0},
-  {'collection': 'sponsorships', 'fields': ['contextId'], 'type': 'persistent'},
   {'collection': 'sponsorships', 'fields': ['appId'], 'type': 'persistent'},
   {'collection': 'connections', 'fields': ['level'], 'type': 'persistent'},
   {'collection': 'connectionsHistory', 'fields': ['timestamp'], 'type': 'persistent'},
