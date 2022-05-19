@@ -142,4 +142,48 @@ describe('errors', function() {
     resp.json.errorNum.should.equal(errors.USER_NOT_FOUND);
     resp.json.errorMessage.should.equal(`The user ${id} is not found.`);
   });
+
+  it('handle joi errors (invalid operation)', function() {
+    const timestamp = Date.now();
+    let op = {
+      'v': 5,
+      'name': 'Add new Connection',
+      'id1': u1.id,
+      'id2': u2.id,
+      timestamp
+    }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    op.sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const resp = apply(op);
+    resp.json.errorNum.should.equal(400);
+    resp.json.code.should.equal(400);
+    resp.json.errorMessage.should.equal('invalid operation name');
+  });
+
+  it('handle joi errors (missed parameter of an operation)', function() {
+    const timestamp = Date.now();
+    let op = {
+      'v': 5,
+      'name': 'Add Connection',
+      'id2': u2.id,
+      timestamp
+    }
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    op.sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const resp = apply(op);
+    resp.json.errorNum.should.equal(400);
+    resp.json.code.should.equal(400);
+    resp.json.errorMessage.should.equal('\"id1\" is required, ');
+  });
+
 });

@@ -61,7 +61,8 @@ def process_op(op):
             print('retry on conflict')
             return process_op(op)
     # resp is returned from arango not PUT /operations handler
-    if resp.get('error'):
+    # joi errors (bad request errors) have code 400
+    if resp.get('error') and resp.get('code') != 400:
         raise Exception('Error from apply service')
 
 
