@@ -122,7 +122,7 @@ describe('operations', function(){
     appsColl.insert({
       _key: app,
       context: contextName,
-      totalSponsorships: 4,
+      totalSponsorships: 5,
       verification: 'BrightID',
       sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey))
     });
@@ -130,7 +130,7 @@ describe('operations', function(){
       _key: soulboundApp,
       soulbound: true,
       context: soulboundContextName,
-      totalSponsorships: 1,
+      totalSponsorships: 5,
       verification: 'BrightID',
       sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey))
     });
@@ -601,12 +601,31 @@ describe('operations', function(){
   });
 
   describe('Sponsoring and getting verification', function() {
-    it('apps should be able to "Sponsor" first then clients "Spend Sponsorship"', function () {
-      const contextId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11E';
+    it('In the legacy apps: apps should be able to "Sponsor" ("Spend Sponsorship" is not required)', function () {
+      const contextId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11B';
       let op1 = {
         name: 'Sponsor',
         contextId,
         app,
+        timestamp: Date.now(),
+        v: 5
+      }
+      const message1 = getMessage(op1);
+      op1.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message1), sponsorPrivateKey))
+      );
+      const r = apply(op1);
+      let resp1 = request.get(`${baseUrl}/sponsorships/${contextId}`);
+      resp1.json.data.appHasAuthorized.should.equal(true);
+      resp1.json.data.spendRequested.should.equal(true);
+    });
+
+    it('In the soulbound apps: apps should be able to "Sponsor" first then clients "Spend Sponsorship"', function () {
+      const contextId = '0x79aF508C9698076Bc1c2DfA224f7829e9768B11E';
+      let op1 = {
+        name: 'Sponsor',
+        contextId,
+        app: soulboundApp,
         timestamp: Date.now(),
         v: 5
       }
@@ -622,7 +641,7 @@ describe('operations', function(){
       let op2 = {
         name: 'Sponsor',
         contextId: contextId.toLowerCase(),
-        app,
+        app: soulboundApp,
         timestamp: Date.now(),
         v: 5
       }
@@ -636,7 +655,7 @@ describe('operations', function(){
       let op3 = {
         name: 'Spend Sponsorship',
         contextId: contextId.toLowerCase(),
-        app,
+        app: soulboundApp,
         timestamp: Date.now(),
         v: 5
       }
@@ -651,7 +670,7 @@ describe('operations', function(){
       let op1 = {
         name: 'Spend Sponsorship',
         contextId,
-        app,
+        app: soulboundApp,
         timestamp: Date.now(),
         v: 5
       }
@@ -663,7 +682,7 @@ describe('operations', function(){
       let op2 = {
         name: 'Spend Sponsorship',
         contextId: contextId.toLowerCase(),
-        app,
+        app: soulboundApp,
         timestamp: Date.now(),
         v: 5
       }
@@ -673,7 +692,7 @@ describe('operations', function(){
       let op3 = {
         name: 'Sponsor',
         contextId: contextId.toLowerCase(),
-        app,
+        app: soulboundApp,
         timestamp: Date.now(),
         v: 5
       }

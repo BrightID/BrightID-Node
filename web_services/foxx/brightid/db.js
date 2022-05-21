@@ -790,13 +790,14 @@ function sponsor(op) {
     const expireDate = op.name == 'Sponsor' && !app.soulbound
       ? null
       : Math.ceil((Date.now() / 1000) + 60 * 60);
+    const spendRequested = op.name == 'Spend Sponsorship' || !app.soulbound ? true : false;
     sponsorshipsColl.insert({
       _from: 'users/0',
       _to: 'apps/' + op.app,
       expireDate,
       appId: op.contextId,
       appHasAuthorized: op.name == 'Sponsor' ? true : false,
-      spendRequested: op.name == 'Spend Sponsorship' ? true : false,
+      spendRequested,
       timestamp: op.timestamp,
     });
     return;
