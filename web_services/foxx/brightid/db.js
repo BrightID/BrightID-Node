@@ -668,6 +668,7 @@ function getState() {
     ethSigningAddress: priv2addr(ethPrivateKey),
     naclSigningKey,
     consensusSenderAddress,
+    development: conf.development,
     version: module.context.manifest.version,
   }
 }
