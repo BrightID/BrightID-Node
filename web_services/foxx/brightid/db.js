@@ -415,7 +415,7 @@ function userVerifications(userId) {
     delete v._rev;
     delete v.user;
   });
-  return verifications;
+  return verifications.filter(v => !v.expression);
 }
 
 function getRecoveryPeriods(allConnections, user, now) {
