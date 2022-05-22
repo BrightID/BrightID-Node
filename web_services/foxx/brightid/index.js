@@ -294,12 +294,14 @@ const handlers = {
     let timestamp = req.param('timestamp');
     const includeHash = req.param('includeHash');
     const app = db.getApp(appKey);
+    const pseudoVerification = req.param('pseudoVerification');
     let appUserId = req.param('appUserId');
     if (app.idsAsHex) {
       appUserId = appUserId.toLowerCase();
     }
     const appUserIdExists = appIdsColl.firstExample({ app: appKey, appId: appUserId });
-    if (! appUserIdExists) {
+    const development = module.context.configuration.development;
+    if (!(development && pseudoVerification) && !appUserIdExists) {
       throw new errors.AppUserIdNotFoundError(appUserId);
     }
 
@@ -317,7 +319,12 @@ const handlers = {
     const results = [];
     for (let verification of app.verifications) {
       const verificationHash = crypto.sha256(verification);
-      const doc = appIdsColl.firstExample({ app: appKey, appId: appUserId, verification, roundedTimestamp });
+      let doc;
+      if (development && pseudoVerification) {
+        doc = { app: appKey, appId: appUserId, verification, roundedTimestamp }
+      } else {
+        doc = appIdsColl.firstExample({ app: appKey, appId: appUserId, verification, roundedTimestamp });
+      }
       const unique = doc ? true : false;
       const result = {
         unique,
@@ -551,6 +558,7 @@ router.get('/verifications/:app/:appUserId/', handlers.verificationsGet)
   .queryParam('signed', joi.string().description('the value will be eth or nacl to indicate the type of signature returned'))
   .queryParam('timestamp', joi.string().description('request a timestamp of the specified format to be added to the response. Accepted values: "seconds", "milliseconds"'))
   .queryParam('includeHash', joi.boolean().default(true).description('false if the requester doesn\'t want the hash included'))
+  .queryParam('pseudoVerification', joi.boolean().default(false).description('true if the requester wants a pseudo verification'))
   .summary('Gets a signed verification')
   .description('Apps use this endpoint to query all signed verifications for an appUserId from the node')
   .response(schemas.verificationsGetResponse)
