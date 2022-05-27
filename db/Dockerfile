@@ -1,17 +1,17 @@
-# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.8.6/Dockerfile
+# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.9.1/Dockerfile
 FROM alpine:3.14
 MAINTAINER Frank Celler <info@arangodb.com>
 
-ENV ARANGO_VERSION 3.8.6
+ENV ARANGO_VERSION 3.9.1
 ENV ARANGO_NO_AUTH true
-ENV ARANGO_URL https://download.arangodb.com/arangodb38/DEBIAN/amd64
+ENV ARANGO_URL https://download.arangodb.com/arangodb39/DEBIAN/amd64
 ENV ARANGO_PACKAGE arangodb3_${ARANGO_VERSION}-1_amd64.deb
 ENV ARANGO_PACKAGE_URL ${ARANGO_URL}/${ARANGO_PACKAGE}
 ENV ARANGO_SIGNATURE_URL ${ARANGO_PACKAGE_URL}.asc
 
 # see
-#   https://www.arangodb.com/docs/3.8/programs-arangod-server.html#managing-endpoints
-#   https://www.arangodb.com/docs/3.8/programs-arangod-log.html
+#   https://www.arangodb.com/docs/3.9/programs-arangod-server.html#managing-endpoints
+#   https://www.arangodb.com/docs/3.9/programs-arangod-log.html
 
 RUN apk add --no-cache gnupg pwgen binutils numactl numactl-tools nodejs yarn && \
     yarn global add foxx-cli@2.0.1 && \
@@ -39,9 +39,6 @@ RUN apk add --no-cache gnupg pwgen binutils numactl numactl-tools nodejs yarn &&
 ENV GLIBCXX_FORCE_NEW=1
 COPY docker-entrypoint.sh /entrypoint.sh
 COPY docker-foxx.sh /usr/bin/foxx
-
-RUN ["chmod", "+x", "/entrypoint.sh"]
-RUN ["chmod", "+x", "/usr/bin/foxx"]
 
 ENTRYPOINT ["/entrypoint.sh"]
 
