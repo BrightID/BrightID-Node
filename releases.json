@@ -24,5 +24,71 @@
     "uploadedTo": {
       "dappnode": "Thu, 26 Aug 2021 09:02:30 GMT"
     }
+  },
+  "1.4.0": {
+    "hash": "/ipfs/QmZqsbWqKwQyQAi3q8oa6qp8bjkrqWLj75uoR3E9K3JbPb",
+    "uploadedTo": {
+      "dappnode": "Thu, 09 Sep 2021 08:51:30 GMT"
+    }
+  },
+  "1.4.1": {
+    "hash": "/ipfs/QmbJn9ujtQMwvxYEJA4JuXFi2opffYL4FXG3jjUk6ZNh5E",
+    "uploadedTo": {
+      "dappnode": "Wed, 06 Oct 2021 10:26:09 GMT"
+    }
+  },
+  "1.4.2": {
+    "hash": "/ipfs/QmQpFDXvXLJJvH4KdrXzy7B15CUu4AWVXJtwpwy1ciLqcy",
+    "uploadedTo": {
+      "dappnode": "Wed, 27 Oct 2021 08:45:28 GMT"
+    }
+  },
+  "1.4.3": {
+    "hash": "/ipfs/Qmbp1hhg1vSDEbBHvSYTRi9P15VsJHHJFbxRTWQ8wHdh9X",
+    "uploadedTo": {
+      "dappnode": "Fri, 19 Nov 2021 16:36:12 GMT"
+    }
+  },
+  "1.4.4": {
+    "hash": "/ipfs/QmPZwvqJTjBJWKYcUMP3JtoBSCJLN8gVEJfjhdtgKX5PnX",
+    "uploadedTo": {
+      "dappnode": "Thu, 09 Dec 2021 13:33:12 GMT"
+    }
+  },
+  "1.4.5": {
+    "hash": "/ipfs/QmbeNPjf4XjPrt51pFQmEw5Wn4dAKCbkvt8yo9zC7Psnr5",
+    "uploadedTo": {
+      "dappnode": "Tue, 14 Dec 2021 21:16:01 GMT"
+    }
+  },
+  "1.5.0": {
+    "hash": "/ipfs/QmbVqur6BsYhjAo72Hz44hb59gYEz571616yxW3iHt4GAL",
+    "uploadedTo": {
+      "dappnode": "Tue, 01 Feb 2022 12:34:27 GMT"
+    }
+  },
+  "1.6.0": {
+    "hash": "/ipfs/QmRr2K5kX1g8EfGP119v7JJqXkUJbXtfTPnvFUJy86xoo2",
+    "uploadedTo": {
+      "dappnode": "Mon, 07 Mar 2022 12:40:47 GMT"
+    }
+  },
+  "1.7.0": {
+    "hash": "/ipfs/QmW5kXhqwVFmJLNwKy64zXWPoCsbFaik2CHnoz8KcDsM2i",
+    "uploadedTo": {
+      "dappnode": "Wed, 09 Mar 2022 12:00:35 GMT"
+    }
+  },
+  "1.7.1": {
+    "hash": "/ipfs/QmQ1bFnD5Fj584GK9zNau58j5WevCbR78FHzaPMH7CMdFd",
+    "uploadedTo": {
+      "dappnode": "Thu, 28 Apr 2022 07:46:29 GMT"
+    }
+  },
+  "1.7.2": {
+    "hash": "/ipfs/QmcFGNNsdi6kMhj1rF1YYhzMwhXEPUSbWtwWqLBnCXRyUJ",
+    "uploadedTo": {
+      "dappnode": "Mon, 23 May 2022 08:10:19 GMT"
+    }
   }
 }
