@@ -266,6 +266,7 @@ schemas = Object.assign({
       ethSigningAddress: joi.string().required().description('the ethereum address of this node; used for signing verifications'),
       naclSigningKey: joi.string().required().description('nacl signing key of this node; used for signing verifications'),
       consensusSenderAddress: joi.string().required().description('the ethereum address of consensus sender service of this node; used for sending operations'),
+      development: joi.boolean().required().description('true if the node is in development mode'),
       version: joi.string().required().description('version of this node'),
     })
   }),

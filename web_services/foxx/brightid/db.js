@@ -415,7 +415,7 @@ function userVerifications(userId) {
     delete v._rev;
     delete v.user;
   });
-  return verifications;
+  return verifications.filter(v => !v.expression);
 }
 
 function getRecoveryPeriods(allConnections, user, now) {
@@ -668,6 +668,7 @@ function getState() {
     ethSigningAddress: priv2addr(ethPrivateKey),
     naclSigningKey,
     consensusSenderAddress,
+    development: conf.development,
     version: module.context.manifest.version,
   }
 }
