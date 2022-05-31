@@ -796,7 +796,7 @@ function sponsor(op) {
       _to: 'apps/' + op.app,
       expireDate,
       appId: op.contextId,
-      appHasAuthorized: op.name == 'Sponsor' ? true : false,
+      appHasAuthorized: op.name == 'Sponsor',
       spendRequested,
       timestamp: op.timestamp,
     });
