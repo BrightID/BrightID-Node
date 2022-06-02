@@ -924,12 +924,11 @@ function isEthereumAddress(address) {
 
 function getAppUserIds(appKey, activeOnly, countOnly) {
   const app = getApp(appKey);
-  const vel = app.verificationExpirationLength;
-  const roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
   const res = [];
   let query = { app: app._key };
   if (activeOnly) {
-    query["roundedTimestamp"] = roundedTimestamp;
+    const vel = app.verificationExpirationLength;
+    query["roundedTimestamp"] = vel ? parseInt(Date.now() / vel) * vel : 0;
   }
   for (const verification of app.verifications) {
     query["verification"] = verification;
