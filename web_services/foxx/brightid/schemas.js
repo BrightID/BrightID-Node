@@ -840,6 +840,28 @@ schemas = Object.assign(
       ),
     }),
 
+    allVerificationsGetResponse: joi.object({
+      data: joi.array().items(
+        joi.object({
+          verification: joi
+            .string()
+            .required()
+            .description("the verification expression"),
+          appUserIds: joi
+            .array()
+            .items(
+              joi.string().description("the id of the user within the app")
+            ),
+          count: joi
+            .number()
+            .required()
+            .description(
+              "the number of app generated ids"
+            ),
+        })
+      ),
+    }),
+
     sponsorshipGetResponse: joi.object({
       data: joi.object({
         app: joi

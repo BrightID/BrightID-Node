@@ -442,6 +442,17 @@ const handlers = {
     res.send({ data: results });
   },
 
+  allVerificationsGet: function (req, res) {
+    const appKey = req.param("app");
+    const countOnly = req.param("countOnly");
+    const activeOnly = req.param("activeOnly");
+    const app = db.getApp(appKey);
+    const data = db.getAppUserIds(appKey, activeOnly, countOnly);
+    res.send({
+      data,
+    });
+  },
+
   appGet: function (req, res) {
     const appKey = req.param("app");
     let app = db.getApp(appKey);
@@ -744,6 +755,40 @@ router
   )
   .response(schemas.verificationsGetResponse)
   .error(404, "appUserId not found");
+
+router
+  .get("/verifications/:app", handlers.allVerificationsGet)
+  .pathParam(
+    "app",
+    joi
+      .string()
+      .required()
+      .description("the app for which the user is verified")
+  )
+  .queryParam(
+    "activeOnly",
+    joi
+      .boolean()
+      .default(false)
+      .description(
+        "true if the requester doesn't want the app generated ids whith expired rounded timestamp"
+      )
+  )
+  .queryParam(
+    "countOnly",
+    joi
+      .boolean()
+      .default(false)
+      .description(
+        "true if the requester doesn't want the array of the app generated ids included"
+      )
+  )
+  .summary("Gets array of all of app generated ids verifed for the app")
+  .description(
+    "Gets array of all of app generated ids that are sponsored and verified for using the app"
+  )
+  .response(schemas.allVerificationsGetResponse)
+  .error(404, "app not found");
 
 router
   .get("/apps/:app", handlers.appGet)

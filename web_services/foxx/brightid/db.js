@@ -922,6 +922,30 @@ function isEthereumAddress(address) {
   return re.test(address);
 }
 
+function getAppUserIds(appKey, activeOnly, countOnly) {
+  const app = getApp(appKey);
+  const vel = app.verificationExpirationLength;
+  const roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
+  const res = [];
+  let query = { app: app._key };
+  if (activeOnly) {
+    query["roundedTimestamp"] = roundedTimestamp;
+  }
+  for (const verification of app.verifications) {
+    query["verification"] = verification;
+    const appUserIds = appIdsColl
+      .byExample(query)
+      .toArray()
+      .map((d) => d.appId);
+    res.push({
+      verification,
+      count: appUserIds.length,
+      appUserIds: countOnly ? [] : appUserIds,
+    });
+  }
+  return res;
+}
+
 module.exports = {
   connect,
   createGroup,
@@ -964,4 +988,5 @@ module.exports = {
   setFamilyHead,
   convertToFamily,
   isEthereumAddress,
+  getAppUserIds,
 };
