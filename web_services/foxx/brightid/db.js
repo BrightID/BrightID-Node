@@ -931,6 +931,7 @@ function getState() {
     initOp,
     sentOp,
     verificationsHashes,
+    version: module.context.manifest.version,
   };
 }
 
