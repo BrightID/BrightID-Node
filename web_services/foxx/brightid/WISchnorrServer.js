@@ -6,6 +6,11 @@
 
 var CryptoJS = require("crypto-js");
 var BigInteger = require("jsbn").BigInteger;
+const { modPow } = require("./encoding");
+
+BigInteger.prototype.modPow = function remoteModPow(exp, b) {
+	return modPow(this, exp, b);
+};
 
 function sha256(s) {
 	return new BigInteger(CryptoJS.SHA256(s).toString(CryptoJS.enc.Hex), 16);
@@ -32,10 +37,7 @@ function WISchnorrServer() {
 	this.p = this.p.add(new BigInteger("1")); // p = 2wq + 1
 
 	// g = 2^2w mod p
-	this.g = new BigInteger("2").modPow(
-		w.multiply(new BigInteger("2")),
-		this.p
-	);
+	this.g = new BigInteger("2").modPow(w.multiply(new BigInteger("2")), this.p);
 }
 
 /* Generates a Schnorr keypair: y = g^x mod q */
@@ -66,8 +68,7 @@ WISchnorrServer.prototype.ExtractPublicKey = function () {
 
 /* Generates a cryptographically secure random number modulo q */
 WISchnorrServer.prototype.GenerateRandomNumber = function () {
-	var bytes =
-		Math.floor(Math.random() * (this.q.bitLength() / 8 - 1 + 1)) + 1;
+	var bytes = Math.floor(Math.random() * (this.q.bitLength() / 8 - 1 + 1)) + 1;
 	const r = CryptoJS.lib.WordArray.random(bytes);
 	const rhex = CryptoJS.enc.Hex.stringify(r);
 	return new BigInteger(rhex, 16).mod(this.q);
@@ -82,10 +83,7 @@ WISchnorrServer.prototype.GenerateWISchnorrParams = function (info) {
 
 	var F = sha256(info);
 	// z = F^((p-1)/q) mod p
-	var z = F.modPow(
-		this.p.subtract(new BigInteger("1")).divide(this.q),
-		this.p
-	);
+	var z = F.modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 
 	// a = g^u mod p
 	var a = this.g.modPow(u, this.p);
@@ -128,10 +126,7 @@ WISchnorrServer.prototype.VerifyWISchnorrBlindSignature = function (
 ) {
 	var F = sha256(info);
 	// z = F^((p-1)/q) mod p
-	var z = F.modPow(
-		this.p.subtract(new BigInteger("1")).divide(this.q),
-		this.p
-	);
+	var z = F.modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 
 	// g^rho mod p
 	var gp = this.g.modPow(new BigInteger(signature.rho), this.p);

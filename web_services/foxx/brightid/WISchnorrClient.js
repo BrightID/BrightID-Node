@@ -5,6 +5,11 @@
 **/
 var CryptoJS = require("crypto-js");
 var BigInteger = require("jsbn").BigInteger;
+const { modPow } = require("./encoding");
+
+BigInteger.prototype.modPow = function remoteModPow(exp, b) {
+	return modPow(this, exp, b);
+};
 
 function sha256(s) {
 	return new BigInteger(CryptoJS.SHA256(s).toString(CryptoJS.enc.Hex), 16);

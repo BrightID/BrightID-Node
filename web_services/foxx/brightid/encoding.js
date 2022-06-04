@@ -1,9 +1,11 @@
 "use strict";
 const B64 = require("base64-js");
 const crypto = require("@arangodb/crypto");
+const request = require("@arangodb/request");
 const nacl = require("tweetnacl");
 const secp256k1 = require("secp256k1");
 const createKeccakHash = require("keccak");
+const BigInteger = require("jsbn").BigInteger;
 
 const conf = module.context.configuration;
 
@@ -127,6 +129,15 @@ function getConsensusSenderAddress() {
   return address;
 }
 
+function modPow(a, exp, b) {
+  const response = request({
+    method: "get",
+    url: "http://localhost/profile/modpow",
+    qs: { a: a.toString(), exp: exp.toString(), b: b.toString() },
+  });
+  return new BigInteger(response.json.data);
+}
+
 module.exports = {
   uInt8ArrayToB64,
   b64ToUint8Array,
@@ -140,4 +151,5 @@ module.exports = {
   getNaclKeyPair,
   getEthKeyPair,
   getConsensusSenderAddress,
+  modPow,
 };
