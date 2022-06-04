@@ -1,208 +1,270 @@
 "use strict";
 
-const db = require('../db.js');
-const errors = require('../errors.js');
-const arango = require('@arangodb').db;
-const { hash } = require('../encoding');
+const db = require("../db.js");
+const errors = require("../errors.js");
+const arango = require("@arangodb").db;
+const { hash } = require("../encoding");
 
-const connectionsColl = arango._collection('connections');
-const groupsColl = arango._collection('groups');
-const usersInGroupsColl = arango._collection('usersInGroups');
-const usersColl = arango._collection('users');
-const invitationsColl = arango._collection('invitations');
+const connectionsColl = arango._collection("connections");
+const groupsColl = arango._collection("groups");
+const usersInGroupsColl = arango._collection("usersInGroups");
+const usersColl = arango._collection("users");
+const invitationsColl = arango._collection("invitations");
 
-const chai = require('chai');
+const chai = require("chai");
 const should = chai.should();
 const expect = chai.expect;
-const url = 'http://url.com/dummy';
+const url = "http://url.com/dummy";
 
-describe('groups', function () {
-  before(function(){
+describe("groups", function () {
+  before(function () {
     usersColl.truncate();
     connectionsColl.truncate();
     groupsColl.truncate();
     usersInGroupsColl.truncate();
     invitationsColl.truncate();
-    db.createUser('a');
-    db.createUser('b');
-    db.createUser('c');
-    db.createUser('d');
-    db.createUser('e');
-    db.createUser('f');
-    db.addConnection('b', 'c', 0);
-    db.addConnection('b', 'd', 0);
-    db.addConnection('a', 'b', 0);
-    db.addConnection('a', 'c', 0);
-    db.addConnection('a', 'd', 0);
+    db.createUser("a");
+    db.createUser("b");
+    db.createUser("c");
+    db.createUser("d");
+    db.createUser("e");
+    db.createUser("f");
+    db.addConnection("b", "c", 0);
+    db.addConnection("b", "d", 0);
+    db.addConnection("a", "b", 0);
+    db.addConnection("a", "c", 0);
+    db.addConnection("a", "d", 0);
   });
-  after(function(){
+  after(function () {
     usersColl.truncate();
     connectionsColl.truncate();
     groupsColl.truncate();
     usersInGroupsColl.truncate();
     invitationsColl.truncate();
   });
-  it('should be able to create a group', function () {
-    db.createGroup('g1', 'b', 'c', 'data', 'd', 'data', url, 'general', Date.now());
+  it("should be able to create a group", function () {
+    db.createGroup(
+      "g1",
+      "b",
+      "c",
+      "data",
+      "d",
+      "data",
+      url,
+      "general",
+      Date.now()
+    );
     groupsColl.count().should.equal(1);
-    const group = groupsColl.any()
-    group._key.should.equal('g1');
+    const group = groupsColl.any();
+    group._key.should.equal("g1");
     group.isNew.should.equal(true);
   });
-  it('should be able to delete a group', function() {
-    db.deleteGroup('g1', 'b', Date.now());
+  it("should be able to delete a group", function () {
+    db.deleteGroup("g1", "b", Date.now());
     groupsColl.count().should.equal(0);
-  })
-  it('should be able to create the group again', function () {
-    db.createGroup('g2', 'b', 'c', 'data', 'd', 'data', url, 'general', Date.now());
+  });
+  it("should be able to create the group again", function () {
+    db.createGroup(
+      "g2",
+      "b",
+      "c",
+      "data",
+      "d",
+      "data",
+      url,
+      "general",
+      Date.now()
+    );
     groupsColl.count().should.equal(1);
-    groupsColl.any()._key.should.equal('g2');
+    groupsColl.any()._key.should.equal("g2");
   });
-  it('the two co-founders should be able to join the group', function (){
-    db.addMembership('g2', 'c', Date.now());
-    db.addMembership('g2', 'd', Date.now());
+  it("the two co-founders should be able to join the group", function () {
+    db.addMembership("g2", "c", Date.now());
+    db.addMembership("g2", "d", Date.now());
   });
-  it('the group should be upgraded from a new group to a normal group', function (){
+  it("the group should be upgraded from a new group to a normal group", function () {
     groupsColl.count().should.equal(1);
     groupsColl.any().isNew.should.equal(false);
   });
 
-  describe('a user connected to all three members of a group', function() {
-    it('should have three connections', function(){
-      db.userConnections('a').length.should.equal(3);
+  describe("a user connected to all three members of a group", function () {
+    it("should have three connections", function () {
+      db.userConnections("a").length.should.equal(3);
     });
-    it('should not be able to join the group without invitation', function (){
+    it("should not be able to join the group without invitation", function () {
       (() => {
-        db.addMembership('g2', 'a', Date.now());
-      }).should.throw('not invited to join this group');
+        db.addMembership("g2", "a", Date.now());
+      }).should.throw("not invited to join this group");
     });
-    it('should be able to join the group after invitation', function (){
-      db.invite('b', 'a', 'g2', 'data', Date.now());
-      db.addMembership('g2', 'a', Date.now());
+    it("should be able to join the group after invitation", function () {
+      db.invite("b", "a", "g2", "data", Date.now());
+      db.addMembership("g2", "a", Date.now());
       usersInGroupsColl.count().should.equal(4);
     });
-    it('should be able to leave the group', function (){
-      db.deleteMembership('g2', 'a', Date.now());
+    it("should be able to leave the group", function () {
+      db.deleteMembership("g2", "a", Date.now());
       usersInGroupsColl.count().should.equal(3);
     });
   });
 
-  describe('inviting', function() {
-    before(function() {
-      db.createUser('g');
-      db.addConnection('a', 'b', 0);
-      db.addConnection('a', 'c', 0);
-      db.addConnection('a', 'd', 0);
-      db.addConnection('b', 'd', 0);
-      db.addConnection('c', 'd', 0);
-      db.createGroup('g3', 'a', 'b', 'data', 'c', 'data', url, 'general', Date.now());
-      db.addMembership('g3', 'b', Date.now());
-      db.addMembership('g3', 'c', Date.now());
+  describe("inviting", function () {
+    before(function () {
+      db.createUser("g");
+      db.addConnection("a", "b", 0);
+      db.addConnection("a", "c", 0);
+      db.addConnection("a", "d", 0);
+      db.addConnection("b", "d", 0);
+      db.addConnection("c", "d", 0);
+      db.createGroup(
+        "g3",
+        "a",
+        "b",
+        "data",
+        "c",
+        "data",
+        url,
+        "general",
+        Date.now()
+      );
+      db.addMembership("g3", "b", Date.now());
+      db.addMembership("g3", "c", Date.now());
     });
-    it('no one should be able to join an invite only group without invitation', function (){
+    it("no one should be able to join an invite only group without invitation", function () {
       (() => {
-        db.addMembership('g3', 'd', Date.now());
-      }).should.throw('not invited to join this group');
+        db.addMembership("g3", "d", Date.now());
+      }).should.throw("not invited to join this group");
     });
-    it('admins should be able to invite any users to the group', function (){
-      db.invite('b', 'd', 'g3', 'data', Date.now());
-      db.userInvitedGroups('d').map(group => group.id).should.deep.equal(['g3']);
+    it("admins should be able to invite any users to the group", function () {
+      db.invite("b", "d", "g3", "data", Date.now());
+      db.userInvitedGroups("d")
+        .map((group) => group.id)
+        .should.deep.equal(["g3"]);
     });
-    it('invited user should be able to join the group', function (){
-      db.addMembership('g3', 'd', Date.now());
-      db.groupMembers('g3').should.include('d');
-      db.userInvitedGroups('d').length.should.equal(0);
+    it("invited user should be able to join the group", function () {
+      db.addMembership("g3", "d", Date.now());
+      db.groupMembers("g3").should.include("d");
+      db.userInvitedGroups("d").length.should.equal(0);
     });
-    it('non-admins should not be able to invite others to the group', function (){
+    it("non-admins should not be able to invite others to the group", function () {
       (() => {
-        db.invite('d', 'e', 'g3', 'data', Date.now());
+        db.invite("d", "e", "g3", "data", Date.now());
       }).should.throw(errors.NotAdminError);
     });
   });
 
-  describe('dismissing', function() {
-    before(function() {
-      db.addConnection('a', 'd', 0);
-      db.addConnection('b', 'd', 0);
-      db.addConnection('c', 'd', 0);
-      db.addConnection('a', 'e', 0);
-      db.addConnection('b', 'e', 0);
-      db.addConnection('c', 'e', 0);
-      db.invite('b', 'd', 'g3', 'data', Date.now());
-      db.invite('b', 'e', 'g3', 'data',  Date.now());
-      db.addMembership('g3', 'd', Date.now());
-      db.addMembership('g3', 'e', Date.now());
+  describe("dismissing", function () {
+    before(function () {
+      db.addConnection("a", "d", 0);
+      db.addConnection("b", "d", 0);
+      db.addConnection("c", "d", 0);
+      db.addConnection("a", "e", 0);
+      db.addConnection("b", "e", 0);
+      db.addConnection("c", "e", 0);
+      db.invite("b", "d", "g3", "data", Date.now());
+      db.invite("b", "e", "g3", "data", Date.now());
+      db.addMembership("g3", "d", Date.now());
+      db.addMembership("g3", "e", Date.now());
     });
-    it('non-admins should not be able to dismiss others from the group', function (){
+    it("non-admins should not be able to dismiss others from the group", function () {
       (() => {
-        db.dismiss('d', 'e', 'g3', Date.now());
+        db.dismiss("d", "e", "g3", Date.now());
       }).should.throw(errors.NotAdminError);
     });
-    it('admins should be able to dismiss others from the group', function (){
-      db.dismiss('b', 'd', 'g3', Date.now());
-      db.groupMembers('g3').should.not.include('d');
+    it("admins should be able to dismiss others from the group", function () {
+      db.dismiss("b", "d", "g3", Date.now());
+      db.groupMembers("g3").should.not.include("d");
     });
   });
 
-  describe('adding new admins', function() {
-    before(function() {
-      db.invite('b', 'd', 'g3', 'data', Date.now());
-      db.addMembership('g3', 'd', Date.now());
+  describe("adding new admins", function () {
+    before(function () {
+      db.invite("b", "d", "g3", "data", Date.now());
+      db.addMembership("g3", "d", Date.now());
     });
-    it('non-admins should not be able to add new admins', function (){
+    it("non-admins should not be able to add new admins", function () {
       (() => {
-        db.addAdmin('e', 'd', 'g3', Date.now());
+        db.addAdmin("e", "d", "g3", Date.now());
       }).should.throw(errors.NotAdminError);
     });
-    it('admins should be able to add new admins', function (){
-      db.addAdmin('b', 'd', 'g3', Date.now());
-      groupsColl.document('g3').admins.should.include('d');
+    it("admins should be able to add new admins", function () {
+      db.addAdmin("b", "d", "g3", Date.now());
+      groupsColl.document("g3").admins.should.include("d");
     });
-    it('new admins should be able to dismiss others from the group', function (){
-      db.dismiss('d', 'e', 'g3', Date.now());
-      db.groupMembers('g3').should.not.include('e');
+    it("new admins should be able to dismiss others from the group", function () {
+      db.dismiss("d", "e", "g3", Date.now());
+      db.groupMembers("g3").should.not.include("e");
     });
-    it('admins should be removed from admins list when they leave the group', function (){
-      groupsColl.document('g3').admins.should.include('d');
-      db.deleteMembership('g3', 'd', Date.now());
-      groupsColl.document('g3').admins.should.not.include('d');
+    it("admins should be removed from admins list when they leave the group", function () {
+      groupsColl.document("g3").admins.should.include("d");
+      db.deleteMembership("g3", "d", Date.now());
+      groupsColl.document("g3").admins.should.not.include("d");
     });
   });
 
-  describe('primary groups', function() {
-    before(function() {
+  describe("primary groups", function () {
+    before(function () {
       groupsColl.truncate();
       groupsColl.truncate();
       usersInGroupsColl.truncate();
-      db.addConnection('a', 'd', 0);
-      db.addConnection('a', 'e', 0);
-      db.addConnection('e', 'c', 0);
-      db.addConnection('e', 'b', 0);
-      db.createGroup('g4', 'a', 'b', 'data', 'c', 'data', url, 'primary', Date.now());
-      db.addMembership('g4', 'b', Date.now());
-      db.addMembership('g4', 'c', Date.now());
+      db.addConnection("a", "d", 0);
+      db.addConnection("a", "e", 0);
+      db.addConnection("e", "c", 0);
+      db.addConnection("e", "b", 0);
+      db.createGroup(
+        "g4",
+        "a",
+        "b",
+        "data",
+        "c",
+        "data",
+        url,
+        "primary",
+        Date.now()
+      );
+      db.addMembership("g4", "b", Date.now());
+      db.addMembership("g4", "c", Date.now());
     });
-    it('users that have primary groups should not be able to create new primary groups', function (){
+    it("users that have primary groups should not be able to create new primary groups", function () {
       (() => {
-        db.createGroup('g5', 'a', 'd', 'data', 'e', 'data', url, 'primary', Date.now());
+        db.createGroup(
+          "g5",
+          "a",
+          "d",
+          "data",
+          "e",
+          "data",
+          url,
+          "primary",
+          Date.now()
+        );
       }).should.throw(errors.AlreadyHasPrimaryGroupError);
     });
-    it('users with no primary group should be able to join a primary group', function (){
-      db.invite('a', 'd', 'g4', 'data', Date.now());
-      db.addMembership('g4', 'd', Date.now());
-      db.userGroups('d').map(group => group.id).should.deep.equal(['g4']);
+    it("users with no primary group should be able to join a primary group", function () {
+      db.invite("a", "d", "g4", "data", Date.now());
+      db.addMembership("g4", "d", Date.now());
+      db.userGroups("d")
+        .map((group) => group.id)
+        .should.deep.equal(["g4"]);
     });
-    it('users that have primary groups should not be able to invited to other primary groups', function (){
-      db.addConnection('e', 'f', Date.now());
-      db.addConnection('e', 'g', Date.now());
-      db.createGroup('g6', 'e', 'f', 'data', 'g', 'data', url, 'primary', Date.now());
-      db.addMembership('g6', 'f', Date.now());
-      db.addMembership('g6', 'g', Date.now());
+    it("users that have primary groups should not be able to invited to other primary groups", function () {
+      db.addConnection("e", "f", Date.now());
+      db.addConnection("e", "g", Date.now());
+      db.createGroup(
+        "g6",
+        "e",
+        "f",
+        "data",
+        "g",
+        "data",
+        url,
+        "primary",
+        Date.now()
+      );
+      db.addMembership("g6", "f", Date.now());
+      db.addMembership("g6", "g", Date.now());
       (() => {
-        db.invite('a', 'e', 'g4', 'data', Date.now());
+        db.invite("a", "e", "g4", "data", Date.now());
       }).should.throw(errors.AlreadyHasPrimaryGroupError);
-
     });
   });
-
 });

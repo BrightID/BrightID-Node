@@ -46,7 +46,7 @@ const SPEND_REQUESTED_BEFORE = 46;
 class BrightIDError extends Error {
   constructor() {
     super();
-    this.name = 'BrightIDError';
+    this.name = "BrightIDError";
     this.date = new Date();
   }
 }
@@ -55,7 +55,7 @@ class BadRequestError extends BrightIDError {
   constructor() {
     super();
     this.code = 400;
-    this.message = 'Bad Request';
+    this.message = "Bad Request";
   }
 }
 
@@ -63,7 +63,7 @@ class UnauthorizedError extends BrightIDError {
   constructor() {
     super();
     this.code = 401;
-    this.message = 'Unauthorized';
+    this.message = "Unauthorized";
   }
 }
 
@@ -71,7 +71,7 @@ class ForbiddenError extends BrightIDError {
   constructor() {
     super();
     this.code = 403;
-    this.message = 'Forbidden';
+    this.message = "Forbidden";
   }
 }
 
@@ -79,7 +79,7 @@ class NotFoundError extends BrightIDError {
   constructor() {
     super();
     this.code = 404;
-    this.message = 'Not Found';
+    this.message = "Not Found";
   }
 }
 
@@ -87,7 +87,7 @@ class TooManyRequestsError extends BrightIDError {
   constructor() {
     super();
     this.code = 429;
-    this.message = 'Too Many Requests';
+    this.message = "Too Many Requests";
   }
 }
 
@@ -95,7 +95,7 @@ class InternalServerError extends BrightIDError {
   constructor() {
     super();
     this.code = 500;
-    this.message = 'Internal Server Error';
+    this.message = "Internal Server Error";
   }
 }
 
@@ -103,7 +103,7 @@ class InvalidSignatureError extends UnauthorizedError {
   constructor() {
     super();
     this.errorNum = INVALID_SIGNATURE;
-    this.message = 'Signature is not valid.';
+    this.message = "Signature is not valid.";
   }
 }
 
@@ -120,7 +120,11 @@ class TooManyOperationsError extends TooManyRequestsError {
   constructor(senders, waitingTime, timeWindow, limit) {
     super();
     this.errorNum = TOO_MANY_OPERATIONS;
-    this.message = `More than ${limit} operations sent from ${senders.join(', ')} in ${parseInt(timeWindow / 1000)} seconds. Try again after ${parseInt(waitingTime / 1000)} seconds.`;
+    this.message = `More than ${limit} operations sent from ${senders.join(
+      ", "
+    )} in ${parseInt(timeWindow / 1000)} seconds. Try again after ${parseInt(
+      waitingTime / 1000
+    )} seconds.`;
     this.senders = senders;
     this.waitingTime = waitingTime;
     this.timeWindow = timeWindow;
@@ -159,7 +163,7 @@ class InvalidOperationHashError extends BadRequestError {
   constructor() {
     super();
     this.errorNum = INVALID_HASH;
-    this.message = 'Operation hash is not valid.';
+    this.message = "Operation hash is not valid.";
   }
 }
 
@@ -167,7 +171,7 @@ class NotRecoveryConnectionsError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_RECOVERY_CONNECTIONS;
-    this.message = 'Signers of the request are not recovery connections.';
+    this.message = "Signers of the request are not recovery connections.";
   }
 }
 
@@ -265,7 +269,8 @@ class KeypairNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = KEYPAIR_NOT_SET;
-    this.message = 'BN_WS_PUBLIC_KEY or BN_WS_PRIVATE_KEY are not set in config.env.';
+    this.message =
+      "BN_WS_PUBLIC_KEY or BN_WS_PRIVATE_KEY are not set in config.env.";
   }
 }
 
@@ -273,7 +278,7 @@ class EthPrivatekeyNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = ETHPRIVATEKEY_NOT_SET;
-    this.message = 'BN_WS_ETH_PRIVATE_KEY is not set.';
+    this.message = "BN_WS_ETH_PRIVATE_KEY is not set.";
   }
 }
 
@@ -281,7 +286,8 @@ class IpNotSetError extends InternalServerError {
   constructor() {
     super();
     this.errorNum = IP_NOT_SET;
-    this.message = 'BN_WS_IP variable is not set in config.env and is not automatically loaded for an unknown reason.';
+    this.message =
+      "BN_WS_IP variable is not set in config.env and is not automatically loaded for an unknown reason.";
   }
 }
 
@@ -289,7 +295,7 @@ class InvalidTestingKeyError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_TESTING_KEY;
-    this.message = 'Invalid testing key.';
+    this.message = "Invalid testing key.";
   }
 }
 
@@ -306,7 +312,7 @@ class InvalidPasscodeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_PASSCODE;
-    this.message = 'Invalid passcode.';
+    this.message = "Invalid passcode.";
   }
 }
 
@@ -314,7 +320,7 @@ class NotAdminError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_ADMIN;
-    this.message = 'Requstor is not admin of the group.';
+    this.message = "Requstor is not admin of the group.";
   }
 }
 
@@ -322,7 +328,7 @@ class AlreadyHasPrimaryGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = ALREADY_HAS_PRIMARY_GROUP;
-    this.message = 'The user already has a primary group.';
+    this.message = "The user already has a primary group.";
   }
 }
 
@@ -330,7 +336,7 @@ class NewUserBeforeFoundersJoinError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NEW_USER_BEFORE_FOUNDERS_JOIN;
-    this.message = 'New members can not join before founders join the group.';
+    this.message = "New members can not join before founders join the group.";
   }
 }
 
@@ -347,7 +353,7 @@ class DuplicateGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = DUPLICATE_GROUP;
-    this.message = 'Group with this id already exists.';
+    this.message = "Group with this id already exists.";
   }
 }
 
@@ -355,7 +361,8 @@ class InvalidCoFoundersError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INVALID_COFOUNDERS;
-    this.message = 'One or both of the co-founders are not connected to the founder.';
+    this.message =
+      "One or both of the co-founders are not connected to the founder.";
   }
 }
 
@@ -363,7 +370,7 @@ class IneligibleNewAdminError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_NEW_ADMIN;
-    this.message = 'New admin is not member of the group.';
+    this.message = "New admin is not member of the group.";
   }
 }
 
@@ -371,7 +378,7 @@ class NotInvitedError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = NOT_INVITED;
-    this.message = 'The user is not invited to join this group.';
+    this.message = "The user is not invited to join this group.";
   }
 }
 
@@ -379,7 +386,8 @@ class LeaveGroupError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = LEAVE_GROUP;
-    this.message = 'Last admin can not leave the group when it still has other members.';
+    this.message =
+      "Last admin can not leave the group when it still has other members.";
   }
 }
 
@@ -396,7 +404,7 @@ class TooManyLinkRequestError extends TooManyRequestsError {
   constructor() {
     super();
     this.errorNum = TOO_MANY_LINK_REQUEST;
-    this.message = 'Only three contextIds can be linked every 24 hours.';
+    this.message = "Only three contextIds can be linked every 24 hours.";
   }
 }
 
@@ -413,7 +421,7 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = 'The contextId is sponsored before.';
+    this.message = "The contextId is sponsored before.";
   }
 }
 
@@ -430,7 +438,8 @@ class IneligibleRecoveryConnection extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = INELIGIBLE_RECOVERY_CONNECTION;
-    this.message = 'Recovery level can only be selected for connections that already know you or trust you as their recovery connection.';
+    this.message =
+      "Recovery level can only be selected for connections that already know you or trust you as their recovery connection.";
   }
 }
 
@@ -553,4 +562,4 @@ module.exports = {
   InvalidContextIdError,
   AppAuthorizedBeforeError,
   SpendRequestedBeforeError,
-}
+};

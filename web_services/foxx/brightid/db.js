@@ -1,37 +1,37 @@
-'use strict';
-const { sha256 } = require('@arangodb/crypto');
-const { query, db } = require('@arangodb');
-const _ = require('lodash');
-const stringify = require('fast-json-stable-stringify');
-const nacl = require('tweetnacl');
+"use strict";
+const { sha256 } = require("@arangodb/crypto");
+const { query, db } = require("@arangodb");
+const _ = require("lodash");
+const stringify = require("fast-json-stable-stringify");
+const nacl = require("tweetnacl");
 const {
   uInt8ArrayToB64,
   b64ToUrlSafeB64,
   urlSafeB64ToB64,
   strToUint8Array,
   b64ToUint8Array,
-  hash
-} = require('./encoding');
-const errors = require('./errors');
+  hash,
+} = require("./encoding");
+const errors = require("./errors");
 
-const connectionsColl = db._collection('connections');
-const connectionsHistoryColl = db._collection('connectionsHistory');
-const groupsColl = db._collection('groups');
-const usersInGroupsColl = db._collection('usersInGroups');
-const usersColl = db._collection('users');
-const contextsColl = db._collection('contexts');
-const appsColl = db._collection('apps');
-const sponsorshipsColl = db._collection('sponsorships');
-const operationsColl = db._collection('operations');
-const invitationsColl = db._collection('invitations');
-const verificationsColl = db._collection('verifications');
-const variablesColl = db._collection('variables');
-const testblocksColl = db._collection('testblocks');
+const connectionsColl = db._collection("connections");
+const connectionsHistoryColl = db._collection("connectionsHistory");
+const groupsColl = db._collection("groups");
+const usersInGroupsColl = db._collection("usersInGroups");
+const usersColl = db._collection("users");
+const contextsColl = db._collection("contexts");
+const appsColl = db._collection("apps");
+const sponsorshipsColl = db._collection("sponsorships");
+const operationsColl = db._collection("operations");
+const invitationsColl = db._collection("invitations");
+const verificationsColl = db._collection("verifications");
+const variablesColl = db._collection("variables");
+const testblocksColl = db._collection("testblocks");
 
 function addConnection(key1, key2, timestamp) {
   // this function is deprecated and will be removed on v6
-  connect({id1: key1, id2: key2, timestamp});
-  connect({id1: key2, id2: key1, timestamp});
+  connect({ id1: key1, id2: key2, timestamp });
+  connect({ id1: key2, id2: key1, timestamp });
 }
 
 function connect(op) {
@@ -42,14 +42,14 @@ function connect(op) {
     reportReason,
     replacedWith,
     requestProof,
-    timestamp
+    timestamp,
   } = op;
 
-  const _from = 'users/' + key1;
-  const _to = 'users/' + key2;
-  if (level == 'recovery') {
-    const tf = connectionsColl.firstExample({ '_from': _to, '_to': _from });
-    if (!tf || !['already known', 'recovery'].includes(tf.level)) {
+  const _from = "users/" + key1;
+  const _to = "users/" + key2;
+  if (level == "recovery") {
+    const tf = connectionsColl.firstExample({ _from: _to, _to: _from });
+    if (!tf || !["already known", "recovery"].includes(tf.level)) {
       throw new errors.IneligibleRecoveryConnection();
     }
   }
@@ -67,37 +67,60 @@ function connect(op) {
 
   // set the first verified user that connect to a user as its parent
   let verifications = userVerifications(key1);
-  if (!u2.parent && (verifications.map(v => v.name).includes('BrightID'))) {
+  if (!u2.parent && verifications.map((v) => v.name).includes("BrightID")) {
     usersColl.update(u2, { parent: key1 });
   }
 
   const conn = connectionsColl.firstExample({ _from, _to });
 
-  if (level != 'reported') {
+  if (level != "reported") {
     // clear reportReason for levels other than reported
     reportReason = null;
   }
-  if (level != 'reported' || reportReason != 'replaced') {
+  if (level != "reported" || reportReason != "replaced") {
     // clear replacedWith for levels other than reported
     // and reportReason other than replaced
     replacedWith = null;
   }
-  if (replacedWith && ! loadUser(replacedWith)) {
+  if (replacedWith && !loadUser(replacedWith)) {
     throw new errors.UserNotFoundError(replacedWith);
   }
-  if (! level) {
+  if (!level) {
     // Set 'just met' as confidence level when old addConnection is called
     // and there was no other level set directly using Connect
     // this if should be removed when v5 dropped and "Add Connection" operation removed
-    level = conn ? conn.level : 'just met';
+    level = conn ? conn.level : "just met";
   }
 
-  connectionsHistoryColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp });
+  connectionsHistoryColl.insert({
+    _from,
+    _to,
+    level,
+    reportReason,
+    replacedWith,
+    requestProof,
+    timestamp,
+  });
 
-  if (! conn) {
-    connectionsColl.insert({ _from, _to, level, reportReason, replacedWith, requestProof, timestamp, initTimestamp: timestamp });
+  if (!conn) {
+    connectionsColl.insert({
+      _from,
+      _to,
+      level,
+      reportReason,
+      replacedWith,
+      requestProof,
+      timestamp,
+      initTimestamp: timestamp,
+    });
   } else {
-    connectionsColl.update(conn, { level, reportReason, replacedWith, requestProof, timestamp });
+    connectionsColl.update(conn, {
+      level,
+      reportReason,
+      replacedWith,
+      requestProof,
+      timestamp,
+    });
   }
 }
 
@@ -106,40 +129,43 @@ function removeConnection(reporter, reported, reportReason, timestamp) {
   connect({
     id1: reporter,
     id2: reported,
-    level: 'reported',
+    level: "reported",
     reportReason,
-    timestamp
+    timestamp,
   });
 }
 
-function userConnections(userId, direction = 'outbound') {
+function userConnections(userId, direction = "outbound") {
   let query, resIdAttr;
-  if (direction == 'outbound') {
-    query = { _from: 'users/' + userId };
-    resIdAttr = '_to';
+  if (direction == "outbound") {
+    query = { _from: "users/" + userId };
+    resIdAttr = "_to";
   } else {
-    query = { _to: 'users/' + userId };
-    resIdAttr = '_from';
+    query = { _to: "users/" + userId };
+    resIdAttr = "_from";
   }
-  return connectionsColl.byExample(query).toArray().map(conn => {
-    return {
-      id: conn[resIdAttr].replace('users/', ''),
-      level: conn.level,
-      reportReason: conn.reportReason || undefined,
-      timestamp: conn.timestamp
-    }
-  });
+  return connectionsColl
+    .byExample(query)
+    .toArray()
+    .map((conn) => {
+      return {
+        id: conn[resIdAttr].replace("users/", ""),
+        level: conn.level,
+        reportReason: conn.reportReason || undefined,
+        timestamp: conn.timestamp,
+      };
+    });
 }
 
 function userToDic(userId) {
-  const u = usersColl.document('users/' + userId);
+  const u = usersColl.document("users/" + userId);
   return {
     id: u._key,
     // all signing keys will be returned on v6
     signingKey: u.signingKeys[0],
     // score is deprecated and will be removed on v6
     score: u.score,
-    verifications: userVerifications(u._key).map(v => v.name),
+    verifications: userVerifications(u._key).map((v) => v.name),
     hasPrimaryGroup: hasPrimaryGroup(u._key),
     // trusted is deprecated and will be replaced by recoveryConnections on v6
     trusted: getRecoveryConnections(u._key),
@@ -147,31 +173,37 @@ function userToDic(userId) {
     flaggers: getReporters(u._key),
     createdAt: u.createdAt,
     // eligible_groups is deprecated and will be removed on v6
-    eligible_groups: u.eligible_groups || []
-  }
+    eligible_groups: u.eligible_groups || [],
+  };
 }
 
 function getReporters(user) {
   const reporters = {};
-  connectionsColl.byExample({
-    _to: 'users/' + user,
-    level: 'reported'
-  }).toArray().forEach(c => {
-    reporters[c._from.replace('users/', '')] = c.reportReason;
-  });
+  connectionsColl
+    .byExample({
+      _to: "users/" + user,
+      level: "reported",
+    })
+    .toArray()
+    .forEach((c) => {
+      reporters[c._from.replace("users/", "")] = c.reportReason;
+    });
   return reporters;
 }
 
 function groupMembers(groupId) {
-  return usersInGroupsColl.byExample({
-    _to: "groups/" + groupId,
-  }).toArray().map(e => e._from.replace('users/', ''));
+  return usersInGroupsColl
+    .byExample({
+      _to: "groups/" + groupId,
+    })
+    .toArray()
+    .map((e) => e._from.replace("users/", ""));
 }
 
 // this function is deprecated and will be removed on v6
 function updateEligibleGroups(userId, connections, currentGroups) {
-  connections = connections.map(uId => 'users/' + uId);
-  currentGroups = currentGroups.map(gId => 'groups/' + gId);
+  connections = connections.map((uId) => "users/" + uId);
+  currentGroups = currentGroups.map((gId) => "groups/" + gId);
   const user = "users/" + userId;
   const candidates = query`
       FOR edge in ${usersInGroupsColl}
@@ -184,7 +216,7 @@ function updateEligibleGroups(userId, connections, currentGroups) {
               count
           }
   `.toArray();
-  const groupIds = candidates.map(x => x.group);
+  const groupIds = candidates.map((x) => x.group);
   const groupCounts = query`
     FOR ug in ${usersInGroupsColl}
       FILTER ug._to in ${groupIds}
@@ -197,16 +229,16 @@ function updateEligibleGroups(userId, connections, currentGroups) {
 
   const groupCountsDic = {};
 
-  groupCounts.map(function(row) {
+  groupCounts.map(function (row) {
     groupCountsDic[row.id] = row.count;
   });
 
   const eligible_groups = candidates
-    .filter(g => g.count * 2 >= groupCountsDic[g.group])
-    .map(g => g.group.replace('groups/', ''));
+    .filter((g) => g.count * 2 >= groupCountsDic[g.group])
+    .map((g) => g.group.replace("groups/", ""));
   usersColl.update(userId, {
     eligible_groups,
-    eligible_timestamp: Date.now()
+    eligible_timestamp: Date.now(),
   });
   return eligible_groups;
 }
@@ -215,14 +247,18 @@ function updateEligibleGroups(userId, connections, currentGroups) {
 function updateEligibles(groupId) {
   const members = groupMembers(groupId);
   const neighbors = [];
-  const isKnown = c => ['just met', 'already known', 'recovery'].includes(c.level);
+  const isKnown = (c) =>
+    ["just met", "already known", "recovery"].includes(c.level);
 
-  members.forEach(member => {
-    const conns = connectionsColl.byExample({
-      _from: 'users/' + member
-    }).toArray().filter(isKnown).map(
-      c => c._to.replace("users/", "")
-    ).filter(u => !members.includes(u));
+  members.forEach((member) => {
+    const conns = connectionsColl
+      .byExample({
+        _from: "users/" + member,
+      })
+      .toArray()
+      .filter(isKnown)
+      .map((c) => c._to.replace("users/", ""))
+      .filter((u) => !members.includes(u));
     neighbors.push(...conns);
   });
 
@@ -230,19 +266,19 @@ function updateEligibles(groupId) {
   for (let neighbor of neighbors) {
     counts[neighbor] = (counts[neighbor] || 0) + 1;
   }
-  const eligibles = Object.keys(counts).filter(neighbor => {
+  const eligibles = Object.keys(counts).filter((neighbor) => {
     return counts[neighbor] >= members.length / 2;
   });
   // storing eligible groups on users documents and updating them
   // from this route will be removed when clients updated to use
   // new GET /groups/{id} result to show eligibles in invite list
-  eligibles.forEach(neighbor => {
+  eligibles.forEach((neighbor) => {
     let { eligible_groups } = usersColl.document(neighbor);
     eligible_groups = eligible_groups || [];
     if (eligible_groups.indexOf(groupId) == -1) {
       eligible_groups.push(groupId);
       usersColl.update(neighbor, {
-        eligible_groups
+        eligible_groups,
       });
     }
   });
@@ -250,80 +286,89 @@ function updateEligibles(groupId) {
 }
 
 function groupToDic(groupId) {
-  const group = groupsColl.document('groups/' + groupId);
+  const group = groupsColl.document("groups/" + groupId);
   return {
     id: group._key,
     members: groupMembers(group._key),
-    type: group.type || 'general',
-    founders: (group.founders || []).map(founder => founder.replace('users/', '')),
+    type: group.type || "general",
+    founders: (group.founders || []).map((founder) =>
+      founder.replace("users/", "")
+    ),
     admins: group.admins || group.founders,
     isNew: group.isNew,
     // score on group is deprecated and will be removed on v6
     score: 0,
     url: group.url,
     timestamp: group.timestamp,
-  }
+  };
 }
 
 function userGroups(userId) {
-  return usersInGroupsColl.byExample({
-    _from: 'users/' + userId
-  }).toArray().map( ug => {
-    return {
-      id: ug._to.replace('groups/', ''),
-      timestamp: ug.timestamp
-    }
-  });
+  return usersInGroupsColl
+    .byExample({
+      _from: "users/" + userId,
+    })
+    .toArray()
+    .map((ug) => {
+      return {
+        id: ug._to.replace("groups/", ""),
+        timestamp: ug.timestamp,
+      };
+    });
 }
 
 function userInvitedGroups(userId) {
-  return invitationsColl.byExample({
-    _from: 'users/' + userId
-  }).toArray().filter(invite => {
-    return Date.now() - invite.timestamp < 86400000
-  }).map(invite => {
-    let group = groupToDic(invite._to.replace('groups/', ''));
-    group.inviter = invite.inviter;
-    group.inviteId = invite._key;
-    group.data = invite.data;
-    group.invited = invite.timestamp;
-    return group;
-  });
+  return invitationsColl
+    .byExample({
+      _from: "users/" + userId,
+    })
+    .toArray()
+    .filter((invite) => {
+      return Date.now() - invite.timestamp < 86400000;
+    })
+    .map((invite) => {
+      let group = groupToDic(invite._to.replace("groups/", ""));
+      group.inviter = invite.inviter;
+      group.inviteId = invite._key;
+      group.data = invite.data;
+      group.invited = invite.timestamp;
+      return group;
+    });
 }
 
 function invite(inviter, invitee, groupId, data, timestamp) {
-  if (! groupsColl.exists(groupId)) {
+  if (!groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
-  if (! group.admins || ! group.admins.includes(inviter)) {
+  if (!group.admins || !group.admins.includes(inviter)) {
     throw new errors.NotAdminError();
   }
-  if (group.type == 'primary' && hasPrimaryGroup(invitee)) {
+  if (group.type == "primary" && hasPrimaryGroup(invitee)) {
     throw new errors.AlreadyHasPrimaryGroupError();
   }
-  if (group.isNew && ! group.founders.includes(invitee)) {
+  if (group.isNew && !group.founders.includes(invitee)) {
     throw new errors.NewUserBeforeFoundersJoinError();
   }
   invitationsColl.removeByExample({
-    _from: 'users/' + invitee,
-    _to: 'groups/' + groupId
+    _from: "users/" + invitee,
+    _to: "groups/" + groupId,
   });
   invitationsColl.insert({
-    _from: 'users/' + invitee,
-    _to: 'groups/' + groupId,
+    _from: "users/" + invitee,
+    _to: "groups/" + groupId,
     inviter,
     data,
-    timestamp
+    timestamp,
   });
 }
 
 function dismiss(dismisser, dismissee, groupId, timestamp) {
-  if (! groupsColl.exists(groupId)) {
+  if (!groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
-  if (! group.admins || ! group.admins.includes(dismisser)) {
+  if (!group.admins || !group.admins.includes(dismisser)) {
     throw new errors.NotAdminError();
   }
   deleteMembership(groupId, dismissee, timestamp);
@@ -350,7 +395,7 @@ function createUser(key, timestamp) {
       score: 0,
       signingKeys: [urlSafeB64ToB64(key)],
       createdAt: timestamp,
-      _key: key
+      _key: key,
     });
   } else {
     return user;
@@ -358,15 +403,28 @@ function createUser(key, timestamp) {
 }
 
 function hasPrimaryGroup(key) {
-  const groupIds = usersInGroupsColl.byExample({
-    _from: 'users/' + key
-  }).toArray().map(ug => ug._to.replace('groups/', ''));
+  const groupIds = usersInGroupsColl
+    .byExample({
+      _from: "users/" + key,
+    })
+    .toArray()
+    .map((ug) => ug._to.replace("groups/", ""));
   const groups = groupsColl.documents(groupIds).documents;
-  return groups.filter(group => group.type == 'primary').length > 0;
+  return groups.filter((group) => group.type == "primary").length > 0;
 }
 
-function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, type, timestamp) {
-  if (! ['general', 'primary'].includes(type)) {
+function createGroup(
+  groupId,
+  key1,
+  key2,
+  inviteData2,
+  key3,
+  inviteData3,
+  url,
+  type,
+  timestamp
+) {
+  if (!["general", "primary"].includes(type)) {
     throw new errors.InvalidGroupTypeError(type);
   }
 
@@ -374,15 +432,18 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     throw new errors.DuplicateGroupError();
   }
 
-  const conns = connectionsColl.byExample({
-    _to: 'users/' + key1
-  }).toArray().map(u => u._from.replace("users/", ""));
+  const conns = connectionsColl
+    .byExample({
+      _to: "users/" + key1,
+    })
+    .toArray()
+    .map((u) => u._from.replace("users/", ""));
   if (conns.indexOf(key2) < 0 || conns.indexOf(key3) < 0) {
     throw new errors.InvalidCoFoundersError();
   }
 
-  const founders = [key1, key2, key3].sort()
-  if (type == 'primary' && founders.some(hasPrimaryGroup)) {
+  const founders = [key1, key2, key3].sort();
+  if (type == "primary" && founders.some(hasPrimaryGroup)) {
     throw new errors.AlreadyHasPrimaryGroupError();
   }
 
@@ -394,7 +455,7 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
     url,
     type,
     timestamp,
-    founders
+    founders,
   });
 
   // Add the creator and invite other cofounders to the group now.
@@ -405,17 +466,19 @@ function createGroup(groupId, key1, key2, inviteData2, key3, inviteData3, url, t
 }
 
 function addAdmin(key, admin, groupId) {
-  if (! groupsColl.exists(groupId)) {
+  if (!groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
-  if (! usersInGroupsColl.firstExample({
-    _from: 'users/' + admin,
-    _to: 'groups/' + groupId
-  })) {
+  if (
+    !usersInGroupsColl.firstExample({
+      _from: "users/" + admin,
+      _to: "groups/" + groupId,
+    })
+  ) {
     throw new errors.IneligibleNewAdminError();
   }
   const group = groupsColl.document(groupId);
-  if (! group.admins || ! group.admins.includes(key)) {
+  if (!group.admins || !group.admins.includes(key)) {
     throw new errors.NotAdminError();
   }
   group.admins.push(admin);
@@ -423,42 +486,41 @@ function addAdmin(key, admin, groupId) {
 }
 
 function addUserToGroup(groupId, key, timestamp) {
-  const user = 'users/' + key;
-  const group = 'groups/' + groupId;
+  const user = "users/" + key;
+  const group = "groups/" + groupId;
 
   const edge = usersInGroupsColl.firstExample({
     _from: user,
-    _to: group
+    _to: group,
   });
-  if (! edge) {
+  if (!edge) {
     usersInGroupsColl.insert({
       _from: user,
       _to: group,
-      timestamp
+      timestamp,
     });
   } else {
     usersInGroupsColl.update(edge, { timestamp });
   }
-
 }
 
 function addMembership(groupId, key, timestamp) {
-  if (! groupsColl.exists(groupId)) {
+  if (!groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
 
   const group = groupsColl.document(groupId);
-  if (group.isNew && ! group.founders.includes(key)) {
+  if (group.isNew && !group.founders.includes(key)) {
     throw new errors.NewUserBeforeFoundersJoinError();
   }
 
-  if (group.type == 'primary' && hasPrimaryGroup(key)) {
+  if (group.type == "primary" && hasPrimaryGroup(key)) {
     throw new errors.AlreadyHasPrimaryGroupError();
   }
 
   const invite = invitationsColl.firstExample({
-    _from: 'users/' + key,
-    _to: 'groups/' + groupId
+    _from: "users/" + key,
+    _to: "groups/" + groupId,
   });
   // invites will expire after 24 hours
   if (!invite || timestamp - invite.timestamp >= 86400000) {
@@ -476,7 +538,7 @@ function addMembership(groupId, key, timestamp) {
 }
 
 function deleteGroup(groupId, key, timestamp) {
-  if (! groupsColl.exists(groupId)) {
+  if (!groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
 
@@ -485,18 +547,18 @@ function deleteGroup(groupId, key, timestamp) {
     throw new errors.NotAdminError();
   }
 
-  invitationsColl.removeByExample({ _to: 'groups/' + groupId });
-  usersInGroupsColl.removeByExample({ _to: 'groups/' + groupId });
+  invitationsColl.removeByExample({ _to: "groups/" + groupId });
+  usersInGroupsColl.removeByExample({ _to: "groups/" + groupId });
   groupsColl.remove(group);
 }
 
 function deleteMembership(groupId, key, timestamp) {
-  if (! groupsColl.exists(groupId)) {
+  if (!groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
   if (group.admins && group.admins.includes(key)) {
-    const admins = group.admins.filter(admin => key != admin);
+    const admins = group.admins.filter((admin) => key != admin);
     const members = groupMembers(groupId);
     if (admins.length == 0 && members.length > 1) {
       throw new errors.LeaveGroupError();
@@ -510,14 +572,14 @@ function deleteMembership(groupId, key, timestamp) {
 }
 
 function getContext(context) {
-  if (! contextsColl.exists(context)) {
+  if (!contextsColl.exists(context)) {
     throw new errors.ContextNotFoundError(context);
   }
   return contextsColl.document(context);
 }
 
 function getApp(app) {
-  if (! appsColl.exists(app)) {
+  if (!appsColl.exists(app)) {
     throw new errors.AppNotFoundError(app);
   }
   return appsColl.document(app);
@@ -579,7 +641,7 @@ function getLastContextIds(coll, appKey) {
 }
 
 function userVerifications(user) {
-  let hashes = variablesColl.document('VERIFICATIONS_HASHES').hashes;
+  let hashes = variablesColl.document("VERIFICATIONS_HASHES").hashes;
   hashes = JSON.parse(hashes);
   // const snapshotPeriod = hashes[1]['block'] - hashes[0]['block']
   // const lastBlock = variablesColl.document('LAST_BLOCK').value;
@@ -598,7 +660,7 @@ function userVerifications(user) {
   let block = Math.max(...Object.keys(hashes));
 
   const verifications = verificationsColl.byExample({ user, block }).toArray();
-  verifications.forEach(v => {
+  verifications.forEach((v) => {
     delete v._key;
     delete v._id;
     delete v._rev;
@@ -607,12 +669,19 @@ function userVerifications(user) {
 
   // replace expression based verification with app based ones
   getApps().forEach((app) => {
-    const v = verifications.find(v => v.expression && app.verification == v.name);
+    const v = verifications.find(
+      (v) => v.expression && app.verification == v.name
+    );
     if (v) {
-      verifications.push({ app: true, name: app._key, timestamp: v.timestamp, block: v.block });
+      verifications.push({
+        app: true,
+        name: app._key,
+        timestamp: v.timestamp,
+        block: v.block,
+      });
     }
   });
-  return verifications.filter(v => !v.expression);
+  return verifications.filter((v) => !v.expression);
 }
 
 function linkContextId(id, context, contextId, timestamp) {
@@ -623,7 +692,7 @@ function linkContextId(id, context, contextId, timestamp) {
   }
 
   if (idsAsHex) {
-    if(!isEthereumAddress(contextId)) {
+    if (!isEthereumAddress(contextId)) {
       throw new errors.InvalidContextIdError(contextId);
     }
     contextId = contextId.toLowerCase();
@@ -634,16 +703,16 @@ function linkContextId(id, context, contextId, timestamp) {
   }
 
   // remove testblocks if exists
-  removeTestblock(contextId, 'link');
+  removeTestblock(contextId, "link");
 
   let user = getUserByContextId(coll, contextId);
   if (user && user != id) {
     throw new errors.DuplicateContextIdError(contextId);
   }
 
-  const links = coll.byExample({user: id}).toArray();
+  const links = coll.byExample({ user: id }).toArray();
   const recentLinks = links.filter(
-    link => timestamp - link.timestamp < 24*3600*1000
+    (link) => timestamp - link.timestamp < 24 * 3600 * 1000
   );
   if (recentLinks.length >= 3) {
     throw new errors.TooManyLinkRequestError();
@@ -662,40 +731,40 @@ function linkContextId(id, context, contextId, timestamp) {
   coll.insert({
     user: id,
     contextId,
-    timestamp
+    timestamp,
   });
 }
 
 function setRecoveryConnections(conns, key, timestamp) {
   // this function is deprecated and will be removed on v6
-  conns.forEach(conn => {
+  conns.forEach((conn) => {
     connect({
       id1: key,
       id2: conn,
-      level: 'recovery',
-      timestamp
+      level: "recovery",
+      timestamp,
     });
   });
 }
 
 function getRecoveryPeriods(allConnections, user, now) {
   const recoveryPeriods = [];
-  const history = allConnections.filter(c => c.id == user);
+  const history = allConnections.filter((c) => c.id == user);
   let open = false;
   let period = {};
   for (let i = 0; i < history.length; i++) {
-    if (history[i].level == 'recovery' && !open) {
+    if (history[i].level == "recovery" && !open) {
       open = true;
-      period['start'] = history[i].timestamp
-    } else if (history[i].level != 'recovery' && open) {
-      period['end'] = history[i].timestamp;
+      period["start"] = history[i].timestamp;
+    } else if (history[i].level != "recovery" && open) {
+      period["end"] = history[i].timestamp;
       recoveryPeriods.push(period);
       period = {};
       open = false;
     }
   }
   if (open) {
-    period['end'] = now;
+    period["end"] = now;
     recoveryPeriods.push(period);
   }
   return recoveryPeriods;
@@ -703,26 +772,31 @@ function getRecoveryPeriods(allConnections, user, now) {
 
 function getRecoveryConnections(user) {
   const res = [];
-  const allConnections = connectionsHistoryColl.byExample({
-    _from: 'users/' + user
-  }).toArray().map(c => {
-    return {
-      id: c._to.replace('users/', ''),
-      level: c.level,
-      timestamp: c.timestamp
-    }
-  });
-  allConnections.sort((c1, c2) => (c1.timestamp - c2.timestamp));
-  const recoveryConnections = allConnections.filter(conn => conn.level == 'recovery');
+  const allConnections = connectionsHistoryColl
+    .byExample({
+      _from: "users/" + user,
+    })
+    .toArray()
+    .map((c) => {
+      return {
+        id: c._to.replace("users/", ""),
+        level: c.level,
+        timestamp: c.timestamp,
+      };
+    });
+  allConnections.sort((c1, c2) => c1.timestamp - c2.timestamp);
+  const recoveryConnections = allConnections.filter(
+    (conn) => conn.level == "recovery"
+  );
   if (recoveryConnections.length == 0) {
-    return res
+    return res;
   }
 
   const now = Date.now();
-  const firstDayBorder = recoveryConnections[0].timestamp + (24 * 60 * 60 * 1000);
+  const firstDayBorder = recoveryConnections[0].timestamp + 24 * 60 * 60 * 1000;
   const aWeek = 7 * 24 * 60 * 60 * 1000;
   const aWeekBorder = Date.now() - aWeek;
-  const recoveryIds = new Set(recoveryConnections.map(conn => conn.id));
+  const recoveryIds = new Set(recoveryConnections.map((conn) => conn.id));
 
   // 1) New recovery connections can participate in resetting signing key,
   //    one week after being set as recovery connection. This limit is not
@@ -734,7 +808,8 @@ function getRecoveryConnections(user) {
     const recoveryPeriods = getRecoveryPeriods(allConnections, id, now);
     // find this user is recovery now
     for (const period of recoveryPeriods) {
-      if (period.end > aWeekBorder &&
+      if (
+        period.end > aWeekBorder &&
         (period.end - period.start > aWeek || period.start < firstDayBorder)
       ) {
         res.push(id);
@@ -747,32 +822,34 @@ function getRecoveryConnections(user) {
 function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
     signingKeys: [signingKey],
-    updateTime: timestamp
+    updateTime: timestamp,
   });
 }
 
 function isSponsored(key) {
-  return sponsorshipsColl.firstExample({ '_from': 'users/' + key }) != null;
+  return sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
 }
 
 function getSponsorship(contextId) {
   const sponsorship = sponsorshipsColl.firstExample({ appId: contextId });
-  if (! sponsorship) {
+  if (!sponsorship) {
     throw new errors.NotSponsoredError(contextId);
   }
   return sponsorship;
 }
 
 function unusedSponsorships(app) {
-  const usedSponsorships = sponsorshipsColl.byExample({
-    _to: 'apps/' + app
-  }).count();
+  const usedSponsorships = sponsorshipsColl
+    .byExample({
+      _to: "apps/" + app,
+    })
+    .count();
   const { totalSponsorships } = appsColl.document(app);
   return totalSponsorships - usedSponsorships;
 }
 
 function sponsor(op) {
-  if (op.name == 'Sponsor' && unusedSponsorships(op.app) < 1) {
+  if (op.name == "Sponsor" && unusedSponsorships(op.app) < 1) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
@@ -782,21 +859,25 @@ function sponsor(op) {
     op.contextId = op.contextId.toLowerCase();
   }
   // remove testblocks if exists
-  removeTestblock(op.contextId, 'sponsorship', op.app);
+  removeTestblock(op.contextId, "sponsorship", op.app);
 
-  const sponsorship = sponsorshipsColl.firstExample({ 'appId': op.contextId, _to: 'apps/' + op.app });
+  const sponsorship = sponsorshipsColl.firstExample({
+    appId: op.contextId,
+    _to: "apps/" + op.app,
+  });
   if (!sponsorship) {
     // legacy v5 apps do not spend sponsorships and apps' sponsor requests are permanent
-    const expireDate = op.name == 'Sponsor' && !app.soulbound
-      ? null
-      : Math.ceil((Date.now() / 1000) + 60 * 60);
-    const spendRequested = op.name == 'Spend Sponsorship' || !app.soulbound;
+    const expireDate =
+      op.name == "Sponsor" && !app.soulbound
+        ? null
+        : Math.ceil(Date.now() / 1000 + 60 * 60);
+    const spendRequested = op.name == "Spend Sponsorship" || !app.soulbound;
     sponsorshipsColl.insert({
-      _from: 'users/0',
-      _to: 'apps/' + op.app,
+      _from: "users/0",
+      _to: "apps/" + op.app,
       expireDate,
       appId: op.contextId,
-      appHasAuthorized: op.name == 'Sponsor',
+      appHasAuthorized: op.name == "Sponsor",
       spendRequested,
       timestamp: op.timestamp,
     });
@@ -807,11 +888,11 @@ function sponsor(op) {
     throw new errors.SponsoredBeforeError();
   }
 
-  if (op.name == 'Sponsor' && sponsorship.appHasAuthorized) {
+  if (op.name == "Sponsor" && sponsorship.appHasAuthorized) {
     throw new errors.AppAuthorizedBeforeError();
   }
 
-  if (op.name == 'Spend Sponsorship' && sponsorship.spendRequested) {
+  if (op.name == "Spend Sponsorship" && sponsorship.spendRequested) {
     throw new errors.SpendRequestedBeforeError();
   }
 
@@ -837,49 +918,57 @@ function upsertOperation(op) {
 }
 
 function getState() {
-  const lastProcessedBlock = variablesColl.document('LAST_BLOCK').value;
-  const verificationsBlock = variablesColl.document('VERIFICATION_BLOCK').value;
-  const initOp = operationsColl.byExample({'state': 'init'}).count();
-  const sentOp = operationsColl.byExample({'state': 'sent'}).count();
-  const verificationsHashes = JSON.parse(variablesColl.document('VERIFICATIONS_HASHES').hashes);
+  const lastProcessedBlock = variablesColl.document("LAST_BLOCK").value;
+  const verificationsBlock = variablesColl.document("VERIFICATION_BLOCK").value;
+  const initOp = operationsColl.byExample({ state: "init" }).count();
+  const sentOp = operationsColl.byExample({ state: "sent" }).count();
+  const verificationsHashes = JSON.parse(
+    variablesColl.document("VERIFICATIONS_HASHES").hashes
+  );
   return {
     lastProcessedBlock,
     verificationsBlock,
     initOp,
     sentOp,
-    verificationsHashes
-  }
+    verificationsHashes,
+  };
 }
 
 function addTestblock(contextId, action, app) {
-  testblocksColl.insert({app, contextId, action,"timestamp": Date.now()});
+  testblocksColl.insert({ app, contextId, action, timestamp: Date.now() });
 }
 
 function removeTestblock(contextId, action, app) {
   let query;
   if (app) {
-    query = {app, contextId, action};
+    query = { app, contextId, action };
   } else {
-    query = {contextId, action};
+    query = { contextId, action };
   }
   testblocksColl.removeByExample(query);
 }
 
 function getTestblocks(app, contextId) {
-  return testblocksColl.byExample({
-    "app": app,
-    "contextId": contextId,
-  }).toArray().map(b => b.action);
+  return testblocksColl
+    .byExample({
+      app: app,
+      contextId: contextId,
+    })
+    .toArray()
+    .map((b) => b.action);
 }
 
 function getContextIds(coll) {
-  return coll.all().toArray().map(c => {
-    return {
-      user: c.user,
-      contextId: c.contextId,
-      timestamp: c.timestamp
-    }
-  });
+  return coll
+    .all()
+    .toArray()
+    .map((c) => {
+      return {
+        user: c.user,
+        contextId: c.contextId,
+        timestamp: c.timestamp,
+      };
+    });
 }
 
 function loadGroup(groupId) {
@@ -887,38 +976,42 @@ function loadGroup(groupId) {
 }
 
 function groupInvites(groupId) {
-  return invitationsColl.byExample({
-    "_to": 'groups/' + groupId,
-  }).toArray().filter(invite => {
-    return Date.now() - invite.timestamp < 86400000
-  }).map(invite => {
-    return {
-      inviter: invite.inviter,
-      invitee: invite._from.replace('users/', ''),
-      id: invite._key,
-      data: invite.data,
-      timestamp: invite.timestamp
-    }
-  });
+  return invitationsColl
+    .byExample({
+      _to: "groups/" + groupId,
+    })
+    .toArray()
+    .filter((invite) => {
+      return Date.now() - invite.timestamp < 86400000;
+    })
+    .map((invite) => {
+      return {
+        inviter: invite.inviter,
+        invitee: invite._from.replace("users/", ""),
+        id: invite._key,
+        data: invite.data,
+        timestamp: invite.timestamp,
+      };
+    });
 }
 
 function removePasscode(contextKey) {
   contextsColl.update(contextKey, {
-    passcode: null
+    passcode: null,
   });
 }
 
 function updateGroup(admin, groupId, url, timestamp) {
-  if (! groupsColl.exists(groupId)) {
+  if (!groupsColl.exists(groupId)) {
     throw new errors.GroupNotFoundError(groupId);
   }
   const group = groupsColl.document(groupId);
-  if (! group.admins || ! group.admins.includes(admin)) {
+  if (!group.admins || !group.admins.includes(admin)) {
     throw new errors.NotAdminError();
   }
   groupsColl.update(group, {
     url,
-    timestamp
+    timestamp,
   });
 }
 
@@ -932,19 +1025,19 @@ function addSigningKey(id, signingKey, timestamp) {
 
 function removeSigningKey(id, signingKey) {
   let signingKeys = usersColl.document(id).signingKeys || [];
-  signingKeys = signingKeys.filter(s => s != signingKey);
+  signingKeys = signingKeys.filter((s) => s != signingKey);
   usersColl.update(id, { signingKeys });
 }
 
 function removeAllSigningKeys(id, signingKey) {
   let signingKeys = usersColl.document(id).signingKeys || [];
-  signingKeys = signingKeys.filter(s => s == signingKey);
+  signingKeys = signingKeys.filter((s) => s == signingKey);
   usersColl.update(id, { signingKeys });
 }
 
 function isEthereumAddress(address) {
-    const re = new RegExp(/^0[xX][A-Fa-f0-9]{40}$/);
-    return re.test(address);
+  const re = new RegExp(/^0[xX][A-Fa-f0-9]{40}$/);
+  return re.test(address);
 }
 
 module.exports = {
