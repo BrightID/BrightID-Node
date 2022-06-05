@@ -20,7 +20,8 @@
     "jquery": "^3.5.0",
     "node-cache": "^5.1.2",
     "object-sizeof": "^1.6.3",
-    "uuid": "^3.4.0"
+    "uuid": "^3.4.0",
+    "bignum": "0.13.1"
   },
   "devDependencies": {
     "jest": "^26.0.1",

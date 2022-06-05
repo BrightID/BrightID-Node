@@ -4,7 +4,8 @@ const sizeof = require('object-sizeof')
 const app = express();
 const NodeCache = require("node-cache");
 const config = require("./config");
-const { renderStats } = require('./stats')
+const { renderStats } = require('./stats');
+const bn = require("bignum");
 
 const dataCache = new NodeCache(config.data_cache_config);
 const channelCache = new NodeCache(config.channel_config);
@@ -277,6 +278,13 @@ app.get("/download/:uuid", function (req, res, next) {
 
   res.json({
     data,
+  });
+});
+
+app.get("/modpow", function (req, res, next) {
+  const { a, exp, b } = req.query;
+  res.json({
+    data: bn(a).powm(bn(exp), bn(b)).toString(),
   });
 });
 
