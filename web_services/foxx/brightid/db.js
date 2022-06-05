@@ -5,12 +5,11 @@ const _ = require("lodash");
 const stringify = require("fast-json-stable-stringify");
 const nacl = require("tweetnacl");
 const {
-  uInt8ArrayToB64,
-  b64ToUrlSafeB64,
   urlSafeB64ToB64,
-  strToUint8Array,
-  b64ToUint8Array,
-  hash,
+  priv2addr,
+  getNaclKeyPair,
+  getEthKeyPair,
+  getConsensusSenderAddress,
 } = require("./encoding");
 const errors = require("./errors");
 
@@ -925,12 +924,18 @@ function getState() {
   const verificationsHashes = JSON.parse(
     variablesColl.document("VERIFICATIONS_HASHES").hashes
   );
+  const consensusSenderAddress = getConsensusSenderAddress();
+  const { privateKey: ethPrivateKey } = getEthKeyPair();
+  const { publicKey: naclSigningKey } = getNaclKeyPair();
   return {
     lastProcessedBlock,
     verificationsBlock,
     initOp,
     sentOp,
     verificationsHashes,
+    ethSigningAddress: priv2addr(ethPrivateKey),
+    naclSigningKey,
+    consensusSenderAddress,
     version: module.context.manifest.version,
   };
 }

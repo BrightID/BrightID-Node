@@ -3,6 +3,7 @@ const B64 = require("base64-js");
 const crypto = require("@arangodb/crypto");
 const nacl = require("tweetnacl");
 const secp256k1 = require("secp256k1");
+const createKeccakHash = require("keccak");
 
 const conf = module.context.configuration;
 
@@ -57,6 +58,23 @@ function addressToBytes32(address) {
   return String.fromCharCode(0).repeat(12) + b;
 }
 
+function priv2addr(priv) {
+  if (!priv) {
+    return null;
+  }
+  const publicKey = Buffer.from(
+    Object.values(secp256k1.publicKeyCreate(priv, false).slice(1))
+  );
+  return (
+    "0x" +
+    createKeccakHash("keccak256")
+      .update(publicKey)
+      .digest()
+      .slice(-20)
+      .toString("hex")
+  );
+}
+
 function getNaclKeyPair() {
   let publicKey, privateKey;
   if (conf.privateKey) {
@@ -94,6 +112,21 @@ function getEthKeyPair() {
   return { publicKey, privateKey };
 }
 
+function getConsensusSenderAddress() {
+  let address = null;
+  if (conf.consensusSenderPrivateKey) {
+    const uint8ArrayPrivateKey = new Uint8Array(
+      Buffer.from(conf.consensusSenderPrivateKey, "hex")
+    );
+    address = priv2addr(uint8ArrayPrivateKey);
+  } else if (conf.seed) {
+    const hex32 = crypto.sha256(conf.seed);
+    const uint8ArrayPrivateKey = new Uint8Array(Buffer.from(hex32, "hex"));
+    address = priv2addr(uint8ArrayPrivateKey);
+  }
+  return address;
+}
+
 module.exports = {
   uInt8ArrayToB64,
   b64ToUint8Array,
@@ -103,6 +136,8 @@ module.exports = {
   hash,
   pad32,
   addressToBytes32,
+  priv2addr,
   getNaclKeyPair,
   getEthKeyPair,
+  getConsensusSenderAddress,
 };
