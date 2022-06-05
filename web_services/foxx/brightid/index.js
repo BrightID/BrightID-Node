@@ -446,7 +446,6 @@ const handlers = {
     const appKey = req.param("app");
     const countOnly = req.param("countOnly");
     const activeOnly = req.param("activeOnly");
-    const app = db.getApp(appKey);
     const data = db.getAppUserIds(appKey, activeOnly, countOnly);
     res.send({
       data,

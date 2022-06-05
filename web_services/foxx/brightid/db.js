@@ -936,11 +936,14 @@ function getAppUserIds(appKey, activeOnly, countOnly) {
       .byExample(query)
       .toArray()
       .map((d) => d.appId);
-    res.push({
+    const data = {
       verification,
       count: appUserIds.length,
-      appUserIds: countOnly ? [] : appUserIds,
-    });
+    };
+    if (!countOnly) {
+      data["appUserIds"] = appUserIds;
+    }
+    res.push(data);
   }
   return res;
 }
