@@ -3,12 +3,13 @@
   Author : Christof Torres <christof.ferreira.001@student.uni.lu>
   Date   : September 2016
 **/
+
 var CryptoJS = require("crypto-js");
 var BigInteger = require("jsbn").BigInteger;
 const { modPow } = require("./encoding");
 
-BigInteger.prototype.modPow = function remoteModPow(exp, b) {
-	return modPow(this, exp, b);
+BigInteger.prototype.remoteModPow = function remoteModPow(exp, b) {
+  return modPow(this, exp, b);
 };
 
 function sha256(s) {
@@ -46,19 +47,19 @@ WISchnorrClient.prototype.GenerateWISchnorrClientChallenge = function (
 
 	var F = sha256(info);
 	// z = F^((p-1)/q) mod p
-	var z = F.modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
+	var z = F.remoteModPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 	// alpha = a * g^t1 * y^t2
 	var a = new BigInteger(params.a);
 	var alpha = a
-		.multiply(this.g.modPow(t1, this.p))
-		.multiply(this.y.modPow(t2, this.p))
+		.multiply(this.g.remoteModPow(t1, this.p))
+		.multiply(this.y.remoteModPow(t2, this.p))
 		.mod(this.p);
 
 	// beta = b * g^t3 * z^t4
 	var b = new BigInteger(params.b);
 	var beta = b
-		.multiply(this.g.modPow(t3, this.p))
-		.multiply(z.modPow(t4, this.p))
+		.multiply(this.g.remoteModPow(t3, this.p))
+		.multiply(z.remoteModPow(t4, this.p))
 		.mod(this.p);
 
 	var H = sha256(alpha.toString() + beta.toString() + z.toString() + msg);
@@ -108,19 +109,19 @@ WISchnorrClient.prototype.VerifyWISchnorrBlindSignature = function (
 ) {
 	var F = sha256(info);
 	// z = F^((p-1)/q) mod p
-	var z = F.modPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
+	var z = F.remoteModPow(this.p.subtract(new BigInteger("1")).divide(this.q), this.p);
 
 	// g^rho mod p
-	var gp = this.g.modPow(new BigInteger(signature.rho), this.p);
+	var gp = this.g.remoteModPow(new BigInteger(signature.rho), this.p);
 	// y^omega mod p
-	var yw = this.y.modPow(new BigInteger(signature.omega), this.p);
+	var yw = this.y.remoteModPow(new BigInteger(signature.omega), this.p);
 	// g^rho * y^omega mod p
 	var gpyw = gp.multiply(yw).mod(this.p);
 
 	// g^sigma mod p
-	var gs = this.g.modPow(new BigInteger(signature.sigma), this.p);
+	var gs = this.g.remoteModPow(new BigInteger(signature.sigma), this.p);
 	// z^delta mod p
-	var zd = z.modPow(new BigInteger(signature.delta), this.p);
+	var zd = z.remoteModPow(new BigInteger(signature.delta), this.p);
 	// g^sigma * z^delta mod p
 	var gszd = gs.multiply(zd).mod(this.p);
 

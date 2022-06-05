@@ -135,7 +135,11 @@ function modPow(a, exp, b) {
     url: "http://localhost/profile/modpow",
     qs: { a: a.toString(), exp: exp.toString(), b: b.toString() },
   });
-  return new BigInteger(response.json.data);
+  if (response.json && response.json.data) {
+    return new BigInteger(response.json.data);
+  } else {
+    return a.modPow(exp, b);
+  }
 }
 
 module.exports = {
