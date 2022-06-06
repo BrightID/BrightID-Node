@@ -634,25 +634,7 @@ function isSponsored(key) {
     sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
 
   // It's a hotfix and should remove after the next client release
-  if (!sponsored) {
-    for (const context of contextsColl.all()) {
-      const coll = db._collection(context.collection);
-      if (coll) {
-        const sponsoredAppIds = query`
-          FOR c IN ${coll}
-            FILTER c.user == ${key}
-            FOR s IN ${sponsorshipsColl}
-              FILTER s.appId == c.contextId
-              RETURN s.appId
-        `.toArray();
-        if (sponsoredAppIds.length > 0) {
-          return true;
-        }
-      }
-    }
-  }
-
-  return sponsored;
+  return true;
 }
 
 function unusedSponsorships(app) {
