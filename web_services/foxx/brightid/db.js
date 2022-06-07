@@ -854,8 +854,7 @@ function sponsor(op) {
   }
 
   const app = getApp(op.app);
-  const context = getContext(app.context);
-  if (context.idsAsHex) {
+  if (app.idsAsHex) {
     op.contextId = op.contextId.toLowerCase();
   }
   // remove testblocks if exists
