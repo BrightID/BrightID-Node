@@ -56,8 +56,6 @@ let { secretKey: linkAESKey } = nacl.sign.keyPair();
 const contextId = "0x636D49c1D76ff8E04767C68fe75eC9900719464b".toLowerCase();
 const contextName = "ethereum";
 const app = "ethereum";
-const soulboundContextName = "soulboundEthereum";
-const soulboundApp = "soulboundEthereum";
 
 function apply(op) {
   let resp = request.post(`${baseUrl}/operations`, {
@@ -86,12 +84,6 @@ describe("operations", function () {
     } else {
       contextIdsColl = arango._create(contextName);
     }
-    contextIdsColl2 = arango._collection(soulboundContextName);
-    if (contextIdsColl2) {
-      contextIdsColl2.truncate();
-    } else {
-      contextIdsColl2 = arango._create(soulboundContextName);
-    }
     operationsHashesColl.truncate();
     usersColl.truncate();
     connectionsColl.truncate();
@@ -114,25 +106,12 @@ describe("operations", function () {
       linkAESKey: uInt8ArrayToB64(Object.values(linkAESKey)),
       idsAsHex: true,
     });
-    contextsColl.insert({
-      _key: soulboundContextName,
-      collection: soulboundContextName,
-      linkAESKey: uInt8ArrayToB64(Object.values(linkAESKey)),
-      idsAsHex: true,
-    });
     appsColl.insert({
       _key: app,
       context: contextName,
       totalSponsorships: 5,
       verification: "BrightID",
-      sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
-    });
-    appsColl.insert({
-      _key: soulboundApp,
-      soulbound: true,
-      context: soulboundContextName,
-      totalSponsorships: 5,
-      verification: "BrightID",
+      idsAsHex: true,
       sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
     });
     verificationsColl.insert({
@@ -632,33 +611,12 @@ describe("operations", function () {
   });
 
   describe("Sponsoring and getting verification", function () {
-    it('In the legacy apps: apps should be able to "Sponsor" ("Spend Sponsorship" is not required)', function () {
-      const contextId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11B";
-      let op1 = {
-        name: "Sponsor",
-        contextId,
-        app,
-        timestamp: Date.now(),
-        v: 5,
-      };
-      const message1 = getMessage(op1);
-      op1.sig = uInt8ArrayToB64(
-        Object.values(
-          nacl.sign.detached(strToUint8Array(message1), sponsorPrivateKey)
-        )
-      );
-      const r = apply(op1);
-      let resp1 = request.get(`${baseUrl}/sponsorships/${contextId}`);
-      resp1.json.data.appHasAuthorized.should.equal(true);
-      resp1.json.data.spendRequested.should.equal(true);
-    });
-
-    it('In the soulbound apps: apps should be able to "Sponsor" first then clients "Spend Sponsorship"', function () {
+    it('apps should be able to "Sponsor" first then clients "Spend Sponsorship"', function () {
       const contextId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11E";
       let op1 = {
         name: "Sponsor",
         contextId,
-        app: soulboundApp,
+        app,
         timestamp: Date.now(),
         v: 5,
       };
@@ -676,7 +634,7 @@ describe("operations", function () {
       let op2 = {
         name: "Sponsor",
         contextId: contextId.toLowerCase(),
-        app: soulboundApp,
+        app,
         timestamp: Date.now(),
         v: 5,
       };
@@ -692,7 +650,7 @@ describe("operations", function () {
       let op3 = {
         name: "Spend Sponsorship",
         contextId: contextId.toLowerCase(),
-        app: soulboundApp,
+        app,
         timestamp: Date.now(),
         v: 5,
       };
@@ -707,7 +665,7 @@ describe("operations", function () {
       let op1 = {
         name: "Spend Sponsorship",
         contextId,
-        app: soulboundApp,
+        app,
         timestamp: Date.now(),
         v: 5,
       };
@@ -719,7 +677,7 @@ describe("operations", function () {
       let op2 = {
         name: "Spend Sponsorship",
         contextId: contextId.toLowerCase(),
-        app: soulboundApp,
+        app,
         timestamp: Date.now(),
         v: 5,
       };
@@ -729,7 +687,7 @@ describe("operations", function () {
       let op3 = {
         name: "Sponsor",
         contextId: contextId.toLowerCase(),
-        app: soulboundApp,
+        app,
         timestamp: Date.now(),
         v: 5,
       };
@@ -747,48 +705,8 @@ describe("operations", function () {
       resp3.json.data.spendRequested.should.equal(true);
     });
 
-    it("return contextid not found for the unlinked and not sponsored contextid", function () {
+    it("return not sponsored for the unlinked and not sponsored contextid", function () {
       const contextId = "0x51E4093bb8DA34AdD694A152635bE8e38F4F1a29";
-      let resp = request.get(
-        `${baseUrl}/verifications/${app}/${contextId.toLowerCase()}`,
-        {
-          qs: {
-            signed: "eth",
-            timestamp: "seconds",
-          },
-          json: true,
-        }
-      );
-      resp.json.errorNum.should.equal(errors.CONTEXTID_NOT_FOUND);
-    });
-
-    it('In the legacy apps: when the client sends "Link ContextId" node returns not sponsored for the not sponsored contextid', function () {
-      const contextId = "0x51E4093bb8DA34AdD694A152635bE8e38F4F1a29";
-      let op = {
-        name: "Spend Sponsorship",
-        contextId: contextId.toLowerCase(),
-        app,
-        timestamp: Date.now(),
-        v: 5,
-      };
-      apply(op);
-
-      op = {
-        name: "Link ContextId",
-        context: contextName,
-        id: u1.id,
-        contextId: contextId.toLowerCase(),
-        timestamp: Date.now(),
-        v: 5,
-      };
-      const message = getMessage(op);
-      op.sig = uInt8ArrayToB64(
-        Object.values(
-          nacl.sign.detached(strToUint8Array(message), u1.secretKey)
-        )
-      );
-      apply(op);
-
       let resp = request.get(
         `${baseUrl}/verifications/${app}/${contextId.toLowerCase()}`,
         {
@@ -802,7 +720,7 @@ describe("operations", function () {
       resp.json.errorNum.should.equal(errors.NOT_SPONSORED);
     });
 
-    it('In the legacy apps: when the app sent a "Sponsor" operation, it should be able to get verification', function () {
+    it("return contextid not found for the unlinked and sponsored contextid", function () {
       const contextId = "0x51E4093bb8DA34AdD694A152635bE8e38F4F1a29";
       let op = {
         name: "Sponsor",
@@ -829,15 +747,15 @@ describe("operations", function () {
           json: true,
         }
       );
-      resp.json.data.unique.should.equal(true);
+      resp.json.errorNum.should.equal(errors.CONTEXTID_NOT_FOUND);
     });
 
-    it('In the soulbound apps: when the client sends "Link ContextId", the app should be able to get verification (the client should check sponsorships status)', function () {
+    it('when the client sends "Link ContextId", the app should be able to get verification (the client should check sponsorships status)', function () {
       const contextId = "0x51E4093bb8DA34AdD694A152635bE8e38F4F1a30";
 
       const op = {
         name: "Link ContextId",
-        context: soulboundContextName,
+        context: contextName,
         id: u1.id,
         contextId: contextId.toLowerCase(),
         timestamp: Date.now(),
@@ -851,7 +769,7 @@ describe("operations", function () {
       );
       apply(op);
       let resp = request.get(
-        `${baseUrl}/verifications/${soulboundApp}/${contextId.toLowerCase()}`,
+        `${baseUrl}/verifications/${app}/${contextId.toLowerCase()}`,
         {
           qs: {
             signed: "eth",
@@ -866,7 +784,7 @@ describe("operations", function () {
 
   describe("Checking verifications signatures", function () {
     it("nacl signature", function () {
-      const contextId = "0x51E4093bb8DA34AdD694A152635bE8e38F4F1a29";
+      const contextId = "0x51E4093bb8DA34AdD694A152635bE8e38F4F1a30";
 
       let resp = request.get(
         `${baseUrl}/verifications/${app}/${contextId.toLowerCase()}`,
