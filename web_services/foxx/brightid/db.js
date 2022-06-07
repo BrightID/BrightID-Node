@@ -25,7 +25,6 @@ const verificationsColl = db._collection("verifications");
 const variablesColl = db._collection("variables");
 const cachedParamsColl = db._collection("cachedParams");
 const appIdsColl = db._collection("appIds");
-const contextsColl = db._collection("contexts");
 
 function connect(op) {
   let {
@@ -630,11 +629,7 @@ function getSponsorship(appUserId) {
 }
 
 function isSponsored(key) {
-  let sponsored =
-    sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
-
-  // It's a hotfix and should remove after the next client release
-  return true;
+  return sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
 }
 
 function unusedSponsorships(app) {
