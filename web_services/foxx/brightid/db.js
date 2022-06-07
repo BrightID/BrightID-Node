@@ -865,19 +865,13 @@ function sponsor(op) {
     _to: "apps/" + op.app,
   });
   if (!sponsorship) {
-    // legacy v5 apps do not spend sponsorships and apps' sponsor requests are permanent
-    const expireDate =
-      op.name == "Sponsor" && !app.soulbound
-        ? null
-        : Math.ceil(Date.now() / 1000 + 60 * 60);
-    const spendRequested = op.name == "Spend Sponsorship" || !app.soulbound;
     sponsorshipsColl.insert({
       _from: "users/0",
       _to: "apps/" + op.app,
-      expireDate,
+      expireDate: Math.ceil(Date.now() / 1000 + 60 * 60),
       appId: op.contextId,
       appHasAuthorized: op.name == "Sponsor",
-      spendRequested,
+      spendRequested: op.name == "Spend Sponsorship",
       timestamp: op.timestamp,
     });
     return;
