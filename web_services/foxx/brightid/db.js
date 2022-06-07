@@ -826,8 +826,7 @@ function setSigningKey(signingKey, key, timestamp) {
 }
 
 function isSponsored(key) {
-  return true;
-  // return sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
+  return sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
 }
 
 function getSponsorship(contextId) {
