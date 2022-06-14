@@ -29,8 +29,8 @@ def sendTransaction(data):
 def main():
     operations = []
     hashes = []
+    ignore = ['_id', '_rev', 'state', '_key', 'hash']
     for op in db.collection('operations').find({'state': 'init'}):
-        ignore = ['_id', '_rev', 'state', '_key', 'hash']
         d = {k: op[k] for k in op if k not in ignore}
         if len(json.dumps(operations)) + len(json.dumps(d)) > config.MAX_DATA_SIZE:
             break
@@ -43,10 +43,15 @@ def main():
 
     data = json.dumps(operations).encode('utf-8')
     data = '0x' + binascii.hexlify(data).decode('utf-8')
-    sendTransaction(data)
+    transaction_hash = sendTransaction(data)
     for i, op in enumerate(operations):
         db.collection('operations').update(
-            {'_key': hashes[i], 'state': 'sent'}, merge=True)
+            {
+                '_key': hashes[i],
+                'state': 'sent',
+                'transactionHash': transaction_hash
+            }, merge=True
+        )
 
 
 def wait():
