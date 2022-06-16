@@ -636,6 +636,8 @@ function unusedSponsorships(app) {
   const usedSponsorships = sponsorshipsColl
     .byExample({
       _to: "apps/" + app,
+      appHasAuthorized: true,
+      spendRequested: true,
     })
     .count();
   const { totalSponsorships } = appsColl.document(app);
