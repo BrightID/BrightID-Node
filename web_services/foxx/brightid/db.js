@@ -938,16 +938,18 @@ function getAppUserIds(appKey, period, countOnly) {
   }
   for (const verification of app.verifications) {
     query["verification"] = verification;
-    const appUserIds = appIdsColl
-      .byExample(query)
-      .toArray()
-      .map((d) => d.appId);
+    const appUserIds = new Set(
+      appIdsColl
+        .byExample(query)
+        .toArray()
+        .map((d) => d.appId)
+    );
     const data = {
       verification,
-      count: appUserIds.length,
+      count: appUserIds.size,
     };
     if (!countOnly) {
-      data["appUserIds"] = appUserIds;
+      data["appUserIds"] = Array.from(appUserIds);
     }
     res.push(data);
   }
