@@ -16,7 +16,7 @@ w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
-NUM_SEALERS = 10
+NUM_SEALERS = 0
 
 
 def hash(op):
@@ -93,6 +93,7 @@ def update_num_sealers():
 
 
 def main():
+    update_num_sealers()
     variables = db.collection('variables')
     last_block = variables.get('LAST_BLOCK')['value']
 
