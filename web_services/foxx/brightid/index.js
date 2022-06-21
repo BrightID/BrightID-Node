@@ -445,8 +445,8 @@ const handlers = {
   allVerificationsGet: function (req, res) {
     const appKey = req.param("app");
     const countOnly = req.param("countOnly");
-    const activeOnly = req.param("activeOnly");
-    const data = db.getAppUserIds(appKey, activeOnly, countOnly);
+    const period = req.param("period");
+    const data = db.getAppUserIds(appKey, period, countOnly);
     res.send({
       data,
     });
@@ -765,13 +765,12 @@ router
       .description("the app for which the user is verified")
   )
   .queryParam(
-    "activeOnly",
+    "period",
     joi
-      .boolean()
-      .default(false)
-      .description(
-        "true if the requester doesn't want the app generated ids whith expired rounded timestamp"
-      )
+      .string()
+      .default("all")
+      .valid("previous", "current", "all")
+      .description("defines expiration periods")
   )
   .queryParam(
     "countOnly",
@@ -782,7 +781,7 @@ router
         "true if the requester doesn't want the array of the app generated ids included"
       )
   )
-  .summary("Gets array of all of app generated ids verifed for the app")
+  .summary("Gets array of all of app generated ids verified for the app")
   .description(
     "Gets array of all of app generated ids that are sponsored and verified for using the app"
   )

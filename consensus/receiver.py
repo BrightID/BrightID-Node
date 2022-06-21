@@ -16,6 +16,8 @@ w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
 if config.INFURA_URL.count('rinkeby') > 0 or config.INFURA_URL.count('idchain') > 0:
     w3.middleware_onion.inject(geth_poa_middleware, layer=0)
 
+NUM_SEALERS = 0
+
 
 def hash(op):
     blockTime = op['blockTime']
@@ -78,7 +80,20 @@ def save_snapshot(block):
     shutil.move(dir_name, fnl_dir_name)
 
 
+def update_num_sealers():
+    global NUM_SEALERS
+    data = {'jsonrpc': '2.0', 'method': 'clique_status', 'params': [], 'id': 1}
+    headers = {'Content-Type': 'application/json', 'Cache-Control': 'no-cache'}
+    try:
+        resp = requests.post(config.IDCHAIN_RPC_URL, json=data, headers=headers)
+        NUM_SEALERS = len(resp.json()['result']['sealerActivity'])
+    except Exception as e:
+        print('Error from update_num_sealers', e)
+        update_num_sealers()
+
+
 def main():
+    update_num_sealers()
     variables = db.collection('variables')
     last_block = variables.get('LAST_BLOCK')['value']
 
@@ -87,16 +102,19 @@ def main():
         # for getting the last block number more than once per second
         time.sleep(1)
         current_block = w3.eth.getBlock('latest').number
+        confirmed_block = current_block - (NUM_SEALERS // 2 + 1)
 
-        if current_block > last_block:
+        if confirmed_block > last_block:
             # Here we should go to process the block imediately, but there seems
             # to be a bug in getBlock that cause error when we get the transactions
             # instantly. This delay is added to avoid that error.
             # When error is raised, the file will run again and no bad problem occur.
             time.sleep(3)
 
-        for block_number in range(last_block + 1, current_block + 1):
+        for block_number in range(last_block + 1, confirmed_block + 1):
             print('processing block {}'.format(block_number))
+            if block_number % 100 == 0:
+                update_num_sealers()
             block = w3.eth.getBlock(block_number, True)
             for i, tx in enumerate(block['transactions']):
                 if tx['to'] and tx['to'].lower() in (config.TO_ADDRESS.lower(), config.DEPRECATED_TO_ADDRESS.lower()):

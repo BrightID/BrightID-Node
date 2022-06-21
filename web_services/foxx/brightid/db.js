@@ -636,6 +636,7 @@ function unusedSponsorships(app) {
   const usedSponsorships = sponsorshipsColl
     .byExample({
       _to: "apps/" + app,
+      expireDate: null,
     })
     .count();
   const { totalSponsorships } = appsColl.document(app);
@@ -922,26 +923,33 @@ function isEthereumAddress(address) {
   return re.test(address);
 }
 
-function getAppUserIds(appKey, activeOnly, countOnly) {
+function getAppUserIds(appKey, period, countOnly) {
   const app = getApp(appKey);
   const res = [];
   let query = { app: app._key };
-  if (activeOnly) {
+  if (period == "current") {
     const vel = app.verificationExpirationLength;
     query["roundedTimestamp"] = vel ? parseInt(Date.now() / vel) * vel : 0;
+  } else if (period == "previous") {
+    const vel = app.verificationExpirationLength;
+    query["roundedTimestamp"] = vel
+      ? (parseInt(Date.now() / vel) - 1) * vel
+      : 0;
   }
   for (const verification of app.verifications) {
     query["verification"] = verification;
-    const appUserIds = appIdsColl
-      .byExample(query)
-      .toArray()
-      .map((d) => d.appId);
+    const appUserIds = new Set(
+      appIdsColl
+        .byExample(query)
+        .toArray()
+        .map((d) => d.appId)
+    );
     const data = {
       verification,
-      count: appUserIds.length,
+      count: appUserIds.size,
     };
     if (!countOnly) {
-      data["appUserIds"] = appUserIds;
+      data["appUserIds"] = Array.from(appUserIds);
     }
     res.push(data);
   }
