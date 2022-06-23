@@ -1,5 +1,7 @@
 "use strict";
 
+const secp256k1 = require("secp256k1");
+const createKeccakHash = require("keccak");
 const db = require("../db.js");
 const errors = require("../errors.js");
 const _ = require("lodash");
@@ -19,6 +21,8 @@ const {
   strToUint8Array,
   b64ToUint8Array,
   hash,
+  pad32,
+  addressToBytes32,
 } = require("../encoding");
 
 const { baseUrl } = module.context;
@@ -806,6 +810,39 @@ describe("operations", function () {
           b64ToUint8Array(resp.json.data.publicKey)
         )
         .should.equal(true);
+    });
+
+    it("eth signature", function () {
+      const contextId = "0x51E4093bb8DA34AdD694A152635bE8e38F4F1a30";
+
+      let resp = request.get(
+        `${baseUrl}/verifications/${app}/${contextId.toLowerCase()}`,
+        {
+          qs: {
+            signed: "eth",
+          },
+          json: true,
+        }
+      );
+      resp.status.should.equal(200);
+      resp.json.data.unique.should.equal(true);
+
+      let message =
+        pad32(resp.json.data.app) +
+        resp.json.data.contextIds.map(addressToBytes32).join("");
+      message = Buffer.from(message, "binary").toString("hex");
+      message = new Uint8Array(
+        createKeccakHash("keccak256").update(message, "hex").digest()
+      );
+
+      let signature = resp.json.data.sig.r + resp.json.data.sig.s;
+      signature = new Uint8Array(Buffer.from(signature, "hex"));
+
+      const publicKey = new Uint8Array(
+        Buffer.from(resp.json.data.publicKey, "hex")
+      );
+
+      secp256k1.ecdsaVerify(signature, message, publicKey).should.equal(true);
     });
   });
 });
