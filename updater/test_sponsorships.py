@@ -32,7 +32,6 @@ class TestUpdate(unittest.TestCase):
         self.CONTRACT_ABI = '[{"anonymous": false,"inputs": [{"indexed": true,"internalType": "address","name": "addr","type": "address"}],"name": "Sponsor","type": "event"},{"inputs": [{"internalType": "address","name": "addr","type": "address"}],"name": "sponsor","outputs": [],"stateMutability": "nonpayable","type": "function"}]'
         self.PRIVATE_KEY = ''
         self.APP = ''.join(random.choices(string.ascii_uppercase, k=5))
-        self.APP2 = ''.join(random.choices(string.ascii_uppercase, k=5))
         private, public = ed25519.create_keypair()
         public = base64.b64encode(public.to_bytes()).decode('ascii')
         private = base64.b64encode(private.to_bytes()).decode('ascii')
@@ -41,14 +40,10 @@ class TestUpdate(unittest.TestCase):
         self.w3 = Web3(Web3.WebsocketProvider(
             self.WS_PROVIDER, websocket_kwargs={'timeout': 60}))
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
-        self.CONTEXT_ID = self.w3.eth.account.create(
-            'SIFTALFJAFJMOHSEN').address.lower()
+        self.CONTEXT_ID = self.w3.eth.account.create().address.lower()
         self.variables = sponsorships.db.collection('variables')
-        self.users = sponsorships.db.collection('users')
         self.apps = sponsorships.db.collection('apps')
-        self.contexts = sponsorships.db.collection('contexts')
         self.sponsorships = sponsorships.db.collection('sponsorships')
-        self.operations = sponsorships.db.collection('operations')
         self.contract = self.w3.eth.contract(
             address=self.SPONSOR_EVENT_CONTRACT,
             abi=self.CONTRACT_ABI)
@@ -57,9 +52,6 @@ class TestUpdate(unittest.TestCase):
         self.app = {
             '_key': self.APP,
             'ethName': self.APP,
-            'collection': self.APP,
-            'context': self.APP,
-            'verification': self.APP,
             'wsProvider': self.WS_PROVIDER,
             'sponsorEventContract': self.SPONSOR_EVENT_CONTRACT,
             'sponsorPublicKey': public,
@@ -67,38 +59,9 @@ class TestUpdate(unittest.TestCase):
             'totalSponsorships': 2,
             'idsAsHex': self.IDS_AS_HEX
         }
-        self.context = {
-            '_key': self.APP,
-            'collection': self.APP,
-            'verification': self.APP,
-        }
-
-        self.app_v6 = {
-            '_key': self.APP2,
-            'collection': self.APP2,
-            'verification': self.APP,
-            'wsProvider': self.WS_PROVIDER,
-            'sponsorEventContract': self.SPONSOR_EVENT_CONTRACT,
-            'sponsorPublicKey': '',
-            'totalSponsorships': 2,
-            'idsAsHex': self.IDS_AS_HEX,
-            'usingBlindSig': True
-        }
 
     def setUp(self):
         self.apps.insert(self.app)
-        self.apps.insert(self.app_v6)
-        self.contexts.insert(self.context)
-        self.users.insert({
-            '_key': self.USER,
-            'verifications': [self.APP],
-        })
-        context_collection = sponsorships.db.create_collection(self.APP)
-        context_collection.insert({
-            'user': self.USER,
-            'contextId': self.CONTEXT_ID,
-            'timestamp': int(time.time())
-        })
         self.testblocks.insert({
             'app': self.APP,
             'contextId': self.CONTEXT_ID,
@@ -108,35 +71,15 @@ class TestUpdate(unittest.TestCase):
 
     def tearDown(self):
         try:
-            self.contexts.delete(self.APP)
-        except Exception:
-            pass
-        try:
             self.apps.delete(self.APP)
-        except Exception:
-            pass
-        try:
-            self.apps.delete(self.APP2)
-        except Exception:
-            pass
-        try:
-            self.users.delete(self.USER)
-        except Exception:
-            pass
-        try:
-            sponsorships.db.delete_collection(self.APP)
         except Exception:
             pass
         try:
             self.variables.delete(f'LAST_BLOCK_LOG_{self.APP}')
         except Exception:
             pass
-        try:
-            self.variables.delete(f'LAST_BLOCK_LOG_{self.APP2}')
-        except Exception:
-            pass
         for r in self.sponsorships:
-            if r['_from'] == f'users/{self.USER}' or r.get('contextId') == self.CONTEXT_ID or r.get('appId') == self.CONTEXT_ID:
+            if r.get('appId') == self.CONTEXT_ID:
                 self.sponsorships.delete(r['_key'])
 
     def priv2addr(self, private_key):
@@ -174,24 +117,17 @@ class TestUpdate(unittest.TestCase):
             '_key': f'LAST_BLOCK_LOG_{self.APP}',
             'value': lb - 1
         })
-        self.variables.insert({
-            '_key': f'LAST_BLOCK_LOG_{self.APP2}',
-            'value': lb - 1
-        })
         sponsorships.update()
-
-        self.assertFalse(self.operations.find({
-            'name': 'Sponsor',
-            'app': self.APP,
-            'id': self.USER,
+        self.assertFalse(self.sponsorships.find({
+            '_from': 'users/0',
+            '_to': f'apps/{self.APP}',
+            'appId': self.CONTEXT_ID,
+            'appHasAuthorized': True,
+            'spendRequested': False
         }).empty())
         self.assertTrue(self.testblocks.find(
             {'contextId': self.CONTEXT_ID}).empty())
-        self.assertFalse(self.sponsorships.find(
-            {'appId': self.CONTEXT_ID, 'state': 'app'}).empty())
         time.sleep(60)
-        # self.assertFalse(self.sponsorships.find(
-        #     {'_from': f'users/{self.USER}'}).empty())
 
 
 if __name__ == '__main__':
