@@ -74,7 +74,7 @@ def sponsor(app, app_id):
 def has_sponsorship(app):
     tsponsorships = app['totalSponsorships']
     usponsorships = sponsorships.find(
-                {'_to': 'apps/{0}'.format(app['_key'])}).count()
+        {'_to': 'apps/{0}'.format(app['_key']), 'expireDate': None}).count()
     return tsponsorships - usponsorships > 0
 
 
