@@ -10,6 +10,7 @@ const {
   getNaclKeyPair,
   getEthKeyPair,
   getConsensusSenderAddress,
+  recoverEthSignedMsg,
 } = require("./encoding");
 const errors = require("./errors");
 
@@ -684,13 +685,19 @@ function userVerifications(user) {
 }
 
 function linkContextId(id, context, contextId, timestamp) {
-  const { collection, idsAsHex, soulbound } = getContext(context);
+  const { collection, idsAsHex, soulbound, soulboundMessage } =
+    getContext(context);
   const coll = db._collection(collection);
   if (!contextId) {
     throw new errors.InvalidContextIdError(contextId);
   }
 
-  if (idsAsHex) {
+  if (soulboundMessage) {
+    if (!isEthereumSignature(contextId)) {
+      throw new errors.InvalidContextIdError(contextId);
+    }
+    contextId = recoverEthSignedMsg(contextId, soulboundMessage);
+  } else if (idsAsHex) {
     if (!isEthereumAddress(contextId)) {
       throw new errors.InvalidContextIdError(contextId);
     }
@@ -1037,6 +1044,11 @@ function removeAllSigningKeys(id, signingKey) {
 function isEthereumAddress(address) {
   const re = new RegExp(/^0[xX][A-Fa-f0-9]{40}$/);
   return re.test(address);
+}
+
+function isEthereumSignature(sig) {
+  const re = new RegExp(/^[A-Fa-f0-9]{130}$/);
+  return re.test(sig);
 }
 
 module.exports = {
