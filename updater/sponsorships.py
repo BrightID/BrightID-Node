@@ -47,7 +47,7 @@ def get_events(app):
 
 
 def sponsor(app, app_id):
-    c = sponsorships.find({'appId': app_id})
+    c = sponsorships.find({'_to': f'apps/{app}', 'appId': app_id})
     if c.empty():
         db['sponsorships'].insert({
             '_from': 'users/0',
@@ -93,8 +93,6 @@ def is_using_sponsor_contract(app):
     if not app.get('sponsorEventContract'):
         return False
     if not app.get('wsProvider'):
-        return False
-    if not app.get('usingBlindSig') and not app.get('sponsorPrivateKey'):
         return False
     return True
 
