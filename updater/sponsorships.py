@@ -1,10 +1,6 @@
 import time
-import json
-import base64
-import ed25519
 import traceback
 from web3 import Web3
-from hashlib import sha256
 from arango import ArangoClient
 from web3.middleware import geth_poa_middleware, local_filter_middleware
 import config
