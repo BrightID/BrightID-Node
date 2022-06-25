@@ -130,12 +130,12 @@ function getConsensusSenderAddress() {
 function recoverEthSignedMsg(signature, message) {
   message = `\x19Ethereum Signed Message:\n${message.length}${message}`;
   const hexMessage = Buffer.from(message, "binary").toString("hex");
-  const uint8ArrayMsg = new Uint8Array(
+  const hashMessage = new Uint8Array(
     createKeccakHash("keccak256").update(hexMessage, "hex").digest()
   );
   const recid = parseInt(signature.slice(-2), 16) - 27;
   signature = new Uint8Array(Buffer.from(signature.slice(0, -2), "hex"));
-  let publicKey = secp256k1.ecdsaRecover(signature, recid, uint8ArrayMsg);
+  let publicKey = secp256k1.ecdsaRecover(signature, recid, hashMessage);
   publicKey = Buffer.from(
     secp256k1.publicKeyConvert(publicKey, false).buffer
   ).slice(1);
