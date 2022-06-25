@@ -8,7 +8,8 @@ const arango = require("@arangodb").db;
 const usersColl = arango._collection("users");
 const connectionsColl = arango._collection("connections");
 const verificationsColl = arango._collection("verifications");
-const wait = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+const variablesColl = arango._collection("variables");
+let hashes;
 
 const chai = require("chai");
 const should = chai.should();
@@ -22,11 +23,14 @@ describe("time window", function () {
     usersColl.insert({ _key: "b" });
     usersColl.insert({ _key: "c" });
     verificationsColl.insert({ name: "BrightID", user: "a" });
+    hashes = variablesColl.document("VERIFICATIONS_HASHES").hashes;
+    variablesColl.update("VERIFICATIONS_HASHES", { hashes: "{}" });
   });
   after(function () {
     usersColl.truncate();
     connectionsColl.truncate();
     verificationsColl.truncate();
+    variablesColl.update("VERIFICATIONS_HASHES", { hashes });
   });
   it("should get error after limit", function () {
     operations.checkLimits({ name: "Add Group", id: "a" }, 100, 2);
