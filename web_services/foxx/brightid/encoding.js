@@ -127,7 +127,7 @@ function getConsensusSenderAddress() {
   return address;
 }
 
-function recoverEthSignedMsg(signature, message) {
+function recoverEthSigner(signature, message) {
   message = `\x19Ethereum Signed Message:\n${message.length}${message}`;
   const hexMessage = Buffer.from(message, "binary").toString("hex");
   const hashMessage = new Uint8Array(
@@ -157,5 +157,5 @@ module.exports = {
   getNaclKeyPair,
   getEthKeyPair,
   getConsensusSenderAddress,
-  recoverEthSignedMsg,
+  recoverEthSigner,
 };

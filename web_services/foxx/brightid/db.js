@@ -10,7 +10,7 @@ const {
   getNaclKeyPair,
   getEthKeyPair,
   getConsensusSenderAddress,
-  recoverEthSignedMsg,
+  recoverEthSigner,
 } = require("./encoding");
 const errors = require("./errors");
 
@@ -696,7 +696,7 @@ function linkContextId(id, context, contextId, timestamp) {
     if (!isEthereumSignature(contextId)) {
       throw new errors.InvalidContextIdError(contextId);
     }
-    contextId = recoverEthSignedMsg(contextId, soulboundMessage);
+    contextId = recoverEthSigner(contextId, soulboundMessage);
   } else if (idsAsHex) {
     if (!isEthereumAddress(contextId)) {
       throw new errors.InvalidContextIdError(contextId);
