@@ -1,17 +1,18 @@
 const stringify = require("fast-json-stable-stringify");
 const db = require("./db");
-const arango = require("@arangodb").db;
+const { db: arango, query } = require("@arangodb");
 var CryptoJS = require("crypto-js");
 const nacl = require("tweetnacl");
 const {
   strToUint8Array,
   b64ToUint8Array,
-  uInt8ArrayToB64,
-  b64ToUrlSafeB64,
   urlSafeB64ToB64,
   hash,
 } = require("./encoding");
 const errors = require("./errors");
+
+const usersColl = arango._collection("users");
+const operationCountersColl = arango._collection("operationCounters");
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
@@ -69,50 +70,63 @@ const senderAttrs = {
   "Update Group": ["id"],
 };
 
-let operationsCount = {};
-let resetTime = 0;
 function checkLimits(op, timeWindow, limit) {
+  let expireDate;
   const now = Date.now();
-  if (now > resetTime) {
-    operationsCount = {};
-    resetTime = now + timeWindow;
-  }
   const senders = senderAttrs[op.name].map((attr) => op[attr]);
-  const usersColl = arango._collection("users");
   for (let sender of senders) {
     // these condition structure is applying:
     // 1) a bucket for a verified user
     // 2) a bucket for children of a verified user
     // 3) a bucket for all non-verified users without parent
+    // 4) a bucket for an app
     // where parent is the first verified user that make connection with the user
-    if (!usersColl.exists(sender)) {
-      // this happens when operation is "Add Connection" and one/both sides don't exist
-      sender = "shared";
-    } else {
-      const user = usersColl.document(sender);
-      const verifications = db.userVerifications(user._key).map((v) => v.name);
-      verified = verifications && verifications.includes("BrightID");
-      if (!verified && user.parent) {
-        // this happens when user is not verified but has a verified connection
-        sender = `shared_${user.parent}`;
-      } else if (!verified && !user.parent) {
-        // this happens when user is not verified and does not have a verified connection
+    if (!["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
+      if (!usersColl.exists(sender)) {
+        // this happens when operation is "Add Connection" and one/both sides don't exist
         sender = "shared";
+      } else {
+        const user = usersColl.document(sender);
+        const verifications = db
+          .userVerifications(user._key)
+          .map((v) => v.name);
+        verified = verifications && verifications.includes("BrightID");
+        if (!verified && user.parent) {
+          // this happens when user is not verified but has a verified connection
+          sender = `shared_${user.parent}`;
+        } else if (!verified && !user.parent) {
+          // this happens when user is not verified and does not have a verified connection
+          sender = "shared";
+        }
       }
     }
-    if (!operationsCount[sender]) {
-      operationsCount[sender] = 0;
-    }
-    operationsCount[sender] += 1;
-    if (operationsCount[sender] <= limit) {
+    const cursor = operationCountersColl.firstExample({ _key: sender });
+    let counter = cursor ? cursor.counter : 0;
+    expireDate = cursor
+      ? cursor.expireDate
+      : Math.ceil(now / 1000 + timeWindow / 1000);
+    counter += 1;
+    query`
+      UPSERT { _key: ${sender} } 
+        INSERT {
+          _key: ${sender},
+          counter: ${counter},
+          expireDate: ${expireDate},
+        }
+        UPDATE { counter: ${counter} }
+      IN operationCounters
+    `;
+
+    if (counter <= limit) {
       // if operation has multiple senders, this check will be passed
       // even if one of the senders did not reach limit yet
       return;
     }
   }
+
   throw new errors.TooManyOperationsError(
     senders,
-    resetTime - now,
+    expireDate * 1000 - now,
     timeWindow,
     limit
   );
