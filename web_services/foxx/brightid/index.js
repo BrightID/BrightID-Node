@@ -11,7 +11,6 @@ const schemas = require("./schemas").schemas;
 const operations = require("./operations");
 const {
   strToUint8Array,
-  b64ToUint8Array,
   uInt8ArrayToB64,
   hash,
   pad32,
@@ -26,7 +25,6 @@ const router = createRouter();
 module.context.use(router);
 const operationsHashesColl = arango._collection("operationsHashes");
 
-const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 const MAX_OP_SIZE = 2000;
 
 const handlers = {
