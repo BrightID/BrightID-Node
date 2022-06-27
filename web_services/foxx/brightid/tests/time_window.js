@@ -9,6 +9,7 @@ const usersColl = arango._collection("users");
 const connectionsColl = arango._collection("connections");
 const verificationsColl = arango._collection("verifications");
 const variablesColl = arango._collection("variables");
+const operationCountersColl = arango._collection("operationCounters");
 let hashes;
 
 const chai = require("chai");
@@ -23,14 +24,15 @@ describe("time window", function () {
     usersColl.insert({ _key: "b" });
     usersColl.insert({ _key: "c" });
     verificationsColl.insert({ name: "BrightID", user: "a" });
-    hashes = variablesColl.document("VERIFICATIONS_HASHES").hashes;
-    variablesColl.update("VERIFICATIONS_HASHES", { hashes: "{}" });
+    variablesColl.truncate();
+    operationCountersColl.truncate();
   });
   after(function () {
     usersColl.truncate();
     connectionsColl.truncate();
     verificationsColl.truncate();
-    variablesColl.update("VERIFICATIONS_HASHES", { hashes });
+    variablesColl.truncate();
+    operationCountersColl.truncate();
   });
   it("should get error after limit", function () {
     operations.checkLimits({ name: "Add Group", id: "a" }, 100, 2);
@@ -38,12 +40,6 @@ describe("time window", function () {
     (() => {
       operations.checkLimits({ name: "Add Membership", id: "a" }, 100, 2);
     }).should.throw(errors.TooManyOperationsError);
-  });
-  it("limit should be removed after time window passed", function () {
-    // for some reason setTimeout is not working
-    const now = Date.now();
-    while (Date.now() - now <= 100);
-    operations.checkLimits({ name: "Remove Group", id: "a" }, 100, 2);
   });
   it("unverified users should have shared limit", function () {
     const now = Date.now();
@@ -66,6 +62,13 @@ describe("time window", function () {
     operations.checkLimits({ name: "Add Group", id: "c" }, 100, 2);
     (() => {
       operations.checkLimits({ name: "Add Membership", id: "c" }, 100, 2);
+    }).should.throw(errors.TooManyOperationsError);
+  });
+  it("every app should have different limit", function () {
+    operations.checkLimits({ name: "Sponsor", app: "app1" }, 100, 2);
+    operations.checkLimits({ name: "Sponsor", app: "app1" }, 100, 2);
+    (() => {
+      operations.checkLimits({ name: "Sponsor", app: "app1" }, 100, 2);
     }).should.throw(errors.TooManyOperationsError);
   });
 });

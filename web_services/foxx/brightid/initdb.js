@@ -22,6 +22,7 @@ const collections = {
   cachedParams: "document",
   signedVerifications: "document",
   appIds: "document",
+  operationCounters: "document",
 };
 
 // deprecated collections should be added to this array after releasing
@@ -57,6 +58,12 @@ const indexes = [
   },
   { collection: "appIds", fields: ["uid"], type: "persistent" },
   { collection: "appIds", fields: ["app", "appId"], type: "persistent" },
+  {
+    collection: "operationCounters",
+    fields: ["expireDate"],
+    type: "ttl",
+    expireAfter: 0,
+  },
 ];
 
 const variables = [

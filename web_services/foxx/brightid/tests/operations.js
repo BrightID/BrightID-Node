@@ -38,6 +38,7 @@ const sponsorshipsColl = arango._collection("sponsorships");
 const operationsHashesColl = arango._collection("operationsHashes");
 const invitationsColl = arango._collection("invitations");
 const verificationsColl = arango._collection("verifications");
+const operationCountersColl = arango._collection("operationCounters");
 
 const chai = require("chai");
 const should = chai.should();
@@ -123,6 +124,7 @@ describe("operations", function () {
       totalSponsorships: 3,
       idsAsHex: true,
     });
+    operationCountersColl.truncate();
   });
 
   after(function () {
@@ -136,6 +138,7 @@ describe("operations", function () {
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     verificationsColl.truncate();
+    operationCountersColl.truncate();
   });
 
   it('should be able to "Connect"', function () {
