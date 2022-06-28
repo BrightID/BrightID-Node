@@ -6,8 +6,7 @@ const db = require("../db.js");
 const errors = require("../errors.js");
 const _ = require("lodash");
 const { getMessage } = require("../operations");
-const arango = require("@arangodb").db;
-const query = require("@arangodb").query;
+const { db: arango, query } = require("@arangodb");
 const request = require("@arangodb/request");
 const nacl = require("tweetnacl");
 nacl.setPRNG(function (x, n) {
@@ -41,6 +40,7 @@ const sponsorshipsColl = arango._collection("sponsorships");
 const operationsHashesColl = arango._collection("operationsHashes");
 const invitationsColl = arango._collection("invitations");
 const verificationsColl = arango._collection("verifications");
+const operationCountersColl = arango._collection("operationCounters");
 const variablesColl = arango._collection("variables");
 
 const chai = require("chai");
@@ -144,21 +144,25 @@ describe("operations", function () {
       soulbound: true,
       sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
     });
+    const hashes = JSON.parse(variablesColl.document("VERIFICATIONS_HASHES").hashes);
+    const block = Math.max(...Object.keys(hashes));
     verificationsColl.insert({
       name: "BrightID",
       user: u1.id,
+      block,
     });
     verificationsColl.insert({
       name: "BrightID",
       user: u3.id,
+      block,
     });
     verificationsColl.insert({
       name: "SeedConnected",
       user: u1.id,
       rank: 3,
+      block,
     });
-    hashes = variablesColl.document("VERIFICATIONS_HASHES").hashes;
-    variablesColl.update("VERIFICATIONS_HASHES", { hashes: "{}" });
+    operationCountersColl.truncate();
   });
 
   after(function () {
@@ -175,7 +179,7 @@ describe("operations", function () {
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     verificationsColl.truncate();
-    variablesColl.update("VERIFICATIONS_HASHES", { hashes });
+    operationCountersColl.truncate();
   });
 
   it('should be able to "Add Connection"', function () {

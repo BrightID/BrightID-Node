@@ -5,7 +5,6 @@ const _ = require("lodash");
 const { getMessage } = require("../operations");
 const errors = require("../errors");
 const arango = require("@arangodb").db;
-const query = require("@arangodb").query;
 const request = require("@arangodb/request");
 const nacl = require("tweetnacl");
 nacl.setPRNG(function (x, n) {
