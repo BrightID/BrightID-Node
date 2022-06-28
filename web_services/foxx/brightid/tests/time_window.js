@@ -23,15 +23,17 @@ describe("time window", function () {
     usersColl.insert({ _key: "a" });
     usersColl.insert({ _key: "b" });
     usersColl.insert({ _key: "c" });
-    verificationsColl.insert({ name: "BrightID", user: "a" });
-    variablesColl.truncate();
+    const hashes = JSON.parse(
+      variablesColl.document("VERIFICATIONS_HASHES").hashes
+    );
+    const block = Math.max(...Object.keys(hashes));
+    verificationsColl.insert({ name: "BrightID", user: "a", block });
     operationCountersColl.truncate();
   });
   after(function () {
     usersColl.truncate();
     connectionsColl.truncate();
     verificationsColl.truncate();
-    variablesColl.truncate();
     operationCountersColl.truncate();
   });
   it("should get error after limit", function () {
