@@ -100,11 +100,9 @@ function checkLimits(op, timeWindow, limit) {
         }
       }
     }
-    const cursor = operationCountersColl.firstExample({ _key: sender });
-    let counter = cursor ? cursor.counter : 0;
-    expireDate = cursor
-      ? cursor.expireDate
-      : Math.ceil(now / 1000 + timeWindow / 1000);
+    const c = operationCountersColl.firstExample({ _key: sender });
+    let counter = c ? c.counter : 0;
+    expireDate = c ? c.expireDate : Math.ceil(now / 1000 + timeWindow / 1000);
     counter += 1;
     query`
       UPSERT { _key: ${sender} } 
