@@ -54,6 +54,7 @@ const INVALID_APP_ID = 64;
 const CACHED_PARAMS_NOT_FOUND = 65;
 const FORBIDDEN_CONNECTION = 66;
 const UNSINGABLE_APP_USER_ID = 67;
+const SPONSOR_REQUESTED_RECENTLY = 68;
 
 class BrightIDError extends Error {
   constructor() {
@@ -576,6 +577,14 @@ class UnsingableAppUserIdError extends BadRequestError {
   }
 }
 
+class SponsorRequestedRecently extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = SPONSOR_REQUESTED_RECENTLY;
+    this.message = `The app has sent this sponsor request recently.`;
+  }
+}
+
 module.exports = {
   NOT_VERIFIED,
   NOT_SPONSORED,
@@ -632,6 +641,7 @@ module.exports = {
   CACHED_PARAMS_NOT_FOUND,
   FORBIDDEN_CONNECTION,
   UNSINGABLE_APP_USER_ID,
+  SPONSOR_REQUESTED_RECENTLY,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -693,4 +703,5 @@ module.exports = {
   CachedParamsNotFound,
   ForbiddenConnectionError,
   UnsingableAppUserIdError,
+  SponsorRequestedRecently,
 };
