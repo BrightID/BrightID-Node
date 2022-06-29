@@ -1051,6 +1051,26 @@ function isEthereumSignature(sig) {
   return re.test(sig);
 }
 
+function alreadySponsored(op) {
+  const lastOperationTimestamp = query`
+    FOR o in ${operationsColl}
+      FILTER o.name == "Sponsor"
+      AND o.contextId == ${op.contextId}
+      SORT o.timestamp ASC
+      RETURN o.timestamp
+  `
+    .toArray()
+    .pop();
+
+  const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
+  if (
+    lastOperationTimestamp &&
+    Date.now() - lastOperationTimestamp < timeWindow
+  ) {
+    throw new errors.SponsorRequestedRecently();
+  }
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -1105,4 +1125,5 @@ module.exports = {
   updateEligibles,
   updateGroup,
   isEthereumAddress,
+  alreadySponsored,
 };

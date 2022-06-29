@@ -42,6 +42,7 @@ const INELIGIBLE_RECOVERY_CONNECTION = 43;
 const INVALID_CONTEXTID = 44;
 const APP_AUTHORIZED_BEFORE = 45;
 const SPEND_REQUESTED_BEFORE = 46;
+const SPONSOR_REQUESTED_RECENTLY = 47;
 
 class BrightIDError extends Error {
   constructor() {
@@ -469,6 +470,14 @@ class SpendRequestedBeforeError extends ForbiddenError {
   }
 }
 
+class SponsorRequestedRecently extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = SPONSOR_REQUESTED_RECENTLY;
+    this.message = `The app has sent this sponsor request recently.`;
+  }
+}
+
 module.exports = {
   CONTEXT_NOT_FOUND,
   CONTEXTID_NOT_FOUND,
@@ -513,6 +522,7 @@ module.exports = {
   INVALID_CONTEXTID,
   APP_AUTHORIZED_BEFORE,
   SPEND_REQUESTED_BEFORE,
+  SPONSOR_REQUESTED_RECENTLY,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -562,4 +572,5 @@ module.exports = {
   InvalidContextIdError,
   AppAuthorizedBeforeError,
   SpendRequestedBeforeError,
+  SponsorRequestedRecently,
 };
