@@ -6,8 +6,7 @@ const db = require("../db.js");
 const errors = require("../errors.js");
 const _ = require("lodash");
 const { getMessage } = require("../operations");
-const arango = require("@arangodb").db;
-const query = require("@arangodb").query;
+const { db: arango, query } = require("@arangodb");
 const request = require("@arangodb/request");
 const nacl = require("tweetnacl");
 nacl.setPRNG(function (x, n) {
@@ -41,6 +40,7 @@ const sponsorshipsColl = arango._collection("sponsorships");
 const operationsHashesColl = arango._collection("operationsHashes");
 const invitationsColl = arango._collection("invitations");
 const verificationsColl = arango._collection("verifications");
+const operationCountersColl = arango._collection("operationCounters");
 const variablesColl = arango._collection("variables");
 
 const chai = require("chai");
@@ -60,6 +60,11 @@ let { secretKey: linkAESKey } = nacl.sign.keyPair();
 const contextId = "0x636D49c1D76ff8E04767C68fe75eC9900719464b".toLowerCase();
 const contextName = "ethereum";
 const app = "ethereum";
+
+const soulboundContextName = "soulboundToken";
+const soulboundApp = "soulboundToken";
+
+const soulboundMessage = "it's a test message.";
 
 function apply(op) {
   let resp = request.post(`${baseUrl}/operations`, {
@@ -87,6 +92,12 @@ describe("operations", function () {
       contextIdsColl.truncate();
     } else {
       contextIdsColl = arango._create(contextName);
+    }
+    contextIdsColl2 = arango._collection(soulboundContextName);
+    if (contextIdsColl2) {
+      contextIdsColl2.truncate();
+    } else {
+      contextIdsColl2 = arango._create(soulboundContextName);
     }
     operationsHashesColl.truncate();
     usersColl.truncate();
@@ -118,17 +129,40 @@ describe("operations", function () {
       idsAsHex: true,
       sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
     });
+    contextsColl.insert({
+      _key: soulboundContextName,
+      collection: soulboundContextName,
+      soulboundMessage,
+      linkAESKey: uInt8ArrayToB64(Object.values(linkAESKey)),
+      soulbound: true,
+    });
+    appsColl.insert({
+      _key: soulboundApp,
+      context: soulboundContextName,
+      totalSponsorships: 1,
+      verification: "BrightID",
+      soulbound: true,
+      sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
+    });
+    const hashes = JSON.parse(variablesColl.document("VERIFICATIONS_HASHES").hashes);
+    const block = Math.max(...Object.keys(hashes));
     verificationsColl.insert({
       name: "BrightID",
       user: u1.id,
+      block,
+    });
+    verificationsColl.insert({
+      name: "BrightID",
+      user: u3.id,
+      block,
     });
     verificationsColl.insert({
       name: "SeedConnected",
       user: u1.id,
       rank: 3,
+      block,
     });
-    hashes = variablesColl.document("VERIFICATIONS_HASHES").hashes;
-    variablesColl.update("VERIFICATIONS_HASHES", { hashes: "{}" });
+    operationCountersColl.truncate();
   });
 
   after(function () {
@@ -145,7 +179,7 @@ describe("operations", function () {
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     verificationsColl.truncate();
-    variablesColl.update("VERIFICATIONS_HASHES", { hashes });
+    operationCountersColl.truncate();
   });
 
   it('should be able to "Add Connection"', function () {
@@ -475,6 +509,43 @@ describe("operations", function () {
     );
     apply(op);
     db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
+  });
+
+  it("should be able to linking with Ethereum-signed messages for the soulbound apps", function () {
+    const exampleSig = {
+      address: "0xcc15be495d8c8996eefdfc78b2b23ba2fa92d67b",
+      msg: "0x6974277320612074657374206d6573736167652e",
+      sig: "e79413f9425cef5771d73321554f96483ef491e7579e85e518fcf84e0948646c393f9afed2de78fa22bf32b0fa4c66cec4d441b90c380f4f67bf8395a551e1111c",
+    };
+
+    const timestamp = Date.now();
+    const op = {
+      v: 5,
+      name: "Link ContextId",
+      context: soulboundContextName,
+      timestamp,
+      id: u3.id,
+      contextId: exampleSig.sig,
+    };
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
+    );
+    const res = apply(op);
+    db.getContextIdsByUser(contextIdsColl2, u3.id)[0].should.equal(
+      exampleSig.address
+    );
+    let resp = request.get(
+      `${baseUrl}/verifications/${soulboundApp}/${exampleSig.address}`,
+      {
+        qs: {
+          signed: "nacl",
+        },
+        json: true,
+      }
+    );
+    resp.status.should.equal(200);
+    resp.json.data.unique.should.equal(true);
   });
 
   it('should be able to "Connect"', function () {

@@ -10,6 +10,7 @@ const {
   getNaclKeyPair,
   getEthKeyPair,
   getConsensusSenderAddress,
+  recoverEthSigner,
 } = require("./encoding");
 const errors = require("./errors");
 
@@ -684,13 +685,19 @@ function userVerifications(user) {
 }
 
 function linkContextId(id, context, contextId, timestamp) {
-  const { collection, idsAsHex, soulbound } = getContext(context);
+  const { collection, idsAsHex, soulbound, soulboundMessage } =
+    getContext(context);
   const coll = db._collection(collection);
   if (!contextId) {
     throw new errors.InvalidContextIdError(contextId);
   }
 
-  if (idsAsHex) {
+  if (soulboundMessage) {
+    if (!isEthereumSignature(contextId)) {
+      throw new errors.InvalidContextIdError(contextId);
+    }
+    contextId = recoverEthSigner(contextId, soulboundMessage);
+  } else if (idsAsHex) {
     if (!isEthereumAddress(contextId)) {
       throw new errors.InvalidContextIdError(contextId);
     }
@@ -1039,6 +1046,28 @@ function isEthereumAddress(address) {
   return re.test(address);
 }
 
+function isEthereumSignature(sig) {
+  const re = new RegExp(/^[A-Fa-f0-9]{130}$/);
+  return re.test(sig);
+}
+
+function sponsorRequestedRecently(op) {
+  const lastSponsorTimestamp = query`
+    FOR o in ${operationsColl}
+      FILTER o.name == "Sponsor"
+      AND o.contextId == ${op.contextId}
+      SORT o.timestamp ASC
+      RETURN o.timestamp
+  `
+    .toArray()
+    .pop();
+
+  const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
+  return (
+    lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow
+  );
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -1093,4 +1122,5 @@ module.exports = {
   updateEligibles,
   updateGroup,
   isEthereumAddress,
+  sponsorRequestedRecently,
 };

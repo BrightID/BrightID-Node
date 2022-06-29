@@ -17,6 +17,7 @@ const collections = {
   variables: "document",
   verifications: "document",
   testblocks: "document",
+  operationCounters: "document",
 };
 
 // deprecated collections should be added to this array after releasing
@@ -42,6 +43,12 @@ const indexes = [
   },
   { collection: "groups", fields: ["seed"], type: "persistent" },
   { collection: "operations", fields: ["state"], type: "persistent" },
+  {
+    collection: "operationCounters",
+    fields: ["expireDate"],
+    type: "ttl",
+    expireAfter: 0,
+  },
 ];
 
 const variables = [
