@@ -158,7 +158,10 @@ function verify(op) {
   let message = getMessage(op);
   if (op.name == "Sponsor") {
     verifyAppSig(message, op.app, op.sig);
-    db.alreadySponsored(op);
+    if (db.sponsorRequestedRecently(op)) {
+      // prevent apps from sending duplicate sponsor requests
+      throw new errors.SponsorRequestedRecently();
+    }
   } else if (op.name == "Spend Sponsorship") {
     // there is no sig on this operation
     return;

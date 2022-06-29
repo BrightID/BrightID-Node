@@ -1051,8 +1051,8 @@ function isEthereumSignature(sig) {
   return re.test(sig);
 }
 
-function alreadySponsored(op) {
-  const lastOperationTimestamp = query`
+function sponsorRequestedRecently(op) {
+  const lastSponsorTimestamp = query`
     FOR o in ${operationsColl}
       FILTER o.name == "Sponsor"
       AND o.contextId == ${op.contextId}
@@ -1063,12 +1063,9 @@ function alreadySponsored(op) {
     .pop();
 
   const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
-  if (
-    lastOperationTimestamp &&
-    Date.now() - lastOperationTimestamp < timeWindow
-  ) {
-    throw new errors.SponsorRequestedRecently();
-  }
+  return (
+    lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow
+  );
 }
 
 module.exports = {
@@ -1125,5 +1122,5 @@ module.exports = {
   updateEligibles,
   updateGroup,
   isEthereumAddress,
-  alreadySponsored,
+  sponsorRequestedRecently,
 };
