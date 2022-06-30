@@ -102,5 +102,11 @@
     "uploadedTo": {
       "dappnode": "Mon, 20 Jun 2022 09:03:18 GMT"
     }
+  },
+  "1.10.0": {
+    "hash": "/ipfs/QmYqPGigKfFBbmBUWpZ8xCMnPPRChBj1gnhHLkDr8k5NKB",
+    "uploadedTo": {
+      "dappnode": "Thu, 30 Jun 2022 11:48:43 GMT"
+    }
   }
 }
