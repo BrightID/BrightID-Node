@@ -1,6 +1,6 @@
 const stringify = require("fast-json-stable-stringify");
 const db = require("./db");
-const arango = require("@arangodb").db;
+const { db: arango, query } = require("@arangodb");
 const nacl = require("tweetnacl");
 
 const {
@@ -12,6 +12,8 @@ const {
 const errors = require("./errors");
 
 const usersColl = arango._collection("users");
+const operationCountersColl = arango._collection("operationCounters");
+
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
 const verifyUserSig = function (message, id, sig) {
@@ -68,49 +70,63 @@ const senderAttrs = {
   "Convert To Family": ["id"],
 };
 
-let operationsCount = {};
-let resetTime = 0;
 function checkLimits(op, timeWindow, limit) {
+  let expireDate;
   const now = Date.now();
-  if (now > resetTime) {
-    operationsCount = {};
-    resetTime = now + timeWindow;
-  }
   const senders = senderAttrs[op.name].map((attr) => op[attr]);
   for (let sender of senders) {
     // these condition structure is applying:
     // 1) a bucket for a verified user
     // 2) a bucket for children of a verified user
     // 3) a bucket for all non-verified users without parent
+    // 4) a bucket for an app
     // where parent is the first verified user that make connection with the user
-    if (!usersColl.exists(sender)) {
-      // this happens when operation is "Connect" and sender does not exist
-      sender = "shared";
-    } else {
-      const user = usersColl.document(sender);
-      const verifications = db.userVerifications(user._key).map((v) => v.name);
-      verified = verifications && verifications.includes("BrightID");
-      if (!verified && user.parent) {
-        // this happens when user is not verified but has a verified connection
-        sender = `shared_${user.parent}`;
-      } else if (!verified && !user.parent) {
-        // this happens when user is not verified and does not have a verified connection
+    if (!["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
+      if (!usersColl.exists(sender)) {
+        // this happens when operation is "Connect" and sender does not exist
         sender = "shared";
+      } else {
+        const user = usersColl.document(sender);
+        const verifications = db
+          .userVerifications(user._key)
+          .map((v) => v.name);
+        verified = verifications && verifications.includes("BrightID");
+        if (!verified && user.parent) {
+          // this happens when user is not verified but has a verified connection
+          sender = `shared_${user.parent}`;
+        } else if (!verified && !user.parent) {
+          // this happens when user is not verified and does not have a verified connection
+          sender = "shared";
+        }
       }
     }
-    if (!operationsCount[sender]) {
-      operationsCount[sender] = 0;
-    }
-    operationsCount[sender] += 1;
-    if (operationsCount[sender] <= limit) {
+    const cursor = operationCountersColl.firstExample({ _key: sender });
+    let counter = cursor ? cursor.counter : 0;
+    expireDate = cursor
+      ? cursor.expireDate
+      : Math.ceil(now / 1000 + timeWindow / 1000);
+    counter += 1;
+    query`
+      UPSERT { _key: ${sender} }
+        INSERT {
+          _key: ${sender},
+          counter: ${counter},
+          expireDate: ${expireDate},
+        }
+        UPDATE { counter: ${counter} }
+      IN operationCounters
+    `;
+
+    if (counter <= limit) {
       // if operation has multiple senders, this check will be passed
       // even if one of the senders did not reach limit yet
       return;
     }
   }
+
   throw new errors.TooManyOperationsError(
     senders,
-    resetTime - now,
+    expireDate * 1000 - now,
     timeWindow,
     limit
   );
@@ -144,6 +160,10 @@ function verify(op) {
   let message = getMessage(op);
   if (op.name == "Sponsor") {
     verifyAppSig(message, op.app, op.sig);
+    if (db.sponsorRequestedRecently(op)) {
+      // prevent apps from sending duplicate sponsor requests
+      throw new errors.SponsorRequestedRecently();
+    }
   } else if (op.name == "Spend Sponsorship") {
     // there is no sig on this operation
     return;

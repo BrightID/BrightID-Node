@@ -956,6 +956,20 @@ function getAppUserIds(appKey, period, countOnly) {
   return res;
 }
 
+function sponsorRequestedRecently(op) {
+  const lastSponsorTimestamp = query`
+    FOR o in ${operationsColl}
+      FILTER o.name == "Sponsor"
+      AND o.appUserId == ${op.appUserId}
+      SORT o.timestamp ASC
+      RETURN o.timestamp
+  `
+    .toArray()
+    .pop();
+  const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
+  return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
+}
+
 module.exports = {
   connect,
   createGroup,
@@ -999,4 +1013,5 @@ module.exports = {
   convertToFamily,
   isEthereumAddress,
   getAppUserIds,
+  sponsorRequestedRecently,
 };

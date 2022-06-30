@@ -1,10 +1,6 @@
 import time
-import json
-import base64
-import ed25519
 import traceback
 from web3 import Web3
-from hashlib import sha256
 from arango import ArangoClient
 from web3.middleware import geth_poa_middleware, local_filter_middleware
 import config
@@ -51,7 +47,7 @@ def get_events(app):
 
 
 def sponsor(app, app_id):
-    c = sponsorships.find({'appId': app_id})
+    c = sponsorships.find({'_to': f'apps/{app}', 'appId': app_id})
     if c.empty():
         db['sponsorships'].insert({
             '_from': 'users/0',
@@ -78,7 +74,7 @@ def sponsor(app, app_id):
 def has_sponsorship(app):
     tsponsorships = app['totalSponsorships']
     usponsorships = sponsorships.find(
-                {'_to': 'apps/{0}'.format(app['_key'])}).count()
+        {'_to': 'apps/{0}'.format(app['_key']), 'expireDate': None}).count()
     return tsponsorships - usponsorships > 0
 
 
@@ -97,8 +93,6 @@ def is_using_sponsor_contract(app):
     if not app.get('sponsorEventContract'):
         return False
     if not app.get('wsProvider'):
-        return False
-    if not app.get('usingBlindSig') and not app.get('sponsorPrivateKey'):
         return False
     return True
 

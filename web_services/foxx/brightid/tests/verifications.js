@@ -55,44 +55,42 @@ describe("verifications", function () {
   before(function () {
     usersColl.truncate();
     appsColl.truncate();
-    variablesColl.truncate();
     sponsorshipsColl.truncate();
     cachedParamsColl.truncate();
     appIdsColl.truncate();
     db.createUser(u1.id, 0);
     db.createUser(u2.id, 0);
     appsColl.insert(app);
-    variablesColl.insert({
-      _key: "LAST_BLOCK",
-      value: 0,
-    });
-    variablesColl.insert({
-      _key: "VERIFICATION_BLOCK",
-      value: 0,
-    });
-    variablesColl.insert({
-      _key: "VERIFICATIONS_HASHES",
-      hashes: "[]",
-    });
     sponsorshipsColl.insert({
       _from: `users/${u1.id}`,
       _to: `apps/${app._key}`,
     });
+    if (!variablesColl.exists("LAST_BLOCK")) {
+      variablesColl.insert({
+        _key: "LAST_BLOCK",
+        value: 0,
+      });
+    }
+    const hashes = JSON.parse(
+      variablesColl.document("VERIFICATIONS_HASHES").hashes
+    );
+    const block = Math.max(...Object.keys(hashes));
     verificationsColl.insert({
       user: u1.id,
       name: "BrightID",
+      block,
     });
     verificationsColl.insert({
       name: "SeedConnected",
       user: u1.id,
       rank: 3,
+      block,
     });
   });
 
   after(function () {
     usersColl.truncate();
     appsColl.truncate();
-    variablesColl.truncate();
     sponsorshipsColl.truncate();
     cachedParamsColl.truncate();
     appIdsColl.truncate();
