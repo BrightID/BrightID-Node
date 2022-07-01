@@ -13,6 +13,7 @@ testblocks = db['testblocks']
 
 
 def get_events(app):
+    print(f'\napp: {app["_key"]}')
     w3 = Web3(Web3.WebsocketProvider(
         app['wsProvider'], websocket_kwargs={'timeout': 60}))
     if app['wsProvider'].count('rinkeby') > 0 or app['wsProvider'].count('idchain') > 0:
@@ -34,7 +35,6 @@ def get_events(app):
     if tb < fb:
         fb = tb - config.CHUNK
 
-    print(f'\napp: {app["_key"]}')
     print(f'checking events from block {fb} to block {tb}')
     sponsor_event_contract = w3.eth.contract(
         address=w3.toChecksumAddress(app['sponsorEventContract']),
