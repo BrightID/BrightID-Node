@@ -821,31 +821,16 @@ describe("operations", function () {
       resp1.json.data.spendRequested.should.equal(false);
 
       let op2 = {
-        name: "Sponsor",
-        appUserId: appUserId.toLowerCase(),
-        app: "idchain",
-        timestamp: Date.now(),
-        v: 6,
-      };
-      op2.sig = uInt8ArrayToB64(
-        Object.values(
-          nacl.sign.detached(strToUint8Array(stringify(op2)), sponsorPrivateKey)
-        )
-      );
-      const opRes = apply(op2);
-      opRes.json.result.errorNum.should.equal(errors.APP_AUTHORIZED_BEFORE);
-
-      let op3 = {
         name: "Spend Sponsorship",
         appUserId: appUserId.toLowerCase(),
         app: "idchain",
         timestamp: Date.now(),
         v: 6,
       };
-      apply(op3);
-      let resp3 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
-      resp3.json.data.appHasAuthorized.should.equal(true);
-      resp3.json.data.spendRequested.should.equal(true);
+      apply(op2);
+      let resp2 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
+      resp2.json.data.appHasAuthorized.should.equal(true);
+      resp2.json.data.spendRequested.should.equal(true);
     });
 
     it('clients should be able to "Spend Sponsorship" first then apps "Sponsor"', function () {
