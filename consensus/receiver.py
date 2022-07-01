@@ -92,6 +92,17 @@ def update_num_sealers():
         update_num_sealers()
 
 
+def remove_old_operations():
+    print(f'Removing operations older than 30 days')
+    border = int(time.time() * 1000) - 30 * 24 * 60 * 60 * 1000
+    print(border)
+    db.aql.execute('''
+        FOR o IN operations
+            FILTER  o.timestamp < @border
+            REMOVE o IN operations
+        ''', bind_vars={'border': border})
+
+
 def main():
     update_num_sealers()
     variables = db.collection('variables')
@@ -125,6 +136,7 @@ def main():
                 # algorithms to filter connections that are made
                 # after previous processed snapshot
                 variables.update({'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
+                remove_old_operations()
             variables.update({'_key': 'LAST_BLOCK', 'value': block_number})
             last_block = block_number
 
