@@ -655,7 +655,10 @@ function sponsor(op) {
     }
     op.appUserId = op.appUserId.toLowerCase();
   }
-  const sponsorship = sponsorshipsColl.firstExample({ appId: op.appUserId });
+  const sponsorship = sponsorshipsColl.firstExample({
+    _to: `apps/${op.app}`,
+    appId: op.appUserId,
+  });
   if (!sponsorship) {
     sponsorshipsColl.insert({
       _from: "users/0",
