@@ -34,7 +34,6 @@ const signedVerificationsColl = arango._collection("signedVerifications");
 const cachedParamsColl = arango._collection("cachedParams");
 const appIdsColl = arango._collection("appIds");
 
-const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 const MAX_OP_SIZE = 2000;
 
 const handlers = {

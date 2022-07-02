@@ -13,6 +13,7 @@ testblocks = db['testblocks']
 
 
 def get_events(app):
+    print(f'\napp: {app["_key"]}')
     w3 = Web3(Web3.WebsocketProvider(
         app['wsProvider'], websocket_kwargs={'timeout': 60}))
     if app['wsProvider'].count('rinkeby') > 0 or app['wsProvider'].count('idchain') > 0:
@@ -34,7 +35,6 @@ def get_events(app):
     if tb < fb:
         fb = tb - config.CHUNK
 
-    print(f'\napp: {app["_key"]}')
     print(f'checking events from block {fb} to block {tb}')
     sponsor_event_contract = w3.eth.contract(
         address=w3.toChecksumAddress(app['sponsorEventContract']),
@@ -47,7 +47,10 @@ def get_events(app):
 
 
 def sponsor(app, app_id):
-    c = sponsorships.find({'_to': f'apps/{app}', 'appId': app_id})
+    c = sponsorships.find({
+        '_to': 'apps/' + app['_key'],
+        'appId': app_id
+    })
     if c.empty():
         db['sponsorships'].insert({
             '_from': 'users/0',
@@ -57,18 +60,22 @@ def sponsor(app, app_id):
             'appHasAuthorized': True,
             'spendRequested': False
         })
+        print('applied')
         return
 
     sponsorship = c.next()
-    if not sponsorship['spendRequested']:
+    if sponsorship['appHasAuthorized']:
+        print('app has authorized before')
         return
 
-    db['sponsorships'].update({
-        '_key': sponsorship['_key'],
-        'expireDate': None,
-        'appHasAuthorized': True,
-        'timestamp': int(time.time() * 1000),
-    })
+    if sponsorship['spendRequested']:
+        db['sponsorships'].update({
+            '_key': sponsorship['_key'],
+            'expireDate': None,
+            'appHasAuthorized': True,
+            'timestamp': int(time.time() * 1000),
+        })
+        print('applied')
 
 
 def has_sponsorship(app):

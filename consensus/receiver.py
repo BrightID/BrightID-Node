@@ -75,7 +75,8 @@ def save_snapshot(block):
     fnl_dir_name = f'{dir_name}_fnl'
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, 'collections.json')
-    res = os.system(f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
+    res = os.system(
+        f'arangodump --overwrite true --compress-output false --server.password "" --server.endpoint "tcp://{config.BN_ARANGO_HOST}:{config.BN_ARANGO_PORT}" --output-directory {dir_name} --maskings {collections_file}')
     assert res == 0, "dumping snapshot failed"
     shutil.move(dir_name, fnl_dir_name)
 
@@ -85,11 +86,23 @@ def update_num_sealers():
     data = {'jsonrpc': '2.0', 'method': 'clique_status', 'params': [], 'id': 1}
     headers = {'Content-Type': 'application/json', 'Cache-Control': 'no-cache'}
     try:
-        resp = requests.post(config.IDCHAIN_RPC_URL, json=data, headers=headers)
+        resp = requests.post(config.IDCHAIN_RPC_URL,
+                             json=data, headers=headers)
         NUM_SEALERS = len(resp.json()['result']['sealerActivity'])
     except Exception as e:
         print('Error from update_num_sealers', e)
         update_num_sealers()
+
+
+def remove_old_operations():
+    print('Removing operations older than 30 days')
+    border = int(time.time() * 1000) - 30 * 24 * 60 * 60 * 1000
+    print(border)
+    db.aql.execute('''
+        FOR o IN operations
+            FILTER  o.timestamp < @border
+            REMOVE o IN operations
+        ''', bind_vars={'border': border})
 
 
 def main():
@@ -124,7 +137,9 @@ def main():
                 # PREV_SNAPSHOT_TIME is used by some verification
                 # algorithms to filter connections that are made
                 # after previous processed snapshot
-                variables.update({'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
+                variables.update(
+                    {'_key': 'PREV_SNAPSHOT_TIME', 'value': block['timestamp']})
+                remove_old_operations()
             variables.update({'_key': 'LAST_BLOCK', 'value': block_number})
             last_block = block_number
 
