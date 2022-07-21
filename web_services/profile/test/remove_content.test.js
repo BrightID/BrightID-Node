@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const request = require('supertest')
 const app = require('../app')
-const {channel_ttl_header, finalTTL} = require('../config')
+const {channel_ttl_header, finalTTL, channel_expires_header} = require('../config')
 
 const setupChannel = async (numEntries) => {
     channelId = uuidv4();
@@ -22,8 +22,8 @@ const setupChannel = async (numEntries) => {
     .get(`/list/${channelId}`)
     .expect(200)
     expect(res.body.profileIds).toHaveLength(numEntries);
-    expect(res.header).toHaveProperty(channel_ttl_header)
-    return {channelId, channelEntries, channelTTL: parseInt(res.header[channel_ttl_header])}
+    expect(res.header).toHaveProperty(channel_expires_header)
+    return {channelId, channelEntries, expires: parseInt(res.header[channel_expires_header])}
 }
 
 describe('Remove items from channel', () => {
@@ -102,28 +102,28 @@ describe('Remove items from channel', () => {
 
     describe('Delete all entries', () => {
 
-        let channelTTL;
+        let channelExpires;
 
         // Setup random channel
         beforeAll(async ()=>{
             const channelData = await setupChannel(numEntries)
             channelId = channelData.channelId
             channelEntries = channelData.channelEntries
-            channelTTL = channelData.channelTTL
+            channelExpires = channelData.expires
         })
 
         it('should delete all entries', async () => {
-            let newTTL
+            let newExpires
             for (let i=0; i < numEntries; i++) {
                 const deleteResult = await request(app)
                 .delete(`/${channelId}/${channelEntries[i].uuid}`)
                 .expect(200)
                 if (i === numEntries -1) {
                     // last entry deleted. TTL should now be set to grace period
-                    expect(deleteResult.header).toHaveProperty(channel_ttl_header)
-                    newTTL = parseInt(deleteResult.header[channel_ttl_header])}
+                    expect(deleteResult.header).toHaveProperty(channel_expires_header)
+                    newExpires = parseInt(deleteResult.header[channel_expires_header])}
             }
-            expect(newTTL).toBeLessThanOrEqual(finalTTL)
+            expect(newExpires).toBeLessThanOrEqual(channelExpires + finalTTL)
         })
 
         it('Should return empty channel list', async () => {

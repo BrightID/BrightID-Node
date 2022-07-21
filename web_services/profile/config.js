@@ -36,7 +36,7 @@ const channel_max_size_bytes = is_test
 
 const channel_limit_response_code = 440;
 const channel_limit_message = "Channel full";
-const channel_ttl_header = "x-ttl";
+const channel_expires_header = "x-expires";
 
 module.exports = {
   is_dev,
@@ -47,7 +47,7 @@ module.exports = {
   channel_max_size_bytes,
   channel_limit_response_code,
   channel_limit_message,
-  channel_ttl_header,
+  channel_expires_header,
   finalTTL,
   minTTL,
   maxTTL,

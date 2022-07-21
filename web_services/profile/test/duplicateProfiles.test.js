@@ -9,6 +9,8 @@ const profileA = {
 
 const channel = uuidv4();
 
+jest.setTimeout(120000);
+
 describe('duplicate profiles', () => {
 
     beforeAll(async() =>{

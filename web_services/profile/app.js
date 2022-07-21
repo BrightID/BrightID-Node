@@ -6,7 +6,7 @@ const NodeCache = require("node-cache");
 const config = require("./config");
 const { renderStats } = require("./stats");
 const bn = require("bignum");
-const {channel_ttl_header, TTLExtension} = require('./config')
+const {TTLExtension, channel_expires_header} = require('./config')
 
 const dataCache = new NodeCache(config.data_cache_config);
 const channelCache = new NodeCache(config.channel_config);
@@ -22,11 +22,17 @@ if (config.is_dev) {
   });
 }
 
+/* Get remaining time to live of channel in seconds */
 const getRemainingTTL = (channelId) => {
   // NodeCache.getTtl() actually returns a unix timestamp in ms(!) when channel will expire
   const expirationTime = channelCache.getTtl(channelId);
   const remainingTTL = expirationTime - Date.now();
   return Math.floor(remainingTTL/1000)
+}
+
+/* Get expiration timestamp of channel as unix timestamp(seconds since 1970) */
+const getExpirationTimestamp = (channelId) => {
+  return Math.floor(channelCache.getTtl(channelId)/1000)
 }
 
 app.get("/", function (req, res, next) {
@@ -131,7 +137,7 @@ app.post("/upload/:channelId", function (req, res) {
     channel.entries.set(uuid, data);
     channel.size = newSize;
     res.status(201);
-    res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
+    res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
     res.json({ success: true });
   } catch (e) {
     console.log(err);
@@ -168,7 +174,7 @@ app.get("/download/:channelId/:uuid", function (req, res, next) {
     return;
   }
 
-  res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
+  res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
 
   res.json({
     data: data,
@@ -251,7 +257,7 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
       channelCache.ttl(channelId, config.finalTTL);
     }
   }
-  res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
+  res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
   res.status(200);
   res.json({ success: true });
 });
@@ -278,7 +284,7 @@ app.get("/list/:channelId", function (req, res, next) {
     return;
   }
 
-  res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
+  res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
 
   res.json({
     profileIds: Array.from(channel.entries.keys()),
