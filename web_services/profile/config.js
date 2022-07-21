@@ -7,6 +7,7 @@ const minTTL = 60; // 1 minute
 const maxTTL = 60 * 60 * 24; // 24 hours
 const defaultTTL = 60 * 15; // 15 minutes
 const finalTTL = 600; // 10 minutes grace period to keep empty channels open
+const TTLExtension = 600;
 
 /* Cache config for channels */
 const channel_config = {
@@ -35,6 +36,7 @@ const channel_max_size_bytes = is_test
 
 const channel_limit_response_code = 440;
 const channel_limit_message = "Channel full";
+const channel_ttl_header = "x-ttl";
 
 module.exports = {
   is_dev,
@@ -45,8 +47,10 @@ module.exports = {
   channel_max_size_bytes,
   channel_limit_response_code,
   channel_limit_message,
+  channel_ttl_header,
   finalTTL,
   minTTL,
   maxTTL,
   defaultTTL,
+  TTLExtension,
 };

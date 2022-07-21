@@ -6,6 +6,7 @@ const NodeCache = require("node-cache");
 const config = require("./config");
 const { renderStats } = require("./stats");
 const bn = require("bignum");
+const {channel_ttl_header, TTLExtension} = require('./config')
 
 const dataCache = new NodeCache(config.data_cache_config);
 const channelCache = new NodeCache(config.channel_config);
@@ -19,6 +20,13 @@ if (config.is_dev) {
   app.get("/test", function (req, res, next) {
     res.sendFile(__dirname + "/index.html");
   });
+}
+
+const getRemainingTTL = (channelId) => {
+  // NodeCache.getTtl() actually returns a unix timestamp in ms(!) when channel will expire
+  const expirationTime = channelCache.getTtl(channelId);
+  const remainingTTL = expirationTime - Date.now();
+  return Math.floor(remainingTTL/1000)
 }
 
 app.get("/", function (req, res, next) {
@@ -56,7 +64,8 @@ app.post("/upload/:channelId", function (req, res) {
   const ttl = requestedTtl || config.defaultTTL;
 
   let channel = channelCache.get(channelId);
-  if (!channel) {
+  const channelExisting = !!channel
+  if (!channelExisting) {
     // Create new channel.
     channel = {
       entries: new Map(),
@@ -83,10 +92,6 @@ app.post("/upload/:channelId", function (req, res) {
       console.log(
         `Received duplicate profile ${uuid} for channel ${channelId}`
       );
-      // Workaround for recovery channels: interpret upload of existing data as request to extend TTL of channel
-      // TODO: Remove ttl extension when client that knows how to create channels with longer ttl time is released
-      channelCache.ttl(channelId, channel.ttl);
-      res.status(201).json({ success: true });
     } else {
       // Same UUID but different content? This is scary. Likely client bug. Bail out.
       res
@@ -112,11 +117,21 @@ app.post("/upload/:channelId", function (req, res) {
     return;
   }
 
+  // extend channel TTL if necessary
+  if (channelExisting) {
+    const remainingTTL = getRemainingTTL(channelId)
+    if ( remainingTTL < TTLExtension) {
+      channelCache.ttl(channelId, TTLExtension)
+      console.log(`Extending TTL of channel ${channelId}. Old: ${remainingTTL} New: ${getRemainingTTL(channelId)}`)
+    }
+  }
+
   // save data in cache
   try {
     channel.entries.set(uuid, data);
     channel.size = newSize;
     res.status(201);
+    res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
     res.json({ success: true });
   } catch (e) {
     console.log(err);
@@ -152,6 +167,8 @@ app.get("/download/:channelId/:uuid", function (req, res, next) {
       .json({ error: `Data ${uuid} in channel ${channelId} not found` });
     return;
   }
+
+  res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
 
   res.json({
     data: data,
@@ -234,7 +251,7 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
       channelCache.ttl(channelId, config.finalTTL);
     }
   }
-
+  res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
   res.status(200);
   res.json({ success: true });
 });
@@ -260,6 +277,8 @@ app.get("/list/:channelId", function (req, res, next) {
       .json({ error: `Map for channel ${channelId} not existing` });
     return;
   }
+
+  res.append(channel_ttl_header, `${getRemainingTTL(channelId)}`)
 
   res.json({
     profileIds: Array.from(channel.entries.keys()),
