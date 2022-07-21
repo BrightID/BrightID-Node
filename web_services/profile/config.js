@@ -29,8 +29,6 @@ const notification_service =
     ? process.env.NOTIFICATION_SERVICE_DEV
     : process.env.NOTIFICATION_SERVICE_RELEASE;
 
-const channel_entry_limit = 30;
-
 const channel_max_size_bytes = is_test
   ? 1024 // 1 kb when running jest tests
   : 1024 * 1024 * 20; // 20 MegaByte normally
@@ -44,7 +42,6 @@ module.exports = {
   channel_config,
   data_cache_config,
   notification_service,
-  channel_entry_limit,
   channel_max_size_bytes,
   channel_limit_response_code,
   channel_limit_message,
