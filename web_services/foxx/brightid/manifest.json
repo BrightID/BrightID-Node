@@ -33,6 +33,11 @@
       "description": "Maximum number of operations each verified user can send in configured time window",
       "type": "int",
       "required": false
+    },
+    "appsOperationsLimit": {
+      "description": "Maximum number of operations each app can send in configured time window",
+      "type": "int",
+      "required": false
     }
   }
 }
