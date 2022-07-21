@@ -44,6 +44,11 @@
       "type": "int",
       "required": false
     },
+    "appsOperationsLimit": {
+      "description": "Maximum number of operations each app can send in configured time window",
+      "type": "int",
+      "required": false
+    },
     "development": {
       "description": "true if the node is in development mode",
       "type": "boolean",

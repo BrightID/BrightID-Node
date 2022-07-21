@@ -12,6 +12,7 @@ foxx config /brightid5 privateKey=$BN_WS_PRIVATE_KEY
 foxx config /brightid5 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
 foxx config /brightid5 operationsTimeWindow=$BN_WS_OPERATIONS_TIME_WINDOW
 foxx config /brightid5 operationsLimit=$BN_WS_OPERATIONS_LIMIT
+foxx config /brightid5 appsOperationsLimit=$BN_WS_APPS_OPERATIONS_LIMIT
 
 foxx upgrade /apply5 /code/foxx/apply5.zip ||
 foxx install /apply5 /code/foxx/apply5.zip
@@ -25,6 +26,7 @@ foxx config /brightid6 ethPrivateKey=$BN_WS_ETH_PRIVATE_KEY
 foxx config /brightid6 consensusSenderPrivateKey=$BN_CONSENSUS_PRIVATE_KEY
 foxx config /brightid6 operationsTimeWindow=$BN_WS_OPERATIONS_TIME_WINDOW
 foxx config /brightid6 operationsLimit=$BN_WS_OPERATIONS_LIMIT
+foxx config /brightid6 appsOperationsLimit=$BN_WS_APPS_OPERATIONS_LIMIT
 foxx config /brightid6 development=$BN_DEVELOPMENT
 
 foxx upgrade /apply6 /code/foxx/apply6.zip ||

@@ -53,7 +53,9 @@ const handlers = {
 
     // allow limited number of operations to be posted in defined time window
     const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
-    const limit = module.context.configuration.operationsLimit;
+    const limit = ["Sponsor", "Spend Sponsorship"].includes(op.name)
+      ? module.context.configuration.appsOperationsLimit
+      : module.context.configuration.operationsLimit;
     operations.checkLimits(op, timeWindow, limit);
 
     op.state = "init";
