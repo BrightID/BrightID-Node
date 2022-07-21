@@ -250,11 +250,7 @@ app.get("/list/:channelId", function (req, res, next) {
   // get channel
   const channel = channelCache.get(channelId);
   if (!channel) {
-    // Don't fail when channel is not existing. Instead return empty array
-    // res.status(404).json({error: `Channel ${channelId} not found`});
-    res.json({
-      profileIds: [],
-    });
+    res.status(404).json({error: `channelId ${channelId} not found`})
     return;
   }
 
@@ -266,7 +262,7 @@ app.get("/list/:channelId", function (req, res, next) {
   }
 
   res.json({
-    profileIds: Array.from(channel.entries.keys()), // channel.entries.keys()
+    profileIds: Array.from(channel.entries.keys()),
   });
 });
 
