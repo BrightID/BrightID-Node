@@ -618,6 +618,11 @@ function setSigningKey(signingKey, key, timestamp) {
     signingKeys: [signingKey],
     updateTime: timestamp,
   });
+
+  // remove pending invites, because they can not be decrypted anymore by the new signing key
+  invitationsColl.removeByExample({
+    _from: "users/" + key,
+  });
 }
 
 function getSponsorship(appUserId) {
