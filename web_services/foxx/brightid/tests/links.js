@@ -86,6 +86,11 @@ describe("links & sponsorships", function () {
         24 * 3600 * 1000 + 25
       );
     });
+    it("should throw UserNotFoundError if user doesn't exist", function () {
+      (() => {
+        db.linkContextId("6", "testContext", "newcontextid", 10);
+      }).should.throw(errors.UserNotFoundError);
+    });
   });
   context("sponsor()", function () {
     it("should be able to sponsor a user if app has unused sponsorships and user is not sponsored before", function () {
