@@ -835,6 +835,10 @@ function setSigningKey(signingKey, key, timestamp) {
     signingKeys: [signingKey],
     updateTime: timestamp,
   });
+
+  invitationsColl.removeByExample({
+    _from: "users/" + key,
+  });
 }
 
 function isSponsored(key) {
@@ -1068,9 +1072,7 @@ function sponsorRequestedRecently(op) {
     .pop();
 
   const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
-  return (
-    lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow
-  );
+  return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
 module.exports = {
