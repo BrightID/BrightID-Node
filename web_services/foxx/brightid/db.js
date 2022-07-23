@@ -687,7 +687,11 @@ function userVerifications(user) {
 function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex, soulbound, soulboundMessage } =
     getContext(context);
-  const coll = db._collection(collection);
+
+  if (!loadUser(id)) {
+    throw new errors.UserNotFoundError(id);
+  }
+
   if (!contextId) {
     throw new errors.InvalidContextIdError(contextId);
   }
@@ -711,6 +715,7 @@ function linkContextId(id, context, contextId, timestamp) {
   // remove testblocks if exists
   removeTestblock(contextId, "link");
 
+  const coll = db._collection(collection);
   let user = getUserByContextId(coll, contextId);
   if (user && user != id) {
     throw new errors.DuplicateContextIdError(contextId);
