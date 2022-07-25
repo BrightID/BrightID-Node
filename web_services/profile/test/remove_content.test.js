@@ -1,7 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const request = require('supertest')
 const app = require('../app')
-const {channel_ttl_header, finalTTL, channel_expires_header} = require('../config')
+const {channel_ttl_header, channel_expires_header} = require('../config')
 
 const setupChannel = async (numEntries) => {
     channelId = uuidv4();
@@ -118,15 +118,8 @@ describe('Remove items from channel', () => {
                 const deleteResult = await request(app)
                 .delete(`/${channelId}/${channelEntries[i].uuid}`)
                 .expect(200)
-                if (i === numEntries -1) {
-                    // last entry deleted. TTL should now be set to grace period
-                    expect(deleteResult.header).toHaveProperty(channel_expires_header)
-                    newExpires = parseInt(deleteResult.header[channel_expires_header])}
             }
-            expect(newExpires).toBeLessThanOrEqual(channelExpires + finalTTL)
-        })
-
-        it('Should return empty channel list', async () => {
+            // Should return empty channel list now
             const res = await request(app)
             .get(`/list/${channelId}`)
             .expect(200)

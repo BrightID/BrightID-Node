@@ -6,7 +6,6 @@ const port = process.env.BN_WS_PROFILE_SERVICE_PORT || 3000;
 const minTTL = 60; // 1 minute
 const maxTTL = 60 * 60 * 24; // 24 hours
 const defaultTTL = 60 * 15; // 15 minutes
-const finalTTL = 600; // 10 minutes grace period to keep empty channels open
 const TTLExtension = 600;
 
 /* Cache config for channels */
@@ -48,7 +47,6 @@ module.exports = {
   channel_limit_response_code,
   channel_limit_message,
   channel_expires_header,
-  finalTTL,
   minTTL,
   maxTTL,
   defaultTTL,

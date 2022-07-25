@@ -81,14 +81,6 @@ app.post("/upload/:channelId", function (req, res) {
     // save channel in cache with requested TTL
     channelCache.set(channelId, channel, ttl);
     console.log(`Created new channel ${channelId} with TTL ${channel.ttl}`);
-  } else {
-    // existing channel. check if this channel was about to expire, but got another upload
-    if (channel.entries.size === 0) {
-      console.log(
-        `Restoring requested TTL ${channel.ttl} for channel ${channelId}`
-      );
-      channelCache.ttl(channelId, channel.ttl);
-    }
   }
 
   // Check if there is already data with the provided uuid to prevent duplicates
@@ -229,34 +221,6 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
     `Deleted ${uuid} from channel ${channelId}. New size: ${channel.size}`
   );
 
-  // handle removing of last entry
-  if (channel.entries.size === 0) {
-    // if channel is empty size should also be 0. Double-check.
-    if (channel.size !== 0) {
-      console.warn(
-        `Channel size calculation incorrect. This should not happen.`
-      );
-      channel.size = 0;
-    }
-
-    // Reduce remaining TTL. Leave a few minutes TTL in case some upload is
-    // hanging from a slow connection
-    const expirationTime = channelCache.getTtl(channelId); // This actually returns a unix timestamp in ms(!) when channel will expire
-    const remainingTTL = expirationTime - Date.now();
-    if (remainingTTL > config.finalTTL) {
-      console.log(
-        `last element removed from channel ${channelId}. Reducing TTL from ${Math.floor(
-          remainingTTL / 1000
-        )} to ${config.finalTTL} secs.`
-      );
-      channelCache.ttl(channelId, config.finalTTL);
-    } else {
-      console.log(
-        `last element removed from channel ${channelId}. Remaining TTL: ${remainingTTL}ms.`
-      );
-      channelCache.ttl(channelId, config.finalTTL);
-    }
-  }
   res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
   res.status(200);
   res.json({ success: true });
