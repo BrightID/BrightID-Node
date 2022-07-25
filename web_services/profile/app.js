@@ -86,48 +86,50 @@ app.post("/upload/:channelId", function (req, res) {
   // Check if there is already data with the provided uuid to prevent duplicates
   const existingData = channel.entries.get(uuid);
   if (existingData) {
-    if (existingData === data) {
-      console.log(
-        `Received duplicate profile ${uuid} for channel ${channelId}`
-      );
-    } else {
+    if (existingData !== data) {
       // Same UUID but different content? This is scary. Likely client bug. Bail out.
       res
-        .status(500)
-        .json({
-          error: `Profile ${uuid} already exists in channel ${channelId} with different data.`,
-        });
+      .status(500)
+      .json({
+        error: `Profile ${uuid} already exists in channel ${channelId} with different data.`,
+      })
+      return;
     }
-    return;
+    console.log(
+      `Received duplicate profile ${uuid} for channel ${channelId}`,
+    )
   }
 
-  // check channel size
-  const entrySize = sizeof(data) + sizeof(uuid);
-  const newSize = channel.size + entrySize;
-  console.log(
-    `channel ${channelId} newSize: ${newSize},\t delta: ${entrySize} bytes`
-  );
-  if (newSize > config.channel_max_size_bytes) {
-    // channel full :-(
-    res
-      .status(config.channel_limit_response_code)
-      .json({ error: config.channel_limit_message });
-    return;
-  }
-
-  // extend channel TTL if necessary
-  if (channelExisting) {
-    const remainingTTL = getRemainingTTL(channelId)
-    if ( remainingTTL < TTLExtension) {
-      channelCache.ttl(channelId, TTLExtension)
-      console.log(`Extending TTL of channel ${channelId}. Old: ${remainingTTL} New: ${getRemainingTTL(channelId)}`)
-    }
-  }
-
-  // save data in cache
   try {
-    channel.entries.set(uuid, data);
-    channel.size = newSize;
+    if (!existingData) {
+      // check channel size
+      const entrySize = sizeof(data) + sizeof(uuid);
+      const newSize = channel.size + entrySize;
+      console.log(
+        `channel ${channelId} newSize: ${newSize},\t delta: ${entrySize} bytes`
+      );
+      if (newSize > config.channel_max_size_bytes) {
+        // channel full :-(
+        res
+        .status(config.channel_limit_response_code)
+        .json({ error: config.channel_limit_message });
+        return;
+      }
+
+      // save new data
+      channel.entries.set(uuid, data);
+      channel.size = newSize;
+    }
+
+    // extend channel TTL if necessary
+    if (channelExisting) {
+      const remainingTTL = getRemainingTTL(channelId)
+      if ( remainingTTL < TTLExtension) {
+        channelCache.ttl(channelId, TTLExtension)
+        console.log(`Extending TTL of channel ${channelId}. Old: ${remainingTTL} New: ${getRemainingTTL(channelId)}`)
+      }
+    }
+
     res.status(201);
     res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
     res.json({ success: true });
@@ -216,7 +218,6 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
 
   // update channel size
   channel.size -= sizeof(data) + sizeof(uuid);
-
   console.log(
     `Deleted ${uuid} from channel ${channelId}. New size: ${channel.size}`
   );
