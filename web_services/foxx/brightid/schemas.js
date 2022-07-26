@@ -138,6 +138,21 @@ const operations = {
       .description(
         "brightid of a recovery connection of the user represented by id"
       ),
+    id3: joi
+      .string()
+      .description(
+        "brightid of a recovery connection of the user represented by id"
+      ),
+    id4: joi
+      .string()
+      .description(
+        "brightid of a recovery connection of the user represented by id"
+      ),
+    id5: joi
+      .string()
+      .description(
+        "brightid of a recovery connection of the user represented by id"
+      ),
     sig1: joi
       .string()
       .required()
@@ -147,6 +162,21 @@ const operations = {
     sig2: joi
       .string()
       .required()
+      .description(
+        "deterministic json representation of operation object signed by the recovery connection represented by id2"
+      ),
+    sig3: joi
+      .string()
+      .description(
+        "deterministic json representation of operation object signed by the recovery connection represented by id2"
+      ),
+    sig4: joi
+      .string()
+      .description(
+        "deterministic json representation of operation object signed by the recovery connection represented by id2"
+      ),
+    sig5: joi
+      .string()
       .description(
         "deterministic json representation of operation object signed by the recovery connection represented by id2"
       ),
@@ -365,6 +395,29 @@ const operations = {
       .string()
       .required()
       .description("the unique id of the family group"),
+    sig: joi
+      .string()
+      .required()
+      .description(
+        "deterministic json representation of operation object signed by the head user represented by id"
+      ),
+  },
+  "Set Required Recovery Num": {
+    id: joi
+      .string()
+      .required()
+      .description(
+        "brightid of the user who is setting the required number of signatures for social recovery"
+      ),
+    requiredRecoveryNum: joi
+      .number()
+      .integer()
+      .greater(2)
+      .less(5)
+      .required()
+      .description(
+        "the required number of signatures for social recovery"
+      ),
     sig: joi
       .string()
       .required()
@@ -855,9 +908,7 @@ schemas = Object.assign(
           count: joi
             .number()
             .required()
-            .description(
-              "the number of app generated ids"
-            ),
+            .description("the number of app generated ids"),
         })
       ),
     }),

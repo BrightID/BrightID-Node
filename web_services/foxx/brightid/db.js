@@ -978,6 +978,18 @@ function sponsorRequestedRecently(op) {
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
+function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
+  const recoveryConnections = getRecoveryConnections(id);
+  if (recoveryConnections.length < requiredRecoveryNum) {
+    throw new errors.InvalidNumberOfSignersError();
+  }
+
+  usersColl.update(id, {
+    requiredRecoveryNum,
+    updateTime: timestamp,
+  });
+}
+
 module.exports = {
   connect,
   createGroup,
@@ -1022,4 +1034,5 @@ module.exports = {
   isEthereumAddress,
   getAppUserIds,
   sponsorRequestedRecently,
+  setRequiredRecoveryNum,
 };
