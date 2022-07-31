@@ -600,7 +600,7 @@ class InvalidNumberOfSignersError extends ForbiddenError {
     super();
     this.errorNum = INVALID_NUMBER_OF_SIGNERS;
     this.message =
-      "The number of signers should be less than the number of recovery connections.";
+      "The number of signers should be equal or less than the number of recovery connections.";
   }
 }
 
