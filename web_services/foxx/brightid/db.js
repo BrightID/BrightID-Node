@@ -978,6 +978,20 @@ function sponsorRequestedRecently(op) {
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
+function getRequiredRecoveryNum(id) {
+  const user = getUser(id);
+  if (
+    "nextRequiredRecoveryNum" in user &&
+    user.requiredRecoveryNumSetAfter <= Date.now()
+  ) {
+    user.requiredRecoveryNum = user.nextRequiredRecoveryNum;
+    delete user.nextRequiredRecoveryNum;
+    delete user.requiredRecoveryNumSetAfter;
+    usersColl.replace(id, user);
+  }
+  return user.requiredRecoveryNum || 2;
+}
+
 function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
   const recoveryConnections = getRecoveryConnections(id);
   if (recoveryConnections.length < requiredRecoveryNum) {
@@ -985,7 +999,8 @@ function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
   }
 
   usersColl.update(id, {
-    requiredRecoveryNum,
+    nextRequiredRecoveryNum: requiredRecoveryNum,
+    requiredRecoveryNumSetAfter: Date.now() + 7 * 24 * 60 * 60 * 1000,
     updateTime: timestamp,
   });
 }
@@ -1035,4 +1050,5 @@ module.exports = {
   getAppUserIds,
   sponsorRequestedRecently,
   setRequiredRecoveryNum,
+  getRequiredRecoveryNum,
 };

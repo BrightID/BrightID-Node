@@ -185,8 +185,7 @@ function verify(op) {
     // there is no sig on this operation
     return;
   } else if (op.name == "Social Recovery") {
-    const user = db.getUser(op.id);
-    const requiredRecoveryNum = user.requiredRecoveryNum || 2;
+    const requiredRecoveryNum = db.getRequiredRecoveryNum(op.id);
     const recoveryConnections = db.getRecoveryConnections(op.id);
     const temp = new Set();
     for (let i = 1; i <= requiredRecoveryNum; i++) {
@@ -221,6 +220,7 @@ function verify(op) {
     const sig = op[sigAttr];
     verifyUserSig(message, signer, sig);
   }
+
   if (hash(message) != op.hash) {
     throw new errors.InvalidOperationHashError();
   }
