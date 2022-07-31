@@ -412,12 +412,10 @@ const operations = {
     requiredRecoveryNum: joi
       .number()
       .integer()
-      .greater(2)
-      .less(5)
+      .greater(1)
+      .less(6)
       .required()
-      .description(
-        "the required number of signatures for social recovery"
-      ),
+      .description("the required number of signatures for social recovery"),
     sig: joi
       .string()
       .required()
@@ -676,6 +674,11 @@ schemas = Object.assign(
           .required()
           .description("list of recovery connections for the user"),
         sponsored: joi.boolean().required().description("if user is sponsored"),
+        requiredRecoveryNum: joi
+          .number()
+          .integer()
+          .required()
+          .description("the required number of signatures for social recovery"),
         mutualConnections: joi
           .array()
           .items(joi.string())
