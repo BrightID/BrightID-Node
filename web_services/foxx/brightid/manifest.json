@@ -49,6 +49,11 @@
       "type": "int",
       "required": false
     },
+    "peers": {
+      "description": "other nodes that this node trusts (comma-separated string)",
+      "type": "string",
+      "required": false
+    },
     "development": {
       "description": "true if the node is in development mode",
       "type": "boolean",

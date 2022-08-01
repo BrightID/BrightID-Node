@@ -886,6 +886,16 @@ schemas = Object.assign(
           .description("the sponsorship timestamp"),
       }),
     }),
+
+    peersGetResponse: joi.object({
+      data: joi.object({
+        peers: joi
+          .array()
+          .items(joi.string())
+          .required()
+          .description("list of other nodes that this node trusts"),
+      }),
+    }),
   },
   schemas
 );

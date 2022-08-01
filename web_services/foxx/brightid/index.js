@@ -517,6 +517,13 @@ const handlers = {
       },
     });
   },
+
+  peersGet: function (req, res) {
+    const conf = module.context.configuration;
+    res.send({
+      peers: conf.peers ? conf.peers.split(",") : [],
+    });
+  },
 };
 
 router
@@ -831,6 +838,11 @@ router
   .summary("Gets sponsorship information of an app generated id")
   .response(schemas.sponsorshipGetResponse)
   .error(404, "App generated id not found");
+
+router
+  .get("/peers", handlers.peersGet)
+  .summary("Gets other nodes this node trusts")
+  .response(schemas.peersGetResponse);
 
 module.context.use(function (req, res, next) {
   try {

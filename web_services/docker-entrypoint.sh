@@ -28,6 +28,7 @@ foxx config /brightid6 operationsTimeWindow=$BN_WS_OPERATIONS_TIME_WINDOW
 foxx config /brightid6 operationsLimit=$BN_WS_OPERATIONS_LIMIT
 foxx config /brightid6 appsOperationsLimit=$BN_WS_APPS_OPERATIONS_LIMIT
 foxx config /brightid6 development=$BN_DEVELOPMENT
+foxx config /brightid6 peers=$BN_PEERS
 
 foxx upgrade /apply6 /code/foxx/apply6.zip ||
 foxx install /apply6 /code/foxx/apply6.zip
