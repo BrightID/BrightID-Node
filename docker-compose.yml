@@ -82,6 +82,7 @@ services:
     image: nginx
     volumes:
       - ./web/brightid-nginx.conf:/etc/nginx/nginx.conf
+      - ./web/index.html:/var/www/html/index.html
     network_mode: host
     env_file:
       - config.env
