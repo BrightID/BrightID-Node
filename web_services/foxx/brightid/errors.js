@@ -583,15 +583,17 @@ class SponsorRequestedRecently extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSOR_REQUESTED_RECENTLY;
-    this.message = `The app has sent this sponsor request recently.`;
+    this.message = "The app has sent this sponsor request recently.";
   }
 }
 
 class WrongNumberOfSignersError extends ForbiddenError {
-  constructor() {
+  constructor(missedAttr, requiredRecoveryNum) {
     super();
     this.errorNum = WRONG_NUMBER_OF_SIGNERS;
-    this.message = "The number of request signers is wrong.";
+    this.message = `${missedAttr} is missed while ${requiredRecoveryNum} signers are required.`;
+    this.missedAttr = missedAttr;
+    this.requiredRecoveryNum = requiredRecoveryNum;
   }
 }
 

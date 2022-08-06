@@ -190,7 +190,7 @@ function verify(op) {
     const temp = new Set();
     for (let i = 1; i <= requiredRecoveryNum; i++) {
       if (!(`id${i}` in op)) {
-        throw new errors.WrongNumberOfSignersError();
+        throw new errors.WrongNumberOfSignersError(`id${i}`, requiredRecoveryNum);
       }
 
       if (temp.has(op[`id${i}`])) {
