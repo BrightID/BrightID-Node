@@ -1001,7 +1001,6 @@ function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
   usersColl.update(id, {
     nextRequiredRecoveryNum: requiredRecoveryNum,
     requiredRecoveryNumSetAfter: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    updateTime: timestamp,
   });
 }
 
