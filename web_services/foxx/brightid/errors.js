@@ -55,6 +55,8 @@ const CACHED_PARAMS_NOT_FOUND = 65;
 const FORBIDDEN_CONNECTION = 66;
 const UNSINGABLE_APP_USER_ID = 67;
 const SPONSOR_REQUESTED_RECENTLY = 68;
+const WRONG_NUMBER_OF_SIGNERS = 69;
+const INVALID_NUMBER_OF_SIGNERS = 70;
 
 class BrightIDError extends Error {
   constructor() {
@@ -581,7 +583,26 @@ class SponsorRequestedRecently extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSOR_REQUESTED_RECENTLY;
-    this.message = `The app has sent this sponsor request recently.`;
+    this.message = "The app has sent this sponsor request recently.";
+  }
+}
+
+class WrongNumberOfSignersError extends ForbiddenError {
+  constructor(missedAttr, requiredRecoveryNum) {
+    super();
+    this.errorNum = WRONG_NUMBER_OF_SIGNERS;
+    this.message = `${missedAttr} is missed while ${requiredRecoveryNum} signers are required.`;
+    this.missedAttr = missedAttr;
+    this.requiredRecoveryNum = requiredRecoveryNum;
+  }
+}
+
+class InvalidNumberOfSignersError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = INVALID_NUMBER_OF_SIGNERS;
+    this.message =
+      "The number of signers should be equal or less than the number of recovery connections.";
   }
 }
 
@@ -642,6 +663,8 @@ module.exports = {
   FORBIDDEN_CONNECTION,
   UNSINGABLE_APP_USER_ID,
   SPONSOR_REQUESTED_RECENTLY,
+  WRONG_NUMBER_OF_SIGNERS,
+  INVALID_NUMBER_OF_SIGNERS,
   BrightIDError,
   BadRequestError,
   InternalServerError,
@@ -704,4 +727,6 @@ module.exports = {
   ForbiddenConnectionError,
   UnsingableAppUserIdError,
   SponsorRequestedRecently,
+  WrongNumberOfSignersError,
+  InvalidNumberOfSignersError,
 };

@@ -978,6 +978,32 @@ function sponsorRequestedRecently(op) {
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
+function getRequiredRecoveryNum(id) {
+  const user = getUser(id);
+  if (
+    "nextRequiredRecoveryNum" in user &&
+    user.requiredRecoveryNumSetAfter <= Date.now()
+  ) {
+    user.requiredRecoveryNum = user.nextRequiredRecoveryNum;
+    delete user.nextRequiredRecoveryNum;
+    delete user.requiredRecoveryNumSetAfter;
+    usersColl.replace(id, user);
+  }
+  return user.requiredRecoveryNum || 2;
+}
+
+function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
+  const recoveryConnections = getRecoveryConnections(id);
+  if (recoveryConnections.length < requiredRecoveryNum) {
+    throw new errors.InvalidNumberOfSignersError();
+  }
+
+  usersColl.update(id, {
+    nextRequiredRecoveryNum: requiredRecoveryNum,
+    requiredRecoveryNumSetAfter: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
+}
+
 module.exports = {
   connect,
   createGroup,
@@ -1022,4 +1048,6 @@ module.exports = {
   isEthereumAddress,
   getAppUserIds,
   sponsorRequestedRecently,
+  setRequiredRecoveryNum,
+  getRequiredRecoveryNum,
 };

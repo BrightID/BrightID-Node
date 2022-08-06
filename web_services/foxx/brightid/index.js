@@ -41,7 +41,6 @@ const handlers = {
     const op = req.body;
     const message = operations.getMessage(op);
     op.hash = hash(message);
-
     if (operationsHashesColl.exists(op.hash)) {
       throw new errors.OperationAppliedBeforeError(op.hash);
     } else if (JSON.stringify(op).length > MAX_OP_SIZE) {
@@ -152,6 +151,7 @@ const handlers = {
       });
     data.createdAt = user.createdAt;
     data.signingKeys = user.signingKeys;
+    data.requiredRecoveryNum = db.getRequiredRecoveryNum(id);
 
     if (requestor && usersColl.exists(requestor)) {
       const requestorConnections = db.userConnections(requestor, "outbound");

@@ -22,14 +22,14 @@ NUM_SEALERS = 0
 def hash(op):
     blockTime = op['blockTime']
     op = {k: op[k] for k in op if k not in (
-        'sig', 'sig1', 'sig2', 'hash', 'blockTime')}
+        'sig', 'sig1', 'sig2', 'sig3', 'sig4', 'sig5', 'hash', 'blockTime')}
     if op['name'] == 'Set Signing Key':
         del op['id1']
         del op['id2']
     # in next release checking blockTime should be removed
     if op['name'] == 'Social Recovery' and op['v'] == 6 and blockTime > 1637380189000:
-        del op['id1']
-        del op['id2']
+        for k in ['id1', 'id2', 'id3', 'id4', 'id5']:
+            op.pop(k, None)
     message = json.dumps(op, sort_keys=True, separators=(',', ':'))
     m = hashlib.sha256()
     m.update(message.encode('ascii'))
