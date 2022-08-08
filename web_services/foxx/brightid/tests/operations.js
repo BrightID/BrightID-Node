@@ -406,10 +406,21 @@ describe("operations", function () {
       Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
     );
     apply(op);
-    usersColl.document(u1.id).requiredRecoveryNum.should.equal(3);
+    const user = usersColl.document(u1.id);
+    user.nextRequiredRecoveryNum.should.equal(3);
+    user.requiredRecoveryNumSetAfter.should.be.at.most(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    );
   });
 
   it('should not be able to "Social Recovery" by wrong number of signers', function () {
+    // the 'requiredRecoveryNum' will set after 7 days so we put it manually for test
+    const user = usersColl.document(u1.id);
+    user.requiredRecoveryNum = user.nextRequiredRecoveryNum;
+    delete user.nextRequiredRecoveryNum;
+    delete user.requiredRecoveryNumSetAfter;
+    usersColl.replace(u1.id, user);
+
     const op = {
       v: 6,
       name: "Social Recovery",
