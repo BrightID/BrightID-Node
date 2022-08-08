@@ -928,16 +928,6 @@ describe("operations", function () {
       resp1.json.data.spendRequested.should.equal(true);
       resp1.json.data.appHasAuthorized.should.equal(false);
 
-      let op2 = {
-        name: "Spend Sponsorship",
-        appUserId: appUserId.toLowerCase(),
-        app: "idchain",
-        timestamp: Date.now(),
-        v: 6,
-      };
-      const opRes = apply(op2);
-      opRes.json.result.errorNum.should.equal(errors.SPEND_REQUESTED_BEFORE);
-
       let op3 = {
         name: "Sponsor",
         appUserId: appUserId.toLowerCase(),
