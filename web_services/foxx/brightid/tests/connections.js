@@ -367,7 +367,7 @@ describe("recovery connections", function () {
     const recoveryConnections = db.getRecoveryConnections("a", "outbound");
     recoveryConnections
       .find((c) => c.id == "c")
-      .activeBefore.should.be.greaterThan(0);
+      .activeBefore.should.be.least(0);
     const activeRecoveryConnection = recoveryConnections
       .filter((conn) => {
         return conn.isActive;
