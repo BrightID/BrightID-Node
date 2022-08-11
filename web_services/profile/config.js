@@ -6,7 +6,7 @@ const port = process.env.BN_WS_PROFILE_SERVICE_PORT || 3000;
 const minTTL = 60; // 1 minute
 const maxTTL = 60 * 60 * 24; // 24 hours
 const defaultTTL = 60 * 15; // 15 minutes
-const finalTTL = 600; // 10 minutes grace period to keep empty channels open
+const TTLExtension = 600;
 
 /* Cache config for channels */
 const channel_config = {
@@ -29,14 +29,13 @@ const notification_service =
     ? process.env.NOTIFICATION_SERVICE_DEV
     : process.env.NOTIFICATION_SERVICE_RELEASE;
 
-const channel_entry_limit = 30;
-
 const channel_max_size_bytes = is_test
   ? 1024 // 1 kb when running jest tests
   : 1024 * 1024 * 20; // 20 MegaByte normally
 
 const channel_limit_response_code = 440;
 const channel_limit_message = "Channel full";
+const channel_expires_header = "x-expires";
 
 module.exports = {
   is_dev,
@@ -44,12 +43,12 @@ module.exports = {
   channel_config,
   data_cache_config,
   notification_service,
-  channel_entry_limit,
   channel_max_size_bytes,
   channel_limit_response_code,
   channel_limit_message,
-  finalTTL,
+  channel_expires_header,
   minTTL,
   maxTTL,
   defaultTTL,
+  TTLExtension,
 };
