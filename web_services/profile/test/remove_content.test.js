@@ -1,6 +1,7 @@
 const { v4: uuidv4 } = require('uuid');
 const request = require('supertest')
 const app = require('../app')
+const {channel_ttl_header, channel_expires_header} = require('../config')
 
 const setupChannel = async (numEntries) => {
     channelId = uuidv4();
@@ -21,8 +22,8 @@ const setupChannel = async (numEntries) => {
     .get(`/list/${channelId}`)
     .expect(200)
     expect(res.body.profileIds).toHaveLength(numEntries);
-
-    return {channelId, channelEntries}
+    expect(res.header).toHaveProperty(channel_expires_header)
+    return {channelId, channelEntries, expires: parseInt(res.header[channel_expires_header])}
 }
 
 describe('Remove items from channel', () => {
@@ -101,22 +102,24 @@ describe('Remove items from channel', () => {
 
     describe('Delete all entries', () => {
 
+        let channelExpires;
+
         // Setup random channel
         beforeAll(async ()=>{
             const channelData = await setupChannel(numEntries)
             channelId = channelData.channelId
             channelEntries = channelData.channelEntries
+            channelExpires = channelData.expires
         })
 
         it('should delete all entries', async () => {
+            let newExpires
             for (let i=0; i < numEntries; i++) {
                 const deleteResult = await request(app)
                 .delete(`/${channelId}/${channelEntries[i].uuid}`)
                 .expect(200)
             }
-        })
-
-        it('Should return empty channel list', async () => {
+            // Should return empty channel list now
             const res = await request(app)
             .get(`/list/${channelId}`)
             .expect(200)
