@@ -13,6 +13,7 @@ const errors = require("./errors");
 
 const usersColl = arango._collection("users");
 const operationCountersColl = arango._collection("operationCounters");
+const sponsorshipsColl = arango._collection("sponsorships");
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
@@ -81,6 +82,20 @@ function checkLimits(op, timeWindow, limit) {
     // 3) a bucket for all non-verified users without parent
     // 4) a bucket for an app
     // where parent is the first verified user that make connection with the user
+
+    if (op["name"] == "Spend Sponsorship") {
+      const sponsorship = sponsorshipsColl.firstExample({
+        appId: op.contextId
+      });
+      if (!sponsorship) {
+        sender = "shared_apps";
+      } else if (sponsorship.spendRequested) {
+        throw new errors.SpendRequestedBeforeError();
+      } else if (!sponsorship.appHasAuthorized) {
+        sender = "shared_apps";
+      }
+    }
+
     if (!["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
       if (!usersColl.exists(sender)) {
         // this happens when operation is "Add Connection" and one/both sides don't exist

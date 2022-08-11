@@ -687,7 +687,11 @@ function userVerifications(user) {
 function linkContextId(id, context, contextId, timestamp) {
   const { collection, idsAsHex, soulbound, soulboundMessage } =
     getContext(context);
-  const coll = db._collection(collection);
+
+  if (!loadUser(id)) {
+    throw new errors.UserNotFoundError(id);
+  }
+
   if (!contextId) {
     throw new errors.InvalidContextIdError(contextId);
   }
@@ -711,6 +715,7 @@ function linkContextId(id, context, contextId, timestamp) {
   // remove testblocks if exists
   removeTestblock(contextId, "link");
 
+  const coll = db._collection(collection);
   let user = getUserByContextId(coll, contextId);
   if (user && user != id) {
     throw new errors.DuplicateContextIdError(contextId);
@@ -829,6 +834,11 @@ function setSigningKey(signingKey, key, timestamp) {
   usersColl.update(key, {
     signingKeys: [signingKey],
     updateTime: timestamp,
+  });
+
+  // remove pending invites, because they can not be decrypted anymore by the new signing key
+  invitationsColl.removeByExample({
+    _from: "users/" + key,
   });
 }
 
@@ -1063,9 +1073,7 @@ function sponsorRequestedRecently(op) {
     .pop();
 
   const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
-  return (
-    lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow
-  );
+  return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
 module.exports = {
