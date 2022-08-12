@@ -6,6 +6,7 @@ import base64
 import hashlib
 import shutil
 import requests
+import traceback
 from arango import ArangoClient, errno
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
@@ -180,4 +181,5 @@ if __name__ == '__main__':
             main()
         except Exception as e:
             print(f'Error: {e}')
+            print(f'Traceback: {traceback.format_exc()}')
             time.sleep(10)
