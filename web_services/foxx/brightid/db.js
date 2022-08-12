@@ -968,7 +968,7 @@ function sponsorRequestedRecently(op) {
   const lastSponsorTimestamp = query`
     FOR o in ${operationsColl}
       FILTER o.name == "Sponsor"
-      AND o.appUserId == ${op.appUserId}
+      AND o.appUserId IN ${[op.appUserId, op.appUserId.toLowerCase()]}
       SORT o.timestamp ASC
       RETURN o.timestamp
   `
