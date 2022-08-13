@@ -85,6 +85,10 @@ function checkLimits(op, timeWindow, limit) {
     // where parent is the first verified user that make connection with the user
 
     if (op["name"] == "Spend Sponsorship") {
+      const app = db.getApp(op.app);
+      if (app.idsAsHex) {
+        op.appUserId = op.appUserId.toLowerCase();
+      }
       const sponsorship = sponsorshipsColl.firstExample({
         appId: op.appUserId,
       });
