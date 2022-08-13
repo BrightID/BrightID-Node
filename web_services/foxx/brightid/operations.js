@@ -84,8 +84,12 @@ function checkLimits(op, timeWindow, limit) {
     // where parent is the first verified user that make connection with the user
 
     if (op["name"] == "Spend Sponsorship") {
+      const app = db.getApp(op.app);
+      if (app.idsAsHex) {
+        op.contextId = op.contextId.toLowerCase();
+      }
       const sponsorship = sponsorshipsColl.firstExample({
-        appId: op.contextId
+        appId: op.contextId,
       });
       if (!sponsorship) {
         sender = "shared_apps";
@@ -120,7 +124,7 @@ function checkLimits(op, timeWindow, limit) {
     expireDate = c ? c.expireDate : Math.ceil(now / 1000 + timeWindow / 1000);
     counter += 1;
     query`
-      UPSERT { _key: ${sender} } 
+      UPSERT { _key: ${sender} }
         INSERT {
           _key: ${sender},
           counter: ${counter},
