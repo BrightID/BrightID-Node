@@ -238,7 +238,11 @@ app.get("/list/:channelId", function (req, res, next) {
   // get channel
   const channel = channelCache.get(channelId);
   if (!channel) {
-    res.status(404).json({error: `channelId ${channelId} not found`})
+    // It's a breaking change and should apply after the client update
+    // res.status(404).json({error: `channelId ${channelId} not found`})
+    res.json({
+      profileIds: [],
+    });
     return;
   }
 
