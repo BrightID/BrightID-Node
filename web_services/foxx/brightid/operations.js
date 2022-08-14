@@ -13,6 +13,7 @@ const errors = require("./errors");
 
 const usersColl = arango._collection("users");
 const operationCountersColl = arango._collection("operationCounters");
+const sponsorshipsColl = arango._collection("sponsorships");
 
 const TIME_FUDGE = 60 * 60 * 1000; // timestamp can be this far in the future (milliseconds) to accommodate client/server clock differences
 
@@ -68,6 +69,7 @@ const senderAttrs = {
   "Vouch Family": ["id"],
   "Set Family Head": ["id"],
   "Convert To Family": ["id"],
+  "Set Required Recovery Num": ["id"],
 };
 
 function checkLimits(op, timeWindow, limit) {
@@ -81,6 +83,24 @@ function checkLimits(op, timeWindow, limit) {
     // 3) a bucket for all non-verified users without parent
     // 4) a bucket for an app
     // where parent is the first verified user that make connection with the user
+
+    if (op["name"] == "Spend Sponsorship") {
+      const app = db.getApp(op.app);
+      if (app.idsAsHex) {
+        op.appUserId = op.appUserId.toLowerCase();
+      }
+      const sponsorship = sponsorshipsColl.firstExample({
+        appId: op.appUserId,
+      });
+      if (!sponsorship) {
+        sender = "shared_apps";
+      } else if (sponsorship.spendRequested) {
+        throw new errors.SpendRequestedBeforeError();
+      } else if (!sponsorship.appHasAuthorized) {
+        sender = "shared_apps";
+      }
+    }
+
     if (!["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
       if (!usersColl.exists(sender)) {
         // this happens when operation is "Connect" and sender does not exist
@@ -147,6 +167,7 @@ const signerAndSigs = {
   "Vouch Family": ["id", "sig"],
   "Set Family Head": ["id", "sig"],
   "Convert To Family": ["id", "sig"],
+  "Set Required Recovery Num": ["id", "sig"],
 };
 
 function verify(op) {
@@ -168,21 +189,30 @@ function verify(op) {
     // there is no sig on this operation
     return;
   } else if (op.name == "Social Recovery") {
+    const requiredRecoveryNum = db.getRequiredRecoveryNum(op.id);
     const recoveryConnections = db.getRecoveryConnections(op.id);
-    if (op.id1 == op.id2) {
-      throw new errors.DuplicateSignersError();
+    const temp = new Set();
+    for (let i = 1; i <= requiredRecoveryNum; i++) {
+      if (!(`id${i}` in op)) {
+        throw new errors.WrongNumberOfSignersError(`id${i}`, requiredRecoveryNum);
+      }
+
+      if (temp.has(op[`id${i}`])) {
+        throw new errors.DuplicateSignersError();
+      }
+
+      const rc = recoveryConnections.find((c) => c.id == op[`id${i}`]);
+      if (!rc) {
+        throw new errors.NotRecoveryConnectionsError();
+      }
+
+      if (rc.activeAfter != 0) {
+        throw new errors.WaitForCooldownError(op[`id${i}`]);
+      }
+
+      verifyUserSig(message, op[`id${i}`], op[`sig${i}`]);
+      temp.add(op[`id${i}`]);
     }
-    const rc1 = recoveryConnections.find((c) => c.id == op.id1);
-    const rc2 = recoveryConnections.find((c) => c.id == op.id2);
-    if (!rc1 || !rc2) {
-      throw new errors.NotRecoveryConnectionsError();
-    } else if (rc1.activeAfter != 0) {
-      throw new errors.WaitForCooldownError(op.id1);
-    } else if (rc2.activeAfter != 0) {
-      throw new errors.WaitForCooldownError(op.id2);
-    }
-    verifyUserSig(message, op.id1, op.sig1);
-    verifyUserSig(message, op.id2, op.sig2);
   } else if (op.name == "Connect") {
     verifyUserSig(message, op.id1, op.sig1);
     if (op.requestProof) {
@@ -194,6 +224,7 @@ function verify(op) {
     const sig = op[sigAttr];
     verifyUserSig(message, signer, sig);
   }
+
   if (hash(message) != op.hash) {
     throw new errors.InvalidOperationHashError();
   }
@@ -242,6 +273,12 @@ function apply(op) {
     return db.setFamilyHead(op.id, op.head, op.group, op.timestamp);
   } else if (op["name"] == "Convert To Family") {
     return db.convertToFamily(op.id, op.head, op.group, op.timestamp);
+  } else if (op["name"] == "Set Required Recovery Num") {
+    return db.setRequiredRecoveryNum(
+      op.id,
+      op.requiredRecoveryNum,
+      op.timestamp
+    );
   } else {
     throw new errors.InvalidOperationNameError(op["name"]);
   }
@@ -255,6 +292,9 @@ function getMessage(op) {
         "sig",
         "sig1",
         "sig2",
+        "sig3",
+        "sig4",
+        "sig5",
         "hash",
         "blockTime",
         "n",
@@ -263,7 +303,10 @@ function getMessage(op) {
       ].includes(k)
     ) {
       continue;
-    } else if (op.name == "Social Recovery" && ["id1", "id2"].includes(k)) {
+    } else if (
+      op.name == "Social Recovery" &&
+      ["id1", "id2", "id3", "id4", "id5"].includes(k)
+    ) {
       continue;
     }
     signedOp[k] = op[k];

@@ -52,6 +52,8 @@ const indexes = [
   { collection: "operations", fields: ["state"], type: "persistent" },
   { collection: "operations", fields: ["name"], type: "persistent" },
   { collection: "operations", fields: ["timestamp"], type: "persistent" },
+  { collection: "operations", fields: ["contextId"], type: "persistent" },
+  { collection: "operations", fields: ["appUserId"], type: "persistent" },
   {
     collection: "cachedParams",
     fields: ["creationDate"],

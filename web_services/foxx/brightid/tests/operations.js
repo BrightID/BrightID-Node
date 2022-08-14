@@ -364,7 +364,7 @@ describe("operations", function () {
       .level.should.equal("just met");
   });
 
-  it('should be able to "Social Recovery"', function () {
+  it('should be able to "Social Recovery" with 2 signers by default', function () {
     connect(u2, u1, "already known");
     connect(u3, u1, "already known");
     connect(u1, u2, "recovery");
@@ -376,6 +376,84 @@ describe("operations", function () {
       id: u1.id,
       id1: u2.id,
       id2: u3.id,
+      signingKey: u7.signingKey,
+      timestamp,
+    };
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    op.sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
+    );
+    apply(op);
+    usersColl.document(u1.id).signingKeys.should.deep.equal([u7.signingKey]);
+    u1.secretKey = u7.secretKey;
+  });
+
+  it('should be able to "Set Required Recovery Num"', function () {
+    connect(u8, u1, "already known");
+    connect(u1, u8, "recovery");
+    const op = {
+      v: 6,
+      name: "Set Required Recovery Num",
+      id: u1.id,
+      requiredRecoveryNum: 3,
+      timestamp: Date.now(),
+    };
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+    );
+    apply(op);
+    const user = usersColl.document(u1.id);
+    user.nextRequiredRecoveryNum.should.equal(3);
+    user.requiredRecoveryNumSetAfter.should.be.at.most(
+      Date.now() + 7 * 24 * 60 * 60 * 1000
+    );
+  });
+
+  it('should not be able to "Social Recovery" by wrong number of signers', function () {
+    // the 'requiredRecoveryNum' will set after 7 days so we put it manually for test
+    const user = usersColl.document(u1.id);
+    user.requiredRecoveryNum = user.nextRequiredRecoveryNum;
+    delete user.nextRequiredRecoveryNum;
+    delete user.requiredRecoveryNumSetAfter;
+    usersColl.replace(u1.id, user);
+
+    const op = {
+      v: 6,
+      name: "Social Recovery",
+      id: u1.id,
+      id1: u2.id,
+      id2: u3.id,
+      signingKey: u4.signingKey,
+      timestamp: Date.now(),
+    };
+    const message = getMessage(op);
+    op.sig1 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    op.sig2 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
+    );
+
+    const resp = request.post(`${baseUrl}/operations`, {
+      body: op,
+      json: true,
+    });
+    resp.json.errorNum.should.equal(errors.WRONG_NUMBER_OF_SIGNERS);
+  });
+
+  it('should be able to "Social Recovery" with the required number of signers (3)', function () {
+    const timestamp = Date.now();
+    const op = {
+      v: 6,
+      name: "Social Recovery",
+      id: u1.id,
+      id1: u2.id,
+      id2: u3.id,
+      id3: u8.id,
       signingKey: u4.signingKey,
       timestamp,
     };
@@ -385,6 +463,9 @@ describe("operations", function () {
     );
     op.sig2 = uInt8ArrayToB64(
       Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
+    );
+    op.sig3 = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u8.secretKey))
     );
     apply(op);
     usersColl.document(u1.id).signingKeys.should.deep.equal([u4.signingKey]);
@@ -846,16 +927,6 @@ describe("operations", function () {
       let resp1 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
       resp1.json.data.spendRequested.should.equal(true);
       resp1.json.data.appHasAuthorized.should.equal(false);
-
-      let op2 = {
-        name: "Spend Sponsorship",
-        appUserId: appUserId.toLowerCase(),
-        app: "idchain",
-        timestamp: Date.now(),
-        v: 6,
-      };
-      const opRes = apply(op2);
-      opRes.json.result.errorNum.should.equal(errors.SPEND_REQUESTED_BEFORE);
 
       let op3 = {
         name: "Sponsor",

@@ -41,7 +41,6 @@ const handlers = {
     const op = req.body;
     const message = operations.getMessage(op);
     op.hash = hash(message);
-
     if (operationsHashesColl.exists(op.hash)) {
       throw new errors.OperationAppliedBeforeError(op.hash);
     } else if (JSON.stringify(op).length > MAX_OP_SIZE) {
@@ -53,7 +52,9 @@ const handlers = {
 
     // allow limited number of operations to be posted in defined time window
     const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
-    const limit = module.context.configuration.operationsLimit;
+    const limit = ["Sponsor", "Spend Sponsorship"].includes(op.name)
+      ? module.context.configuration.appsOperationsLimit
+      : module.context.configuration.operationsLimit;
     operations.checkLimits(op, timeWindow, limit);
 
     op.state = "init";
@@ -150,6 +151,7 @@ const handlers = {
       });
     data.createdAt = user.createdAt;
     data.signingKeys = user.signingKeys;
+    data.requiredRecoveryNum = db.getRequiredRecoveryNum(id);
 
     if (requestor && usersColl.exists(requestor)) {
       const requestorConnections = db.userConnections(requestor, "outbound");
@@ -515,6 +517,13 @@ const handlers = {
       },
     });
   },
+
+  peersGet: function (req, res) {
+    const conf = module.context.configuration;
+    res.send({
+      peers: conf.peers ? conf.peers.split(",") : [],
+    });
+  },
 };
 
 router
@@ -829,6 +838,11 @@ router
   .summary("Gets sponsorship information of an app generated id")
   .response(schemas.sponsorshipGetResponse)
   .error(404, "App generated id not found");
+
+router
+  .get("/peers", handlers.peersGet)
+  .summary("Gets other nodes this node trusts")
+  .response(schemas.peersGetResponse);
 
 module.context.use(function (req, res, next) {
   try {

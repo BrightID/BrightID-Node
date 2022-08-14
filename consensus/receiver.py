@@ -6,6 +6,7 @@ import base64
 import hashlib
 import shutil
 import requests
+import traceback
 from arango import ArangoClient, errno
 from web3 import Web3
 from web3.middleware import geth_poa_middleware
@@ -22,14 +23,14 @@ NUM_SEALERS = 0
 def hash(op):
     blockTime = op['blockTime']
     op = {k: op[k] for k in op if k not in (
-        'sig', 'sig1', 'sig2', 'hash', 'blockTime')}
+        'sig', 'sig1', 'sig2', 'sig3', 'sig4', 'sig5', 'hash', 'blockTime')}
     if op['name'] == 'Set Signing Key':
         del op['id1']
         del op['id2']
     # in next release checking blockTime should be removed
     if op['name'] == 'Social Recovery' and op['v'] == 6 and blockTime > 1637380189000:
-        del op['id1']
-        del op['id2']
+        for k in ['id1', 'id2', 'id3', 'id4', 'id5']:
+            op.pop(k, None)
     message = json.dumps(op, sort_keys=True, separators=(',', ':'))
     m = hashlib.sha256()
     m.update(message.encode('ascii'))
@@ -180,4 +181,5 @@ if __name__ == '__main__':
             main()
         except Exception as e:
             print(f'Error: {e}')
+            print(f'Traceback: {traceback.format_exc()}')
             time.sleep(10)

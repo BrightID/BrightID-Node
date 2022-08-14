@@ -6,6 +6,7 @@ const NodeCache = require("node-cache");
 const config = require("./config");
 const { renderStats } = require("./stats");
 const bn = require("bignum");
+const {TTLExtension, channel_expires_header} = require('./config')
 
 const dataCache = new NodeCache(config.data_cache_config);
 const channelCache = new NodeCache(config.channel_config);
@@ -19,6 +20,19 @@ if (config.is_dev) {
   app.get("/test", function (req, res, next) {
     res.sendFile(__dirname + "/index.html");
   });
+}
+
+/* Get remaining time to live of channel in seconds */
+const getRemainingTTL = (channelId) => {
+  // NodeCache.getTtl() actually returns a unix timestamp in ms(!) when channel will expire
+  const expirationTime = channelCache.getTtl(channelId);
+  const remainingTTL = expirationTime - Date.now();
+  return Math.floor(remainingTTL/1000)
+}
+
+/* Get expiration timestamp of channel as unix timestamp(seconds since 1970) */
+const getExpirationTimestamp = (channelId) => {
+  return Math.floor(channelCache.getTtl(channelId)/1000)
 }
 
 app.get("/", function (req, res, next) {
@@ -56,7 +70,8 @@ app.post("/upload/:channelId", function (req, res) {
   const ttl = requestedTtl || config.defaultTTL;
 
   let channel = channelCache.get(channelId);
-  if (!channel) {
+  const channelExisting = !!channel
+  if (!channelExisting) {
     // Create new channel.
     channel = {
       entries: new Map(),
@@ -66,57 +81,57 @@ app.post("/upload/:channelId", function (req, res) {
     // save channel in cache with requested TTL
     channelCache.set(channelId, channel, ttl);
     console.log(`Created new channel ${channelId} with TTL ${channel.ttl}`);
-  } else {
-    // existing channel. check if this channel was about to expire, but got another upload
-    if (channel.entries.size === 0) {
-      console.log(
-        `Restoring requested TTL ${channel.ttl} for channel ${channelId}`
-      );
-      channelCache.ttl(channelId, channel.ttl);
-    }
   }
 
   // Check if there is already data with the provided uuid to prevent duplicates
   const existingData = channel.entries.get(uuid);
   if (existingData) {
-    if (existingData === data) {
-      console.log(
-        `Received duplicate profile ${uuid} for channel ${channelId}`
-      );
-      // Workaround for recovery channels: interpret upload of existing data as request to extend TTL of channel
-      // TODO: Remove ttl extension when client that knows how to create channels with longer ttl time is released
-      channelCache.ttl(channelId, channel.ttl);
-      res.status(201).json({ success: true });
-    } else {
+    if (existingData !== data) {
       // Same UUID but different content? This is scary. Likely client bug. Bail out.
       res
-        .status(500)
-        .json({
-          error: `Profile ${uuid} already exists in channel ${channelId} with different data.`,
-        });
+      .status(500)
+      .json({
+        error: `Profile ${uuid} already exists in channel ${channelId} with different data.`,
+      })
+      return;
     }
-    return;
+    console.log(
+      `Received duplicate profile ${uuid} for channel ${channelId}`,
+    )
   }
 
-  // check channel size
-  const entrySize = sizeof(data) + sizeof(uuid);
-  const newSize = channel.size + entrySize;
-  console.log(
-    `channel ${channelId} newSize: ${newSize},\t delta: ${entrySize} bytes`
-  );
-  if (newSize > config.channel_max_size_bytes) {
-    // channel full :-(
-    res
-      .status(config.channel_limit_response_code)
-      .json({ error: config.channel_limit_message });
-    return;
-  }
-
-  // save data in cache
   try {
-    channel.entries.set(uuid, data);
-    channel.size = newSize;
+    if (!existingData) {
+      // check channel size
+      const entrySize = sizeof(data) + sizeof(uuid);
+      const newSize = channel.size + entrySize;
+      console.log(
+        `channel ${channelId} newSize: ${newSize},\t delta: ${entrySize} bytes`
+      );
+      if (newSize > config.channel_max_size_bytes) {
+        // channel full :-(
+        res
+        .status(config.channel_limit_response_code)
+        .json({ error: config.channel_limit_message });
+        return;
+      }
+
+      // save new data
+      channel.entries.set(uuid, data);
+      channel.size = newSize;
+    }
+
+    // extend channel TTL if necessary
+    if (channelExisting) {
+      const remainingTTL = getRemainingTTL(channelId)
+      if ( remainingTTL < TTLExtension) {
+        channelCache.ttl(channelId, TTLExtension)
+        console.log(`Extending TTL of channel ${channelId}. Old: ${remainingTTL} New: ${getRemainingTTL(channelId)}`)
+      }
+    }
+
     res.status(201);
+    res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
     res.json({ success: true });
   } catch (e) {
     console.log(err);
@@ -152,6 +167,8 @@ app.get("/download/:channelId/:uuid", function (req, res, next) {
       .json({ error: `Data ${uuid} in channel ${channelId} not found` });
     return;
   }
+
+  res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
 
   res.json({
     data: data,
@@ -201,40 +218,11 @@ app.delete("/:channelId/:uuid", function (req, res, next) {
 
   // update channel size
   channel.size -= sizeof(data) + sizeof(uuid);
-
   console.log(
     `Deleted ${uuid} from channel ${channelId}. New size: ${channel.size}`
   );
 
-  // handle removing of last entry
-  if (channel.entries.size === 0) {
-    // if channel is empty size should also be 0. Double-check.
-    if (channel.size !== 0) {
-      console.warn(
-        `Channel size calculation incorrect. This should not happen.`
-      );
-      channel.size = 0;
-    }
-
-    // Reduce remaining TTL. Leave a few minutes TTL in case some upload is
-    // hanging from a slow connection
-    const expirationTime = channelCache.getTtl(channelId); // This actually returns a unix timestamp in ms(!) when channel will expire
-    const remainingTTL = expirationTime - Date.now();
-    if (remainingTTL > config.finalTTL) {
-      console.log(
-        `last element removed from channel ${channelId}. Reducing TTL from ${Math.floor(
-          remainingTTL / 1000
-        )} to ${config.finalTTL} secs.`
-      );
-      channelCache.ttl(channelId, config.finalTTL);
-    } else {
-      console.log(
-        `last element removed from channel ${channelId}. Remaining TTL: ${remainingTTL}ms.`
-      );
-      channelCache.ttl(channelId, config.finalTTL);
-    }
-  }
-
+  res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
   res.status(200);
   res.json({ success: true });
 });
@@ -250,8 +238,8 @@ app.get("/list/:channelId", function (req, res, next) {
   // get channel
   const channel = channelCache.get(channelId);
   if (!channel) {
-    // Don't fail when channel is not existing. Instead return empty array
-    // res.status(404).json({error: `Channel ${channelId} not found`});
+    // It's a breaking change and should apply after the client update
+    // res.status(404).json({error: `channelId ${channelId} not found`})
     res.json({
       profileIds: [],
     });
@@ -265,8 +253,10 @@ app.get("/list/:channelId", function (req, res, next) {
     return;
   }
 
+  res.append(channel_expires_header, `${getExpirationTimestamp(channelId)}`)
+
   res.json({
-    profileIds: Array.from(channel.entries.keys()), // channel.entries.keys()
+    profileIds: Array.from(channel.entries.keys()),
   });
 });
 

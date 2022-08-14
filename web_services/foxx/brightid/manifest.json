@@ -3,7 +3,7 @@
   "name": "BrightID-Node",
   "description": "Read and update the anonymous social graph stored on BrightID nodes.",
   "license": "ISC",
-  "version": "6.13.1",
+  "version": "6.14.0",
   "tests": ["tests/*.js"],
   "scripts": {
     "setup": "initdb.js"
@@ -42,6 +42,16 @@
     "operationsLimit": {
       "description": "Maximum number of operations each verified user can send in configured time window",
       "type": "int",
+      "required": false
+    },
+    "appsOperationsLimit": {
+      "description": "Maximum number of operations each app can send in configured time window",
+      "type": "int",
+      "required": false
+    },
+    "peers": {
+      "description": "other nodes that this node trusts (comma-separated string)",
+      "type": "string",
       "required": false
     },
     "development": {

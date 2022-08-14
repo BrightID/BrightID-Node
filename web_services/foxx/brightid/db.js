@@ -618,6 +618,11 @@ function setSigningKey(signingKey, key, timestamp) {
     signingKeys: [signingKey],
     updateTime: timestamp,
   });
+
+  // remove pending invites, because they can not be decrypted anymore by the new signing key
+  invitationsColl.removeByExample({
+    _from: "users/" + key,
+  });
 }
 
 function getSponsorship(appUserId) {
@@ -963,7 +968,7 @@ function sponsorRequestedRecently(op) {
   const lastSponsorTimestamp = query`
     FOR o in ${operationsColl}
       FILTER o.name == "Sponsor"
-      AND o.appUserId == ${op.appUserId}
+      AND o.appUserId IN ${[op.appUserId, op.appUserId.toLowerCase()]}
       SORT o.timestamp ASC
       RETURN o.timestamp
   `
@@ -971,6 +976,32 @@ function sponsorRequestedRecently(op) {
     .pop();
   const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
+}
+
+function getRequiredRecoveryNum(id) {
+  const user = getUser(id);
+  if (
+    "nextRequiredRecoveryNum" in user &&
+    user.requiredRecoveryNumSetAfter <= Date.now()
+  ) {
+    user.requiredRecoveryNum = user.nextRequiredRecoveryNum;
+    delete user.nextRequiredRecoveryNum;
+    delete user.requiredRecoveryNumSetAfter;
+    usersColl.replace(id, user);
+  }
+  return user.requiredRecoveryNum || 2;
+}
+
+function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
+  const recoveryConnections = getRecoveryConnections(id);
+  if (recoveryConnections.length < requiredRecoveryNum) {
+    throw new errors.InvalidNumberOfSignersError();
+  }
+
+  usersColl.update(id, {
+    nextRequiredRecoveryNum: requiredRecoveryNum,
+    requiredRecoveryNumSetAfter: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
 }
 
 module.exports = {
@@ -1017,4 +1048,6 @@ module.exports = {
   isEthereumAddress,
   getAppUserIds,
   sponsorRequestedRecently,
+  setRequiredRecoveryNum,
+  getRequiredRecoveryNum,
 };
