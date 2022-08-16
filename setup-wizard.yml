@@ -79,3 +79,15 @@ fields:
       type: environment
       name: BN_CONSENSUS_PRIVATE_KEY
       service: [consensus_sender, ws]
+
+  - id: peers
+    title: "other nodes that this node trusts (comma-separated string)"
+    description: >-
+      Provide a list of BrightID Node instances that you are trusting.
+    required: false
+    secret: false
+    target:
+      type: environment
+      name: BN_PEERS
+      service: ws
+

@@ -16,6 +16,7 @@ services:
       BN_ARANGO_HOST: db.brightid-node.public.dappnode
       BN_ARANGO_PORT: "8529"
       BN_CONSENSUS_PRIVATE_KEY: ""
+      BN_PEERS: ""
   scorer:
     build: scorer
     depends_on:
