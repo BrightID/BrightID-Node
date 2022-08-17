@@ -12,28 +12,43 @@ sponsorships = db['sponsorships']
 testblocks = db['testblocks']
 
 
-def get_events(app):
-    print(f'\napp: {app["_key"]}')
-    w3 = Web3(Web3.WebsocketProvider(
-        app['wsProvider'], websocket_kwargs={'timeout': 60}))
-    if app['wsProvider'].count('rinkeby') > 0 or app['wsProvider'].count('idchain') > 0:
+def get_w3(app):
+    if app['rpcEndpoint'].startswith("http"):
+        w3 = Web3(Web3.HTTPProvider(
+            app['rpcEndpoint'], request_kwargs={'timeout': 60}))
+    elif app['rpcEndpoint'].startswith("ws"):
+        w3 = Web3(Web3.WebsocketProvider(
+            app['rpcEndpoint'], websocket_kwargs={'timeout': 60}))
+    else:
+        raise ValueError(f'invalid RPC: {app["rpcEndpoint"]}')
+
+    if app.get('poaNetwork'):
         w3.middleware_onion.inject(geth_poa_middleware, layer=0)
+
     if app.get('localFilter'):
         w3.middleware_onion.add(local_filter_middleware)
+    return w3
 
+
+def get_events(app):
+    print(f'\napp: {app["_key"]}')
+    w3 = get_w3(app)
     if variables.has(f'LAST_BLOCK_LOG_{app["_key"]}'):
         fb = variables[f'LAST_BLOCK_LOG_{app["_key"]}']['value']
     else:
         fb = w3.eth.getBlock('latest').number
+
         variables.insert({
             '_key': f'LAST_BLOCK_LOG_{app["_key"]}',
             'value': fb
         })
+
     cb = w3.eth.getBlock('latest').number
     tb = min(cb, fb + config.CHUNK)
 
     if tb < fb:
         fb = tb - config.CHUNK
+    fb = fb - config.RECHECK_CHUNK
 
     print(f'checking events from block {fb} to block {tb}')
     sponsor_event_contract = w3.eth.contract(
@@ -99,7 +114,7 @@ def remove_testblocks(app, context_id):
 def is_using_sponsor_contract(app):
     if not app.get('sponsorEventContract'):
         return False
-    if not app.get('wsProvider'):
+    if not app.get('rpcEndpoint'):
         return False
     return True
 

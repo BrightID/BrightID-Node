@@ -26,6 +26,8 @@ local_to_json = {
     'verificationExpirationLength': 'Verification Expiration Length',
     'soulbound': 'Soulbound',
     'callbackUrl': 'Callback Url',
+    'poaNetwork': 'POA Network',
+    'rpcEndpoint': 'RPC Endpoint'
 }
 
 
