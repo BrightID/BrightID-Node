@@ -16,7 +16,7 @@ def get_w3(app):
     if app['rpcEndpoint'].startswith("http"):
         w3 = Web3(Web3.HTTPProvider(
             app['rpcEndpoint'], request_kwargs={'timeout': 60}))
-    elif app['rpcEndpoint'].startswith("wss"):
+    elif app['rpcEndpoint'].startswith("ws"):
         w3 = Web3(Web3.WebsocketProvider(
             app['rpcEndpoint'], websocket_kwargs={'timeout': 60}))
     else:
