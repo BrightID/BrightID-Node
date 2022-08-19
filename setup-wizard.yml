@@ -45,7 +45,7 @@ fields:
     description: >-
       BrightID node needs access to an IDChain node.
 
-      - IDChain on DAppNode: `http://http://idchain.dappnode:8545` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
+      - IDChain on DAppNode: `http://idchain.dappnode:8545` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
 
       - Remote node (example URL): `https://remote-node-provider.io`
     target:
