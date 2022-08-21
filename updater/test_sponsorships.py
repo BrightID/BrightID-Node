@@ -36,9 +36,9 @@ class TestUpdate(unittest.TestCase):
         public = base64.b64encode(public.to_bytes()).decode('ascii')
         private = base64.b64encode(private.to_bytes()).decode('ascii')
         self.USER = public.strip('=').replace('/', '_').replace('+', '-')
-        self.WS_PROVIDER = 'wss://idchain.one/ws/'
+        self.RPC_ENDPOINT = 'wss://idchain.one/ws/'
         self.w3 = Web3(Web3.WebsocketProvider(
-            self.WS_PROVIDER, websocket_kwargs={'timeout': 60}))
+            self.RPC_ENDPOINT, websocket_kwargs={'timeout': 60}))
         self.w3.middleware_onion.inject(geth_poa_middleware, layer=0)
         self.CONTEXT_ID = self.w3.eth.account.create().address.lower()
         self.variables = sponsorships.db.collection('variables')
@@ -52,7 +52,8 @@ class TestUpdate(unittest.TestCase):
         self.app = {
             '_key': self.APP,
             'ethName': self.APP,
-            'wsProvider': self.WS_PROVIDER,
+            'rpcEndpoint': self.RPC_ENDPOINT,
+            'poaNetwork': True,
             'sponsorEventContract': self.SPONSOR_EVENT_CONTRACT,
             'sponsorPublicKey': public,
             'sponsorPrivateKey': private,
