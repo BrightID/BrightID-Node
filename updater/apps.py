@@ -15,7 +15,6 @@ local_to_json = {
     'context': 'Context',
     'sponsorPublicKey': 'Sponsor Public Key',
     'sponsorEventContract': 'Contract Address',
-    'wsProvider': 'Websocket Endpoint',
     'verification': 'Verification',
     'verifications': 'Verifications',
     'testing': 'Testing',
