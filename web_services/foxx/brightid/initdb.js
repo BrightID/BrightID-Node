@@ -41,6 +41,10 @@ const indexes = [
     expireAfter: 0,
   },
   { collection: "sponsorships", fields: ["contextId"], type: "persistent" },
+  { collection: "sponsorships", fields: ["appId"], type: "persistent" },
+  { collection: "sponsorships", fields: ["expireDate"], type: "persistent" },
+  { collection: "sponsorships", fields: ["appHasAuthorized"], type: "persistent" },
+  { collection: "sponsorships", fields: ["spendRequested"], type: "persistent" },
   { collection: "connections", fields: ["level"], type: "persistent" },
   {
     collection: "connectionsHistory",
