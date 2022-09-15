@@ -196,17 +196,8 @@ const handlers = {
 
   allVerificationsGet: function (req, res) {
     const appKey = req.param("app");
-    const count_only = "count_only" in req.queryParams;
-    const app = db.getApp(appKey);
-    const context = db.getContext(app.context);
-    const coll = arango._collection(context.collection);
-    let contextIds = db.getLastContextIds(coll, app._key);
-    let data = {
-      count: contextIds.length,
-    };
-    if (!count_only) {
-      data["contextIds"] = contextIds;
-    }
+    const countOnly = "count_only" in req.queryParams;
+    const data = db.getLastContextIds(appKey, countOnly);
     res.send({
       data,
     });

@@ -1,6 +1,6 @@
 "use strict";
 const { sha256 } = require("@arangodb/crypto");
-const { query, db } = require("@arangodb");
+const { query, db, aql } = require("@arangodb");
 const _ = require("lodash");
 const stringify = require("fast-json-stable-stringify");
 const nacl = require("tweetnacl");
@@ -622,22 +622,46 @@ function getContextIdsByUser(coll, id) {
   `.toArray();
 }
 
-function getLastContextIds(coll, appKey) {
-  const app = getApp(appKey);
-  return query`
+function getLastContextIds(appKey, countOnly) {
+  const { context, verification } = getApp(appKey);
+  const { collection } = getContext(context);
+  const coll = db._collection(collection);
+
+  const baseQuery = aql`
     FOR c IN ${coll}
-      FOR u in ${usersColl}
-        FILTER c.user == u._key
-        FOR v in verifications
-          FILTER v.user == u._key
-            AND v.expression == true
-            AND v.name == ${app.verification}
-          FOR s IN ${sponsorshipsColl}
-            FILTER s._from == u._id OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
-            SORT c.timestamp DESC
-            COLLECT user = c.user INTO contextIds = c.contextId
-            RETURN contextIds[0]
-  `.toArray();
+      FOR v in verifications
+        FILTER v.user == c.user
+          AND v.expression == true
+          AND v.name == ${verification}
+        FOR s IN ${sponsorshipsColl}
+          FILTER s._from == CONCAT("users/", c.user) OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
+  `;
+  const data = {};
+  if (countOnly) {
+    data["count"] = db
+      ._query(
+        aql`
+      ${baseQuery}
+      COLLECT user = c.user
+      COLLECT WITH COUNT INTO length
+      RETURN length
+    `
+      )
+      .toArray()[0];
+  } else {
+    data["contextIds"] = db
+      ._query(
+        aql`
+      ${baseQuery}
+      SORT c.timestamp DESC
+      COLLECT user = c.user INTO contextIds = c.contextId
+      RETURN contextIds[0]
+    `
+      )
+      .toArray();
+    data["count"] = data["contextIds"].length;
+  }
+  return data;
 }
 
 function userVerifications(user) {
