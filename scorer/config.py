@@ -1,4 +1,5 @@
-import os, shutil
+import os
+import shutil
 
 SNAPSHOTS_PATH = "/snapshots"
 if 'INIT_BRIGHTID_DB' in os.environ:
