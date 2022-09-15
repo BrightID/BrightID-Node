@@ -206,15 +206,15 @@ function updateEligibleGroups(userId, connections, currentGroups) {
   currentGroups = currentGroups.map((gId) => "groups/" + gId);
   const user = "users/" + userId;
   const candidates = query`
-      FOR edge in ${usersInGroupsColl}
-          FILTER edge._from in ${connections}
-          FILTER edge._to NOT IN ${currentGroups}
-          COLLECT group=edge._to WITH COUNT INTO count
-          SORT count DESC
-          RETURN {
-              group,
-              count
-          }
+    FOR edge in ${usersInGroupsColl}
+      FILTER edge._from in ${connections}
+      FILTER edge._to NOT IN ${currentGroups}
+      COLLECT group=edge._to WITH COUNT INTO count
+      SORT count DESC
+      RETURN {
+        group,
+        count
+      }
   `.toArray();
   const groupIds = candidates.map((x) => x.group);
   const groupCounts = query`
