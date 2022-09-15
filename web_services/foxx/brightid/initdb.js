@@ -47,6 +47,7 @@ const indexes = [
   { collection: "sponsorships", fields: ["appHasAuthorized"], type: "persistent" },
   { collection: "sponsorships", fields: ["spendRequested"], type: "persistent" },
   { collection: "connections", fields: ["level"], type: "persistent" },
+  { collection: "connections", fields: ["timestamp"], type: "persistent" },
   {
     collection: "connectionsHistory",
     fields: ["timestamp"],
