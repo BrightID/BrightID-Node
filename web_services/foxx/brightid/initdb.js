@@ -34,6 +34,7 @@ const indexes = [
   { collection: "verifications", fields: ["name"], type: "persistent" },
   { collection: "verifications", fields: ["block"], type: "persistent" },
   { collection: "verifications", fields: ["expression"], type: "persistent" },
+  { collection: "verifications", fields: ["rank"], type: "persistent" },
   {
     collection: "sponsorships",
     fields: ["expireDate"],
