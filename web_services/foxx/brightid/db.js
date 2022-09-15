@@ -1,5 +1,5 @@
 "use strict";
-const { query, db } = require("@arangodb");
+const { query, db, aql } = require("@arangodb");
 const _ = require("lodash");
 const {
   urlSafeB64ToB64,
@@ -943,32 +943,45 @@ function isEthereumAddress(address) {
 }
 
 function getAppUserIds(appKey, period, countOnly) {
-  const app = getApp(appKey);
-  const res = [];
-  let query = { app: app._key };
+  const { verifications, verificationExpirationLength: vel } = getApp(appKey);
+  let roundedTimestamp;
   if (period == "current") {
-    const vel = app.verificationExpirationLength;
-    query["roundedTimestamp"] = vel ? parseInt(Date.now() / vel) * vel : 0;
+    roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
   } else if (period == "previous") {
-    const vel = app.verificationExpirationLength;
-    query["roundedTimestamp"] = vel
-      ? (parseInt(Date.now() / vel) - 1) * vel
-      : 0;
+    roundedTimestamp = vel ? (parseInt(Date.now() / vel) - 1) * vel : 0;
   }
-  for (const verification of app.verifications) {
-    query["verification"] = verification;
-    const appUserIds = new Set(
-      appIdsColl
-        .byExample(query)
-        .toArray()
-        .map((d) => d.appId)
-    );
-    const data = {
-      verification,
-      count: appUserIds.size,
-    };
-    if (!countOnly) {
-      data["appUserIds"] = Array.from(appUserIds);
+
+  const res = [];
+  for (const verification of verifications) {
+    const data = { verification };
+    const filters = [
+      aql`FILTER d.app == ${appKey}`,
+      aql`AND d.verification == ${verification}`,
+    ];
+    if (roundedTimestamp) {
+      filters.push(aql`AND d.roundedTimestamp == ${roundedTimestamp}`);
+    }
+    const joinedFilters = aql.join(filters);
+
+    if (countOnly) {
+      data["count"] = query`
+        RETURN COUNT(
+          FOR d IN ${appIdsColl}
+            ${joinedFilters}
+            RETURN DISTINCT d.appId
+        )
+      `.toArray()[0];
+    } else {
+      data["appUserIds"] = db
+        ._query(
+          aql`
+        FOR d IN ${appIdsColl}
+          ${joinedFilters}
+          RETURN DISTINCT d.appId
+      `
+        )
+        .toArray();
+      data["count"] = data["appUserIds"].length;
     }
     res.push(data);
   }
