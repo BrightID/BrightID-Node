@@ -955,8 +955,18 @@ function upsertOperation(op) {
 function getState() {
   const lastProcessedBlock = variablesColl.document("LAST_BLOCK").value;
   const verificationsBlock = variablesColl.document("VERIFICATION_BLOCK").value;
-  const initOp = operationsColl.byExample({ state: "init" }).count();
-  const sentOp = operationsColl.byExample({ state: "sent" }).count();
+  const initOp = query`
+    FOR o in ${operationsColl}
+      FILTER o.state == "init"
+      COLLECT WITH COUNT INTO length
+      RETURN length
+  `.toArray()[0];
+  const sentOp = query`
+    FOR o in ${operationsColl}
+      FILTER o.state == "sent"
+      COLLECT WITH COUNT INTO length
+      RETURN length
+  `.toArray()[0];
   const verificationsHashes = JSON.parse(
     variablesColl.document("VERIFICATIONS_HASHES").hashes
   );
