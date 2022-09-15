@@ -21,7 +21,7 @@ def verify(block):
         'levels': ['just met', 'already known', 'recovery'],
         'time_limit': 1564600000000
     })
-
+    counter = 0
     for verified in verifieds:
         verified = verified.replace('users/', '')
         db['verifications'].insert({
@@ -31,7 +31,6 @@ def verify(block):
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('DollarForEveryone', verified)
         })
+        counter += 1
 
-    verifiedCount = db['verifications'].find(
-        {'name': 'DollarForEveryone', 'block': block}).count()
-    print(f'verifieds: {verifiedCount}\n')
+    print(f'verifieds: {counter}\n')

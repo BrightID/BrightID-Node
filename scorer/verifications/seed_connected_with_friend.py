@@ -109,6 +109,4 @@ def verify(block):
             add_verification_to(pair[0], pair[1], block)
             add_verification_to(pair[1], pair[0], block)
 
-    verified_count = db['verifications'].find(
-        {'name': 'SeedConnectedWithFriend', 'block': block}).count()
-    print(f'verifieds: {verified_count}\n')
+    print(f'verifieds: {len(verifieds)}\n')

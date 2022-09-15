@@ -31,6 +31,4 @@ def verify(block):
             verifications = batch_db.collection('verifications')
     batch_db.commit()
 
-    verifiedCount = db['verifications'].find({
-        'name': 'BrightID', 'block': block}).count()
-    print(f'verifieds: {verifiedCount}\n')
+    print(f'verifieds: {i + 1}\n')

@@ -37,10 +37,4 @@ def verify(block):
             batch_col = batch_db.collection('verifications')
     batch_db.commit()
 
-    verifiedCount = db.aql.execute('''
-        FOR v in verifications
-            FILTER v.name == 'Seed'
-                AND v.block == @block
-            RETURN v
-    ''', bind_vars={'block': block}, count=True).count()
-    print(f'verifications: {verifiedCount}\n')
+    print(f'verifications: {counter}\n')
