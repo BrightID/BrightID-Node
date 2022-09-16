@@ -42,8 +42,11 @@ def update_verifications_hashes(block):
     hashes = json.loads(hashes)
     # json save keys (block numbers) as strings
     last_block = str(max(map(int, hashes.keys())))
-    hashes = { block: new_hashes, last_block: hashes[last_block] }
-    variables.update({'_key': 'VERIFICATIONS_HASHES', 'hashes': json.dumps(hashes)})
+    hashes = {block: new_hashes, last_block: hashes[last_block]}
+    variables.update({
+        '_key': 'VERIFICATIONS_HASHES',
+        'hashes': json.dumps(hashes)
+    })
 
 
 def remove_verifications_before(block):
