@@ -637,15 +637,15 @@ function isSponsored(key) {
   return sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
 }
 
-function unusedSponsorships(app) {
+function unusedSponsorships(appKey) {
   const usedSponsorships = query`
     FOR s in ${sponsorshipsColl}
-      FILTER s._to == ${"apps/" + app}
-      && s.expireDate == null
+      FILTER s._to == CONCAT("apps/", ${appKey})
+      AND s.expireDate == null
       COLLECT WITH COUNT INTO length
       RETURN length
   `.toArray()[0];
-  const { totalSponsorships } = appsColl.document(app);
+  const { totalSponsorships } = appsColl.document(appKey);
   return totalSponsorships - usedSponsorships;
 }
 
