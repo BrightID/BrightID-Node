@@ -707,32 +707,17 @@ describe("operations", function () {
       resp1.json.data.spendRequested.should.equal(false);
 
       let op2 = {
-        name: "Sponsor",
-        contextId: contextId.toLowerCase(),
-        app,
-        timestamp: Date.now(),
-        v: 5,
-      };
-      const message2 = getMessage(op2);
-      op2.sig = uInt8ArrayToB64(
-        Object.values(
-          nacl.sign.detached(strToUint8Array(message2), sponsorPrivateKey)
-        )
-      );
-      const opRes = apply(op2);
-      opRes.json.result.errorNum.should.equal(errors.APP_AUTHORIZED_BEFORE);
-
-      let op3 = {
         name: "Spend Sponsorship",
         contextId: contextId.toLowerCase(),
         app,
         timestamp: Date.now(),
         v: 5,
       };
-      const r2 = apply(op3);
+      const r2 = apply(op2);
       let resp3 = request.get(`${baseUrl}/sponsorships/${contextId}`);
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
+      appsColl.document(app).usedSponsorships.should.equal(1);
     });
 
     it('clients should be able to "Spend Sponsorship" first then apps "Sponsor"', function () {
@@ -750,34 +735,25 @@ describe("operations", function () {
       resp1.json.data.appHasAuthorized.should.equal(false);
 
       let op2 = {
-        name: "Spend Sponsorship",
-        contextId: contextId.toLowerCase(),
-        app,
-        timestamp: Date.now(),
-        v: 5,
-      };
-      const opRes = apply(op2);
-      opRes.json.result.errorNum.should.equal(errors.SPEND_REQUESTED_BEFORE);
-
-      let op3 = {
         name: "Sponsor",
         contextId: contextId.toLowerCase(),
         app,
         timestamp: Date.now(),
         v: 5,
       };
-      const message3 = getMessage(op3);
-      op3.sig = uInt8ArrayToB64(
+      const message3 = getMessage(op2);
+      op2.sig = uInt8ArrayToB64(
         Object.values(
           nacl.sign.detached(strToUint8Array(message3), sponsorPrivateKey)
         )
       );
-      apply(op3);
+      apply(op2);
       let resp3 = request.get(
         `${baseUrl}/sponsorships/${contextId.toLowerCase()}`
       );
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
+      appsColl.document(app).usedSponsorships.should.equal(2);
     });
 
     it("return not sponsored for the unlinked and not sponsored contextid", function () {

@@ -100,6 +100,13 @@ describe("links & sponsorships", function () {
         app: "testApp",
         timestamp: 0,
       });
+      db.sponsor({
+        name: "Spend Sponsorship",
+        contextId: "2",
+        app: "testApp",
+        timestamp: 0,
+      });
+      appsColl.document("testApp").usedSponsorships.should.equal(1);
     });
     it("should throw UnusedSponsorshipsError if app has no unused sponsorship", function () {
       (() => {
