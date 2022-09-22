@@ -90,14 +90,11 @@ def sponsor(app, app_id):
             'appHasAuthorized': True,
             'timestamp': int(time.time() * 1000),
         })
+        db['apps'].update({
+            '_key': app['_key'],
+            'usedSponsorships': app['usedSponsorships'] + 1
+        })
         print('applied')
-
-
-def has_sponsorship(app):
-    tsponsorships = app['totalSponsorships']
-    usponsorships = sponsorships.find(
-        {'_to': 'apps/{0}'.format(app['_key']), 'expireDate': None}).count()
-    return tsponsorships - usponsorships > 0
 
 
 def remove_testblocks(app, context_id):
@@ -136,7 +133,7 @@ def update():
             if not app.get('usingBlindSig', False):
                 remove_testblocks(app, _id)
 
-            if not has_sponsorship(app):
+            if app['totalSponsorships'] - app['usedSponsorships'] < 1:
                 print("app does not have unused sponsorships")
                 continue
 

@@ -912,6 +912,7 @@ describe("operations", function () {
       let resp2 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
       resp2.json.data.appHasAuthorized.should.equal(true);
       resp2.json.data.spendRequested.should.equal(true);
+      appsColl.document("idchain").usedSponsorships.should.equal(1);
     });
 
     it('clients should be able to "Spend Sponsorship" first then apps "Sponsor"', function () {
@@ -946,6 +947,7 @@ describe("operations", function () {
       );
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
+      appsColl.document("idchain").usedSponsorships.should.equal(2);
     });
   });
 });

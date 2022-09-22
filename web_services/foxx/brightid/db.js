@@ -419,7 +419,7 @@ function appToDic(app) {
     logo: app.logo,
     url: app.url,
     assignedSponsorships: app.totalSponsorships,
-    unusedSponsorships: unusedSponsorships(app._key),
+    unusedSponsorships: app.totalSponsorships - (app.usedSponsorships || 0),
     testing: app.testing,
     idsAsHex: app.idsAsHex,
     usingBlindSig: app.usingBlindSig,
@@ -637,25 +637,16 @@ function isSponsored(key) {
   return sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
 }
 
-function unusedSponsorships(appKey) {
-  const usedSponsorships = query`
-    FOR s in ${sponsorshipsColl}
-      FILTER s._to == CONCAT("apps/", ${appKey})
-      AND s.expireDate == null
-      COLLECT WITH COUNT INTO length
-      RETURN length
-  `.toArray()[0];
-  const { totalSponsorships } = appsColl.document(appKey);
-  return totalSponsorships - usedSponsorships;
-}
-
 function sponsor(op) {
-  if (op.name == "Sponsor" && unusedSponsorships(op.app) < 1) {
+  const app = appsColl.document(op.app);
+  if (
+    op.name == "Sponsor" &&
+    app.totalSponsorships - (app.usedSponsorships || 0) < 1
+  ) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
-  const { idsAsHex } = appsColl.document(op.app);
-  if (idsAsHex) {
+  if (app.idsAsHex) {
     if (!isEthereumAddress(op.appUserId)) {
       throw new errors.InvalidAppUserIdError(op.appUserId);
     }
@@ -697,6 +688,8 @@ function sponsor(op) {
     spendRequested: true,
     timestamp: op.timestamp,
   });
+
+  appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
 }
 
 function loadOperation(key) {
@@ -1056,7 +1049,6 @@ module.exports = {
   upsertOperation,
   insertAppUserIdVerification,
   setSigningKey,
-  unusedSponsorships,
   getState,
   getRecoveryConnections,
   addSigningKey,
