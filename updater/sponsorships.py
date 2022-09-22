@@ -92,7 +92,7 @@ def sponsor(app, app_id):
         })
         db['apps'].update({
             '_key': app['_key'],
-            'usedSponsorships': app['usedSponsorships'] + 1
+            'usedSponsorships': app.get('usedSponsorships', 0) + 1
         })
         print('applied')
 
@@ -133,7 +133,7 @@ def update():
             if not app.get('usingBlindSig', False):
                 remove_testblocks(app, _id)
 
-            if app['totalSponsorships'] - app['usedSponsorships'] < 1:
+            if app['totalSponsorships'] - app.get('usedSponsorships', 0) < 1:
                 print("app does not have unused sponsorships")
                 continue
 
