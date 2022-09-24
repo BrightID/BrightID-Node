@@ -1105,6 +1105,24 @@ function sponsorRequestedRecently(op) {
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
+function isSponsoredByContextId(op) {
+  const sponsored = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == CONCAT("apps/", ${op.app})
+      AND s.appHasAuthorized == true
+      AND s.spendRequested == true
+      AND s.appId IN ${[op.contextId, op.contextId.toLowerCase()]}
+      RETURN s.appId
+  `
+    .toArray()
+    .pop();
+  if (sponsored) {
+    return true;
+  }
+
+  return false;
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -1159,4 +1177,5 @@ module.exports = {
   updateGroup,
   isEthereumAddress,
   sponsorRequestedRecently,
+  isSponsoredByContextId,
 };

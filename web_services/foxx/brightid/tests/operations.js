@@ -144,7 +144,9 @@ describe("operations", function () {
       soulbound: true,
       sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
     });
-    const hashes = JSON.parse(variablesColl.document("VERIFICATIONS_HASHES").hashes);
+    const hashes = JSON.parse(
+      variablesColl.document("VERIFICATIONS_HASHES").hashes
+    );
     const block = Math.max(...Object.keys(hashes));
     verificationsColl.insert({
       name: "BrightID",
@@ -754,6 +756,62 @@ describe("operations", function () {
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
       appsColl.document(app).usedSponsorships.should.equal(2);
+    });
+
+    it("should reject the duplicate sponsor requests which are received recently", function () {
+      const contextId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11D";
+      let op = {
+        name: "Sponsor",
+        contextId,
+        app,
+        timestamp: Date.now(),
+        v: 5,
+      };
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(
+          nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey)
+        )
+      );
+      let resp = request.post(`${baseUrl}/operations`, {
+        body: op,
+        json: true,
+      });
+      resp.status.should.equal(403);
+      resp.json.errorNum.should.equal(errors.SPONSOR_REQUESTED_RECENTLY);
+    });
+
+    it("should reject the sponsor requests which are already sponsored", function () {
+      const contextId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11F";
+      // insert dummy sponsorship
+      sponsorshipsColl.insert({
+        _from: "users/0",
+        _to: `apps/${app}`,
+        appId: contextId,
+        appHasAuthorized: true,
+        spendRequested: true,
+        timestamp: Date.now(),
+      });
+
+      let op = {
+        name: "Sponsor",
+        contextId,
+        app,
+        timestamp: Date.now(),
+        v: 5,
+      };
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(
+          nacl.sign.detached(strToUint8Array(message), sponsorPrivateKey)
+        )
+      );
+      let resp = request.post(`${baseUrl}/operations`, {
+        body: op,
+        json: true,
+      });
+      resp.status.should.equal(403);
+      resp.json.errorNum.should.equal(errors.SPONSORED_BEFORE);
     });
 
     it("return not sponsored for the unlinked and not sponsored contextid", function () {
