@@ -996,16 +996,17 @@ function sponsorRequestedRecently(op) {
 }
 
 function isSponsoredByAppUserId(op) {
-  const sponsorship = sponsorshipsColl.firstExample({
-    _to: `apps/${op.app}`,
-    appId: op.appUserId,
-  });
-
-  if (
-    sponsorship &&
-    sponsorship.appHasAuthorized &&
-    sponsorship.spendRequested
-  ) {
+  const sponsored = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == CONCAT("apps/", ${op.app})
+      AND s.appHasAuthorized == true
+      AND s.spendRequested == true
+      AND s.appId IN ${[op.appUserId, op.appUserId.toLowerCase()]}
+      RETURN s.appId
+  `
+    .toArray()
+    .pop();
+  if (sponsored) {
     return true;
   }
 
