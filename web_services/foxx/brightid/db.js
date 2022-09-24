@@ -995,6 +995,23 @@ function sponsorRequestedRecently(op) {
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
+function isSponsoredByAppUserId(op) {
+  const sponsorship = sponsorshipsColl.firstExample({
+    _to: `apps/${op.app}`,
+    appId: op.appUserId,
+  });
+
+  if (
+    sponsorship &&
+    sponsorship.appHasAuthorized &&
+    sponsorship.spendRequested
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 function getRequiredRecoveryNum(id) {
   const user = getUser(id);
   if (
@@ -1066,4 +1083,5 @@ module.exports = {
   sponsorRequestedRecently,
   setRequiredRecoveryNum,
   getRequiredRecoveryNum,
+  isSponsoredByAppUserId,
 };
