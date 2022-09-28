@@ -550,6 +550,10 @@ schemas = Object.assign(
         .boolean()
         .required()
         .description("true if the app uses soulbound standard"),
+      soulboundMessage: joi
+        .string()
+        .required()
+        .description("a static message to be signed at linking time by the context id"),
     }),
   },
   schemas

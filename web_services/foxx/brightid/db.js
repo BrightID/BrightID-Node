@@ -602,6 +602,7 @@ function appToDic(app) {
     unusedSponsorships: app.totalSponsorships - (app.usedSponsorships || 0),
     testing: app.testing,
     soulbound: app.soulbound,
+    soulboundMessage: app.context ? getContext(app.context).soulboundMessage || '' : '',
   };
 }
 
