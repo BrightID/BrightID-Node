@@ -181,9 +181,11 @@ function verify(op) {
   let message = getMessage(op);
   if (op.name == "Sponsor") {
     verifyAppSig(message, op.app, op.sig);
+    // prevent apps from sending duplicate sponsor requests
     if (db.sponsorRequestedRecently(op)) {
-      // prevent apps from sending duplicate sponsor requests
       throw new errors.SponsorRequestedRecently();
+    } else if (db.isSponsoredByAppUserId(op)) {
+      throw new errors.SponsoredBeforeError();
     }
   } else if (op.name == "Spend Sponsorship") {
     // there is no sig on this operation
@@ -194,7 +196,10 @@ function verify(op) {
     const temp = new Set();
     for (let i = 1; i <= requiredRecoveryNum; i++) {
       if (!(`id${i}` in op)) {
-        throw new errors.WrongNumberOfSignersError(`id${i}`, requiredRecoveryNum);
+        throw new errors.WrongNumberOfSignersError(
+          `id${i}`,
+          requiredRecoveryNum
+        );
       }
 
       if (temp.has(op[`id${i}`])) {

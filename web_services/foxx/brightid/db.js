@@ -1,5 +1,5 @@
 "use strict";
-const { query, db } = require("@arangodb");
+const { query, db, aql } = require("@arangodb");
 const _ = require("lodash");
 const {
   urlSafeB64ToB64,
@@ -419,7 +419,7 @@ function appToDic(app) {
     logo: app.logo,
     url: app.url,
     assignedSponsorships: app.totalSponsorships,
-    unusedSponsorships: unusedSponsorships(app._key),
+    unusedSponsorships: app.totalSponsorships - (app.usedSponsorships || 0),
     testing: app.testing,
     idsAsHex: app.idsAsHex,
     usingBlindSig: app.usingBlindSig,
@@ -637,24 +637,16 @@ function isSponsored(key) {
   return sponsorshipsColl.firstExample({ _from: "users/" + key }) != null;
 }
 
-function unusedSponsorships(app) {
-  const usedSponsorships = sponsorshipsColl
-    .byExample({
-      _to: "apps/" + app,
-      expireDate: null,
-    })
-    .count();
-  const { totalSponsorships } = appsColl.document(app);
-  return totalSponsorships - usedSponsorships;
-}
-
 function sponsor(op) {
-  if (op.name == "Sponsor" && unusedSponsorships(op.app) < 1) {
+  const app = appsColl.document(op.app);
+  if (
+    op.name == "Sponsor" &&
+    app.totalSponsorships - (app.usedSponsorships || 0) < 1
+  ) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
-  const { idsAsHex } = appsColl.document(op.app);
-  if (idsAsHex) {
+  if (app.idsAsHex) {
     if (!isEthereumAddress(op.appUserId)) {
       throw new errors.InvalidAppUserIdError(op.appUserId);
     }
@@ -696,6 +688,8 @@ function sponsor(op) {
     spendRequested: true,
     timestamp: op.timestamp,
   });
+
+  appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
 }
 
 function loadOperation(key) {
@@ -742,8 +736,18 @@ function insertAppUserIdVerification(
 function getState() {
   const lastProcessedBlock = variablesColl.document("LAST_BLOCK").value;
   const verificationsBlock = variablesColl.document("VERIFICATION_BLOCK").value;
-  const initOp = operationsColl.byExample({ state: "init" }).count();
-  const sentOp = operationsColl.byExample({ state: "sent" }).count();
+  const initOp = query`
+    FOR o in ${operationsColl}
+      FILTER o.state == "init"
+      COLLECT WITH COUNT INTO length
+      RETURN length
+  `.toArray()[0];
+  const sentOp = query`
+    FOR o in ${operationsColl}
+      FILTER o.state == "sent"
+      COLLECT WITH COUNT INTO length
+      RETURN length
+  `.toArray()[0];
   const verificationsHashes = JSON.parse(
     variablesColl.document("VERIFICATIONS_HASHES").hashes
   );
@@ -932,32 +936,45 @@ function isEthereumAddress(address) {
 }
 
 function getAppUserIds(appKey, period, countOnly) {
-  const app = getApp(appKey);
-  const res = [];
-  let query = { app: app._key };
+  const { verifications, verificationExpirationLength: vel } = getApp(appKey);
+  let roundedTimestamp;
   if (period == "current") {
-    const vel = app.verificationExpirationLength;
-    query["roundedTimestamp"] = vel ? parseInt(Date.now() / vel) * vel : 0;
+    roundedTimestamp = vel ? parseInt(Date.now() / vel) * vel : 0;
   } else if (period == "previous") {
-    const vel = app.verificationExpirationLength;
-    query["roundedTimestamp"] = vel
-      ? (parseInt(Date.now() / vel) - 1) * vel
-      : 0;
+    roundedTimestamp = vel ? (parseInt(Date.now() / vel) - 1) * vel : 0;
   }
-  for (const verification of app.verifications) {
-    query["verification"] = verification;
-    const appUserIds = new Set(
-      appIdsColl
-        .byExample(query)
-        .toArray()
-        .map((d) => d.appId)
-    );
-    const data = {
-      verification,
-      count: appUserIds.size,
-    };
-    if (!countOnly) {
-      data["appUserIds"] = Array.from(appUserIds);
+
+  const res = [];
+  for (const verification of verifications) {
+    const data = { verification };
+    const filters = [
+      aql`FILTER d.app == ${appKey}`,
+      aql`AND d.verification == ${verification}`,
+    ];
+    if (roundedTimestamp) {
+      filters.push(aql`AND d.roundedTimestamp == ${roundedTimestamp}`);
+    }
+    const joinedFilters = aql.join(filters);
+
+    if (countOnly) {
+      data["count"] = query`
+        RETURN COUNT(
+          FOR d IN ${appIdsColl}
+            ${joinedFilters}
+            RETURN DISTINCT d.appId
+        )
+      `.toArray()[0];
+    } else {
+      data["appUserIds"] = db
+        ._query(
+          aql`
+        FOR d IN ${appIdsColl}
+          ${joinedFilters}
+          RETURN DISTINCT d.appId
+      `
+        )
+        .toArray();
+      data["count"] = data["appUserIds"].length;
     }
     res.push(data);
   }
@@ -976,6 +993,24 @@ function sponsorRequestedRecently(op) {
     .pop();
   const timeWindow = module.context.configuration.operationsTimeWindow * 1000;
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
+}
+
+function isSponsoredByAppUserId(op) {
+  const sponsored = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == CONCAT("apps/", ${op.app})
+      AND s.appHasAuthorized == true
+      AND s.spendRequested == true
+      AND s.appId IN ${[op.appUserId, op.appUserId.toLowerCase()]}
+      RETURN s.appId
+  `
+    .toArray()
+    .pop();
+  if (sponsored) {
+    return true;
+  }
+
+  return false;
 }
 
 function getRequiredRecoveryNum(id) {
@@ -1032,7 +1067,6 @@ module.exports = {
   upsertOperation,
   insertAppUserIdVerification,
   setSigningKey,
-  unusedSponsorships,
   getState,
   getRecoveryConnections,
   addSigningKey,
@@ -1050,4 +1084,5 @@ module.exports = {
   sponsorRequestedRecently,
   setRequiredRecoveryNum,
   getRequiredRecoveryNum,
+  isSponsoredByAppUserId,
 };

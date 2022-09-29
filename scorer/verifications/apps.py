@@ -15,9 +15,10 @@ def verify(block):
         try:
             expr = parser.parse(app['verification'])
             variables = expr.variables()
-            expressions[app['verification']] = (expr,  variables)
+            expressions[app['verification']] = (expr, variables)
         except:
-            print('{} has an invalid verification expression: {}'.format(app['name'], app['verification']))
+            print(
+                f'{app["name"]} has an invalid verification expression: {app["verification"]}')
             continue
 
     batch_db = db.begin_batch_execution(return_result=True)

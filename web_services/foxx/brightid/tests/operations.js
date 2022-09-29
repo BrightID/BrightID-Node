@@ -912,6 +912,7 @@ describe("operations", function () {
       let resp2 = request.get(`${baseUrl}/sponsorships/${appUserId}`);
       resp2.json.data.appHasAuthorized.should.equal(true);
       resp2.json.data.spendRequested.should.equal(true);
+      appsColl.document("idchain").usedSponsorships.should.equal(1);
     });
 
     it('clients should be able to "Spend Sponsorship" first then apps "Sponsor"', function () {
@@ -946,6 +947,61 @@ describe("operations", function () {
       );
       resp3.json.data.appHasAuthorized.should.equal(true);
       resp3.json.data.spendRequested.should.equal(true);
+      appsColl.document("idchain").usedSponsorships.should.equal(2);
+    });
+
+    it('should reject the duplicate sponsor requests which are received recently', function () {
+      const appUserId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11E";
+      let op = {
+        name: "Sponsor",
+        appUserId,
+        app: "idchain",
+        timestamp: Date.now(),
+        v: 6,
+      };
+      op.sig = uInt8ArrayToB64(
+        Object.values(
+          nacl.sign.detached(strToUint8Array(stringify(op)), sponsorPrivateKey)
+        )
+      );
+      let resp = request.post(`${baseUrl}/operations`, {
+        body: op,
+        json: true,
+      });
+      resp.status.should.equal(403);
+      resp.json.errorNum.should.equal(errors.SPONSOR_REQUESTED_RECENTLY);
+    });
+
+    it('should reject the sponsor requests which are already sponsored', function () {
+      const appUserId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11F";
+      // insert dummy sponsorship
+      sponsorshipsColl.insert({
+        _from: "users/0",
+        _to: "apps/idchain",
+        appId: appUserId,
+        appHasAuthorized:true,
+        spendRequested: true,
+        timestamp: Date.now(),
+      });
+
+      let op = {
+        name: "Sponsor",
+        appUserId,
+        app: "idchain",
+        timestamp: Date.now(),
+        v: 6,
+      };
+      op.sig = uInt8ArrayToB64(
+        Object.values(
+          nacl.sign.detached(strToUint8Array(stringify(op)), sponsorPrivateKey)
+        )
+      );
+      let resp = request.post(`${baseUrl}/operations`, {
+        body: op,
+        json: true,
+      });
+      resp.status.should.equal(403);
+      resp.json.errorNum.should.equal(errors.SPONSORED_BEFORE);
     });
   });
 });

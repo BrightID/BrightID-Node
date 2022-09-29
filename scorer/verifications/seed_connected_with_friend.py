@@ -7,7 +7,7 @@ import config
 SEED_CONNECTION_LEVELS = ['just met', 'already known', 'recovery']
 FRIEND_CONNECTION_LEVELS = ['already known', 'recovery']
 CONN_DIFF_TIME = 60 * 60 * 1000
-GO_BACK_TIME = 6 * 60 * 60 * 1000 # 6 hours
+GO_BACK_TIME = 6 * 60 * 60 * 1000  # 6 hours
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
@@ -29,10 +29,14 @@ def add_verification_to(user, friend, block):
 
 
 def get_seeds():
-    seeds = set()
-    for seed_group in snapshot_db['groups'].find({'seed': True}):
-        cursor = snapshot_db['usersInGroups'].find({'_to': seed_group['_id']})
-        seeds.update({ug['_from'].replace('users/', '') for ug in cursor})
+    cursor = snapshot_db.aql.execute('''
+        FOR g in groups
+            FILTER g.seed == true
+            FOR ug in usersInGroups
+                FILTER ug._to == g._id
+                RETURN DISTINCT ug._from
+    ''')
+    seeds = set(s.replace('users/', '') for s in cursor)
     return seeds
 
 
@@ -109,6 +113,4 @@ def verify(block):
             add_verification_to(pair[0], pair[1], block)
             add_verification_to(pair[1], pair[0], block)
 
-    verified_count = db['verifications'].find(
-        {'name': 'SeedConnectedWithFriend', 'block': block}).count()
-    print(f'verifieds: {verified_count}\n')
+    print(f'verifieds: {len(verifieds)}\n')

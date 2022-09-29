@@ -77,6 +77,7 @@ def verify(block):
         region = seed_group.get('region')
         print(f'{region}, quota: {quota}, spent: {spent}, exceeded: {exceeded}')
 
+    counter = 0
     for u, d in users.items():
         # penalizing users that are reported by seeds
         rank = len(d['connected']) - len(d['reported']) * PENALTY
@@ -91,12 +92,7 @@ def verify(block):
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('SeedConnected', u, rank)
         })
+        if rank > 0:
+            counter += 1
 
-    verifiedCount = db.aql.execute('''
-        FOR v in verifications
-            FILTER v.name == 'SeedConnected'
-                AND v.rank > 0
-                AND v.block == @block
-            RETURN v
-    ''', bind_vars={'block': block}, count=True).count()
-    print(f'verifications: {verifiedCount}\n')
+    print(f'verifications: {counter}\n')

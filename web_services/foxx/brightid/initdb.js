@@ -33,6 +33,8 @@ const indexes = [
   { collection: "verifications", fields: ["user"], type: "persistent" },
   { collection: "verifications", fields: ["name"], type: "persistent" },
   { collection: "verifications", fields: ["block"], type: "persistent" },
+  { collection: "verifications", fields: ["expression"], type: "persistent" },
+  { collection: "verifications", fields: ["rank"], type: "persistent" },
   {
     collection: "sponsorships",
     fields: ["expireDate"],
@@ -40,7 +42,20 @@ const indexes = [
     expireAfter: 0,
   },
   { collection: "sponsorships", fields: ["contextId"], type: "persistent" },
+  { collection: "sponsorships", fields: ["appId"], type: "persistent" },
+  { collection: "sponsorships", fields: ["expireDate"], type: "persistent" },
+  {
+    collection: "sponsorships",
+    fields: ["appHasAuthorized"],
+    type: "persistent",
+  },
+  {
+    collection: "sponsorships",
+    fields: ["spendRequested"],
+    type: "persistent",
+  },
   { collection: "connections", fields: ["level"], type: "persistent" },
+  { collection: "connections", fields: ["timestamp"], type: "persistent" },
   {
     collection: "connectionsHistory",
     fields: ["timestamp"],
@@ -148,7 +163,33 @@ function v6_8() {
     });
 }
 
-const upgrades = ["v6_8"];
+function v6_16() {
+  const sponsorshipsColl = arango._collection("sponsorships");
+  const appsColl = arango._collection("apps");
+
+  console.log("adding 'usedSponsorships' to apps");
+  appsColl
+    .all()
+    .toArray()
+    .forEach((app) => {
+      const usedSponsorships = query`
+        FOR s in ${sponsorshipsColl}
+          FILTER s._to == ${app._id}
+          AND s.expireDate == null
+          COLLECT WITH COUNT INTO length
+          RETURN length
+      `.toArray()[0];
+
+      appsColl.update(app, { usedSponsorships });
+    });
+
+  console.log("removing 'wsProvider' from apps");
+  query`
+    FOR app IN apps
+      REPLACE UNSET(app, 'wsProvider') IN apps`;
+}
+
+const upgrades = ["v6_8", "v6_16"];
 
 function initdb() {
   createCollections();
