@@ -14,10 +14,10 @@ snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 verifieds = set()
 
 
-def add_verification_to(user, friend, block):
+def add_verification_to(user, friend, block, batch_col):
     if user in verifieds:
         return
-    db['verifications'].insert({
+    batch_col.insert({
         'name': 'SeedConnectedWithFriend',
         'user': user,
         'friend': friend,
@@ -55,15 +55,18 @@ def verify(block):
     seeds = get_seeds()
     seed_connecteds = get_seed_connecteds(block)
 
+    batch_db = db.begin_batch_execution(return_result=True)
+    batch_col = batch_db.collection('verifications')
+
     # verify already verified users if they are still SeedConnected
     for v in db['verifications'].find({'name': 'SeedConnectedWithFriend'}):
         if v['user'] in seed_connecteds:
-            add_verification_to(v['user'], v['friend'], block)
+            add_verification_to(v['user'], v['friend'], block, batch_col)
 
     # verify new users
     for seed in seeds:
         # seeds get verified by default
-        add_verification_to(seed, None, block)
+        add_verification_to(seed, None, block, batch_col)
         # find users that seed connected to them recently
         conns = snapshot_db.aql.execute('''
             FOR c IN connections
@@ -110,7 +113,12 @@ def verify(block):
                 continue
 
             # verify both sides (if not verified)
-            add_verification_to(pair[0], pair[1], block)
-            add_verification_to(pair[1], pair[0], block)
+            add_verification_to(pair[0], pair[1], block, batch_col)
+            add_verification_to(pair[1], pair[0], block, batch_col)
+            if len(verifieds) % 1000 == 0:
+                batch_db.commit()
+                batch_db = db.begin_batch_execution(return_result=True)
+                batch_col = batch_db.collection('verifications')
+    batch_db.commit()
 
     print(f'verifieds: {len(verifieds)}\n')
