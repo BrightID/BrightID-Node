@@ -78,10 +78,12 @@ def verify(block):
         print(f'{region}, quota: {quota}, spent: {spent}, exceeded: {exceeded}')
 
     counter = 0
+    batch_db = db.begin_batch_execution(return_result=True)
+    verifications_col = batch_db.collection('verifications')
     for u, d in users.items():
         # penalizing users that are reported by seeds
         rank = len(d['connected']) - len(d['reported']) * PENALTY
-        db['verifications'].insert({
+        verifications_col.insert({
             'name': 'SeedConnected',
             'user': u,
             'rank': rank,
@@ -92,7 +94,14 @@ def verify(block):
             'timestamp': int(time.time() * 1000),
             'hash': utils.hash('SeedConnected', u, rank)
         })
+
         if rank > 0:
             counter += 1
+
+        if counter % 1000 == 0:
+            batch_db.commit()
+            batch_db = db.begin_batch_execution(return_result=True)
+            verifications_col = batch_db.collection('verifications')
+    batch_db.commit()
 
     print(f'verifications: {counter}\n')
