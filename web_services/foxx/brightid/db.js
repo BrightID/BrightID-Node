@@ -1,6 +1,6 @@
 "use strict";
 const { sha256 } = require("@arangodb/crypto");
-const { query, db } = require("@arangodb");
+const { query, db, aql } = require("@arangodb");
 const _ = require("lodash");
 const stringify = require("fast-json-stable-stringify");
 const nacl = require("tweetnacl");
@@ -206,15 +206,15 @@ function updateEligibleGroups(userId, connections, currentGroups) {
   currentGroups = currentGroups.map((gId) => "groups/" + gId);
   const user = "users/" + userId;
   const candidates = query`
-      FOR edge in ${usersInGroupsColl}
-          FILTER edge._from in ${connections}
-          FILTER edge._to NOT IN ${currentGroups}
-          COLLECT group=edge._to WITH COUNT INTO count
-          SORT count DESC
-          RETURN {
-              group,
-              count
-          }
+    FOR edge in ${usersInGroupsColl}
+      FILTER edge._from in ${connections}
+      FILTER edge._to NOT IN ${currentGroups}
+      COLLECT group=edge._to WITH COUNT INTO count
+      SORT count DESC
+      RETURN {
+        group,
+        count
+      }
   `.toArray();
   const groupIds = candidates.map((x) => x.group);
   const groupCounts = query`
@@ -599,9 +599,13 @@ function appToDic(app) {
     logo: app.logo,
     url: app.url,
     assignedSponsorships: app.totalSponsorships,
-    unusedSponsorships: unusedSponsorships(app._key),
+    unusedSponsorships: app.totalSponsorships - (app.usedSponsorships || 0),
     testing: app.testing,
     soulbound: app.soulbound,
+    soulboundMessage:
+      app.context && contextsColl.exists(app.context)
+        ? contextsColl.document(app.context).soulboundMessage || ""
+        : "",
   };
 }
 
@@ -622,22 +626,46 @@ function getContextIdsByUser(coll, id) {
   `.toArray();
 }
 
-function getLastContextIds(coll, appKey) {
-  const app = getApp(appKey);
-  return query`
+function getLastContextIds(appKey, countOnly) {
+  const { context, verification } = getApp(appKey);
+  const { collection } = getContext(context);
+  const coll = db._collection(collection);
+
+  const baseQuery = aql`
     FOR c IN ${coll}
-      FOR u in ${usersColl}
-        FILTER c.user == u._key
-        FOR v in verifications
-          FILTER v.user == u._key
-            AND v.expression == true
-            AND v.name == ${app.verification}
-          FOR s IN ${sponsorshipsColl}
-            FILTER s._from == u._id OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
-            SORT c.timestamp DESC
-            COLLECT user = c.user INTO contextIds = c.contextId
-            RETURN contextIds[0]
-  `.toArray();
+      FOR v in verifications
+        FILTER v.user == c.user
+          AND v.expression == true
+          AND v.name == ${verification}
+        FOR s IN ${sponsorshipsColl}
+          FILTER s._from == CONCAT("users/", c.user) OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
+  `;
+  const data = {};
+  if (countOnly) {
+    data["count"] = db
+      ._query(
+        aql`
+      ${baseQuery}
+      COLLECT user = c.user
+      COLLECT WITH COUNT INTO length
+      RETURN length
+    `
+      )
+      .toArray()[0];
+  } else {
+    data["contextIds"] = db
+      ._query(
+        aql`
+      ${baseQuery}
+      SORT c.timestamp DESC
+      COLLECT user = c.user INTO contextIds = c.contextId
+      RETURN contextIds[0]
+    `
+      )
+      .toArray();
+    data["count"] = data["contextIds"].length;
+  }
+  return data;
 }
 
 function userVerifications(user) {
@@ -854,23 +882,15 @@ function getSponsorship(contextId) {
   return sponsorship;
 }
 
-function unusedSponsorships(app) {
-  const usedSponsorships = sponsorshipsColl
-    .byExample({
-      _to: "apps/" + app,
-      expireDate: null,
-    })
-    .count();
-  const { totalSponsorships } = appsColl.document(app);
-  return totalSponsorships - usedSponsorships;
-}
-
 function sponsor(op) {
-  if (op.name == "Sponsor" && unusedSponsorships(op.app) < 1) {
+  const app = appsColl.document(op.app);
+  if (
+    op.name == "Sponsor" &&
+    app.totalSponsorships - (app.usedSponsorships || 0) < 1
+  ) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
-  const app = getApp(op.app);
   if (app.idsAsHex) {
     op.contextId = op.contextId.toLowerCase();
   }
@@ -912,6 +932,8 @@ function sponsor(op) {
     spendRequested: true,
     timestamp: op.timestamp,
   });
+
+  appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
 }
 
 function loadOperation(key) {
@@ -930,8 +952,18 @@ function upsertOperation(op) {
 function getState() {
   const lastProcessedBlock = variablesColl.document("LAST_BLOCK").value;
   const verificationsBlock = variablesColl.document("VERIFICATION_BLOCK").value;
-  const initOp = operationsColl.byExample({ state: "init" }).count();
-  const sentOp = operationsColl.byExample({ state: "sent" }).count();
+  const initOp = query`
+    FOR o in ${operationsColl}
+      FILTER o.state == "init"
+      COLLECT WITH COUNT INTO length
+      RETURN length
+  `.toArray()[0];
+  const sentOp = query`
+    FOR o in ${operationsColl}
+      FILTER o.state == "sent"
+      COLLECT WITH COUNT INTO length
+      RETURN length
+  `.toArray()[0];
   const verificationsHashes = JSON.parse(
     variablesColl.document("VERIFICATIONS_HASHES").hashes
   );
@@ -1077,6 +1109,24 @@ function sponsorRequestedRecently(op) {
   return lastSponsorTimestamp && Date.now() - lastSponsorTimestamp < timeWindow;
 }
 
+function isSponsoredByContextId(op) {
+  const sponsored = query`
+    FOR s in ${sponsorshipsColl}
+      FILTER s._to == CONCAT("apps/", ${op.app})
+      AND s.appHasAuthorized == true
+      AND s.spendRequested == true
+      AND s.appId IN ${[op.contextId, op.contextId.toLowerCase()]}
+      RETURN s.appId
+  `
+    .toArray()
+    .pop();
+  if (sponsored) {
+    return true;
+  }
+
+  return false;
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -1112,7 +1162,6 @@ module.exports = {
   setRecoveryConnections,
   setSigningKey,
   getLastContextIds,
-  unusedSponsorships,
   getState,
   getReporters,
   getRecoveryConnections,
@@ -1132,4 +1181,5 @@ module.exports = {
   updateGroup,
   isEthereumAddress,
   sponsorRequestedRecently,
+  isSponsoredByContextId,
 };
