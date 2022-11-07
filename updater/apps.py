@@ -123,7 +123,6 @@ def update():
         db.aql.execute('''
             INSERT @app IN apps
             OPTIONS { overwriteMode: "update" }
-            RETURN OLD
         ''', bind_vars={
             "app": app
         })
