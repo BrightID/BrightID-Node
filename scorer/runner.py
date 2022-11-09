@@ -54,7 +54,7 @@ def remove_verifications_before(block):
     db.aql.execute('''
         FOR v IN verifications
             FILTER  v.block < @remove_border
-            REMOVE { _key: v._key } IN verifications
+            REMOVE { _key: v._key } IN verifications OPTIONS { exclusive: true }
         ''', bind_vars={'remove_border': block})
 
 
