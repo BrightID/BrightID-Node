@@ -633,12 +633,10 @@ function getLastContextIds(appKey, countOnly) {
 
   const baseQuery = aql`
     FOR c IN ${coll}
-      FOR v in verifications
-        FILTER v.user == c.user
-          AND v.expression == true
-          AND v.name == ${verification}
-        FOR s IN ${sponsorshipsColl}
-          FILTER s._from == CONCAT("users/", c.user) OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
+      FOR s IN ${sponsorshipsColl}
+        FILTER s._from == CONCAT("users/", c.user) OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
+        FOR v in verifications
+          FILTER v.user == c.user AND v.expression == true AND v.name == ${verification}
   `;
   const data = {};
   if (countOnly) {
