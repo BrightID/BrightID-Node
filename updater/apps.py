@@ -6,7 +6,7 @@ from web3 import Web3
 from arango import ArangoClient
 from web3.middleware import geth_poa_middleware
 import config
-from marshmallow import Schema, fields
+from marshmallow import Schema, fields, pre_load, post_load
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 w3_mainnet = Web3(Web3.WebsocketProvider(
@@ -40,19 +40,17 @@ key_converter_dic = {
     'callbackUrl': 'Callback Url',
     'poaNetwork': 'POA Network',
     'rpcEndpoint': 'RPC Endpoint',
-    'callbackUrl': 'Callback Url'
 }
 
 
 class AppSchema(Schema):
-    _key = fields.String(required=True, allow_none=True)
-    name = fields.String(required=True, allow_none=True)
+    _key = fields.String(required=True, allow_none=False)
+    name = fields.String(required=True, allow_none=False)
     context = fields.String(required=True, allow_none=True)
     sponsorPublicKey = fields.String(required=True, allow_none=True)
     sponsorEventContract = fields.String(required=True, allow_none=True)
     verification = fields.String(required=True, allow_none=True)
-    verifications = fields.List(
-        fields.String(), metadata={'allow_blank': True})
+    verifications = fields.List(fields.String(allow_none=True), required=True)
     testing = fields.Boolean(required=True)
     idsAsHex = fields.Boolean(required=True)
     usingBlindSig = fields.Boolean(required=True)
@@ -68,6 +66,20 @@ class AppSchema(Schema):
     url = fields.URL(required=True, allow_none=True)
     logo = fields.String(required=True, allow_none=True)
 
+    @pre_load
+    def _pre_load(self, data, **kwargs):
+        for k, v in data.items():
+            if v == '':
+                data[k] = None
+        return data
+
+    @post_load
+    def _post_load(self, data, **kwargs):
+        for k, v in data.items():
+            if v is None:
+                data[k] = ''
+        return data
+
 
 app_schema = AppSchema()
 
@@ -78,7 +90,7 @@ def str2bytes32(s):
     return (bytes(s, 'utf-8')).hex() + padding
 
 
-def get_logo(url):
+def get_logo(app_key, url):
     try:
         res = requests.get(url)
         file_format = url.split('.')[-1]
@@ -87,16 +99,16 @@ def get_logo(url):
         logo = 'data:image/' + file_format + ';base64,' + \
             base64.b64encode(res.content).decode('ascii')
     except Exception as e:
-        print(f'Error in getting logo: {e}')
+        print(f'app: {app_key} => Error in getting logo: {e}')
         logo = ''
     return logo
 
 
 def row_to_app(row):
-    app = {k1: row[k2] if row[k2] != '' else None for k1,
-           k2 in key_converter_dic.items() if k2 in row}
+    app = {k1: row[k2] for k1, k2 in key_converter_dic.items() if k2 in row}
     app['url'] = next(iter(row.get('Links', [])), '').strip()
-    app['logo'] = get_logo(next(iter(row.get('Images', [])), '').strip())
+    app['logo'] = get_logo(app['_key'], next(
+        iter(row.get('Images', [])), '').strip())
     app = app_schema.load(app)
     return app
 
@@ -104,27 +116,29 @@ def row_to_app(row):
 def update():
     print('Updating apps', time.ctime())
     data = requests.get(config.APPS_JSON_FILE).json()
+
     for row in data['Applications']:
+        if ('Key' not in row) or (not row.get('Key')):
+            print(f'the Key not exists => {row}')
+            continue
+
         try:
             app = row_to_app(row)
         except Exception as e:
             print(f'app: {row["Key"]} => Invalid data: {e}')
-            app = {'_key': row["Key"]}
+            # try to update totalSponsorships
+            app = {'_key': row['Key']}
 
         try:
             app['totalSponsorships'] = get_sponsorships(app['_key'])
-            # print(f'app: {app["_key"]} => totalSponsorships: {app["totalSponsorships"]}')
         except Exception as e:
             print(f'app: {row["Key"]} => Error in get totalSponsorships: {e}')
-
-        if not app:
-            continue
 
         db.aql.execute('''
             INSERT @app IN apps
             OPTIONS { overwriteMode: "update" }
         ''', bind_vars={
-            "app": app
+            'app': app
         })
 
     for app_key in data['Removed apps']:
