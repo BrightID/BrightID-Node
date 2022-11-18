@@ -147,7 +147,6 @@ def update_app(app):
 
 
 def update():
-    print(f'Updating sponsors {time.ctime()}')
     apps = db.aql.execute('''
         for app in apps
         filter app.sponsorEventContract not in [null, ""]
@@ -170,9 +169,10 @@ def update():
 
 if __name__ == '__main__':
     try:
+        print(f'\nUpdating sponsors {time.ctime()}')
         ts = time.time()
         update()
-        print(f'Updating sponsors ended in {int(time.time() - ts)} seconds')
+        print(f'Updating sponsors ended in {int(time.time() - ts)} seconds\n')
     except Exception as e:
-        print(f'Error in sponsorships updater: {e}')
+        print(f'Error in sponsorships updater: {e}\n')
         traceback.print_exc()

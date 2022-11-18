@@ -5,8 +5,8 @@ import traceback
 from web3 import Web3
 from arango import ArangoClient
 from web3.middleware import geth_poa_middleware
-import config
 from marshmallow import Schema, fields, pre_load, post_load
+import config
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
 w3_mainnet = Web3(Web3.WebsocketProvider(
@@ -114,7 +114,6 @@ def row_to_app(row):
 
 
 def update():
-    print('Updating apps', time.ctime())
     data = requests.get(config.APPS_JSON_FILE).json()
 
     for row in data['Applications']:
@@ -163,9 +162,10 @@ def get_sponsorships(app_key):
 
 if __name__ == '__main__':
     try:
+        print('\nUpdating apps', time.ctime())
         ts = time.time()
         update()
-        print(f'Updating apps ended in {int(time.time() - ts)} seconds')
+        print(f'Updating apps ended in {int(time.time() - ts)} seconds\n')
     except Exception as e:
-        print(f'Error in updater: {e}')
+        print(f'Error in apps updater: {e}\n')
         traceback.print_exc()
