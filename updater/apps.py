@@ -77,7 +77,10 @@ class AppSchema(Schema):
     def _post_load(self, data, **kwargs):
         for k, v in data.items():
             if v is None:
-                data[k] = ''
+                if k == 'verificationExpirationLength':
+                    data[k] = 0
+                else:
+                    data[k] = ''
         return data
 
 
