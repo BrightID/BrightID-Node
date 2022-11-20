@@ -27,7 +27,7 @@ requests-toolbelt==0.9.1
 rlp==1.2.0
 six==1.14.0
 toolz==0.10.0
-urllib3==1.25.8
+urllib3==1.26.5
 varint==1.0.2
 web3==5.0.0
 websockets==7.0
