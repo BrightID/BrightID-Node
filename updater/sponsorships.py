@@ -105,7 +105,7 @@ def remove_testblocks(app_key, context_id):
             filter t.contextId == @context_id
             and t.app == @app_key
             and t.action == "sponsorship"
-            remove { _key: u._key } in testblocks options { ignoreErrors: true }
+            remove { _key: t._key } in testblocks options { ignoreErrors: true }
     ''', bind_vars={
         'context_id': context_id,
         'app_key': app_key,
