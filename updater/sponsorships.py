@@ -59,8 +59,8 @@ def check_events(app):
     events = sponsor_event_contract.events.Sponsor.createFilter(
         fromBlock=fb, toBlock=tb, argument_filters=None
     ).get_all_entries()
-    sponsored_users = [e['args']['addr'].lower() for e in events]
-    return sponsored_users, tb
+    sponsored_addrs = [e['args']['addr'].lower() for e in events]
+    return sponsored_addrs, tb
 
 
 def sponsor(app_key, app_id):
@@ -114,7 +114,7 @@ def remove_testblocks(app, context_id):
 
 def update_app(app):
     try:
-        sponsored_users, tb = check_events(app)
+        sponsored_addrs, tb = check_events(app)
         db['variables'].update({
             '_key': f'LAST_BLOCK_LOG_{app["_key"]}',
             'value': tb
@@ -124,16 +124,16 @@ def update_app(app):
         return
 
     used = 0
-    for sponsored_user in sponsored_users:
+    for sponsored_addr in sponsored_addrs:
         if not app.get('usingBlindSig'):
-            remove_testblocks(app, sponsored_user)
+            remove_testblocks(app['_key'], sponsored_addr)
 
         if app['totalSponsorships'] - (app['usedSponsorships'] + used) < 1:
             print(
-                f'app: {app["_key"]} appId: {sponsored_user} => app does not have unused sponsorships')
+                f'app: {app["_key"]} appId: {sponsored_addr} => app does not have unused sponsorships')
             continue
 
-        sponsored = sponsor(app['_key'], sponsored_user)
+        sponsored = sponsor(app['_key'], sponsored_addr)
         if sponsored:
             used += 1
 
