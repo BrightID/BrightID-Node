@@ -786,6 +786,25 @@ schemas = Object.assign(
           .boolean()
           .required()
           .description("true if the node is in development mode"),
+        appsLastUpdateBlock: joi
+          .number()
+          .integer()
+          .required()
+          .description("the block that updater service updated the apps"),
+        sponsorshipsLastUpdateBlock: joi
+          .number()
+          .integer()
+          .required()
+          .description(
+            "the block that updater service updated the sponsorships"
+          ),
+        seedGroupsLastUpdateBlock: joi
+          .number()
+          .integer()
+          .required()
+          .description(
+            "the block that updater service updated the seed groups"
+          ),
         version: joi.string().required().description("version of this node"),
       }),
     }),

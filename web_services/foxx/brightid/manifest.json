@@ -3,7 +3,7 @@
   "name": "BrightID-Node",
   "description": "Read and update the anonymous social graph stored on BrightID nodes.",
   "license": "ISC",
-  "version": "6.16.1",
+  "version": "6.17.0",
   "tests": ["tests/*.js"],
   "scripts": {
     "setup": "initdb.js"
