@@ -83,6 +83,12 @@ const indexes = [
     type: "ttl",
     expireAfter: 0,
   },
+  {
+    collection: "signedVerifications",
+    fields: ["id", "roundedTimestamp", "app", "verification"],
+    type: "persistent",
+    unique: true,
+  },
 ];
 
 const variables = [
