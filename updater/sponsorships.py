@@ -78,7 +78,8 @@ def sponsor(app_key, app_id):
             'appHasAuthorized': True,
             'spendRequested': False
         })
-        print(f'app: {app_key} appId: {app_id} => app authorization applied successfully')
+        print(
+            f'app: {app_key} appId: {app_id} => app authorization applied successfully')
         return False
 
     sponsorship = c.next()
@@ -127,23 +128,24 @@ def update_app(app):
         if not app.get('usingBlindSig'):
             remove_testblocks(app, sponsored_user)
 
-        if app['totalSponsorships'] - (app.get('usedSponsorships', 0) + used) < 1:
-            print(f'app: {app["_key"]} appId: {sponsored_user} => app does not have unused sponsorships')
+        if app['totalSponsorships'] - (app['usedSponsorships'] + used) < 1:
+            print(
+                f'app: {app["_key"]} appId: {sponsored_user} => app does not have unused sponsorships')
             continue
 
         sponsored = sponsor(app['_key'], sponsored_user)
         if sponsored:
             used += 1
 
-        if used > 0:
-            db.aql.execute('''
-                for app in apps
-                  filter app._key == @key
-                  UPDATE app WITH { usedSponsorships: app.usedSponsorships + @used } IN apps
-            ''', bind_vars={
-                'key': app['_key'],
-                'used': used,
-            })
+    if used > 0:
+        db.aql.execute('''
+            for app in apps
+              filter app._key == @key
+              update app with { usedSponsorships: app.usedSponsorships + @used } in apps
+        ''', bind_vars={
+            'key': app['_key'],
+            'used': used
+        })
 
 
 def update():
@@ -153,13 +155,13 @@ def update():
         and app.rpcEndpoint not in [null, ""]
         return {
             _key: app._key,
-            totalSponsorships: app.totalSponsorships,
+            totalSponsorships: app.totalSponsorships || 0,
             usingBlindSig: app.usingBlindSig,
             rpcEndpoint: app.rpcEndpoint,
             poaNetwork: app.poaNetwork,
             localFilter: app.localFilter,
             sponsorEventContract: app.sponsorEventContract,
-            usedSponsorships: app.usedSponsorships
+            usedSponsorships: app.usedSponsorships || 0
         }
     ''').batch()
 
