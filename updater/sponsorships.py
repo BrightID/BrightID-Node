@@ -2,6 +2,7 @@ import time
 import traceback
 from web3 import Web3
 from arango import ArangoClient
+from concurrent.futures import ThreadPoolExecutor
 from web3.middleware import geth_poa_middleware, local_filter_middleware
 import config
 
@@ -165,8 +166,8 @@ def update():
         }
     ''').batch()
 
-    for app in apps:
-        update_app(app)
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(update_app, apps)
 
 
 if __name__ == '__main__':
