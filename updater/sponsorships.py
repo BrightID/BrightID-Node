@@ -105,7 +105,7 @@ def remove_testblocks(app, context_id):
             filter t.contextId == @context_id
             and t.app == @app
             and t.action == "sponsorship"
-            REMOVE { _key: u._key } IN backup OPTIONS { ignoreErrors: true }
+            remove { _key: u._key } in testblocks options { ignoreErrors: true }
     ''', bind_vars={
         'context_id': context_id,
         'app': app,
