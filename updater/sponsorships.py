@@ -98,17 +98,17 @@ def sponsor(app_key, app_id):
         return True
 
 
-def remove_testblocks(app, context_id):
+def remove_testblocks(app_key, context_id):
     # remove testblocks if exists
     db.aql.execute('''
         for t in testblocks
             filter t.contextId == @context_id
-            and t.app == @app
+            and t.app == @app_key
             and t.action == "sponsorship"
             remove { _key: u._key } in testblocks options { ignoreErrors: true }
     ''', bind_vars={
         'context_id': context_id,
-        'app': app,
+        'app_key': app_key,
     })
 
 
