@@ -761,6 +761,14 @@ function getState() {
     server.GenerateSchnorrKeypair(conf.wISchnorrPassword || conf.seed);
     wISchnorrPublic = server.ExtractPublicKey();
   }
+  const appsLastUpdateBlock = variablesColl.document("APPS_LAST_UPDATE").value;
+  const sponsorshipsLastUpdateBlock = variablesColl.document(
+    "SPONSORSHIPS_LAST_UPDATE"
+  ).value;
+  const seedGroupsLastUpdateBlock = variablesColl.document(
+    "SEED_GROUPS_LAST_UPDATE"
+  ).value;
+
   return {
     lastProcessedBlock,
     verificationsBlock,
@@ -773,6 +781,9 @@ function getState() {
     consensusSenderAddress,
     development: conf.development,
     version: module.context.manifest.version,
+    appsLastUpdateBlock,
+    sponsorshipsLastUpdateBlock,
+    seedGroupsLastUpdateBlock,
   };
 }
 

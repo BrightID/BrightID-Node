@@ -4,6 +4,7 @@ from web3 import Web3
 from arango import ArangoClient
 from concurrent.futures import ThreadPoolExecutor
 from web3.middleware import geth_poa_middleware, local_filter_middleware
+import tools
 import config
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
@@ -175,6 +176,17 @@ if __name__ == '__main__':
         print(f'\nUpdating sponsors {time.ctime()}')
         ts = time.time()
         update()
+
+        bn = tools.get_idchain_block_number()
+        db.aql.execute('''
+            upsert { _key: "SPONSORSHIPS_LAST_UPDATE" }
+            insert { _key: "SPONSORSHIPS_LAST_UPDATE", value: @bn }
+            update { value: @bn }
+            in variables
+        ''', bind_vars={
+            'bn': bn
+        })
+
         print(f'Updating sponsors ended in {int(time.time() - ts)} seconds\n')
     except Exception as e:
         print(f'Error in sponsorships updater: {e}\n')

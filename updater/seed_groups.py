@@ -3,6 +3,7 @@ import traceback
 from web3 import Web3
 from arango import ArangoClient
 from web3.middleware import geth_poa_middleware
+import tools
 import config
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
@@ -98,6 +99,17 @@ def update():
 if __name__ == '__main__':
     try:
         update()
+
+        bn = tools.get_idchain_block_number()
+        db.aql.execute('''
+            upsert { _key: "SEED_GROUPS_LAST_UPDATE" }
+            insert { _key: "SEED_GROUPS_LAST_UPDATE", value: @bn }
+            update { value: @bn }
+            in variables
+        ''', bind_vars={
+            'bn': bn
+        })
+
     except Exception as e:
         print(f'Error in updater: {e}')
         traceback.print_exc()
