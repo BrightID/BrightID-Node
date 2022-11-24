@@ -120,6 +120,14 @@ def row_to_app(row):
 def update():
     data = requests.get(config.APPS_JSON_FILE).json()
 
+    cursor = db.aql.execute('''
+        FOR s in sponsorships
+            FILTER s.expireDate == null
+            COLLECT app = s._to WITH COUNT INTO length
+            RETURN {"app": REGEX_REPLACE(app, "apps/", ""), "used": length}
+    ''')
+    used_sponsorships = {c['app']: c['used'] for c in cursor}
+
     for row in data['Applications']:
         if ('Key' not in row) or (not row.get('Key')):
             print(f'the Key not exists => {row}')
@@ -136,6 +144,8 @@ def update():
             app['totalSponsorships'] = get_sponsorships(app['_key'])
         except Exception as e:
             print(f'app: {row["Key"]} => Error in get totalSponsorships: {e}')
+
+        app['usedSponsorships'] = used_sponsorships.get(app['_key'], 0)
 
         db.aql.execute('''
             INSERT @app IN apps

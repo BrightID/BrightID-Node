@@ -761,13 +761,19 @@ function getState() {
     server.GenerateSchnorrKeypair(conf.wISchnorrPassword || conf.seed);
     wISchnorrPublic = server.ExtractPublicKey();
   }
-  const appsLastUpdateBlock = variablesColl.document("APPS_LAST_UPDATE").value;
-  const sponsorshipsLastUpdateBlock = variablesColl.document(
+  const appsLastUpdateBlock = variablesColl.exists("APPS_LAST_UPDATE")
+    ? variablesColl.document("APPS_LAST_UPDATE").value
+    : 0;
+  const sponsorshipsLastUpdateBlock = variablesColl.exists(
     "SPONSORSHIPS_LAST_UPDATE"
-  ).value;
-  const seedGroupsLastUpdateBlock = variablesColl.document(
+  )
+    ? variablesColl.document("SPONSORSHIPS_LAST_UPDATE").value
+    : 0;
+  const seedGroupsLastUpdateBlock = variablesColl.exists(
     "SEED_GROUPS_LAST_UPDATE"
-  ).value;
+  )
+    ? variablesColl.document("SEED_GROUPS_LAST_UPDATE").value
+    : 0;
 
   return {
     lastProcessedBlock,
