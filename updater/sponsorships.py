@@ -2,21 +2,19 @@ import time
 import traceback
 from web3 import Web3
 from arango import ArangoClient
+from concurrent.futures import ThreadPoolExecutor
 from web3.middleware import geth_poa_middleware, local_filter_middleware
+import tools
 import config
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-variables = db['variables']
-contexts = db['contexts']
-sponsorships = db['sponsorships']
-testblocks = db['testblocks']
 
 
 def get_w3(app):
-    if app['rpcEndpoint'].startswith("http"):
+    if app['rpcEndpoint'].startswith('http'):
         w3 = Web3(Web3.HTTPProvider(
             app['rpcEndpoint'], request_kwargs={'timeout': 60}))
-    elif app['rpcEndpoint'].startswith("ws"):
+    elif app['rpcEndpoint'].startswith('ws'):
         w3 = Web3(Web3.WebsocketProvider(
             app['rpcEndpoint'], websocket_kwargs={'timeout': 60}))
     else:
@@ -30,58 +28,66 @@ def get_w3(app):
     return w3
 
 
-def get_events(app):
-    print(f'\napp: {app["_key"]}')
+def check_events(app):
     w3 = get_w3(app)
-    if variables.has(f'LAST_BLOCK_LOG_{app["_key"]}'):
-        fb = variables[f'LAST_BLOCK_LOG_{app["_key"]}']['value']
-    else:
-        fb = w3.eth.getBlock('latest').number
-
-        variables.insert({
-            '_key': f'LAST_BLOCK_LOG_{app["_key"]}',
-            'value': fb
-        })
-
     cb = w3.eth.getBlock('latest').number
-    tb = min(cb, fb + config.CHUNK)
 
+    c = db.aql.execute('''
+        for v in variables
+            filter v._key == @key
+            return v.value
+    ''', bind_vars={
+        'key': f'LAST_BLOCK_LOG_{app["_key"]}'
+    })
+
+    if c.empty():
+        fb = cb
+        db['variables'].insert({
+            '_key': f'LAST_BLOCK_LOG_{app["_key"]}',
+            'value': cb
+        })
+    else:
+        fb = c.next()
+    fb -= config.RECHECK_CHUNK
+    tb = min(cb, fb + config.CHUNK)
     if tb < fb:
         fb = tb - config.CHUNK
-    fb = fb - config.RECHECK_CHUNK
 
-    print(f'checking events from block {fb} to block {tb}')
+    print(f'app: {app["_key"]} => checking events from: {fb} to: {tb}')
     sponsor_event_contract = w3.eth.contract(
         address=w3.toChecksumAddress(app['sponsorEventContract']),
         abi=config.SPONSOR_EVENT_CONTRACT_ABI)
-    time.sleep(5)
-    sponsoreds = sponsor_event_contract.events.Sponsor.createFilter(
+    time.sleep(3)
+    events = sponsor_event_contract.events.Sponsor.createFilter(
         fromBlock=fb, toBlock=tb, argument_filters=None
     ).get_all_entries()
-    return sponsoreds, tb
+    sponsored_addrs = [e['args']['addr'].lower() for e in events]
+    return sponsored_addrs, tb
 
 
-def sponsor(app, app_id):
-    c = sponsorships.find({
-        '_to': 'apps/' + app['_key'],
+def sponsor(app_key, app_id):
+    c = db['sponsorships'].find({
+        '_to': 'apps/' + app_key,
         'appId': app_id
     })
+
     if c.empty():
         db['sponsorships'].insert({
             '_from': 'users/0',
-            '_to': 'apps/' + app['_key'],
+            '_to': 'apps/' + app_key,
             'expireDate': int(time.time()) + 3600,
             'appId': app_id,
             'appHasAuthorized': True,
             'spendRequested': False
         })
-        print('applied')
-        return
+        print(
+            f'app: {app_key} appId: {app_id} => app authorization applied successfully')
+        return False
 
     sponsorship = c.next()
     if sponsorship['appHasAuthorized']:
-        print('app has authorized before')
-        return
+        print(f'app: {app_key} appId: {app_id} => app has authorized before')
+        return False
 
     if sponsorship['spendRequested']:
         db['sponsorships'].update({
@@ -90,64 +96,98 @@ def sponsor(app, app_id):
             'appHasAuthorized': True,
             'timestamp': int(time.time() * 1000),
         })
-        db['apps'].update({
-            '_key': app['_key'],
-            'usedSponsorships': app.get('usedSponsorships', 0) + 1
-        })
-        print('applied')
+        print(f'app: {app_key} appId: {app_id} => sponsored successfully')
+        return True
 
 
-def remove_testblocks(app, context_id):
+def remove_testblocks(app_key, context_id):
     # remove testblocks if exists
-    tblocks = testblocks.find({
-        'contextId': context_id,
-        'action': 'sponsorship',
-        'app': app['_key']
-    }).batch()
-    for tblock in tblocks:
-        testblocks.delete(tblock)
+    db.aql.execute('''
+        for t in testblocks
+            filter t.contextId == @context_id
+            and t.app == @app_key
+            and t.action == "sponsorship"
+            remove { _key: t._key } in testblocks options { ignoreErrors: true }
+    ''', bind_vars={
+        'context_id': context_id,
+        'app_key': app_key,
+    })
 
 
-def is_using_sponsor_contract(app):
-    if not app.get('sponsorEventContract'):
-        return False
-    if not app.get('rpcEndpoint'):
-        return False
-    return True
-
-
-def update():
-    print('Updating sponsors', time.ctime())
-    for app in db['apps']:
-        if not is_using_sponsor_contract(app):
-            continue
-        try:
-            sponsoreds, tb = get_events(app)
-        except Exception as e:
-            print(f'Error in getting events: {e}')
-            continue
-        for sponsored in sponsoreds:
-            _id = sponsored['args']['addr'].lower()
-            print(f'checking\tapp_name: {app["_key"]}\tapp_id: {_id}')
-
-            if not app.get('usingBlindSig', False):
-                remove_testblocks(app, _id)
-
-            if app['totalSponsorships'] - app.get('usedSponsorships', 0) < 1:
-                print("app does not have unused sponsorships")
-                continue
-
-            sponsor(app, _id)
-
-        variables.update({
+def update_app(app):
+    try:
+        sponsored_addrs, tb = check_events(app)
+        db['variables'].update({
             '_key': f'LAST_BLOCK_LOG_{app["_key"]}',
             'value': tb
         })
+    except Exception as e:
+        print(f'app: {app["_key"]} => Error in getting events: {e}')
+        return
+
+    used = 0
+    for sponsored_addr in sponsored_addrs:
+        if not app.get('usingBlindSig'):
+            remove_testblocks(app['_key'], sponsored_addr)
+
+        if app['totalSponsorships'] - (app['usedSponsorships'] + used) < 1:
+            print(
+                f'app: {app["_key"]} appId: {sponsored_addr} => app does not have unused sponsorships')
+            continue
+
+        sponsored = sponsor(app['_key'], sponsored_addr)
+        if sponsored:
+            used += 1
+
+    if used > 0:
+        db.aql.execute('''
+            for app in apps
+              filter app._key == @key
+              update app with { usedSponsorships: app.usedSponsorships + @used } in apps
+        ''', bind_vars={
+            'key': app['_key'],
+            'used': used
+        })
+
+
+def update():
+    apps = db.aql.execute('''
+        for app in apps
+        filter app.sponsorEventContract not in [null, ""]
+        and app.rpcEndpoint not in [null, ""]
+        return {
+            _key: app._key,
+            totalSponsorships: app.totalSponsorships || 0,
+            usingBlindSig: app.usingBlindSig,
+            rpcEndpoint: app.rpcEndpoint,
+            poaNetwork: app.poaNetwork,
+            localFilter: app.localFilter,
+            sponsorEventContract: app.sponsorEventContract,
+            usedSponsorships: app.usedSponsorships || 0
+        }
+    ''').batch()
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        executor.map(update_app, apps)
 
 
 if __name__ == '__main__':
     try:
+        print(f'\nUpdating sponsors {time.ctime()}')
+        ts = time.time()
         update()
+
+        bn = tools.get_idchain_block_number()
+        db.aql.execute('''
+            upsert { _key: "SPONSORSHIPS_LAST_UPDATE" }
+            insert { _key: "SPONSORSHIPS_LAST_UPDATE", value: @bn }
+            update { value: @bn }
+            in variables
+        ''', bind_vars={
+            'bn': bn
+        })
+
+        print(f'Updating sponsors ended in {int(time.time() - ts)} seconds\n')
     except Exception as e:
-        print(f'Error in updater: {e}')
+        print(f'Error in sponsorships updater: {e}\n')
         traceback.print_exc()

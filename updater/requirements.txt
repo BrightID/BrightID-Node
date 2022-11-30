@@ -32,3 +32,4 @@ varint==1.0.2
 web3==5.0.0
 websockets==7.0
 ed25519==1.5
+marshmallow==3.18.0

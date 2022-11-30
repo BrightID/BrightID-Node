@@ -761,6 +761,20 @@ function getState() {
     server.GenerateSchnorrKeypair(conf.wISchnorrPassword || conf.seed);
     wISchnorrPublic = server.ExtractPublicKey();
   }
+  const appsLastUpdateBlock = variablesColl.exists("APPS_LAST_UPDATE")
+    ? variablesColl.document("APPS_LAST_UPDATE").value
+    : 0;
+  const sponsorshipsLastUpdateBlock = variablesColl.exists(
+    "SPONSORSHIPS_LAST_UPDATE"
+  )
+    ? variablesColl.document("SPONSORSHIPS_LAST_UPDATE").value
+    : 0;
+  const seedGroupsLastUpdateBlock = variablesColl.exists(
+    "SEED_GROUPS_LAST_UPDATE"
+  )
+    ? variablesColl.document("SEED_GROUPS_LAST_UPDATE").value
+    : 0;
+
   return {
     lastProcessedBlock,
     verificationsBlock,
@@ -773,6 +787,9 @@ function getState() {
     consensusSenderAddress,
     development: conf.development,
     version: module.context.manifest.version,
+    appsLastUpdateBlock,
+    sponsorshipsLastUpdateBlock,
+    seedGroupsLastUpdateBlock,
   };
 }
 
