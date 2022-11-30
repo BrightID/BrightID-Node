@@ -51,7 +51,7 @@ fields:
     target:
       type: environment
       name: BN_CONSENSUS_IDCHAIN_RPC_URL
-      service: [consensus_sender, consensus_receiver]
+      service: [consensus_sender, consensus_receiver, updater]
 
   - id: updater_seedgroups_url
     title: Updater Seedgroups node url
