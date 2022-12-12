@@ -428,6 +428,7 @@ function appToDic(app) {
     nodeUrl: app.nodeUrl,
     soulbound: app.soulbound,
     callbackUrl: app.callbackUrl,
+    sponsoring: app.sponsoring,
   };
 }
 

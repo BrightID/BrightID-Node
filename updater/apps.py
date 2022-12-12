@@ -41,6 +41,7 @@ key_converter_dic = {
     'callbackUrl': 'Callback Url',
     'poaNetwork': 'POA Network',
     'rpcEndpoint': 'RPC Endpoint',
+    'sponsoring': 'Sponsoring',
 }
 
 
@@ -66,6 +67,7 @@ class AppSchema(Schema):
     callbackUrl = fields.URL(required=True, allow_none=True)
     url = fields.URL(required=True, allow_none=True)
     logo = fields.String(required=True, allow_none=True)
+    sponsoring = fields.Boolean(required=True)
 
     @pre_load
     def _pre_load(self, data, **kwargs):
