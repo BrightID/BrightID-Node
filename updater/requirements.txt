@@ -30,6 +30,6 @@ toolz==0.10.0
 urllib3==1.25.8
 varint==1.0.2
 web3==5.0.0
-websockets==7.0
+websockets==9.1
 ed25519==1.5
 marshmallow==3.18.0
