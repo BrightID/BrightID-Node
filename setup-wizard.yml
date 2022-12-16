@@ -45,13 +45,13 @@ fields:
     description: >-
       BrightID node needs access to an IDChain node.
 
-      - IDChain on DAppNode: `http://idchain.dappnode:8545` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
+      - IDChain on DAppNode: `http://idchain.public.dappnode:8545` - [Install link](http://my.dappnode/#/installer/idchain.public.dappnode.eth)
 
       - Remote node (example URL): `https://remote-node-provider.io`
     target:
       type: environment
       name: BN_CONSENSUS_IDCHAIN_RPC_URL
-      service: [consensus_sender, consensus_receiver]
+      service: [consensus_sender, consensus_receiver, updater]
 
   - id: updater_seedgroups_url
     title: Updater Seedgroups node url

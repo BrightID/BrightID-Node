@@ -86,11 +86,9 @@ function checkLimits(op, timeWindow, limit) {
 
     if (op["name"] == "Spend Sponsorship") {
       const app = db.getApp(op.app);
-      if (app.idsAsHex) {
-        op.appUserId = op.appUserId.toLowerCase();
-      }
+      const appUserId = app.idsAsHex ? op.appUserId.toLowerCase() : op.appUserId;
       const sponsorship = sponsorshipsColl.firstExample({
-        appId: op.appUserId,
+        appId: appUserId,
       });
       if (!sponsorship) {
         sender = "shared_apps";

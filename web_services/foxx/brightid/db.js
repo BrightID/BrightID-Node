@@ -428,6 +428,7 @@ function appToDic(app) {
     nodeUrl: app.nodeUrl,
     soulbound: app.soulbound,
     callbackUrl: app.callbackUrl,
+    sponsoring: app.sponsoring,
   };
 }
 
@@ -650,11 +651,12 @@ function sponsor(op) {
     if (!isEthereumAddress(op.appUserId)) {
       throw new errors.InvalidAppUserIdError(op.appUserId);
     }
-    op.appUserId = op.appUserId.toLowerCase();
   }
+
+  const appUserId = app.idsAsHex ? op.appUserId.toLowerCase() : op.appUserId;
   const sponsorship = sponsorshipsColl.firstExample({
     _to: `apps/${op.app}`,
-    appId: op.appUserId,
+    appId: appUserId,
   });
   if (!sponsorship) {
     sponsorshipsColl.insert({
@@ -662,7 +664,7 @@ function sponsor(op) {
       _to: "apps/" + op.app,
       // it will expire after 1 hour
       expireDate: Math.ceil(Date.now() / 1000 + 60 * 60),
-      appId: op.appUserId,
+      appId: appUserId,
       appHasAuthorized: op.name == "Sponsor" ? true : false,
       spendRequested: op.name == "Spend Sponsorship" ? true : false,
       timestamp: op.timestamp,
