@@ -633,12 +633,10 @@ function getLastContextIds(appKey, countOnly) {
 
   const baseQuery = aql`
     FOR c IN ${coll}
-      FOR v in verifications
-        FILTER v.user == c.user
-          AND v.expression == true
-          AND v.name == ${verification}
-        FOR s IN ${sponsorshipsColl}
-          FILTER s._from == CONCAT("users/", c.user) OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
+      FOR s IN ${sponsorshipsColl}
+        FILTER s._from == CONCAT("users/", c.user) OR (s.appId == c.contextId AND s.appHasAuthorized AND s.spendRequested)
+        FOR v in verifications
+          FILTER v.user == c.user AND v.expression == true AND v.name == ${verification}
   `;
   const data = {};
   if (countOnly) {
@@ -891,14 +889,12 @@ function sponsor(op) {
     throw new errors.UnusedSponsorshipsError(op.app);
   }
 
-  if (app.idsAsHex) {
-    op.contextId = op.contextId.toLowerCase();
-  }
+  const contextId = app.idsAsHex ? op.contextId.toLowerCase() : op.contextId;
   // remove testblocks if exists
-  removeTestblock(op.contextId, "sponsorship", op.app);
+  removeTestblock(contextId, "sponsorship", op.app);
 
   const sponsorship = sponsorshipsColl.firstExample({
-    appId: op.contextId,
+    appId: contextId,
     _to: "apps/" + op.app,
   });
   if (!sponsorship) {
@@ -906,7 +902,7 @@ function sponsor(op) {
       _from: "users/0",
       _to: "apps/" + op.app,
       expireDate: Math.ceil(Date.now() / 1000 + 60 * 60),
-      appId: op.contextId,
+      appId: contextId,
       appHasAuthorized: op.name == "Sponsor",
       spendRequested: op.name == "Spend Sponsorship",
       timestamp: op.timestamp,
