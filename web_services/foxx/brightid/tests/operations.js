@@ -58,6 +58,7 @@ let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } =
 let { secretKey: linkAESKey } = nacl.sign.keyPair();
 
 const contextId = "0x636D49c1D76ff8E04767C68fe75eC9900719464b".toLowerCase();
+const contextId2 = "0x636D49c1D76ff8E04767C68fe75eC9900719464a".toLowerCase();
 const contextName = "ethereum";
 const app = "ethereum";
 
@@ -511,6 +512,25 @@ describe("operations", function () {
     );
     apply(op);
     db.getContextIdsByUser(contextIdsColl, u1.id)[0].should.equal(contextId);
+  });
+
+  it('unverified users should not be able to "Link ContextId"', function () {
+    const timestamp = Date.now();
+    const op = {
+      v: 5,
+      name: "Link ContextId",
+      context: contextName,
+      timestamp,
+      id: u2.id,
+      contextId: contextId2,
+    };
+    const message = getMessage(op);
+    op.sig = uInt8ArrayToB64(
+      Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+    );
+    const resp = apply(op);
+    resp.json.state.should.equal('failed');
+    resp.json.result.errorNum.should.equal(errors.NOT_VERIFIED);
   });
 
   it("should be able to linking with Ethereum-signed messages for the soulbound apps", function () {

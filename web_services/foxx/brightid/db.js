@@ -12,6 +12,7 @@ const {
   getConsensusSenderAddress,
   recoverEthSigner,
 } = require("./encoding");
+const parser = require("expr-eval").Parser;
 const errors = require("./errors");
 
 const connectionsColl = db._collection("connections");
@@ -381,7 +382,7 @@ function loadUser(id) {
 function userScore(key) {
   return query`
     FOR u in ${usersColl}
-      FILTER u._key  == ${key}
+      FILTER u._key == ${key}
       RETURN u.score
   `.toArray()[0];
 }
@@ -745,6 +746,22 @@ function linkContextId(id, context, contextId, timestamp) {
   let user = getUserByContextId(coll, contextId);
   if (user && user != id) {
     throw new errors.DuplicateContextIdError(contextId);
+  }
+
+  const appsWithSameContext = query`
+    FOR app in apps
+      FILTER app.context == ${context}
+      return app
+  `.toArray();
+  let verified = false;
+  for (let app of appsWithSameContext) {
+    if (isVerifiedFor(id, app)) {
+      verified = true;
+      break;
+    }
+  }
+  if (!verified) {
+    throw new errors.NotVerifiedError(contextId, context);
   }
 
   const links = coll.byExample({ user: id }).toArray();
@@ -1123,6 +1140,24 @@ function isSponsoredByContextId(op) {
   return false;
 }
 
+function isVerifiedFor(user, app, verification) {
+  let verifications = userVerifications(user);
+  verifications = _.keyBy(verifications, (v) => v.name);
+  let verified;
+  try {
+    let expr = parser.parse(verification || app.verification);
+    for (let v of expr.variables()) {
+      if (!verifications[v]) {
+        verifications[v] = false;
+      }
+    }
+    verified = expr.evaluate(verifications);
+  } catch (err) {
+    throw new errors.InvalidExpressionError(app.name, app.verification, err);
+  }
+  return verified;
+}
+
 module.exports = {
   connect,
   addConnection,
@@ -1178,4 +1213,5 @@ module.exports = {
   isEthereumAddress,
   sponsorRequestedRecently,
   isSponsoredByContextId,
+  isVerifiedFor,
 };

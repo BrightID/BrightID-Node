@@ -18,7 +18,6 @@ const {
   getNaclKeyPair,
   getEthKeyPair,
 } = require("./encoding");
-const parser = require("expr-eval").Parser;
 const errors = require("./errors");
 
 const router = createRouter();
@@ -236,21 +235,7 @@ const handlers = {
       }
     }
 
-    let verifications = db.userVerifications(user);
-    verifications = _.keyBy(verifications, (v) => v.name);
-    let verified;
-    try {
-      let expr = parser.parse(verification || app.verification);
-      for (let v of expr.variables()) {
-        if (!verifications[v]) {
-          verifications[v] = false;
-        }
-      }
-      verified = expr.evaluate(verifications);
-    } catch (err) {
-      throw new errors.InvalidExpressionError(app.name, app.verification, err);
-    }
-    if (!verified) {
+    if (!db.isVerifiedFor(user, app, verification)) {
       throw new errors.NotVerifiedError(contextId, appKey);
     }
 
