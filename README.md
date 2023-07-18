@@ -20,4 +20,4 @@ Many issues have [bounties assigned](https://github.com/orgs/BrightID/projects/2
 
 ## Integration
 
-* [API spec and guides](https://dev.brightid.org) for developers integrating BrightID.
+* [API spec and guides](https://brightid.stoplight.io) for developers integrating BrightID.
