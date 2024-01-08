@@ -57,6 +57,8 @@ const UNSINGABLE_APP_USER_ID = 67;
 const SPONSOR_REQUESTED_RECENTLY = 68;
 const WRONG_NUMBER_OF_SIGNERS = 69;
 const INVALID_NUMBER_OF_SIGNERS = 70;
+const USER_NOT_VERIFIED = 71;
+const SPONSORED_BRIGHTID_BEFORE = 72;
 
 class BrightIDError extends Error {
   constructor() {
@@ -252,6 +254,15 @@ class NotVerifiedError extends ForbiddenError {
   }
 }
 
+class UserNotVerifiedError extends ForbiddenError {
+  constructor(app) {
+    super();
+    this.errorNum = USER_NOT_VERIFIED;
+    this.message = `The user is not verified.`;
+    this.app = app;
+  }
+}
+
 class InvalidExpressionError extends InternalServerError {
   constructor(app, expression, err) {
     super();
@@ -364,6 +375,13 @@ class SponsoredBeforeError extends ForbiddenError {
     super();
     this.errorNum = SPONSORED_BEFORE;
     this.message = "The app generated id was sponsored before.";
+  }
+}
+class SponsoredBrightIDBeforeError extends ForbiddenError {
+  constructor() {
+    super();
+    this.errorNum = SPONSORED_BRIGHTID_BEFORE;
+    this.message = "BrightID was sponsored before.";
   }
 }
 
@@ -729,4 +747,6 @@ module.exports = {
   SponsorRequestedRecently,
   WrongNumberOfSignersError,
   InvalidNumberOfSignersError,
+  SponsoredBrightIDBeforeError,
+  UserNotVerifiedError,
 };
