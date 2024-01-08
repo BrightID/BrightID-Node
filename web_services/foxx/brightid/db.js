@@ -645,7 +645,7 @@ function sponsor(op) {
 
     const verified = userVerifications(op.id);
     if (verified.length == 0) {
-      throw new errors.NotVerifiedError();
+      throw new errors.UserNotVerifiedError();
     }
 
     const sponsorship = sponsorshipsColl.firstExample({
