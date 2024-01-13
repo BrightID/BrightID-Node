@@ -254,11 +254,12 @@ class NotVerifiedError extends ForbiddenError {
   }
 }
 
+//use old ERROR (UPDATE CODE)
 class UserNotVerifiedError extends ForbiddenError {
   constructor(app) {
     super();
     this.errorNum = USER_NOT_VERIFIED;
-    this.message = `The user is not verified.`;
+    this.message = `The user is not verified for the "${app}" app.`;
     this.app = app;
   }
 }

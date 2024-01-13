@@ -642,12 +642,10 @@ function sponsor(op) {
   const app = appsColl.document(op.app);
 
   if (op.id) {
-
-    const verified = userVerifications(op.id);
-    if (verified.length == 0) {
-      throw new errors.UserNotVerifiedError();
+    //check app verifications and user verifications
+    if(!isVerifiedFor(op.id, app)){
+      throw new errors.UserNotVerifiedError(app.name);
     }
-
     const sponsorship = sponsorshipsColl.firstExample({
       _to: `apps/${op.app}`,
       _from: `users/${op.id}`,
@@ -1085,6 +1083,26 @@ function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
     requiredRecoveryNumSetAfter: Date.now() + 7 * 24 * 60 * 60 * 1000,
   });
 }
+
+
+function isVerifiedFor(user, app) {
+  let verifications = userVerifications(user);
+  verifications = _.keyBy(verifications, (v) => v.name);
+  let verified;
+  try {
+    let expr = parser.parse(app.verifications);
+    for (let v of expr.variables()) {
+      if (!verifications[v]) {
+        verifications[v] = false;
+      }
+    }
+    verified = expr.evaluate(verifications);
+  } catch (err) {
+    throw new errors.InvalidExpressionError(app.name, app.verifications, err);
+  }
+  return verified;
+}
+
 
 module.exports = {
   connect,
