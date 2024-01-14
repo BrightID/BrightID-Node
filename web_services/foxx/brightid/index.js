@@ -221,7 +221,7 @@ const handlers = {
     } else if (testblocks.includes("sponsorship")) {
       throw new errors.NotSponsoredError(contextId);
     } else if (testblocks.includes("verification")) {
-      throw new errors.NotVerifiedError(contextId, appKey);
+      throw new errors.NotVerifiedError(appKey);
     }
 
     const coll = arango._collection(context.collection);
@@ -235,8 +235,8 @@ const handlers = {
       }
     }
 
-    if (!db.isVerifiedFor(user, app, verification)) {
-      throw new errors.NotVerifiedError(contextId, appKey);
+    if (!db.isVerifiedFor(user, { ...app, verification })) {
+      throw new errors.NotVerifiedError(appKey);
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
