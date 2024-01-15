@@ -263,10 +263,12 @@ const operations = {
   Sponsor: {
     contextId: joi
       .string()
-      .required()
       .description(
         "the contextId for the user that is being sponsored by context"
       ),
+      id: joi
+      .string()
+      .description("brightid of the user who is requesting sponsorship"),
     app: joi
       .string()
       .required()
@@ -565,7 +567,9 @@ schemas = Object.assign(
       .alternatives()
       .try(
         Object.keys(operations).map((name) =>
-          joi.object(operations[name]).label(name)
+          name === 'Sponsor' ?
+            joi.object(operations[name]).label(name).xor('id', 'contextId') :
+            joi.object(operations[name]).label(name)
         )
       )
       .description(
@@ -597,7 +601,7 @@ schemas = Object.assign(
         .required()
         .description(
           "encrypted version of the AES key that group name and photo uploaded to `url` encrypted with" +
-            "invitee should first decrypt this data with his/her signingKey and then fetch data in `url` and decrypt that using the AES key"
+          "invitee should first decrypt this data with his/her signingKey and then fetch data in `url` and decrypt that using the AES key"
         ),
     }),
   },
