@@ -969,5 +969,55 @@ describe("operations", function () {
 
       secp256k1.ecdsaVerify(signature, message, publicKey).should.equal(true);
     });
+
+
+    it('should throw error because of XOR(id, contextId)', function () {
+      const contextId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11E";
+      let op = {
+        name: "Sponsor",
+        app: "idchain",
+        timestamp: Date.now(),
+        id: u1.id,
+        contextId: contextId,
+        v: 5
+      }
+
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+      );
+
+      let resp = request.post(`${baseUrl}/operations`, {
+        body: op,
+        json: true,
+      });
+
+      resp.status.should.equal(400);
+
+    })
+
+    it('should accept new sponsor operation without contextId', function () {
+      let op = {
+        name: "Sponsor",
+        app: "idchain",
+        timestamp: Date.now(),
+        id: u3.id,
+        v: 5
+      }
+
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u3.secretKey))
+      );
+      let resp = request.post(`${baseUrl}/operations`, {
+        body: op,
+        json: true,
+      });
+      resp.status.should.equal(200);
+
+    })
+
+
+
   });
 });
