@@ -178,7 +178,7 @@ function verify(op) {
     verifyUserSig(message, op.id, op.sig);
   }
   //! deprecated 
-  else if (op.name == "Sponsor" && op.appUserId) {
+  else if (op.name == "Sponsor" && op.contextId) {
     verifyAppSig(message, op.app, op.sig);
     // prevent apps from sending duplicate sponsor requests
     if (db.sponsorRequestedRecently(op)) {
