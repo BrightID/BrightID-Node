@@ -54,6 +54,7 @@ const u8 = nacl.sign.keyPair();
 const u9 = nacl.sign.keyPair();
 const u10 = nacl.sign.keyPair();
 const u11 = nacl.sign.keyPair();
+const u12 = nacl.sign.keyPair();
 
 let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } =
   nacl.sign.keyPair();
@@ -112,7 +113,7 @@ describe("operations", function () {
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     verificationsColl.truncate();
-    [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11].map((u) => {
+    [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12].map((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
       db.createUser(u.id, Date.now());
@@ -123,9 +124,13 @@ describe("operations", function () {
       verificationExpirationLength: 1000000,
       totalSponsorships: 3,
       idsAsHex: true,
+      verifications: [
+        'SeedConnected and SeedConnected.rank>0'
+      ]
     });
     operationCountersColl.truncate();
   });
+
 
   after(function () {
     operationsHashesColl.truncate();
@@ -1034,21 +1039,40 @@ describe("operations", function () {
         name: "Sponsor",
         app: "idchain",
         timestamp: Date.now(),
-        id: u2.id,
+        id: u12.id,
         v: 6
       }
 
       const message = getMessage(op);
       op.sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u2.secretKey))
+        Object.values(nacl.sign.detached(strToUint8Array(message), u12.secretKey))
       );
-      let resp = request.post(`${baseUrl}/operations`, {
-        body: op,
-        json: true,
-      });
+      let resp = apply(op);
       resp.status.should.equal(200);
 
     })
+
+
+
+    it('should accept new sponsor operation without appUserId', function () {
+      let op = {
+        name: "Sponsor",
+        app: "idchain",
+        timestamp: Date.now(),
+        id: u12.id,
+        v: 6
+      }
+
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u12.secretKey))
+      );
+      let resp = apply(op);
+      resp.status.should.equal(200);
+
+    })
+
+
 
   });
 });
