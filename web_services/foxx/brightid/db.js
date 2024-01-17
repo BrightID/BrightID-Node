@@ -643,7 +643,7 @@ function sponsor(op) {
 
   if (op.id) {
     //check app verifications and user verifications
-    if(!isVerifiedFor(op.id, app)){
+    if (!isVerifiedFor(op.id, app)) {
       throw new errors.UserNotVerifiedError(app.name);
     }
     const sponsorship = sponsorshipsColl.firstExample({
@@ -1090,10 +1090,12 @@ function isVerifiedFor(user, app) {
   verifications = _.keyBy(verifications, (v) => v.name);
   let verified;
   try {
-    let expr = parser.parse(app.verifications);
-    for (let v of expr.variables()) {
-      if (!verifications[v]) {
-        verifications[v] = false;
+    for (let av of app.verifications) {
+      let expr = parser.parse(av);
+      for (let v of expr.variables()) {
+        if (!verifications[v]) {
+          verifications[v] = false;
+        }
       }
     }
     verified = expr.evaluate(verifications);
