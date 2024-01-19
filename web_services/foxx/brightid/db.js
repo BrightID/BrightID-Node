@@ -11,6 +11,7 @@ const {
 } = require("./encoding");
 const errors = require("./errors");
 const wISchnorrServer = require("./WISchnorrServer");
+const parser = require("expr-eval").Parser;
 
 const connectionsColl = db._collection("connections");
 const connectionsHistoryColl = db._collection("connectionsHistory");
