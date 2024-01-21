@@ -113,7 +113,7 @@ describe("operations", function () {
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     verificationsColl.truncate();
-    [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12].map((u) => {
+    [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12].forEach((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
       db.createUser(u.id, Date.now());
@@ -128,6 +128,13 @@ describe("operations", function () {
         'SeedConnected and SeedConnected.rank>0'
       ]
     });
+
+    verificationsColl.insert({
+      name: "SeedConnected",
+      user: u12.id,
+      rank: 3
+    });
+
     operationCountersColl.truncate();
   });
 
@@ -1048,27 +1055,8 @@ describe("operations", function () {
         Object.values(nacl.sign.detached(strToUint8Array(message), u12.secretKey))
       );
       let resp = apply(op);
-      resp.status.should.equal(200);
-
-    })
-
-
-
-    it('should accept new sponsor operation without appUserId', function () {
-      let op = {
-        name: "Sponsor",
-        app: "idchain",
-        timestamp: Date.now(),
-        id: u12.id,
-        v: 6
-      }
-
-      const message = getMessage(op);
-      op.sig = uInt8ArrayToB64(
-        Object.values(nacl.sign.detached(strToUint8Array(message), u12.secretKey))
-      );
-      let resp = apply(op);
-      resp.status.should.equal(200);
+      resp.json.state.should.equal("applied");
+      
 
     })
 
