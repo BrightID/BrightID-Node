@@ -645,7 +645,7 @@ function sponsor(op) {
   if (op.id) {
     //check app verifications and user verifications
     if (!isVerifiedFor(op.id, app)) {
-      throw new errors.UserNotVerifiedError(app.name);
+      throw new errors.UserNotVerifiedError(app._key);
     }
     const sponsorship = sponsorshipsColl.firstExample({
       _to: `apps/${op.app}`,
@@ -1101,7 +1101,7 @@ function isVerifiedFor(user, app) {
     verified = expr.evaluate(verifications);
     }
   } catch (err) {
-    throw new errors.InvalidExpressionError(app.name, app.verifications, err);
+    throw new errors.InvalidExpressionError(app._key, app.verifications, err);
   }
   return verified;
 }
