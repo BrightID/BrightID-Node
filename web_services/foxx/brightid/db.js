@@ -1098,8 +1098,8 @@ function isVerifiedFor(user, app) {
           verifications[v] = false;
         }
       }
-    }
     verified = expr.evaluate(verifications);
+    }
   } catch (err) {
     throw new errors.InvalidExpressionError(app.name, app.verifications, err);
   }
