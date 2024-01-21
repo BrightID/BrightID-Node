@@ -112,7 +112,7 @@ describe("operations", function () {
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     verificationsColl.truncate();
-    [u1, u2, u3, u4, u5, u6, u7].map((u) => {
+    [u1, u2, u3, u4, u5, u6, u7].forEach((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
       db.createUser(u.id, Date.now());
@@ -164,6 +164,11 @@ describe("operations", function () {
       name: "SeedConnected",
       user: u1.id,
       rank: 3,
+      block,
+    });
+    verificationsColl.insert({
+      name: "BrightID",
+      user: u7.id,
       block,
     });
     operationCountersColl.truncate();
@@ -1012,7 +1017,8 @@ describe("operations", function () {
       );
 
       const resp = apply(op);
-      resp.status.should.equal(200);
+      console.log(resp)
+      resp.json.state.should.equal("applied");
 
     })
 
