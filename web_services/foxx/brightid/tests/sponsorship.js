@@ -53,7 +53,8 @@ describe("New sponsorship routine", function () {
         totalSponsorships: 10,
         idsAsHex: true,
         verifications: [
-          'meets.rank > 1 and bitu.score > 2'
+          'meets.rank > 1 and bitu.score > 2',
+          'SeedConnected and SeedConnected.rank>0'
         ]
       });
 
