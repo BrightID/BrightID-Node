@@ -644,7 +644,8 @@ function sponsor(op) {
 
   if (op.id) {
     //check app verifications and user verifications
-    if (!isVerifiedFor(op.id, app)) {
+    const canBeSponsored = app.verifications.some((v) => isVerifiedFor(op.id, v));
+    if (!canBeSponsored) {
       throw new errors.UserNotVerifiedError(app._key);
     }
     const sponsorship = sponsorshipsColl.firstExample({
@@ -1086,22 +1087,20 @@ function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
 }
 
 
-function isVerifiedFor(user, app) {
+function isVerifiedFor(user, verification) {
   let verifications = userVerifications(user);
   verifications = _.keyBy(verifications, (v) => v.name);
   let verified;
   try {
-    for (let av of app.verifications) {
-      let expr = parser.parse(av);
-      for (let v of expr.variables()) {
-        if (!verifications[v]) {
-          verifications[v] = false;
-        }
+    let expr = parser.parse(verification);
+    for (let v of expr.variables()) {
+      if (!verifications[v]) {
+        verifications[v] = false;
       }
-    verified = expr.evaluate(verifications);
     }
+    verified = expr.evaluate(verifications);
   } catch (err) {
-    throw new errors.InvalidExpressionError(app._key, app.verifications, err);
+    return false;
   }
   return verified;
 }
