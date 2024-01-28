@@ -900,11 +900,10 @@ function getSponsorship(contextId) {
 function sponsor(op) {
   const app = appsColl.document(op.app);
 
-
   if (op.id) {
     //check app verifications and user verifications
-    if (!isVerifiedFor(op.id, app)) {
-      throw new errors.NotVerifiedError(app.name);
+    if (!isVerifiedFor(op.id, app.verification)) {
+      throw new errors.NotVerifiedError(app.context,app._key);
     }
     const sponsorship = sponsorshipsColl.firstExample({
       _to: `apps/${op.app}`,
@@ -1170,12 +1169,12 @@ function isSponsoredByContextId(op) {
   return false;
 }
 
-function isVerifiedFor(user, app) {
+function isVerifiedFor(user, verification) {
   let verifications = userVerifications(user);
   verifications = _.keyBy(verifications, (v) => v.name);
   let verified;
   try {
-    let expr = parser.parse(app.verification);
+    let expr = parser.parse(verification);
     for (let v of expr.variables()) {
       if (!verifications[v]) {
         verifications[v] = false;
@@ -1183,7 +1182,7 @@ function isVerifiedFor(user, app) {
     }
     verified = expr.evaluate(verifications);
   } catch (err) {
-    throw new errors.InvalidExpressionError(app.name, app.verification, err);
+    return false;
   }
   return verified;
 }
