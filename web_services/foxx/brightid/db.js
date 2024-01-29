@@ -1152,4 +1152,5 @@ module.exports = {
   setRequiredRecoveryNum,
   getRequiredRecoveryNum,
   isSponsoredByAppUserId,
+  isVerifiedFor
 };
