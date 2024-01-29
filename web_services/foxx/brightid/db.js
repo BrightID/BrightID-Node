@@ -755,7 +755,7 @@ function linkContextId(id, context, contextId, timestamp) {
   `.toArray();
   let verified = false;
   for (let app of appsWithSameContext) {
-    if (isVerifiedFor(id, app)) {
+    if (isVerifiedFor(id, app.verification)) {
       verified = true;
       break;
     }
@@ -903,7 +903,7 @@ function sponsor(op) {
   if (op.id) {
     //check app verifications and user verifications
     if (!isVerifiedFor(op.id, app.verification)) {
-      throw new errors.NotVerifiedError(app.context,app._key);
+      throw new errors.NotVerifiedError(app.context, app._key);
     }
     const sponsorship = sponsorshipsColl.firstExample({
       _to: `apps/${op.app}`,
@@ -925,8 +925,6 @@ function sponsor(op) {
     //! TODO: deprecated
   }
   else {
-
-
     if (
       op.name == "Sponsor" &&
       app.totalSponsorships - (app.usedSponsorships || 0) < 1

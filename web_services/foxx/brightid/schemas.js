@@ -266,7 +266,7 @@ const operations = {
       .description(
         "the contextId for the user that is being sponsored by context"
       ),
-      id: joi
+    id: joi
       .string()
       .description("brightid of the user who is requesting sponsorship"),
     app: joi
