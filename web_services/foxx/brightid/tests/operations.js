@@ -1056,7 +1056,7 @@ describe("operations", function () {
       );
       let resp = apply(op);
       resp.json.state.should.equal("applied");
-      
+
 
     })
 

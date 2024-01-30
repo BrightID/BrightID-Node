@@ -646,14 +646,14 @@ function sponsor(op) {
     //check app verifications and user verifications
     const canBeSponsored = app.verifications.some((v) => isVerifiedFor(op.id, v));
     if (!canBeSponsored) {
-      throw new errors.UserNotVerifiedError(app._key);
+      throw new errors.NotVerifiedError(app._key, '');
     }
     const sponsorship = sponsorshipsColl.firstExample({
       _to: `apps/${op.app}`,
       _from: `users/${op.id}`,
     });
     if (sponsorship) {
-      throw new errors.SponsoredBrightIDBeforeError();
+      throw new errors.SponsoredBeforeError();
     }
 
     sponsorshipsColl.insert({

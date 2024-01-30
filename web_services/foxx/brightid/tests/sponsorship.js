@@ -47,18 +47,18 @@ describe("New sponsorship routine", function () {
 
 
     appsColl.insert({
-        _key: app,
-        sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
-        verificationExpirationLength: 1000000,
-        totalSponsorships: 10,
-        idsAsHex: true,
-        verifications: [
-          'meets.rank > 1 and bitu.score > 2',
-          'SeedConnected and SeedConnected.rank>0'
-        ]
-      });
+      _key: app,
+      sponsorPublicKey: uInt8ArrayToB64(Object.values(sponsorPublicKey)),
+      verificationExpirationLength: 1000000,
+      totalSponsorships: 10,
+      idsAsHex: true,
+      verifications: [
+        'meets.rank > 1 and bitu.score > 2',
+        'SeedConnected and SeedConnected.rank>0'
+      ]
+    });
 
-    
+
 
     verificationsColl.insert({
       name: "bitu",
