@@ -10,10 +10,7 @@ nacl.setPRNG(function (x, n) {
   }
 });
 
-const {
-  b64ToUrlSafeB64,
-  uInt8ArrayToB64,
-} = require("../encoding");
+const { b64ToUrlSafeB64, uInt8ArrayToB64 } = require("../encoding");
 
 const usersColl = arango._collection("users");
 const appsColl = arango._collection("apps");
@@ -21,7 +18,6 @@ const sponsorshipsColl = arango._collection("sponsorships");
 const verificationsColl = arango._collection("verifications");
 const variablesColl = arango._collection("variables");
 const contextsColl = arango._collection("contexts");
-
 
 const chai = require("chai");
 const should = chai.should();
@@ -91,7 +87,6 @@ describe("New sponsorship routine", function () {
       rank: 2,
       block,
     });
-
   });
   after(function () {
     usersColl.truncate();
@@ -100,7 +95,6 @@ describe("New sponsorship routine", function () {
     verificationsColl.truncate();
     variablesColl.truncate();
     contextsColl.truncate();
-
   });
 
   describe("Unit tests", function () {
@@ -118,13 +112,13 @@ describe("New sponsorship routine", function () {
         db.isVerifiedFor(u2.id, sampleExpr).should.equal(false);
       });
     });
-    describe('db.sponor', function () {
+    describe("db.sponor", function () {
       it("should accept new sponsor operations", function () {
         const operation = {
           id: u1.id,
           app: app,
           timestamp: Date.now(),
-        }
+        };
         db.sponsor(operation);
       });
       it("should reject sponsor operation with verification error", function () {
@@ -132,33 +126,18 @@ describe("New sponsorship routine", function () {
           id: u2.id,
           app: app,
           timestamp: Date.now(),
-        }
-        try {
-          db.sponsor(operation);
-          // throw new Error("should not reach here");
-        } catch (e) {
-          e.errorNum.should.equal(3);
-        }
-
+        };
+        db.sponsor(operation).should.throw(errors.NOT_VERIFIED);
       });
       it("should reject sponsor operation with already sponsored error", function () {
         const operation = {
           id: u1.id,
           app: app,
           timestamp: Date.now(),
-        }
-        try {
-          db.sponsor(operation);
-          throw new Error("should not reach here");
-        } catch (e) {
-          e.errorNum.should.equal(39);
-        }
+        };
+
+        db.sponsor(operation).should.throw(errors.SPONSORED_BEFORE);
       });
     });
-
-
   });
-
-
-
 });
