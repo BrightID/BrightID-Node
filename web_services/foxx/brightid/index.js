@@ -235,7 +235,7 @@ const handlers = {
       }
     }
 
-    if (verification?.length !== 0 && !db.isVerifiedFor(user, verification)) {
+    if (!db.isVerifiedFor(user, verification || app.verification)) {
       throw new errors.NotVerifiedError(appKey);
     }
 
