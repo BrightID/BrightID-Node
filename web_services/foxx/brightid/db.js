@@ -755,13 +755,13 @@ function linkContextId(id, context, contextId, timestamp) {
   `.toArray();
   let verified = false;
   for (let app of appsWithSameContext) {
-    if (isVerifiedFor(id, app)) {
+    if (isVerifiedFor(id, app.verification)) {
       verified = true;
       break;
     }
   }
   if (!verified) {
-    throw new errors.NotVerifiedError(contextId, context);
+    throw new errors.NotVerifiedError(context);
   }
 
   const links = coll.byExample({ user: id }).toArray();
@@ -899,54 +899,81 @@ function getSponsorship(contextId) {
 
 function sponsor(op) {
   const app = appsColl.document(op.app);
-  if (
-    op.name == "Sponsor" &&
-    app.totalSponsorships - (app.usedSponsorships || 0) < 1
-  ) {
-    throw new errors.UnusedSponsorshipsError(op.app);
-  }
 
-  const contextId = app.idsAsHex ? op.contextId.toLowerCase() : op.contextId;
-  // remove testblocks if exists
-  removeTestblock(contextId, "sponsorship", op.app);
+  if (op.id) {
+    //check app verifications and user verifications
+    if (!isVerifiedFor(op.id, app.verification)) {
+      throw new errors.NotVerifiedError(app.context, app._key);
+    }
+    const sponsorship = sponsorshipsColl.firstExample({
+      _to: `apps/${op.app}`,
+      _from: `users/${op.id}`,
+    });
+    if (sponsorship) {
+      throw new errors.SponsoredBeforeError();
+    }
 
-  const sponsorship = sponsorshipsColl.firstExample({
-    appId: contextId,
-    _to: "apps/" + op.app,
-  });
-  if (!sponsorship) {
     sponsorshipsColl.insert({
-      _from: "users/0",
+      _from: `users/${op.id}`,
       _to: "apps/" + op.app,
-      expireDate: Math.ceil(Date.now() / 1000 + 60 * 60),
+      appHasAuthorized: true,
+      timestamp: op.timestamp,
+      appId: null
+    });
+    appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
+
+    //! TODO: deprecated
+  }
+  else {
+    if (
+      op.name == "Sponsor" &&
+      app.totalSponsorships - (app.usedSponsorships || 0) < 1
+    ) {
+      throw new errors.UnusedSponsorshipsError(op.app);
+    }
+
+    const contextId = app.idsAsHex ? op.contextId.toLowerCase() : op.contextId;
+    // remove testblocks if exists
+    removeTestblock(contextId, "sponsorship", op.app);
+
+    const sponsorship = sponsorshipsColl.firstExample({
       appId: contextId,
-      appHasAuthorized: op.name == "Sponsor",
-      spendRequested: op.name == "Spend Sponsorship",
+      _to: "apps/" + op.app,
+    });
+    if (!sponsorship) {
+      sponsorshipsColl.insert({
+        _from: "users/0",
+        _to: "apps/" + op.app,
+        expireDate: Math.ceil(Date.now() / 1000 + 60 * 60),
+        appId: contextId,
+        appHasAuthorized: op.name == "Sponsor",
+        spendRequested: op.name == "Spend Sponsorship",
+        timestamp: op.timestamp,
+      });
+      return;
+    }
+
+    if (sponsorship.appHasAuthorized && sponsorship.spendRequested) {
+      throw new errors.SponsoredBeforeError();
+    }
+
+    if (op.name == "Sponsor" && sponsorship.appHasAuthorized) {
+      throw new errors.AppAuthorizedBeforeError();
+    }
+
+    if (op.name == "Spend Sponsorship" && sponsorship.spendRequested) {
+      throw new errors.SpendRequestedBeforeError();
+    }
+
+    sponsorshipsColl.update(sponsorship, {
+      expireDate: null,
+      appHasAuthorized: true,
+      spendRequested: true,
       timestamp: op.timestamp,
     });
-    return;
+
+    appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
   }
-
-  if (sponsorship.appHasAuthorized && sponsorship.spendRequested) {
-    throw new errors.SponsoredBeforeError();
-  }
-
-  if (op.name == "Sponsor" && sponsorship.appHasAuthorized) {
-    throw new errors.AppAuthorizedBeforeError();
-  }
-
-  if (op.name == "Spend Sponsorship" && sponsorship.spendRequested) {
-    throw new errors.SpendRequestedBeforeError();
-  }
-
-  sponsorshipsColl.update(sponsorship, {
-    expireDate: null,
-    appHasAuthorized: true,
-    spendRequested: true,
-    timestamp: op.timestamp,
-  });
-
-  appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
 }
 
 function loadOperation(key) {
@@ -1140,12 +1167,12 @@ function isSponsoredByContextId(op) {
   return false;
 }
 
-function isVerifiedFor(user, app, verification) {
+function isVerifiedFor(user, verification) {
   let verifications = userVerifications(user);
   verifications = _.keyBy(verifications, (v) => v.name);
   let verified;
   try {
-    let expr = parser.parse(verification || app.verification);
+    let expr = parser.parse(verification);
     for (let v of expr.variables()) {
       if (!verifications[v]) {
         verifications[v] = false;
@@ -1153,7 +1180,7 @@ function isVerifiedFor(user, app, verification) {
     }
     verified = expr.evaluate(verifications);
   } catch (err) {
-    throw new errors.InvalidExpressionError(app.name, app.verification, err);
+    return false;
   }
   return verified;
 }
