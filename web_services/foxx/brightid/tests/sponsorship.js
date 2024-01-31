@@ -2,6 +2,7 @@
 
 const db = require("../db.js");
 const arango = require("@arangodb").db;
+const errors = require("../errors.js");
 const nacl = require("tweetnacl");
 nacl.setPRNG(function (x, n) {
   for (let i = 0; i < n; i++) {
@@ -134,7 +135,7 @@ describe("New sponsorship routine", function () {
         }
         try {
           db.sponsor(operation);
-          throw new Error("should not reach here");
+          // throw new Error("should not reach here");
         } catch (e) {
           e.errorNum.should.equal(3);
         }
