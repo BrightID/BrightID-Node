@@ -1,6 +1,7 @@
 "use strict";
 
 const db = require("../db.js");
+const errors = require("../errors.js");
 const arango = require("@arangodb").db;
 const nacl = require("tweetnacl");
 nacl.setPRNG(function (x, n) {
@@ -117,12 +118,9 @@ describe("New sponsorship routine", function () {
           app: app,
           timestamp: Date.now(),
         }
-        try {
-          db.sponsor(operation);
-          throw new Error("should not reach here");
-        } catch (e) {
-          e.errorNum.should.equal(71);
-        }
+
+        db.sponsor(operation).should.throw(errors.NOT_VERIFIED);
+
 
       });
       it("should reject sponsor operation with already sponsored error", function () {
@@ -131,12 +129,9 @@ describe("New sponsorship routine", function () {
           app: app,
           timestamp: Date.now(),
         }
-        try {
-          db.sponsor(operation);
-          throw new Error("should not reach here");
-        } catch (e) {
-          e.errorNum.should.equal(72);
-        }
+
+        db.sponsor(operation).should.throw(errors.SPONSORED_BEFORE);
+
       });
     });
 
