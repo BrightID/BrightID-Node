@@ -228,28 +228,11 @@ const handlers = {
     }
 
     const params = db.getCachedParams(pub);
-    const app = db.getApp(params.app);
     const msg = stringify({ id, public: JSON.parse(pub) });
     operations.verifyUserSig(msg, id, sig);
 
-    let verifications = db.userVerifications(id);
-    verifications = _.keyBy(verifications, (v) => v.name);
-    let verified;
-    try {
-      let expr = parser.parse(params.verification);
-      for (let v of expr.variables()) {
-        if (!verifications[v]) {
-          verifications[v] = false;
-        }
-      }
-      verified = expr.evaluate(verifications);
-    } catch (err) {
-      throw new errors.InvalidExpressionError(
-        app.name,
-        params.verification,
-        err
-      );
-    }
+
+    const verified = db.isVerifiedFor(id, params.verification)
     if (!verified) {
       throw new errors.NotVerifiedError(params.app, params.verification);
     }
