@@ -57,8 +57,8 @@ const senderAttrs = {
   "Add Membership": ["id"],
   "Remove Membership": ["id"],
   "Social Recovery": ["id"],
-  Sponsor: ["app"],
-  "Spend Sponsorship": ["app"],
+  Sponsor: ["app", "id"], //! TODO: deprecated (we are supporting old clients for now) app is not required anymore
+  "Spend Sponsorship": ["app"], //! TODO: deprecated (we are supporting old clients for now)
   Invite: ["inviter"],
   Dismiss: ["dismisser"],
   "Add Admin": ["id"],
@@ -84,6 +84,7 @@ function checkLimits(op, timeWindow, limit) {
     // 4) a bucket for an app
     // where parent is the first verified user that make connection with the user
 
+    //! TODO: deprecated (we are supporting old clients for now)
     if (op["name"] == "Spend Sponsorship") {
       const app = db.getApp(op.app);
       const appUserId = app.idsAsHex ? op.appUserId.toLowerCase() : op.appUserId;
@@ -99,6 +100,7 @@ function checkLimits(op, timeWindow, limit) {
       }
     }
 
+    //! TODO: deprecated (we are supporting old clients for now)
     if (!["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
       if (!usersColl.exists(sender)) {
         // this happens when operation is "Connect" and sender does not exist
@@ -177,7 +179,11 @@ function verify(op) {
   }
 
   let message = getMessage(op);
-  if (op.name == "Sponsor") {
+  if(op.name == "Sponsor" && op.id) {
+    verifyUserSig(message, op.id, op.sig);
+  }
+  //! TODO: deprecated (we are supporting old clients for now)
+  else if (op.name == "Sponsor" && op.appUserId) {
     verifyAppSig(message, op.app, op.sig);
     // prevent apps from sending duplicate sponsor requests
     if (db.sponsorRequestedRecently(op)) {
@@ -256,6 +262,7 @@ function apply(op) {
     return db.deleteMembership(op.group, op.id, op.timestamp);
   } else if (op["name"] == "Social Recovery") {
     return db.setSigningKey(op.signingKey, op.id, op.timestamp);
+    //! TODO: deprecated (we are supporting old clients for now)
   } else if (["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
     return db.sponsor(op);
   } else if (op["name"] == "Invite") {

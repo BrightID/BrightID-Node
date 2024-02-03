@@ -184,8 +184,10 @@ const operations = {
   Sponsor: {
     appUserId: joi
       .string()
-      .required()
       .description("the app generated id that is being sponsored"),
+      id: joi
+      .string()
+      .description("brightid of the user who is requesting sponsorship"),
     app: joi
       .string()
       .required()
@@ -575,6 +577,8 @@ schemas = Object.assign(
       .alternatives()
       .try(
         Object.keys(operations).map((name) =>
+          name==='Sponsor'?
+          joi.object(operations[name]).label(name).xor('id','appUserId'):
           joi.object(operations[name]).label(name)
         )
       )
