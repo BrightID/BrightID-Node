@@ -114,29 +114,36 @@ describe("New sponsorship routine", function () {
     });
     describe("db.sponor", function () {
       it("should accept new sponsor operations", function () {
+        db.isSponsored(u1.id, app).should.equal(false);
         const operation = {
           id: u1.id,
           app: app,
           timestamp: Date.now(),
         };
         db.sponsor(operation);
+        db.isSponsored(u1.id, app).should.equal(true);
       });
       it("should reject sponsor operation with verification error", function () {
+        db.isSponsored(u2.id, app).should.equal(false);
         const operation = {
           id: u2.id,
           app: app,
           timestamp: Date.now(),
         };
-        db.sponsor(operation).should.throw(errors.NOT_VERIFIED);
+        (() => {
+          db.sponsor(operation)
+        }).should.throw(errors.NOT_VERIFIED);
       });
       it("should reject sponsor operation with already sponsored error", function () {
+        db.isSponsored(u1.id, app).should.equal(true);
         const operation = {
           id: u1.id,
           app: app,
           timestamp: Date.now(),
         };
-
-        db.sponsor(operation).should.throw(errors.SPONSORED_BEFORE);
+        (() => {
+          db.sponsor(operation)
+        }).should.throw(errors.SPONSORED_BEFORE);
       });
     });
   });
