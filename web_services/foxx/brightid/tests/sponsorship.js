@@ -117,9 +117,11 @@ describe("New sponsorship routine", function () {
           id: u2.id,
           app: app,
           timestamp: Date.now(),
-        }
+        };
 
-        db.sponsor(operation).should.throw(errors.NOT_VERIFIED);
+        (() => {
+          db.sponsor(operation)
+        }).should.throw(errors.NOT_VERIFIED);
 
 
       });
@@ -128,9 +130,10 @@ describe("New sponsorship routine", function () {
           id: u1.id,
           app: app,
           timestamp: Date.now(),
-        }
-
-        db.sponsor(operation).should.throw(errors.SPONSORED_BEFORE);
+        };
+        (() => {
+          db.sponsor(operation)
+        }).should.throw(errors.SPONSORED_BEFORE);
 
       });
     });
