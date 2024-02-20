@@ -644,7 +644,7 @@ function sponsor(op) {
 
   if (op.id) {
     //check app verifications and user verifications
-    const wholeAppVerifications = [...app.verifications || [], app.verification].filter((v) => v?.length > 0);
+    const wholeAppVerifications = [...app.verifications || [], app.verification].filter((v) => v && v.length > 0);
     const canBeSponsored = wholeAppVerifications.some((v) => isVerifiedFor(op.id, v));
     if (!canBeSponsored) {
       throw new errors.NotVerifiedError(app._key, '');
