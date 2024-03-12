@@ -11,6 +11,7 @@ const {
 } = require("./encoding");
 const errors = require("./errors");
 const wISchnorrServer = require("./WISchnorrServer");
+const parser = require("expr-eval").Parser;
 
 const connectionsColl = db._collection("connections");
 const connectionsHistoryColl = db._collection("connectionsHistory");
@@ -599,12 +600,12 @@ function getRecoveryConnections(userId) {
     // for active recovery connections, find how long it takes to be inactivated
     const activeBefore = isActive
       ? getActiveBefore(
-          recoveryPeriods,
-          firstDayBorder,
-          aWeek,
-          aWeekBorder,
-          now
-        )
+        recoveryPeriods,
+        firstDayBorder,
+        aWeek,
+        aWeekBorder,
+        now
+      )
       : 0;
 
     if (isActive || activeAfter > 0 || activeBefore > 0) {
@@ -640,58 +641,86 @@ function isSponsored(key) {
 
 function sponsor(op) {
   const app = appsColl.document(op.app);
-  if (
-    op.name == "Sponsor" &&
-    app.totalSponsorships - (app.usedSponsorships || 0) < 1
-  ) {
-    throw new errors.UnusedSponsorshipsError(op.app);
-  }
 
-  if (app.idsAsHex) {
-    if (!isEthereumAddress(op.appUserId)) {
-      throw new errors.InvalidAppUserIdError(op.appUserId);
+  if (op.id) {
+    //check app verifications and user verifications
+    const wholeAppVerifications = [...app.verifications || [], app.verification].filter((v) => v && v.length > 0);
+    const canBeSponsored = wholeAppVerifications.some((v) => isVerifiedFor(op.id, v));
+    if (!canBeSponsored) {
+      throw new errors.NotVerifiedError(app._key, '');
     }
-  }
+    const sponsorship = sponsorshipsColl.firstExample({
+      _to: `apps/${op.app}`,
+      _from: `users/${op.id}`,
+    });
+    if (sponsorship) {
+      throw new errors.SponsoredBeforeError();
+    }
 
-  const appUserId = app.idsAsHex ? op.appUserId.toLowerCase() : op.appUserId;
-  const sponsorship = sponsorshipsColl.firstExample({
-    _to: `apps/${op.app}`,
-    appId: appUserId,
-  });
-  if (!sponsorship) {
     sponsorshipsColl.insert({
-      _from: "users/0",
+      _from: `users/${op.id}`,
       _to: "apps/" + op.app,
-      // it will expire after 1 hour
-      expireDate: Math.ceil(Date.now() / 1000 + 60 * 60),
+      appHasAuthorized: true,
+      timestamp: op.timestamp,
+      appId: null
+    });
+    appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
+
+    //! TODO: deprecated
+  } else {
+    if (
+      op.name == "Sponsor" &&
+      app.totalSponsorships - (app.usedSponsorships || 0) < 1
+    ) {
+      throw new errors.UnusedSponsorshipsError(op.app);
+    }
+
+    if (app.idsAsHex) {
+      if (!isEthereumAddress(op.appUserId)) {
+        throw new errors.InvalidAppUserIdError(op.appUserId);
+      }
+    }
+
+    const appUserId = app.idsAsHex ? op.appUserId.toLowerCase() : op.appUserId;
+    const sponsorship = sponsorshipsColl.firstExample({
+      _to: `apps/${op.app}`,
       appId: appUserId,
-      appHasAuthorized: op.name == "Sponsor" ? true : false,
-      spendRequested: op.name == "Spend Sponsorship" ? true : false,
+    });
+    if (!sponsorship) {
+      sponsorshipsColl.insert({
+        _from: "users/0",
+        _to: "apps/" + op.app,
+        // it will expire after 1 hour
+        expireDate: Math.ceil(Date.now() / 1000 + 60 * 60),
+        appId: appUserId,
+        appHasAuthorized: op.name == "Sponsor" ? true : false,
+        spendRequested: op.name == "Spend Sponsorship" ? true : false,
+        timestamp: op.timestamp,
+      });
+      return;
+    }
+
+    if (sponsorship.appHasAuthorized && sponsorship.spendRequested) {
+      throw new errors.SponsoredBeforeError();
+    }
+
+    if (op.name == "Sponsor" && sponsorship.appHasAuthorized) {
+      throw new errors.AppAuthorizedBeforeError();
+    }
+
+    if (op.name == "Spend Sponsorship" && sponsorship.spendRequested) {
+      throw new errors.SpendRequestedBeforeError();
+    }
+
+    sponsorshipsColl.update(sponsorship, {
+      expireDate: null,
+      appHasAuthorized: true,
+      spendRequested: true,
       timestamp: op.timestamp,
     });
-    return;
+
+    appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
   }
-
-  if (sponsorship.appHasAuthorized && sponsorship.spendRequested) {
-    throw new errors.SponsoredBeforeError();
-  }
-
-  if (op.name == "Sponsor" && sponsorship.appHasAuthorized) {
-    throw new errors.AppAuthorizedBeforeError();
-  }
-
-  if (op.name == "Spend Sponsorship" && sponsorship.spendRequested) {
-    throw new errors.SpendRequestedBeforeError();
-  }
-
-  sponsorshipsColl.update(sponsorship, {
-    expireDate: null,
-    appHasAuthorized: true,
-    spendRequested: true,
-    timestamp: op.timestamp,
-  });
-
-  appsColl.update(app, { usedSponsorships: (app.usedSponsorships || 0) + 1 });
 }
 
 function loadOperation(key) {
@@ -1058,6 +1087,26 @@ function setRequiredRecoveryNum(id, requiredRecoveryNum, timestamp) {
   });
 }
 
+
+function isVerifiedFor(user, verification) {
+  let verifications = userVerifications(user);
+  verifications = _.keyBy(verifications, (v) => v.name);
+  let verified;
+  try {
+    let expr = parser.parse(verification);
+    for (let v of expr.variables()) {
+      if (!verifications[v]) {
+        verifications[v] = false;
+      }
+    }
+    verified = expr.evaluate(verifications);
+  } catch (err) {
+    return false;
+  }
+  return verified;
+}
+
+
 module.exports = {
   connect,
   createGroup,
@@ -1104,4 +1153,5 @@ module.exports = {
   setRequiredRecoveryNum,
   getRequiredRecoveryNum,
   isSponsoredByAppUserId,
+  isVerifiedFor
 };

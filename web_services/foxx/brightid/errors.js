@@ -58,6 +58,7 @@ const SPONSOR_REQUESTED_RECENTLY = 68;
 const WRONG_NUMBER_OF_SIGNERS = 69;
 const INVALID_NUMBER_OF_SIGNERS = 70;
 
+
 class BrightIDError extends Error {
   constructor() {
     super();
@@ -251,6 +252,8 @@ class NotVerifiedError extends ForbiddenError {
     this.app = app;
   }
 }
+
+
 
 class InvalidExpressionError extends InternalServerError {
   constructor(app, expression, err) {
@@ -728,5 +731,5 @@ module.exports = {
   UnsingableAppUserIdError,
   SponsorRequestedRecently,
   WrongNumberOfSignersError,
-  InvalidNumberOfSignersError,
+  InvalidNumberOfSignersError
 };

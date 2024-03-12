@@ -54,6 +54,7 @@ const u8 = nacl.sign.keyPair();
 const u9 = nacl.sign.keyPair();
 const u10 = nacl.sign.keyPair();
 const u11 = nacl.sign.keyPair();
+const u12 = nacl.sign.keyPair();
 
 let { publicKey: sponsorPublicKey, secretKey: sponsorPrivateKey } =
   nacl.sign.keyPair();
@@ -112,7 +113,7 @@ describe("operations", function () {
     sponsorshipsColl.truncate();
     invitationsColl.truncate();
     verificationsColl.truncate();
-    [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11].map((u) => {
+    [u1, u2, u3, u4, u5, u6, u7, u8, u9, u10, u11, u12].forEach((u) => {
       u.signingKey = uInt8ArrayToB64(Object.values(u.publicKey));
       u.id = b64ToUrlSafeB64(u.signingKey);
       db.createUser(u.id, Date.now());
@@ -123,9 +124,20 @@ describe("operations", function () {
       verificationExpirationLength: 1000000,
       totalSponsorships: 3,
       idsAsHex: true,
+      verifications: [
+        'SeedConnected and SeedConnected.rank>0'
+      ]
     });
+
+    verificationsColl.insert({
+      name: "SeedConnected",
+      user: u12.id,
+      rank: 3
+    });
+
     operationCountersColl.truncate();
   });
+
 
   after(function () {
     operationsHashesColl.truncate();
@@ -979,7 +991,7 @@ describe("operations", function () {
         _from: "users/0",
         _to: "apps/idchain",
         appId: appUserId,
-        appHasAuthorized:true,
+        appHasAuthorized: true,
         spendRequested: true,
         timestamp: Date.now(),
       });
@@ -1003,5 +1015,52 @@ describe("operations", function () {
       resp.status.should.equal(403);
       resp.json.errorNum.should.equal(errors.SPONSORED_BEFORE);
     });
+
+    it('should throw error because of XOR(id, appUserId)', function () {
+      const appUserId = "0x79aF508C9698076Bc1c2DfA224f7829e9768B11E";
+      let op = {
+        name: "Sponsor",
+        app: "idchain",
+        timestamp: Date.now(),
+        id: u1.id,
+        appUserId: appUserId,
+        v: 6
+      }
+
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u1.secretKey))
+      );
+
+      let resp = request.post(`${baseUrl}/operations`, {
+        body: op,
+        json: true,
+      });
+
+      resp.status.should.equal(400);
+
+    })
+
+    it('should accept new sponsor operation without appUserId', function () {
+      let op = {
+        name: "Sponsor",
+        app: "idchain",
+        timestamp: Date.now(),
+        id: u12.id,
+        v: 6
+      }
+
+      const message = getMessage(op);
+      op.sig = uInt8ArrayToB64(
+        Object.values(nacl.sign.detached(strToUint8Array(message), u12.secretKey))
+      );
+      let resp = apply(op);
+      resp.json.state.should.equal("applied");
+
+
+    })
+
+
+
   });
 });
