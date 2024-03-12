@@ -11,6 +11,8 @@ const usersColl = arango._collection("users");
 const contextsColl = arango._collection("contexts");
 const appsColl = arango._collection("apps");
 const sponsorshipsColl = arango._collection("sponsorships");
+const variablesColl = arango._collection("variables");
+const verificationsColl = arango._collection("verifications");
 const should = chai.should();
 
 describe("links & sponsorships", function () {
@@ -30,6 +32,7 @@ describe("links & sponsorships", function () {
       INSERT {
         _key: "testApp",
         totalSponsorships: 1,
+        verification: "BrightID",
         context: "testContext"
       } IN ${appsColl}
     `;
@@ -47,6 +50,31 @@ describe("links & sponsorships", function () {
       INSERT {
         _key: "4"
       } IN ${usersColl}
+    `;
+    const hashes = JSON.parse(
+      variablesColl.document("VERIFICATIONS_HASHES").hashes
+    );
+    const block = Math.max(...Object.keys(hashes));
+    query`
+      INSERT {
+        name: "BrightID",
+        user: "2",
+        block: ${block}
+      } IN ${verificationsColl}
+    `;
+    query`
+      INSERT {
+        name: "BrightID",
+        user: "3",
+        block: ${block}
+      } IN ${verificationsColl}
+    `;
+    query`
+      INSERT {
+        name: "BrightID",
+        user: "4",
+        block: ${block}
+      } IN ${verificationsColl}
     `;
   });
   after(function () {

@@ -252,7 +252,7 @@ class NotVerifiedError extends ForbiddenError {
   constructor(contextId, app) {
     super();
     this.errorNum = NOT_VERIFIED;
-    this.message = `The user linked to contextId ${contextId} is not verified for ${app} app.`;
+    this.message = `The linked user is not verified for ${app} app.`;
     this.contextId = contextId;
     this.app = app;
   }
@@ -422,7 +422,7 @@ class SponsoredBeforeError extends ForbiddenError {
   constructor() {
     super();
     this.errorNum = SPONSORED_BEFORE;
-    this.message = "The contextId is sponsored before.";
+    this.message = "The user has been sponsored before.";
   }
 }
 

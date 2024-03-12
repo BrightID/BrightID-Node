@@ -59,8 +59,8 @@ const senderAttrs = {
   "Remove Membership": ["id"],
   "Set Trusted Connections": ["id"],
   "Set Signing Key": ["id"],
-  Sponsor: ["app"],
-  "Spend Sponsorship": ["app"],
+  Sponsor: ["app","id"], //! deprecated app is not used anymore
+  "Spend Sponsorship": ["app"], //! deprecated 
   "Link ContextId": ["id"],
   Invite: ["inviter"],
   Dismiss: ["dismisser"],
@@ -83,6 +83,7 @@ function checkLimits(op, timeWindow, limit) {
     // 4) a bucket for an app
     // where parent is the first verified user that make connection with the user
 
+    //! deprecated we don't accept spend sponsorship anymore
     if (op["name"] == "Spend Sponsorship") {
       const app = db.getApp(op.app);
       const contextId = app.idsAsHex ? op.contextId.toLowerCase() : op.contextId;
@@ -97,7 +98,7 @@ function checkLimits(op, timeWindow, limit) {
         sender = "shared_apps";
       }
     }
-
+    //! deprecated we don't accept sponsor anymore
     if (!["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
       if (!usersColl.exists(sender)) {
         // this happens when operation is "Add Connection" and one/both sides don't exist
@@ -173,7 +174,11 @@ function verify(op) {
   }
 
   let message = getMessage(op);
-  if (op.name == "Sponsor") {
+  if(op.name == "Sponsor" && op.id){
+    verifyUserSig(message, op.id, op.sig);
+  }
+  //! deprecated 
+  else if (op.name == "Sponsor" && op.contextId) {
     verifyAppSig(message, op.app, op.sig);
     // prevent apps from sending duplicate sponsor requests
     if (db.sponsorRequestedRecently(op)) {
@@ -183,6 +188,7 @@ function verify(op) {
     }
   } else if (op.name == "Spend Sponsorship") {
     // there is no sig on this operation
+    //! deprecated we don't accept spend sponsorship anymore
     return;
   } else if (op.name == "Set Signing Key") {
     const recoveryConnections = db.getRecoveryConnections(op.id);
@@ -259,6 +265,7 @@ function apply(op) {
     return db.setRecoveryConnections(op.trusted, op.id, op.timestamp);
   } else if (op["name"] == "Set Signing Key") {
     return db.setSigningKey(op.signingKey, op.id, op.timestamp);
+    //!deprecated we don't accept sponsor anymore
   } else if (["Sponsor", "Spend Sponsorship"].includes(op["name"])) {
     return db.sponsor(op);
   } else if (op["name"] == "Link ContextId") {

@@ -18,7 +18,6 @@ const {
   getNaclKeyPair,
   getEthKeyPair,
 } = require("./encoding");
-const parser = require("expr-eval").Parser;
 const errors = require("./errors");
 
 const router = createRouter();
@@ -222,7 +221,7 @@ const handlers = {
     } else if (testblocks.includes("sponsorship")) {
       throw new errors.NotSponsoredError(contextId);
     } else if (testblocks.includes("verification")) {
-      throw new errors.NotVerifiedError(contextId, appKey);
+      throw new errors.NotVerifiedError(appKey);
     }
 
     const coll = arango._collection(context.collection);
@@ -236,22 +235,8 @@ const handlers = {
       }
     }
 
-    let verifications = db.userVerifications(user);
-    verifications = _.keyBy(verifications, (v) => v.name);
-    let verified;
-    try {
-      let expr = parser.parse(verification || app.verification);
-      for (let v of expr.variables()) {
-        if (!verifications[v]) {
-          verifications[v] = false;
-        }
-      }
-      verified = expr.evaluate(verifications);
-    } catch (err) {
-      throw new errors.InvalidExpressionError(app.name, app.verification, err);
-    }
-    if (!verified) {
-      throw new errors.NotVerifiedError(contextId, appKey);
+    if (!db.isVerifiedFor(user, verification || app.verification)) {
+      throw new errors.NotVerifiedError(appKey);
     }
 
     let contextIds = db.getContextIdsByUser(coll, user);
