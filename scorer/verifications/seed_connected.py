@@ -6,13 +6,12 @@ import config
 PENALTY = 3
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db('_system')
-snapshot_db = ArangoClient(hosts=config.ARANGO_SERVER).db('snapshot')
 
 
 def seed_connections(group_id, after):
-    cursor = snapshot_db['usersInGroups'].find({'_to': group_id})
+    cursor = db['usersInGroups'].find({'_to': group_id})
     members = [ug['_from'] for ug in cursor]
-    return snapshot_db.aql.execute('''
+    return db.aql.execute('''
         FOR c in connections
             FILTER c._from IN @members
                 AND (c.timestamp > @after OR c.level == 'reported')
@@ -47,8 +46,8 @@ def verify(block):
         for g in v['connected']:
             counts[g] = counts.get(g, 0) + 1
 
-    prev_snapshot_time = snapshot_db['variables'].get('PREV_SNAPSHOT_TIME')['value']
-    seed_groups = snapshot_db['groups'].find({'seed': True})
+    prev_snapshot_time = db['variables'].get('PREV_SNAPSHOT_TIME')['value']
+    seed_groups = db['groups'].find({'seed': True})
     for seed_group in seed_groups:
         # load connection that members of this seed group made after
         # previous snapshot
