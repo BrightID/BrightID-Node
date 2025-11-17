@@ -1,29 +1,37 @@
 import socket
 import time
 import json
-import binascii
 from arango import ArangoClient
-from web3 import Web3
 import config
+from hiero_sdk_python import (
+    Client,
+    Network,
+    AccountId,
+    PrivateKey,
+    TopicMessageSubmitTransaction,
+    TopicId,
+)
 
-w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
+print(f"Connecting to Hedera {config.NETWORK} network!")
+network = Network(config.NETWORK)
+client = Client(network)
+operator_id = AccountId.from_string(config.OPERATOR_ID)
+operator_key = PrivateKey.from_string_ecdsa(config.OPERATOR_KEY)
+client.set_operator(operator_id, operator_key)
+
 db = ArangoClient(hosts=config.ARANGO_SERVER).db("_system")
 
 
-def sendTransaction(data):
-    nonce = w3.eth.getTransactionCount(config.ADDRESS, "pending")
-    tx = {
-        "to": config.TO_ADDRESS,
-        "value": 0,
-        "gas": config.GAS,
-        "gasPrice": config.GAS_PRICE,
-        "nonce": nonce,
-        "chainId": w3.eth.chainId,
-        "data": data,
-    }
-    signed = w3.eth.account.sign_transaction(tx, config.PRIVATE_KEY)
-    tx = w3.eth.sendRawTransaction(signed.rawTransaction).hex()
-    return tx
+def sendMessage(data):
+    topic_id = TopicId.from_string(config.TOPIC_ID)
+    message_transaction = (
+        TopicMessageSubmitTransaction()
+        .set_topic_id(topic_id)
+        .set_message(data)
+        .freeze_with(client)
+        .sign(operator_key)
+    )
+    message_transaction.execute(client)
 
 
 def main():
@@ -41,12 +49,14 @@ def main():
     if not operations:
         return
 
-    data = json.dumps(operations).encode("utf-8")
-    data = "0x" + binascii.hexlify(data).decode("utf-8")
-    transaction_hash = sendTransaction(data)
+    data = json.dumps(operations)
+    sendMessage(data)
     for i, op in enumerate(operations):
         db.collection("operations").update(
-            {"_key": hashes[i], "state": "sent", "transactionHash": transaction_hash},
+            {
+                "_key": hashes[i],
+                "state": "sent",
+            },
             merge=True,
         )
 

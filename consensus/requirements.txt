@@ -1,3 +1,3 @@
 python-arango==5.4.0
-web3==5.0.0
+hiero_sdk_python==0.1.7
 requests
