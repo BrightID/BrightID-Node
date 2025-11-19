@@ -70,7 +70,7 @@ def process_op(op):
 
 
 def save_snapshot(next_snapshot_timestamp):
-    dir_name = config.SNAPSHOTS_PATH.format(next_snapshot_timestamp)
+    dir_name = config.SNAPSHOTS_PATH.format(int(next_snapshot_timestamp / 1000))
     fnl_dir_name = f"{dir_name}_fnl"
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, "collections.json")
@@ -147,6 +147,7 @@ def main():
                 save_snapshot(next_snapshot_timestamp)
             while next_snapshot_timestamp <= consensus_timestamp:
                 next_snapshot_timestamp += config.SNAPSHOTS_PERIOD_MILLISECONDS
+                print(f"next snapshot timestamp will be {next_snapshot_timestamp}")
 
             process(message)
             sequence_number = message["sequence_number"]
