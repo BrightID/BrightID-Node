@@ -70,7 +70,7 @@ def process_op(op):
 
 
 def save_snapshot(next_snapshot_timestamp):
-    dir_name = config.SNAPSHOTS_PATH.format(int(next_snapshot_timestamp / 1000))
+    dir_name = config.SNAPSHOTS_PATH.format(next_snapshot_timestamp)
     fnl_dir_name = f"{dir_name}_fnl"
     dir_path = os.path.dirname(os.path.realpath(__file__))
     collections_file = os.path.join(dir_path, "collections.json")
@@ -107,7 +107,7 @@ def get_sequence_number():
 
 def get_next_snapshot_timestamp(sequence_number):
     if variables.has("PREV_SNAPSHOT_TIME"):
-        return variables.get("PREV_SNAPSHOT_TIME")["value"] + config.SNAPSHOTS_PERIOD_MILLISECONDS
+        return variables.get("PREV_SNAPSHOT_TIME")["value"] * 1000 + config.SNAPSHOTS_PERIOD_MILLISECONDS
     else:
         url = config.MIRROR_NODE_URL.format(
             topic_id=config.TOPIC_ID, sequence_number=sequence_number, limit=1
@@ -122,7 +122,7 @@ def get_next_snapshot_timestamp(sequence_number):
             int(timestamp / config.SNAPSHOTS_PERIOD_MILLISECONDS) * config.SNAPSHOTS_PERIOD_MILLISECONDS
         )
         variables.insert(
-            {"_key": "PREV_SNAPSHOT_TIME", "value": prev_snapshot_timestamp}
+            {"_key": "PREV_SNAPSHOT_TIME", "value": int(prev_snapshot_timestamp / 1000)}
         )
         return prev_snapshot_timestamp + config.SNAPSHOTS_PERIOD_MILLISECONDS
 
@@ -144,7 +144,7 @@ def main():
         for i, message in enumerate(messages):
             consensus_timestamp = int(float(message["consensus_timestamp"]) * 1000)
             if next_snapshot_timestamp <= consensus_timestamp:
-                save_snapshot(next_snapshot_timestamp)
+                save_snapshot(int(next_snapshot_timestamp / 1000))
             while next_snapshot_timestamp <= consensus_timestamp:
                 next_snapshot_timestamp += config.SNAPSHOTS_PERIOD_MILLISECONDS
                 print(f"next snapshot timestamp will be {next_snapshot_timestamp}")
@@ -157,7 +157,7 @@ def main():
         allowed_delay = min(config.SNAPSHOTS_PERIOD_MILLISECONDS / 2, 60 * 1000)
 
         if len(messages) == 0 and now > next_snapshot_timestamp + allowed_delay:
-            save_snapshot(next_snapshot_timestamp)
+            save_snapshot(int(next_snapshot_timestamp / 1000))
             next_snapshot_timestamp += config.SNAPSHOTS_PERIOD_MILLISECONDS
 
 
