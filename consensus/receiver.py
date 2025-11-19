@@ -101,8 +101,8 @@ def get_sequence_number():
     if variables.has("SEQUENCE_NUMBER"):
         return variables.get("SEQUENCE_NUMBER")["value"]
     else:
-        variables.insert({"_key": "SEQUENCE_NUMBER", "value": 3})
-        return 3
+        variables.insert({"_key": "SEQUENCE_NUMBER", "value": 7})
+        return 7
 
 
 def get_next_snapshot_timestamp(sequence_number):
