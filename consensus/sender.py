@@ -1,7 +1,9 @@
 import socket
 import time
 import json
+import binascii
 from arango import ArangoClient
+from web3 import Web3
 import config
 from hiero_sdk_python import (
     Client,
@@ -21,6 +23,24 @@ client.set_operator(operator_id, operator_key)
 
 db = ArangoClient(hosts=config.ARANGO_SERVER).db("_system")
 
+# This method should be removed in the next update
+def sendTransaction(data):
+    data = data.encode("utf-8")
+    data = "0x" + binascii.hexlify(data).decode("utf-8")
+    w3 = Web3(Web3.WebsocketProvider(config.INFURA_URL))
+    nonce = w3.eth.get_transaction_count(config.ADDRESS, "pending")
+    tx = {
+        "to": config.TO_ADDRESS,
+        "value": 0,
+        "gas": config.GAS,
+        "gasPrice": config.GAS_PRICE,
+        "nonce": nonce,
+        "chainId": w3.eth.chain_id,
+        "data": data,
+    }
+    signed = w3.eth.account.sign_transaction(tx, config.PRIVATE_KEY)
+    tx = w3.eth.send_raw_transaction(signed.rawTransaction).hex()
+    return tx
 
 def sendMessage(data):
     topic_id = TopicId.from_string(config.TOPIC_ID)
@@ -50,6 +70,9 @@ def main():
         return
 
     data = json.dumps(operations)
+
+    # send the operation to the both services until all nodes upgrade to hedera
+    sendTransaction(data)
     sendMessage(data)
     for i, op in enumerate(operations):
         db.collection("operations").update(
