@@ -1,5 +1,5 @@
 #!/bin/sh
-# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.9.1/docker-entrypoint.sh
+# Edited from https://github.com/arangodb/arangodb-docker/blob/official/alpine/3.12.4.3/docker-entrypoint.sh
 set -e
 
 echo "BN_ARANGO_EXTRA_OPTS: $BN_ARANGO_EXTRA_OPTS"
@@ -60,6 +60,7 @@ if [ "$1" = 'arangod' ]; then
         echo "Using encrypted database"
         sed -i /tmp/arangod.conf -e "s;^.*encryption-keyfile.*;encryption-keyfile=$ARANGO_ENCRYPTION_KEYFILE;"
     fi
+
     if [ "$INIT_BRIGHTID_DB" == "1" ] || ([ ! -f /var/lib/arangodb3/SERVER ] && [ "$SKIP_DATABASE_INIT" != "1" ]); then
         if [ ! -z "$ARANGO_ROOT_PASSWORD_FILE" ]; then
             if [ -f "$ARANGO_ROOT_PASSWORD_FILE" ]; then
@@ -67,7 +68,7 @@ if [ "$1" = 'arangod' ]; then
             else
                 echo "WARNING: password file '$ARANGO_ROOT_PASSWORD_FILE' does not exist"
             fi
-        fi
+	fi
         # Please note that the +x in the following line is for the case
         # that ARANGO_ROOT_PASSWORD is set but to an empty value, please
         # do not remove!
@@ -101,8 +102,8 @@ if [ "$1" = 'arangod' ]; then
         $NUMACTL arangod --config /tmp/arangod.conf \
                 --server.endpoint tcp://127.0.0.1:$ARANGO_INIT_PORT \
                 --server.authentication false \
-                --log.file /tmp/init-log \
-                --log.foreground-tty false &
+		--log.file /tmp/init-log \
+		--log.foreground-tty false &
         pid="$!"
 
         counter=0
@@ -128,12 +129,6 @@ if [ "$1" = 'arangod' ]; then
                 --javascript.execute-string "db._version()" \
                 > /dev/null 2>&1 || ARANGO_UP=0
         done
-
-        if [ "$(id -u)" = "0" ] ; then
-            foxx server set default http://127.0.0.1:$ARANGO_INIT_PORT
-        else
-            echo Not setting foxx server default because we are not root.
-        fi
 
         for f in /docker-entrypoint-initdb.d/*; do
             case "$f" in
@@ -165,10 +160,6 @@ if [ "$1" = 'arangod' ]; then
             esac
         done
 
-        if [ "$(id -u)" = "0" ] ; then
-            foxx server remove default
-        fi
-
         if ! kill -s TERM "$pid" || ! wait "$pid"; then
             echo >&2 'ArangoDB Init failed.'
             exit 1
@@ -183,7 +174,7 @@ if [ "$1" = 'arangod' ]; then
     shift
 
     if [ ! -z "$ARANGO_NO_AUTH" ]; then
-        AUTHENTICATION="false"
+	    AUTHENTICATION="false"
     fi
 
     set -- arangod "$@" --server.endpoint=$BN_ARANGO_SERVER_ENDPOINT --server.authentication="$AUTHENTICATION" --config /tmp/arangod.conf $BN_ARANGO_EXTRA_OPTS
