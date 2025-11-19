@@ -10,7 +10,7 @@ RUN pip3 install --user -r requirements.txt
 FROM python:3.12-slim as runner
 ADD . /code
 WORKDIR /code/
-ADD https://download.arangodb.com/arangodb36/Community/Linux/arangodb3-client_3.6.4-1_amd64.deb ./
+ADD https://download.arangodb.com/arangodb312/DEBIAN/amd64/arangodb3-client_3.12.0-1_amd64.deb ./
 RUN dpkg -i arangodb3-client_3.6.4-1_amd64.deb && rm arangodb3-client_3.6.4-1_amd64.deb
 COPY docker-entrypoint.sh /usr/local/bin/
 # Copy installed packages from 1st stage
