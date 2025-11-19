@@ -1,5 +1,5 @@
 # 1st stage
-FROM python:3.7 as builder
+FROM python:3.12 as builder
 
 ADD . /code
 WORKDIR /code/
