@@ -7,7 +7,7 @@ WORKDIR /code/
 RUN pip3 install --user -r requirements.txt
 
 # 2nd stage
-FROM python:3.7-slim as runner
+FROM python:3.12-slim as runner
 ADD . /code
 WORKDIR /code/
 ADD https://download.arangodb.com/arangodb36/Community/Linux/arangodb3-client_3.6.4-1_amd64.deb ./
