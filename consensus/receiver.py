@@ -145,9 +145,9 @@ def main():
             consensus_timestamp = float(message["consensus_timestamp"])
             if next_snapshot_timestamp <= consensus_timestamp:
                 save_snapshot(next_snapshot_timestamp)
-            while next_snapshot_timestamp <= consensus_timestamp:
-                next_snapshot_timestamp += config.SNAPSHOTS_PERIOD_SECONDS
-                print(f"next snapshot timestamp will be {next_snapshot_timestamp}")
+                while next_snapshot_timestamp <= consensus_timestamp:
+                    next_snapshot_timestamp += config.SNAPSHOTS_PERIOD_SECONDS
+                    print(f"next snapshot timestamp will be {next_snapshot_timestamp}")
 
             process(message)
             sequence_number = message["sequence_number"]
@@ -156,9 +156,11 @@ def main():
         now = time.time()
         allowed_delay = min(config.SNAPSHOTS_PERIOD_SECONDS / 2, 60)
 
-        if len(messages) == 0 and now > next_snapshot_timestamp + allowed_delay:
+        if len(messages) == 0 and next_snapshot_timestamp + allowed_delay < now:
             save_snapshot(next_snapshot_timestamp)
-            next_snapshot_timestamp += config.SNAPSHOTS_PERIOD_SECONDS
+            while next_snapshot_timestamp + allowed_delay < now:
+                next_snapshot_timestamp += config.SNAPSHOTS_PERIOD_SECONDS
+                print(f"next snapshot timestamp will be {next_snapshot_timestamp}")
 
 
 def wait():
