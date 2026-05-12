@@ -7,7 +7,6 @@ const {
   priv2addr,
   getNaclKeyPair,
   getEthKeyPair,
-  getConsensusSenderAddress,
 } = require("./encoding");
 const errors = require("./errors");
 const wISchnorrServer = require("./WISchnorrServer");
@@ -783,7 +782,6 @@ function getState() {
     variablesColl.document("VERIFICATIONS_HASHES").hashes
   );
   const conf = module.context.configuration;
-  const consensusSenderAddress = getConsensusSenderAddress();
   const { privateKey: ethPrivateKey } = getEthKeyPair();
   const { publicKey: naclSigningKey } = getNaclKeyPair();
   let wISchnorrPublic = null;
@@ -815,7 +813,6 @@ function getState() {
     wISchnorrPublic,
     ethSigningAddress: priv2addr(ethPrivateKey),
     naclSigningKey,
-    consensusSenderAddress,
     development: conf.development,
     version: module.context.manifest.version,
     appsLastUpdateBlock,

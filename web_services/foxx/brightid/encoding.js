@@ -114,21 +114,6 @@ function getEthKeyPair() {
   return { publicKey, privateKey };
 }
 
-function getConsensusSenderAddress() {
-  let address = null;
-  if (conf.consensusSenderPrivateKey) {
-    const uint8ArrayPrivateKey = new Uint8Array(
-      Buffer.from(conf.consensusSenderPrivateKey, "hex")
-    );
-    address = priv2addr(uint8ArrayPrivateKey);
-  } else if (conf.seed) {
-    const hex32 = crypto.sha256(conf.seed);
-    const uint8ArrayPrivateKey = new Uint8Array(Buffer.from(hex32, "hex"));
-    address = priv2addr(uint8ArrayPrivateKey);
-  }
-  return address;
-}
-
 function modPow(a, exp, b) {
   const response = request({
     method: "get",
@@ -154,6 +139,5 @@ module.exports = {
   priv2addr,
   getNaclKeyPair,
   getEthKeyPair,
-  getConsensusSenderAddress,
   modPow,
 };

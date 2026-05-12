@@ -3,14 +3,14 @@
   "name": "BrightID-Node",
   "description": "Read and update the anonymous social graph stored on BrightID nodes.",
   "license": "ISC",
-  "version": "6.18.0",
+  "version": "6.19.0",
   "tests": ["tests/*.js"],
   "scripts": {
     "setup": "initdb.js"
   },
   "configuration": {
     "seed": {
-      "description": "A password; is used for generating privateKey, ethPrivateKey, consensusSenderPrivateKey, and wISchnorrPassword if they haven't set (string)",
+      "description": "A password; is used for generating privateKey, ethPrivateKey, and wISchnorrPassword if they haven't set (string)",
       "type": "string",
       "required": false
     },
@@ -21,11 +21,6 @@
     },
     "ethPrivateKey": {
       "description": "Ethereum private key of this server node; used for signing verifications (hex representation without 0x)",
-      "type": "string",
-      "required": false
-    },
-    "consensusSenderPrivateKey": {
-      "description": "Ethereum private key of consensus sender service of this server node; used for sending operations (hex representation without 0x)",
       "type": "string",
       "required": false
     },
