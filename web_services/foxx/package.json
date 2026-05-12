@@ -1,0 +1,19 @@
+{
+  "name": "brightid-foxx-main",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "deploy-services": "node scripts/deploy-services.js",
+    "download-services": "node scripts/download-services.js",
+    "set-dev": "node scripts/set-dev.js",
+    "test": "foxx test"
+  },
+  "devDependencies": {
+    "dotenv": "^10.0.0",
+    "foxx-cli": "^1.0.1"
+  },
+  "dependencies": {
+    "fs-extra": "^11.2.0",
+    "unzipper": "^0.11.6"
+  }
+}
